@@ -3,7 +3,10 @@
 
 #include <cstddef>
 #include <initializer_list>
+#include <stdexcept>
 
+
+#include <computoc/errors.h>
 #include <memoc/allocators.h>
 #include <memoc/buffers.h>
 #include <memoc/pointers.h>
@@ -38,7 +41,7 @@ namespace computoc {
         R to S:
         -------
         S(n) = Rt(n),  S'(n) = 1
-        For each i in {n, ..., 2}:
+        For each i in {n-1, ..., 1}:
             S'(i) = S'(i+1) * (Re(i+1) + 1)
             S(i) = S'(i+1) * (Re(i+1) + 1) * Rt(i)
 
@@ -56,6 +59,60 @@ namespace computoc {
         --------------
         Index = Subs(1)*S(1) + Subs(2)*S(2) + ... + Subs(n)*S(n) + offset
 
+        */
+
+        using ND_dims = std::initializer_list<std::size_t>;
+
+        struct ND_range {
+            std::size_t start{ 0 }, stop{ 0 }, step{ 1 };
+        };
+        using ND_ranges = std::initializer_list<ND_range>;
+
+        void dims2ranges(std::size_t ndims, const std::size_t* dims, ND_range* ranges)
+        {
+            for (std::size_t i = 0; i < ndims; ++i) {
+                ranges[i] = { 0, dims[i] - 1, 1 };
+            }
+        }
+
+        void ranges2dims(std::size_t ndims, const ND_range* ranges, std::size_t* dims)
+        {
+            for (std::size_t i = 0; i < ndims; ++i) {
+                dims[i] = static_cast<std::size_t>(std::ceil((ranges[i].stop - ranges[i].start + 1.0) / ranges[i].step));
+            }
+        }
+
+        void ranges2strides(std::size_t ndims, const ND_range* ranges, std::size_t* strides)
+        {
+            std::size_t current_stride_prime{ 1 }, current_stride{ ranges[ndims - 1].step };
+            strides[ndims - 1] = current_stride;
+            for (std::size_t i = ndims - 1; i >= 1; --i) {
+                std::size_t prev_stride_prime{ current_stride_prime };
+                current_stride_prime = prev_stride_prime * (ranges[i].stop + 1);
+                current_stride = prev_stride_prime * (ranges[i].stop + 1) * ranges[i - 1].step;
+                strides[i - 1] = current_stride;
+            }
+        }
+
+        std::size_t ranges2offset(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t current_offset = 0)
+        {
+            std::size_t offset{ current_offset };
+            for (std::size_t i = 0; i < ndims; ++i) {
+                offset += ranges[i].start * strides[i];
+            }
+            return (offset == 0 ? 0 : offset - 1);
+        }
+
+        std::size_t subs2index(std::size_t ndims, const std::size_t* subs, const std::size_t* strides, std::size_t offset = 0)
+        {
+            std::size_t ind{ offset };
+            for (std::size_t i = 0; i < ndims; ++i) {
+                ind += subs[i] * strides[i];
+            }
+            return ind;
+        }
+
+        /*
         
         Example:
         ========
@@ -143,58 +200,69 @@ namespace computoc {
         */
 
         using ND_dims = std::initializer_list<std::size_t>;
-
-        struct ND_range {
-            std::size_t start_index{ 0 }, stop_index{ 0 }, step{ 1 };
-        };
-        using ND_ranges = std::initializer_list<ND_range>;
-
-        ND_range dim2range(std::size_t dim)
-        {
-            return { 0, dim - 1, 1 };
-        }
-
-        struct ND_sub {
-            std::size_t start_index{ 0 };
-            std::size_t stop_index{ 0 };
-            std::size_t step{ 1 };
-        };
-
-        using ND_dims = std::initializer_list<std::size_t>;
         using ND_strides = std::initializer_list<std::size_t>;
         using ND_subs = std::initializer_list<std::size_t>;
 
         using ND_array_allocator = memoc::Malloc_allocator;
 
-        using ND_header_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
-            memoc::Stack_buffer<(3 + 3) * sizeof(std::size_t)>,
+        using ND_header_buffer = memoc::Typed_buffer<std::uint8_t, memoc::Fallback_buffer<
+            memoc::Stack_buffer<3 * (2 * sizeof(std::size_t) + sizeof(ND_range))>,
             memoc::Allocated_buffer<ND_array_allocator, true>>>;
 
-        template <memoc::Buffer<std::size_t> Internal_buffer = ND_header_buffer>
+        template <memoc::Buffer<std::uint8_t> Internal_buffer = ND_header_buffer>
         class ND_array_header {
         public:
             ND_array_header() = default;
 
-            ND_array_header(ND_dims dims, std::size_t offset = 0, bool is_subarray = false)
-                : size_info_(dims.size() * 2), ndims_(dims.size()), offset_(offset), is_subarray_(is_subarray)
+            ND_array_header(std::size_t ndims, const ND_range* ranges, std::size_t offset, bool is_subarray)
+                : size_info_(ndims * (2 * sizeof(std::size_t) + sizeof(ND_range))), ndims_(ndims), is_subarray_(is_subarray)
             {
-                std::size_t* dimsp = size_info_.data().p;
-                std::size_t* stridesp = dimsp + ndims_;
+                COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
 
+                ND_range* rangesp = reinterpret_cast<ND_range*>(size_info_.data().p + 2 * ndims_ * sizeof(std::size_t));
                 for (std::size_t i = 0; i < ndims_; ++i) {
-                    dimsp[i] = dims.begin()[i];
+                    rangesp[i] = ranges[i];
+                }
+
+                std::size_t* dimsp = reinterpret_cast<std::size_t*>(size_info_.data().p);
+                ranges2dims(ndims_, rangesp, dimsp);
+
+                count_ = 1;
+                for (std::size_t i = 0; i < ndims_; ++i) {
+                    count_ *= dimsp[i];
+                }
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
+
+                std::size_t* stridesp = reinterpret_cast<std::size_t*>(size_info_.data().p + ndims_ * sizeof(std::size_t));
+
+                ranges2strides(ndims_, rangesp, stridesp);
+                offset_ = ranges2offset(ndims_, rangesp, stridesp, offset);
+            }
+
+            ND_array_header(std::size_t ndims, const std::size_t* dims)
+                : size_info_(ndims* (2 * sizeof(std::size_t) + sizeof(ND_range))), ndims_(ndims)
+            {
+                COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                std::size_t* dimsp = reinterpret_cast<std::size_t*>(size_info_.data().p);
+                for (std::size_t i = 0; i < ndims_; ++i) {
+                    dimsp[i] = dims[i];
                 }
 
                 count_ = 1;
                 for (std::size_t i = 0; i < ndims_; ++i) {
                     count_ *= dimsp[i];
                 }
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
 
-                std::size_t current_stride{ 1 };
-                for (std::size_t i = ndims_; i >= 1; --i) {
-                    stridesp[i - 1] = current_stride;
-                    current_stride *= dimsp[i - 1];
-                }
+                ND_range* rangesp = reinterpret_cast<ND_range*>(size_info_.data().p + 2 * ndims_ * sizeof(std::size_t));
+                dims2ranges(ndims_, dims, rangesp);
+
+                std::size_t* stridesp = reinterpret_cast<std::size_t*>(size_info_.data().p + ndims_ * sizeof(std::size_t));
+                ranges2strides(ndims_, rangesp, stridesp);
+                offset_ = ranges2offset(ndims_, rangesp, stridesp, 0);
             }
 
             ND_array_header(ND_array_header<Internal_buffer>&& other) = default;
@@ -217,12 +285,12 @@ namespace computoc {
 
             const std::size_t* dims() const
             {
-                return size_info_.data().p;
+                return reinterpret_cast<std::size_t*>(size_info_.data().p);
             }
 
             const std::size_t* strides() const
             {
-                return size_info_.data().p + ndims_;
+                return reinterpret_cast<std::size_t*>(size_info_.data().p + ndims_ * sizeof(std::size_t));
             }
 
             std::size_t offset() const
@@ -243,15 +311,6 @@ namespace computoc {
             bool is_subarray_{ false };
         };
 
-        std::size_t subs2ind(std::size_t ndims, const std::size_t* subs, const std::size_t* strides, std::size_t offset = 0)
-        {
-            std::size_t ind{ offset };
-            for (std::size_t i = 0; i < ndims; ++i) {
-                ind += subs[i] * strides[i];
-            }
-            return ind;
-        }
-
         using ND_array_allocator = memoc::Malloc_allocator;
 
         template <typename T>
@@ -259,7 +318,7 @@ namespace computoc {
             memoc::Stack_buffer<9 * sizeof(T)>,
             memoc::Allocated_buffer<ND_array_allocator, true>>>;
 
-        template <typename T, memoc::Buffer<T> Internal_data_buffer = ND_array_buffer<T>, memoc::Allocator Internal_allocator = ND_array_allocator, memoc::Buffer<std::size_t> Internal_header_buffer = ND_header_buffer>
+        template <typename T, memoc::Buffer<T> Internal_data_buffer = ND_array_buffer<T>, memoc::Allocator Internal_allocator = ND_array_allocator, memoc::Buffer<std::uint8_t> Internal_header_buffer = ND_header_buffer>
         class ND_array {
         public:
             ND_array() = default;
@@ -273,7 +332,7 @@ namespace computoc {
             virtual ~ND_array() = default;
 
             ND_array(ND_dims dims, const T* data = nullptr)
-                : hdr_(dims), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count(), data))
+                : hdr_(dims.size(), dims.begin()), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count(), data))
             {
             }
 
@@ -292,15 +351,22 @@ namespace computoc {
 
             const T& operator()(ND_subs inds) const
             {
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), inds.begin(), hdr_.strides(), hdr_.offset())];
+                return buffsp_->data().p[subs2index(hdr_.ndims(), inds.begin(), hdr_.strides(), hdr_.offset())];
             }
 
             T& operator()(ND_subs inds)
             {
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), inds.begin(), hdr_.strides(), hdr_.offset())];
+                return buffsp_->data().p[subs2index(hdr_.ndims(), inds.begin(), hdr_.strides(), hdr_.offset())];
             }
 
-            //ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(ND_subs subs, )
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(ND_ranges ranges)
+            {
+                ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> slice{};
+                slice.hdr_ = ND_array_header<Internal_header_buffer>{ ranges.size(), ranges.begin(), hdr_.offset(), true };
+                slice.buffsp_ = buffsp_;
+
+                return slice;
+            }
 
         private:
             ND_array_header<Internal_header_buffer> hdr_{};
