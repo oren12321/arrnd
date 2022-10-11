@@ -94,13 +94,21 @@ namespace computoc {
             }
         }
 
+        void ranges2strides(std::size_t ndims, const ND_range* ranges, const std::size_t* prev_strides, std::size_t* strides)
+        {
+            for (std::size_t i = 0; i < ndims; ++i) {
+                strides[i] = prev_strides[i] * ranges[i].step;
+            }
+        }
+
         std::size_t ranges2offset(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t current_offset = 0)
         {
             std::size_t offset{ current_offset };
             for (std::size_t i = 0; i < ndims; ++i) {
                 offset += ranges[i].start * strides[i];
             }
-            return (offset == 0 ? 0 : offset - 1);
+            //return (offset == 0 ? 0 : offset - 1);
+            return offset;
         }
 
         std::size_t subs2index(std::size_t ndims, const std::size_t* subs, const std::size_t* strides, std::size_t offset = 0)
@@ -214,7 +222,7 @@ namespace computoc {
         public:
             ND_array_header() = default;
 
-            ND_array_header(std::size_t ndims, const ND_range* ranges, std::size_t offset, bool is_subarray)
+            ND_array_header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
                 : size_info_(ndims * (2 * sizeof(std::size_t) + sizeof(ND_range))), ndims_(ndims), is_subarray_(is_subarray)
             {
                 COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
@@ -236,8 +244,8 @@ namespace computoc {
 
                 std::size_t* stridesp = reinterpret_cast<std::size_t*>(size_info_.data().p + ndims_ * sizeof(std::size_t));
 
-                ranges2strides(ndims_, rangesp, stridesp);
-                offset_ = ranges2offset(ndims_, rangesp, stridesp, offset);
+                ranges2strides(ndims_, rangesp, strides, stridesp);
+                offset_ = ranges2offset(ndims_, rangesp, strides, offset);
             }
 
             ND_array_header(std::size_t ndims, const std::size_t* dims)
@@ -362,7 +370,7 @@ namespace computoc {
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(ND_ranges ranges)
             {
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> slice{};
-                slice.hdr_ = ND_array_header<Internal_header_buffer>{ ranges.size(), ranges.begin(), hdr_.offset(), true };
+                slice.hdr_ = ND_array_header<Internal_header_buffer>{ ranges.size(), ranges.begin(), hdr_.strides(), hdr_.offset(), true };
                 slice.buffsp_ = buffsp_;
 
                 return slice;

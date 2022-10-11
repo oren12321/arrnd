@@ -59,4 +59,7 @@ TEST(ND_array_header, initiazlization)
     ND_array<int> subarray1{ arr({ {1,1,1}, {0,1,2}, {0,0,1}, {0,1,1}, {1,2,2} }) };
     EXPECT_EQ(26, subarray1({ 0, 0, 0, 0, 0 }));
     EXPECT_EQ(29, subarray1({ 0, 0, 0, 1, 0 }));
+
+    ND_array<int> subarray2{ subarray1({{0,0,1}, {0,0,1}, {0,0,1}, {1,1,2}, {0,0,1}}) };
+    EXPECT_EQ(29, subarray2({ 0, 0, 0, 0, 0 }));
 }
