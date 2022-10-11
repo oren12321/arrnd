@@ -15,50 +15,66 @@ namespace computoc {
     namespace details {
 
         /*
+        * N-dimensional array definitions:
+        * ================================
+        * 
+        * N - number of dimensions
+        * All sizes of defined groups are proportional to N.
+        * 
+        * Dimensions:
+        * -----------
+        * D = {n(1), n(2), ..., n(N)}
+        * The dimensions order is from the larges to the smallest (i.e. columns).
+        * 
+        * Ranges:
+        * -------
+        * R = {(Rs(1),Re(1),Rt(1)), (Rs(2),Re(2),Rt(2)), ..., (Rs(N),Re(N),Rt(N))}
+        * s.t. Rs - start index
+        *      Re - stop index
+        *      Rt - step
+        * 
+        * Strides:
+        * --------
+        * S = {s(1), s(2), ..., s(N)}
+        * s.t. s(i) - the elements count between two consecutive elements of the i(th) dimension.
+        * 
+        * Offset:
+        * -------
+        * The start index of the current array or sub-array.
+        * Has value of 0 for the base array.
+        * 
+        * Subscripts:
+        * -----------
+        * I = {I(1), I(2), ..., I(N)}
+        * s.t. I is a group of subscripts of specific value in the array.
+        */
 
-        N-dimensional array:
-        ====================
-        Range:
-        ------
-        R(i) = {Rs(i)<start index>, Re(i)<end index>, Rt(i)<step>}
-
-        Dimensions:
-        -----------
-        Dims = {N(1), N(2), ..., N(n-1)<rows>, N(n)<columns>}
-
-        Dims to R:
-        ----------
-        R(i) = {0, N(i)-1, 1} for each i in {1, ..., n}
-
-        Subscript(i) to R(i):
-        ---------------------
-        R(i) = {Sub(i), Sub(i), 1}
-
-        Strides:
-        --------
-        S = {S(1), S(2), ..., S(n)<column stride>}
-
-        R to S:
-        -------
-        S(n) = Rt(n),  S'(n) = 1
-        For each i in {n-1, ..., 1}:
-            S'(i) = S'(i+1) * (Re(i+1) + 1)
-            S(i) = S'(i+1) * (Re(i+1) + 1) * Rt(i)
-
-        Offsets:
-        --------
-        O(i) = Rs(i) for each i in {1, ..., n}
-        Total offset: Toffset = Toffset' + O(1)*S(1) + O(2)*S(2) + ... + O(n)*S(n) - 1
-        Toffset' is the previous subarray offset, otherwise is equal to 0
-
-        R to Dims:
-        ----------
-        Dims(i) = ceil((Re(i) - Rs(i) + 1) / Rt(i)) for each i in {1, ..., n}
-
-        Subs to Index:
-        --------------
-        Index = Subs(1)*S(1) + Subs(2)*S(2) + ... + Subs(n)*S(n) + offset
-
+        /*
+        * N-dimensional array indexing:
+        * =============================
+        * 
+        * Dimensions to strides:
+        * ----------------------
+        * Relates to the original array dimensions for the base strides calculation.
+        * s(N) = 1
+        * s(i) = f(S,D) = s(i+1) * n(i+1) - for every i in {1, 2, ..., N}
+        * 
+        * Ranges to strides:
+        * ------------------
+        * Relates to calculation of sub-array strides.
+        * s(i) = f(S',Rt) = s'(i) * Rt(i) for every i in {1, 2, ..., N}
+        * s.t. S' are the previously calculted strides.
+        * 
+        * Offset:
+        * -------
+        * offset = f(offset', S',Rs) = offset' + dot(S',Rs)
+        * s.t. offset' - previously calculated offset
+        *      S'      - vector of previously calculated strides
+        *      Rs      - vector of ranges start indices
+        * 
+        * Index:
+        * ------
+        * index = f(offset, S, I) = offset + dot(S,I)
         */
 
         using ND_dims = std::initializer_list<std::size_t>;
