@@ -7,6 +7,7 @@
 
 
 #include <computoc/errors.h>
+#include <computoc/utils.h>
 #include <memoc/allocators.h>
 #include <memoc/buffers.h>
 #include <memoc/pointers.h>
@@ -104,6 +105,10 @@ namespace computoc {
         * Check if ranges inside array dimensions:
         * ----------------------------------------
         * are_inside = f(D,R) = Re(1)<D(1) and Re(2)<D(2) and ... and Re(N)<D(N)
+        * 
+        * Check if two dimensions are equal:
+        * ----------------------------------
+        * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
         */
 
         void dims2strides(std::size_t ndims, const ND_dim* dims, ND_stride* strides)
@@ -158,7 +163,7 @@ namespace computoc {
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result = (subs[i] < dims[i]);
+                *result &= (subs[i] < dims[i]);
             }
         }
 
@@ -166,7 +171,7 @@ namespace computoc {
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result = (ranges[i].start <= ranges[i].stop);
+                *result &= (ranges[i].start <= ranges[i].stop);
             }
         }
 
@@ -174,7 +179,16 @@ namespace computoc {
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result = (ranges[i].stop < dims[i]);
+                *result &= (ranges[i].stop < dims[i]);
+            }
+        }
+
+        void are_dims_equal(std::size_t ndims1, const ND_dim* dims1, std::size_t ndims2, const ND_dim* dims2, bool* result)
+        {
+            *result = (ndims1 == ndims2);
+            std::size_t ndims{ ndims1 };
+            for (std::size_t i = 0; i < ndims && *result; ++i) {
+                *result &= (dims1[i] == dims2[i]);
             }
         }
 
@@ -434,10 +448,35 @@ namespace computoc {
                 return slice;
             }
 
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend bool operator==(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& lhs, const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& rhs);
+
         private:
             ND_array_header<Internal_header_buffer> hdr_{};
             memoc::Shared_ptr<Internal_data_buffer, Internal_allocator> buffsp_{ nullptr };
         };
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline bool operator==(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& lhs, const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& rhs)
+        {
+            bool are_equal_dims{ false };
+            are_dims_equal(lhs.hdr_.ndims(), lhs.hdr_.dims(), rhs.hdr_.ndims(), rhs.hdr_.dims(), &are_equal_dims);
+            if (!are_equal_dims) {
+                return false;
+            }
+
+            if (lhs.hdr_.count() != rhs.hdr_.count()) {
+                return false;
+            }
+
+            for (std::size_t i = 0; i < lhs.hdr_.count(); ++i) {
+                if (!is_equal(lhs.buffsp_->data().p[i], rhs.buffsp_->data().p[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     using details::ND_array;
