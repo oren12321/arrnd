@@ -92,6 +92,18 @@ namespace computoc {
         * Number of elements in array:
         * ----------------------------
         * count = f(D) = n(1) * n(2) * ... n(N)
+        * 
+        * Check if subscripts inside array dimensions:
+        * ---------------------------------------
+        * are_inside = f(D,I) = I(1)<D(1) and I(2)<D(2) and ... and I(N)<D(N)
+        * 
+        * Check if ranges are legal:
+        * --------------------------
+        * are_legal = f(R) = Rs(1)<=Re(1) and Rs(2)<=Re(2) and ... and Rs(N)<=Re(N)
+        * 
+        * Check if ranges inside array dimensions:
+        * ----------------------------------------
+        * are_inside = f(D,R) = Re(1)<D(1) and Re(2)<D(2) and ... and Re(N)<D(N)
         */
 
         void dims2strides(std::size_t ndims, const ND_dim* dims, ND_stride* strides)
@@ -142,8 +154,31 @@ namespace computoc {
             }
         }
 
+        void are_subs_in_dims(std::size_t ndims, const ND_dim* dims, const ND_subscript* subs, bool* result)
+        {
+            *result = true;
+            for (std::size_t i = 0; i < ndims && *result; ++i) {
+                *result = (subs[i] < dims[i]);
+            }
+        }
+
+        void are_ranges_legal(std::size_t ndims, const ND_range* ranges, bool* result)
+        {
+            *result = true;
+            for (std::size_t i = 0; i < ndims && *result; ++i) {
+                *result = (ranges[i].start <= ranges[i].stop);
+            }
+        }
+
+        void are_ranges_in_dims(std::size_t ndims, const ND_dim* dims, const ND_range* ranges, bool* result)
+        {
+            *result = true;
+            for (std::size_t i = 0; i < ndims && *result; ++i) {
+                *result = (ranges[i].stop < dims[i]);
+            }
+        }
+
         /*
-        
         Example:
         ========
         D = {2, 2, 2, 2, 3}
@@ -313,10 +348,34 @@ namespace computoc {
             ND_array() = default;
 
             ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>&& other) = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>&& other) = default;
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>&& other)
+            {
+                COMPUTOC_THROW_IF_FALSE(!hdr_.is_subarray(), std::runtime_error, "move assignment to subarray is undefined");
+
+                if (this == &other) {
+                    return *this;
+                }
+
+                hdr_ = std::move(other.hdr_);
+                buffsp_ = std::move(other.buffsp_);
+
+                return *this;
+            }
 
             ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& other) = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& other) = default;
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& other)
+            {
+                COMPUTOC_THROW_IF_FALSE(!hdr_.is_subarray(), std::runtime_error, "copy assignment to subarray is undefined");
+
+                if (this == &other) {
+                    return *this;
+                }
+
+                hdr_ = other.hdr_;
+                buffsp_ = other.buffsp_;
+
+                return *this;
+            }
 
             virtual ~ND_array() = default;
 
@@ -340,6 +399,9 @@ namespace computoc {
 
             const T& operator()(std::initializer_list<ND_subscript> subs) const
             {
+                bool are_valid_subs{false};
+                are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
+                COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
                 ND_index ind{ 0 };
                 subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
                 return buffsp_->data().p[ind];
@@ -347,6 +409,9 @@ namespace computoc {
 
             T& operator()(std::initializer_list<ND_subscript> subs)
             {
+                bool are_valid_subs{ false };
+                are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
+                COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
                 ND_index ind{ 0 };
                 subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
                 return buffsp_->data().p[ind];
@@ -354,6 +419,14 @@ namespace computoc {
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::initializer_list<ND_range> ranges)
             {
+                bool are_legal_ranges{ false };
+                are_ranges_legal(hdr_.ndims(), ranges.begin(), &are_legal_ranges);
+                COMPUTOC_THROW_IF_FALSE(are_legal_ranges, std::invalid_argument, "ranges are not legal");
+
+                bool are_valid_ranges{ false };
+                are_ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges.begin(), &are_valid_ranges);
+                COMPUTOC_THROW_IF_FALSE(are_valid_ranges, std::out_of_range, "out of range ranges");
+
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> slice{};
                 slice.hdr_ = ND_array_header<Internal_header_buffer>{ ranges.size(), ranges.begin(), hdr_.strides(), hdr_.offset(), true };
                 slice.buffsp_ = buffsp_;
