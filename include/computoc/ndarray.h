@@ -411,6 +411,11 @@ namespace computoc {
                 return hdr_;
             }
 
+            T* data() const
+            {
+                return (buffsp_ ? buffsp_->data().p : nullptr);
+            }
+
             const T& operator()(std::initializer_list<ND_subscript> subs) const
             {
                 bool are_valid_subs{false};
@@ -451,6 +456,20 @@ namespace computoc {
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
             friend bool operator==(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& lhs, const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& rhs);
 
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> copy_to(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& src, ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& dst);
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> copy_to(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& src, ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>&& dst);
+
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> copy_of(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr);
+
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> reshaped(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<ND_dim> new_dims);
+
+            template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> resized(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<ND_dim> new_dims);
+
         private:
             ND_array_header<Internal_header_buffer> hdr_{};
             memoc::Shared_ptr<Internal_data_buffer, Internal_allocator> buffsp_{ nullptr };
@@ -476,6 +495,98 @@ namespace computoc {
             }
 
             return true;
+        }
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> copy_to(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& src, ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& dst)
+        {
+            bool are_equal_dims{ false };
+            are_dims_equal(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims(), &are_equal_dims);
+            if (!are_equal_dims) {
+                COMPUTOC_THROW_IF_FALSE(!dst.hdr_.is_subarray(), std::runtime_error, "unable to reallocate subarray");
+                dst.hdr_ = ND_array_header<Internal_header_buffer>{ src.hdr_.ndims(), src.hdr_.dims() };
+                dst.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(src.hdr_.count());
+            }
+
+            for (std::size_t i = 0; i < src.hdr_.count(); ++i) {
+                dst.buffsp_->data.p[i] = src.buffsp_->data.p[i];
+            }
+
+            return dst;
+        }
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> copy_to(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& src, ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>&& dst)
+        {
+            return copy_to(src, dst);
+        }
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> copyf(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr)
+        {
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> clone{};
+            clone.hdr_ = ND_array_header<Internal_header_buffer>{ arr.hdr_.ndims(), arr.hdr_.dims() };
+            if (arr.buffsp_) {
+                clone.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(arr.hdr_.count());
+                for (std::size_t i = 0; i < arr.hdr_.count(); ++i) {
+                    clone.buffsp_->data.p[i] = arr.buffsp_->data.p[i];
+                }
+            }
+            return clone;
+        }
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<ND_dim> new_dims)
+        {
+            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "reshaping subarray is undefined");
+            COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
+
+            std::size_t new_count{ 0 };
+            dims2count(new_dims.size(), new_dims.begin(), &new_count);
+            COMPUTOC_THROW_IF_FALSE(new_count == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
+
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> res{ arr };
+            res.hdr_ = ND_array_header<Internal_header_buffer>{ new_dims.size(), new_dims.begin() };
+
+            return res;
+        }
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<ND_dim> new_dims)
+        {
+            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "resize for subarray is undefined");
+
+            bool are_equal_dims{ false };
+            are_dims_equal(arr.hdr_.ndims(), arr.hdr_.dims(), new_dims.size(), new_dims.begin(), &are_equal_dims);
+            if (are_equal_dims) {
+                return arr;
+            }
+
+            if (!arr.buffsp_) {
+                return arr;
+            }
+
+            std::size_t new_count{ 0 };
+            dims2count(new_dims.size(), new_dims.begin(), &new_count);
+
+            if (new_count == arr.hdr_.count()) {
+                return reshaped(arr, new_dims);
+            }
+
+            if (new_count < arr.hdr_.count()) {
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>{new_dims, arr.buffsp_->data().p};
+            }
+
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> res{ new_dims };
+            for (std::size_t i = 0; i < arr.buffsp_->data().s; ++i) {
+                res.buffsp_->data().p[i] = arr.buffsp_->data().p[i];
+            }
+            return res;
+        }
+
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline bool is_empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr)
+        {
+            return !arr.data();
         }
     }
 
