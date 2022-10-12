@@ -111,7 +111,7 @@ namespace computoc {
         * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
         */
 
-        void dims2strides(std::size_t ndims, const ND_dim* dims, ND_stride* strides)
+        inline void dims2strides(std::size_t ndims, const ND_dim* dims, ND_stride* strides)
         {
             if (ndims > 0) {
                 strides[ndims - 1] = 1;
@@ -121,21 +121,21 @@ namespace computoc {
             }
         }
 
-        void ranges2strides(std::size_t ndims, const ND_stride* previous_strides, const ND_range* ranges, ND_stride* strides)
+        inline void ranges2strides(std::size_t ndims, const ND_stride* previous_strides, const ND_range* ranges, ND_stride* strides)
         {
             for (std::size_t i = 0; i < ndims; ++i) {
                 strides[i] = previous_strides[i] * ranges[i].step;
             }
         }
 
-        void ranges2dims(std::size_t ndims, const ND_range* ranges, ND_dim* dims)
+        inline void ranges2dims(std::size_t ndims, const ND_range* ranges, ND_dim* dims)
         {
             for (std::size_t i = 0; i < ndims; ++i) {
                 dims[i] = static_cast<std::size_t>(std::ceil((ranges[i].stop - ranges[i].start + 1.0) / ranges[i].step));
             }
         }
 
-        void ranges2offset(std::size_t ndims, ND_offset previous_offset, const ND_stride* previous_strides, const ND_range* ranges, ND_offset* offset)
+        inline void ranges2offset(std::size_t ndims, ND_offset previous_offset, const ND_stride* previous_strides, const ND_range* ranges, ND_offset* offset)
         {
             *offset = previous_offset;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -143,7 +143,7 @@ namespace computoc {
             }
         }
 
-        void subs2ind(std::size_t ndims, ND_offset offset, const ND_stride* strides, const ND_subscript* subs, ND_index* ind)
+        inline void subs2ind(std::size_t ndims, ND_offset offset, const ND_stride* strides, const ND_subscript* subs, ND_index* ind)
         {
             *ind = offset;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -151,7 +151,7 @@ namespace computoc {
             }
         }
 
-        void dims2count(std::size_t ndims, const ND_dim* dims, std::size_t* count)
+        inline void dims2count(std::size_t ndims, const ND_dim* dims, std::size_t* count)
         {
             *count = 1;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -159,7 +159,7 @@ namespace computoc {
             }
         }
 
-        void are_subs_in_dims(std::size_t ndims, const ND_dim* dims, const ND_subscript* subs, bool* result)
+        inline void are_subs_in_dims(std::size_t ndims, const ND_dim* dims, const ND_subscript* subs, bool* result)
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
@@ -167,7 +167,7 @@ namespace computoc {
             }
         }
 
-        void are_ranges_legal(std::size_t ndims, const ND_range* ranges, bool* result)
+        inline void are_ranges_legal(std::size_t ndims, const ND_range* ranges, bool* result)
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
@@ -175,7 +175,7 @@ namespace computoc {
             }
         }
 
-        void are_ranges_in_dims(std::size_t ndims, const ND_dim* dims, const ND_range* ranges, bool* result)
+        inline void are_ranges_in_dims(std::size_t ndims, const ND_dim* dims, const ND_range* ranges, bool* result)
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
@@ -183,7 +183,7 @@ namespace computoc {
             }
         }
 
-        void are_dims_equal(std::size_t ndims1, const ND_dim* dims1, std::size_t ndims2, const ND_dim* dims2, bool* result)
+        inline void are_dims_equal(std::size_t ndims1, const ND_dim* dims1, std::size_t ndims2, const ND_dim* dims2, bool* result)
         {
             *result = (ndims1 == ndims2);
             std::size_t ndims{ ndims1 };
