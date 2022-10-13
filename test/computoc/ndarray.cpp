@@ -57,7 +57,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     using Integer_nd_array = computoc::ND_array<int>;
 
     Integer_nd_array earr{};
-    const Integer_nd_array::ND_array_header& ehdr{ earr.header() };
+    const Integer_nd_array::Header& ehdr{ earr.header() };
 
     EXPECT_EQ(0, ehdr.ndims());
     EXPECT_EQ(0, ehdr.count());
@@ -69,7 +69,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
 
     const int value{ 0 };
     Integer_nd_array arr{ {3, 1, 2}, value };
-    const Integer_nd_array::ND_array_header& hdr{ arr.header() };
+    const Integer_nd_array::Header& hdr{ arr.header() };
 
     EXPECT_EQ(3, hdr.ndims());
     EXPECT_EQ(6, hdr.count());
