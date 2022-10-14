@@ -50,14 +50,9 @@ namespace computoc {
         * s.t. I is a group of subscripts of specific value in the array.
         */
 
-        using ND_dim = std::size_t;
         struct ND_range {
             std::size_t start{ 0 }, stop{ 0 }, step{ 1 };
         };
-        using ND_stride = std::size_t;
-        using ND_offset = std::size_t;
-        using ND_subscript = std::size_t;
-        using ND_index = std::size_t;
 
         /*
         * N-dimensional array indexing:
@@ -111,7 +106,7 @@ namespace computoc {
         * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
         */
 
-        inline void dims2strides(std::size_t ndims, const ND_dim* dims, ND_stride* strides)
+        inline void dims2strides(std::size_t ndims, const std::size_t* dims, std::size_t* strides)
         {
             if (ndims > 0) {
                 strides[ndims - 1] = 1;
@@ -121,21 +116,21 @@ namespace computoc {
             }
         }
 
-        inline void ranges2strides(std::size_t ndims, const ND_stride* previous_strides, const ND_range* ranges, ND_stride* strides)
+        inline void ranges2strides(std::size_t ndims, const std::size_t* previous_strides, const ND_range* ranges, std::size_t* strides)
         {
             for (std::size_t i = 0; i < ndims; ++i) {
                 strides[i] = previous_strides[i] * ranges[i].step;
             }
         }
 
-        inline void ranges2dims(std::size_t ndims, const ND_range* ranges, ND_dim* dims)
+        inline void ranges2dims(std::size_t ndims, const ND_range* ranges, std::size_t* dims)
         {
             for (std::size_t i = 0; i < ndims; ++i) {
                 dims[i] = static_cast<std::size_t>(std::ceil((ranges[i].stop - ranges[i].start + 1.0) / ranges[i].step));
             }
         }
 
-        inline void ranges2offset(std::size_t ndims, ND_offset previous_offset, const ND_stride* previous_strides, const ND_range* ranges, ND_offset* offset)
+        inline void ranges2offset(std::size_t ndims, std::size_t previous_offset, const std::size_t* previous_strides, const ND_range* ranges, std::size_t* offset)
         {
             *offset = previous_offset;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -143,7 +138,7 @@ namespace computoc {
             }
         }
 
-        inline void subs2ind(std::size_t ndims, ND_offset offset, const ND_stride* strides, const ND_subscript* subs, ND_index* ind)
+        inline void subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const std::size_t* subs, std::size_t* ind)
         {
             *ind = offset;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -151,7 +146,7 @@ namespace computoc {
             }
         }
 
-        inline void dims2count(std::size_t ndims, const ND_dim* dims, std::size_t* count)
+        inline void dims2count(std::size_t ndims, const std::size_t* dims, std::size_t* count)
         {
             *count = 1;
             for (std::size_t i = 0; i < ndims; ++i) {
@@ -159,7 +154,7 @@ namespace computoc {
             }
         }
 
-        inline void are_subs_in_dims(std::size_t ndims, const ND_dim* dims, const ND_subscript* subs, bool* result)
+        inline void are_subs_in_dims(std::size_t ndims, const std::size_t* dims, const std::size_t* subs, bool* result)
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
@@ -175,7 +170,7 @@ namespace computoc {
             }
         }
 
-        inline void are_ranges_in_dims(std::size_t ndims, const ND_dim* dims, const ND_range* ranges, bool* result)
+        inline void are_ranges_in_dims(std::size_t ndims, const std::size_t* dims, const ND_range* ranges, bool* result)
         {
             *result = true;
             for (std::size_t i = 0; i < ndims && *result; ++i) {
@@ -183,7 +178,7 @@ namespace computoc {
             }
         }
 
-        inline void are_dims_equal(std::size_t ndims1, const ND_dim* dims1, std::size_t ndims2, const ND_dim* dims2, bool* result)
+        inline void are_dims_equal(std::size_t ndims1, const std::size_t* dims1, std::size_t ndims2, const std::size_t* dims2, bool* result)
         {
             *result = (ndims1 == ndims2);
             std::size_t ndims{ ndims1 };
@@ -259,7 +254,7 @@ namespace computoc {
         using ND_array_allocator = memoc::Malloc_allocator;
 
         using ND_header_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
-            memoc::Stack_buffer<3 * (sizeof(ND_dim) + sizeof(ND_stride))>,
+            memoc::Stack_buffer<3 * (sizeof(std::size_t) + sizeof(std::size_t))>,
             memoc::Allocated_buffer<ND_array_allocator, true>>>;
 
         template <typename T>
@@ -274,8 +269,8 @@ namespace computoc {
             public:
                 Header() = default;
 
-                Header(std::size_t ndims, const ND_range* ranges, const ND_stride* strides, ND_offset offset, bool is_subarray)
-                    : ndims_(ndims), size_info_(ndims* (3 * (sizeof(ND_dim) + sizeof(ND_stride)))), is_subarray_(is_subarray)
+                Header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
+                    : ndims_(ndims), size_info_(ndims* (3 * (sizeof(std::size_t) + sizeof(std::size_t)))), is_subarray_(is_subarray)
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                     COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
@@ -292,7 +287,7 @@ namespace computoc {
                     ranges2offset(ndims_, offset, strides, ranges, &offset_);
                 }
 
-                Header(std::size_t ndims, const ND_dim* dims)
+                Header(std::size_t ndims, const std::size_t* dims)
                     : ndims_(ndims), size_info_(ndims* (2 * sizeof(std::size_t) + sizeof(ND_range)))
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
@@ -352,7 +347,7 @@ namespace computoc {
                 std::size_t ndims_{ 0 };
                 Internal_header_buffer size_info_{};
                 std::size_t count_{ 0 };
-                ND_offset offset_{ 0 };
+                std::size_t offset_{ 0 };
                 bool is_subarray_{ false };
             };
 
@@ -391,12 +386,12 @@ namespace computoc {
 
             virtual ~ND_array() = default;
 
-            ND_array(std::initializer_list<ND_dim> dims, const T* data = nullptr)
+            ND_array(std::initializer_list<std::size_t> dims, const T* data = nullptr)
                 : hdr_(dims.size(), dims.begin()), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count(), data))
             {
             }
 
-            ND_array(std::initializer_list<ND_dim> dims, const T& value)
+            ND_array(std::initializer_list<std::size_t> dims, const T& value)
                 : hdr_(dims.size(), dims.begin()), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count()))
             {
                 for (std::size_t i = 0; i < buffsp_->data().s; ++i) {
@@ -414,22 +409,22 @@ namespace computoc {
                 return (buffsp_ ? buffsp_->data().p : nullptr);
             }
 
-            const T& operator()(std::initializer_list<ND_subscript> subs) const
+            const T& operator()(std::initializer_list<std::size_t> subs) const
             {
                 bool are_valid_subs{false};
                 are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
                 COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
-                ND_index ind{ 0 };
+                std::size_t ind{ 0 };
                 subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
                 return buffsp_->data().p[ind];
             }
 
-            T& operator()(std::initializer_list<ND_subscript> subs)
+            T& operator()(std::initializer_list<std::size_t> subs)
             {
                 bool are_valid_subs{ false };
                 are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
                 COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
-                ND_index ind{ 0 };
+                std::size_t ind{ 0 };
                 subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
                 return buffsp_->data().p[ind];
             }
@@ -463,10 +458,10 @@ namespace computoc {
             friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> copy_of(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr);
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
-            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> reshaped(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<ND_dim> new_dims);
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> reshaped(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<std::size_t> new_dims);
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
-            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> resized(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<ND_dim> new_dims);
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> resized(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<std::size_t> new_dims);
 
         private:
             Header hdr_{};
@@ -533,7 +528,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<ND_dim> new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
             COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "reshaping subarray is undefined");
             COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
@@ -549,7 +544,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<ND_dim> new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
             COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "resize for subarray is undefined");
 
@@ -588,15 +583,8 @@ namespace computoc {
         }
     }
 
-    using details::ND_dim;
     using details::ND_range;
-    using details::ND_stride;
-    using details::ND_offset;
-    using details::ND_subscript;
-    using details::ND_index;
-
     using details::ND_array;
-
     using details::copy_to;
     using details::copy_of;
     using details::reshaped;
