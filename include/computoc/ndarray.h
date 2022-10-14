@@ -130,61 +130,68 @@ namespace computoc {
             }
         }
 
-        inline void ranges2offset(std::size_t ndims, std::size_t previous_offset, const std::size_t* previous_strides, const ND_range* ranges, std::size_t* offset)
+        inline std::size_t ranges2offset(std::size_t ndims, std::size_t previous_offset, const std::size_t* previous_strides, const ND_range* ranges)
         {
-            *offset = previous_offset;
+            std::size_t offset{ previous_offset };
             for (std::size_t i = 0; i < ndims; ++i) {
-                *offset += previous_strides[i] * ranges[i].start;
+                offset += previous_strides[i] * ranges[i].start;
             }
+            return offset;
         }
 
-        inline void subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const std::size_t* subs, std::size_t* ind)
+        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const std::size_t* subs)
         {
-            *ind = offset;
+            std::size_t ind{ offset };
             for (std::size_t i = 0; i < ndims; ++i) {
-                *ind += strides[i] * subs[i];
+                ind += strides[i] * subs[i];
             }
+            return ind;
         }
 
-        inline void dims2count(std::size_t ndims, const std::size_t* dims, std::size_t* count)
+        inline std::size_t dims2count(std::size_t ndims, const std::size_t* dims)
         {
-            *count = 1;
+            std::size_t count{ 1 };
             for (std::size_t i = 0; i < ndims; ++i) {
-                *count *= dims[i];
+                count *= dims[i];
             }
+            return count;
         }
 
-        inline void are_subs_in_dims(std::size_t ndims, const std::size_t* dims, const std::size_t* subs, bool* result)
+        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, const std::size_t* subs)
         {
-            *result = true;
-            for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result &= (subs[i] < dims[i]);
+            bool result{ true };
+            for (std::size_t i = 0; i < ndims && result; ++i) {
+                result &= (subs[i] < dims[i]);
             }
+            return result;
         }
 
-        inline void are_ranges_legal(std::size_t ndims, const ND_range* ranges, bool* result)
+        inline bool legal_ranges(std::size_t ndims, const ND_range* ranges)
         {
-            *result = true;
-            for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result &= (ranges[i].start <= ranges[i].stop);
+            bool result{ true };
+            for (std::size_t i = 0; i < ndims && result; ++i) {
+                result &= (ranges[i].start <= ranges[i].stop);
             }
+            return result;
         }
 
-        inline void are_ranges_in_dims(std::size_t ndims, const std::size_t* dims, const ND_range* ranges, bool* result)
+        inline bool ranges_in_dims(std::size_t ndims, const std::size_t* dims, const ND_range* ranges)
         {
-            *result = true;
-            for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result &= (ranges[i].stop < dims[i]);
+            bool result{ true };
+            for (std::size_t i = 0; i < ndims && result; ++i) {
+                result &= (ranges[i].stop < dims[i]);
             }
+            return result;
         }
 
-        inline void are_dims_equal(std::size_t ndims1, const std::size_t* dims1, std::size_t ndims2, const std::size_t* dims2, bool* result)
+        inline bool equal_dims(std::size_t ndims1, const std::size_t* dims1, std::size_t ndims2, const std::size_t* dims2)
         {
-            *result = (ndims1 == ndims2);
+            bool result{ ndims1 == ndims2 };
             std::size_t ndims{ ndims1 };
-            for (std::size_t i = 0; i < ndims && *result; ++i) {
-                *result &= (dims1[i] == dims2[i]);
+            for (std::size_t i = 0; i < ndims && result; ++i) {
+                result &= (dims1[i] == dims2[i]);
             }
+            return result;
         }
 
         /*
@@ -278,13 +285,13 @@ namespace computoc {
                     std::size_t* dimsp = size_info_.data().p;
                     ranges2dims(ndims_, ranges, dimsp);
 
-                    dims2count(ndims_, dimsp, &count_);
+                    count_ = dims2count(ndims_, dimsp);
                     COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
 
                     std::size_t* stridesp = size_info_.data().p + ndims_;
                     ranges2strides(ndims_, strides, ranges, stridesp);
 
-                    ranges2offset(ndims_, offset, strides, ranges, &offset_);
+                    offset_ = ranges2offset(ndims_, offset, strides, ranges);
                 }
 
                 Header(std::size_t ndims, const std::size_t* dims)
@@ -298,7 +305,7 @@ namespace computoc {
                         dimsp[i] = dims[i];
                     }
 
-                    dims2count(ndims_, dimsp, &count_);
+                    count_ = dims2count(ndims_, dimsp);
                     COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
 
                     std::size_t* stridesp = size_info_.data().p + ndims_;
@@ -411,33 +418,20 @@ namespace computoc {
 
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
-                bool are_valid_subs{false};
-                are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
-                COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
-                std::size_t ind{ 0 };
-                subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
-                return buffsp_->data().p[ind];
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin()), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin())];
             }
 
             T& operator()(std::initializer_list<std::size_t> subs)
             {
-                bool are_valid_subs{ false };
-                are_subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin(), &are_valid_subs);
-                COMPUTOC_THROW_IF_FALSE(are_valid_subs, std::out_of_range, "out of range subscripts");
-                std::size_t ind{ 0 };
-                subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin(), &ind);
-                return buffsp_->data().p[ind];
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin()), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin())];
             }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::initializer_list<ND_range> ranges)
             {
-                bool are_legal_ranges{ false };
-                are_ranges_legal(hdr_.ndims(), ranges.begin(), &are_legal_ranges);
-                COMPUTOC_THROW_IF_FALSE(are_legal_ranges, std::invalid_argument, "ranges are not legal");
-
-                bool are_valid_ranges{ false };
-                are_ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges.begin(), &are_valid_ranges);
-                COMPUTOC_THROW_IF_FALSE(are_valid_ranges, std::out_of_range, "out of range ranges");
+                COMPUTOC_THROW_IF_FALSE(legal_ranges(hdr_.ndims(), ranges.begin()), std::invalid_argument, "ranges are not legal");
+                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges.begin()), std::out_of_range, "out of range ranges");
 
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> slice{};
                 slice.hdr_ = Header{ ranges.size(), ranges.begin(), hdr_.strides(), hdr_.offset(), true };
@@ -493,9 +487,7 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> copy_to(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& src, ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& dst)
         {
-            bool are_equal_dims{ false };
-            are_dims_equal(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims(), &are_equal_dims);
-            if (!are_equal_dims) {
+            if (!equal_dims(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims())) {
                 COMPUTOC_THROW_IF_FALSE(!dst.hdr_.is_subarray(), std::runtime_error, "unable to reallocate subarray");
                 dst.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>::Header( src.hdr_.ndims(), src.hdr_.dims() );
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(src.hdr_.count());
@@ -532,10 +524,7 @@ namespace computoc {
         {
             COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "reshaping subarray is undefined");
             COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
-
-            std::size_t new_count{ 0 };
-            dims2count(new_dims.size(), new_dims.begin(), &new_count);
-            COMPUTOC_THROW_IF_FALSE(new_count == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
+            COMPUTOC_THROW_IF_FALSE(dims2count(new_dims.size(), new_dims.begin()) == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> res{ arr };
             res.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>::Header( new_dims.size(), new_dims.begin() );
@@ -548,9 +537,7 @@ namespace computoc {
         {
             COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "resize for subarray is undefined");
 
-            bool are_equal_dims{ false };
-            are_dims_equal(arr.hdr_.ndims(), arr.hdr_.dims(), new_dims.size(), new_dims.begin(), &are_equal_dims);
-            if (are_equal_dims) {
+            if (equal_dims(arr.hdr_.ndims(), arr.hdr_.dims(), new_dims.size(), new_dims.begin())) {
                 return arr;
             }
 
@@ -558,8 +545,7 @@ namespace computoc {
                 return arr;
             }
 
-            std::size_t new_count{ 0 };
-            dims2count(new_dims.size(), new_dims.begin(), &new_count);
+            std::size_t new_count{ dims2count(new_dims.size(), new_dims.begin()) };
 
             if (new_count == arr.hdr_.count()) {
                 return reshaped(arr, new_dims);
