@@ -465,9 +465,7 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
         inline bool operator==(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& lhs, const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& rhs)
         {
-            bool are_equal_dims{ false };
-            are_dims_equal(lhs.hdr_.ndims(), lhs.hdr_.dims(), rhs.hdr_.ndims(), rhs.hdr_.dims(), &are_equal_dims);
-            if (!are_equal_dims) {
+            if (!equal_dims(lhs.hdr_.ndims(), lhs.hdr_.dims(), rhs.hdr_.ndims(), rhs.hdr_.dims())) {
                 return false;
             }
 
