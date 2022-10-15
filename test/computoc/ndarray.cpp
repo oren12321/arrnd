@@ -2,6 +2,30 @@
 
 #include <computoc/ndarray.h>
 
+
+TEST(ND_range, fields_initialization)
+{
+    computoc::ND_range r1{};
+    EXPECT_EQ(0, r1.start);
+    EXPECT_EQ(0, r1.stop);
+    EXPECT_EQ(1, r1.step);
+
+    computoc::ND_range r2{1};
+    EXPECT_EQ(1, r2.start);
+    EXPECT_EQ(1, r2.stop);
+    EXPECT_EQ(1, r2.step);
+
+    computoc::ND_range r3{1, 2};
+    EXPECT_EQ(1, r3.start);
+    EXPECT_EQ(2, r3.stop);
+    EXPECT_EQ(1, r3.step);
+
+    computoc::ND_range r4{1, 2, 3};
+    EXPECT_EQ(1, r4.start);
+    EXPECT_EQ(2, r4.stop);
+    EXPECT_EQ(3, r4.step);
+}
+
 TEST(ND_array_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_nd_array = computoc::ND_array<int>;

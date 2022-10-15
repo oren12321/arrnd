@@ -51,7 +51,7 @@ namespace computoc {
         */
 
         struct ND_range {
-            std::size_t start{ 0 }, stop{ 0 }, step{ 1 };
+            std::size_t start{ 0 }, stop{ start }, step{ 1 };
         };
 
         /*
