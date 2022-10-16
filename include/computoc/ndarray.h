@@ -393,17 +393,25 @@ namespace computoc {
 
             virtual ~ND_array() = default;
 
+            ND_array(std::size_t ndims, const std::size_t* dims, const T* data = nullptr)
+                : hdr_(ndims, dims), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count(), data))
+            {
+            }
             ND_array(std::initializer_list<std::size_t> dims, const T* data = nullptr)
-                : hdr_(dims.size(), dims.begin()), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count(), data))
+                : ND_array(dims.size(), dims.begin(), data)
             {
             }
 
-            ND_array(std::initializer_list<std::size_t> dims, const T& value)
-                : hdr_(dims.size(), dims.begin()), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count()))
+            ND_array(std::size_t ndims, const std::size_t* dims, const T& value)
+                : hdr_(ndims, dims), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count()))
             {
                 for (std::size_t i = 0; i < buffsp_->data().s; ++i) {
                     buffsp_->data().p[i] = value;
                 }
+            }
+            ND_array(std::initializer_list<std::size_t> dims, const T& value)
+                : ND_array(dims.size(), dims.begin(), value)
+            {
             }
 
             const Header& header() const
@@ -416,16 +424,26 @@ namespace computoc {
                 return (buffsp_ ? buffsp_->data().p : nullptr);
             }
 
+            const T& operator()(std::size_t nsubs, const std::size_t* subs) const
+            {
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+            }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin()), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin())];
+                return (*this)(subs.size(), subs.begin());
             }
 
+            T& operator()(std::size_t nsubs, const std::size_t* subs)
+            {
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+            }
             T& operator()(std::initializer_list<std::size_t> subs)
             {
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs.begin()), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs.begin())];
+                return (*this)(subs.size(), subs.begin());
             }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::initializer_list<ND_range> ranges)
