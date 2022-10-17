@@ -199,13 +199,17 @@ TEST(ND_array_test, reshape)
     Integer_nd_array rarr2{ computoc::reshaped(arr1, {3, 1, 2}) };
     EXPECT_EQ(arr3, rarr2);
 
-    EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
+    EXPECT_EQ(computoc::reshaped(Integer_nd_array{}, {}), Integer_nd_array{});
+    EXPECT_EQ(computoc::reshaped(Integer_nd_array{}, {2, 3}), Integer_nd_array{});
+
     EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
 }
 
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
+
+    EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{});
 
     const int data1[] = {
         1, 2,
@@ -296,7 +300,6 @@ TEST(ND_array_test, can_return_slice)
     EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1, 2} }), sarr4);
 }
 
-/*
 TEST(ND_array_test, copy_by_reference)
 {
     using Integer_nd_array = computoc::ND_array<int>;
@@ -305,16 +308,16 @@ TEST(ND_array_test, copy_by_reference)
         1, 2,
         3, 4,
         5, 6 };
-    computoc::Dims dims{ 1, 2, 3 };
-    Integer_nd_array arr{ dims, data };
+    const std::size_t dims[]{ 3, 1, 2 };
+    Integer_nd_array arr{ 3, dims, data };
 
     Integer_nd_array carr1{ arr };
-    carr1({ 0, 0, 2 }) = 0;
+    carr1({ 2, 0, 0 }) = 0;
     const int rdata1[] = {
         1, 2,
         3, 4,
         0, 6 };
-    Integer_nd_array rarr1{ dims, rdata1 };
+    Integer_nd_array rarr1{ 3, dims, rdata1 };
     EXPECT_EQ(rarr1, carr1);
 
     Integer_nd_array carr2{};
@@ -324,9 +327,9 @@ TEST(ND_array_test, copy_by_reference)
         0, 2,
         3, 4,
         0, 6 };
-    Integer_nd_array rarr2{ dims, rdata2 };
+    Integer_nd_array rarr2{ 3, dims, rdata2 };
     EXPECT_EQ(rarr2, carr2);
-    EXPECT_THROW(carr2({ 0, 0, 0 }, { 1, 1, 1 }) = carr1, std::runtime_error);
+    EXPECT_THROW(carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1, std::runtime_error);
 }
 
 TEST(ND_array_test, move_by_reference)
@@ -337,19 +340,19 @@ TEST(ND_array_test, move_by_reference)
         1, 2,
         3, 4,
         5, 6 };
-    computoc::Dims dims{ 1, 2, 3 };
-    Integer_nd_array sarr{ dims, data };
+    const std::size_t dims[]{ 3, 1, 2 };
+    Integer_nd_array sarr{ 3, dims, data };
 
-    Integer_nd_array arr{ dims, data };
+    Integer_nd_array arr{ 3, dims, data };
     Integer_nd_array carr1{ std::move(arr) };
     EXPECT_EQ(sarr, carr1);
-    EXPECT_TRUE(is_empty(arr.header().dims));
+    EXPECT_TRUE(is_empty(arr));
 
     Integer_nd_array carr2{};
     carr2 = std::move(carr1);
     EXPECT_EQ(sarr, carr2);
-    EXPECT_TRUE(is_empty(carr1.header().dims));
-    EXPECT_THROW(carr2({ 0, 0, 0 }, { 1, 1, 1 }) = std::move(sarr), std::runtime_error);
+    EXPECT_TRUE(is_empty(carr1));
+    EXPECT_THROW(carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr), std::runtime_error);
 }
 
 TEST(ND_array_test, copy_of)
@@ -364,18 +367,18 @@ TEST(ND_array_test, copy_of)
         1, 2,
         3, 4,
         5, 6 };
-    computoc::Dims dims{ 1, 2, 3 };
-    Integer_nd_array sarr{ dims, data };
+    const std::size_t dims[]{ 3, 1, 2 };
+    Integer_nd_array sarr{ 3, dims, data };
 
     Integer_nd_array carr{ computoc::copy_of(sarr) };
     EXPECT_EQ(carr, sarr);
     carr({ 0, 0 }) = 0;
     EXPECT_NE(carr, sarr);
 
-    Integer_nd_array csubarr{ computoc::copy_of(sarr({0, 0, 0}, {1, 1, 1})) };
-    EXPECT_EQ(sarr({ 0, 0, 0 }, { 1, 1, 1 }), csubarr);
+    Integer_nd_array csubarr{ computoc::copy_of(sarr({{0, 0}, {0, 0}, {0, 0}})) };
+    EXPECT_EQ(sarr({ {0, 0}, {0, 0}, {0, 0} }), csubarr);
     csubarr({ 0, 0 }) = 5;
-    EXPECT_NE(sarr({ 0, 0, 0 }, { 1, 1, 1 }), csubarr);
+    EXPECT_NE(sarr({ {0, 0}, {0, 0}, {0, 0} }), csubarr);
 }
 
 TEST(ND_array_test, copy_to)
@@ -392,15 +395,13 @@ TEST(ND_array_test, copy_to)
             1, 2,
             3, 4,
             5, 6 };
-        computoc::Dims dims1{ 1, 2, 3 };
-        Integer_nd_array arr1{ dims1, data1 };
+        Integer_nd_array arr1{ {3, 1, 2}, data1 };
 
         const int data2[] = {
             2, 4,
             6, 8,
             10, 12 };
-        computoc::Dims dims2{ 1, 2, 3 };
-        Integer_nd_array arr2{ dims2, data2 };
+        Integer_nd_array arr2{ {3, 1, 2}, data2 };
         EXPECT_NE(arr1, arr2);
         computoc::copy_to(arr2, arr1);
         EXPECT_EQ(arr1, arr2);
@@ -409,12 +410,11 @@ TEST(ND_array_test, copy_to)
             10, 12,
             6, 8,
             10, 12 };
-        computoc::Dims dims3{ 1, 2, 3 };
-        Integer_nd_array arr3{ dims3, data3 };
-        computoc::copy_to(arr2({ 0, 0, 2 }, { 1, 2, 1 }), arr2({ 0, 0, 0 }, { 1, 2, 1 }));
+        Integer_nd_array arr3{ {3, 1, 2}, data3 };
+        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
 
-        EXPECT_THROW(computoc::copy_to(arr2, arr2({ 0, 0, 0 }, { 1, 2, 1 })), std::runtime_error);
+        EXPECT_THROW(computoc::copy_to(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} })), std::runtime_error);
     }
 
     { // forward cases - copy from other arrrix to created arrrix
@@ -427,15 +427,13 @@ TEST(ND_array_test, copy_to)
             1, 2,
             3, 4,
             5, 6 };
-        computoc::Dims dims1{ 1, 2, 3 };
-        Integer_nd_array arr1{ dims1, data1 };
+        Integer_nd_array arr1{ {3, 1, 2}, data1 };
 
         const int data2[] = {
             2, 4,
             6, 8,
             10, 12 };
-        computoc::Dims dims2{ 1, 2, 3 };
-        Integer_nd_array arr2{ dims2, data2 };
+        Integer_nd_array arr2{ {3, 1, 2}, data2 };
         EXPECT_NE(arr1, arr2);
         computoc::copy_to(arr2, arr1);
         EXPECT_EQ(arr1, arr2);
@@ -444,14 +442,13 @@ TEST(ND_array_test, copy_to)
             10, 12,
             6, 8,
             10, 12 };
-        computoc::Dims dims3{ 1, 2, 3 };
-        Integer_nd_array arr3{ dims3, data3 };
-        computoc::copy_to(arr2({ 0, 0, 2 }, { 1, 2, 1 }), arr2({ 0, 0, 0 }, { 1, 2, 1 }));
+        Integer_nd_array arr3{ {3, 1, 2}, data3 };
+        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
-        EXPECT_THROW(computoc::copy_to(arr2({ 0, 0, 2 }, { 1, 2, 1 }), arr2({ 0, 0, 0 }, { 1, 2, 2 })), std::runtime_error);
+        EXPECT_THROW(computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} })), std::runtime_error);
 
-        computoc::copy_to(arr3({ 0, 0, 0 }, { 1, 2, 1 }), arr2);
-        EXPECT_EQ(arr3({ 0, 0, 0 }, { 1, 2, 1 }), arr2);
+        computoc::copy_to(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
+        EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
     }
 }
 
@@ -460,39 +457,34 @@ TEST(ND_array_test, resize)
     using Integer_nd_array = computoc::ND_array<int>;
 
     const int data1[] = { 1, 2, 3, 4, 5, 6 };
-    computoc::Dims dims1{ 1, 6 };
-    Integer_nd_array arr1{ dims1, data1 };
+    Integer_nd_array arr1{ {6}, data1 };
 
     const int data2[] = {
         1, 2,
         3, 4,
         5, 6 };
-    computoc::Dims dims2{ 1, 2, 3 };
-    Integer_nd_array arr2{ dims2, data2 };
+    Integer_nd_array arr2{ {3, 1, 2}, data2 };
 
-    arr1 = computoc::resized(arr1, { 1, 2, 3 });
+    arr1 = computoc::resized(arr1, { 3, 1, 2 });
     EXPECT_EQ(arr2, arr1);
 
     const int data3[] = { 1, 2 };
-    computoc::Dims dims3{ 1, 2 };
-    Integer_nd_array arr3{ dims3, data3 };
+    Integer_nd_array arr3{ {2}, data3 };
 
-    arr1 = computoc::resized(arr1, { 1, 2 });
+    arr1 = computoc::resized(arr1, { 2 });
     EXPECT_EQ(arr3, arr1);
 
     const int data4[] = { 1, 2, 3, 4 };
-    computoc::Dims dims4{ 1, 4 };
-    Integer_nd_array arr4{ dims4, data4 };
+    Integer_nd_array arr4{ {4}, data4 };
 
-    arr1 = computoc::resized(arr1, { 1, 4 });
+    arr1 = computoc::resized(arr1, { 4 });
     EXPECT_NE(arr4, arr1);
     EXPECT_EQ(arr4({ 0, 0 }), arr1({ 0, 0 }));
     EXPECT_EQ(arr4({ 0, 1 }), arr1({ 0, 1 }));
 
     Integer_nd_array arr5{ computoc::resized(arr1, {1, 2}) };
-    EXPECT_NE(arr1.header().dims, arr5.header().dims);
+    //EXPECT_NE(arr1.header().dims, arr5.header().dims);
     EXPECT_EQ(arr3, arr5);
 
-    EXPECT_THROW(computoc::resized(arr1({ 0, 0, 0 }, { 1, 1, 1 }), {}), std::runtime_error);
+    EXPECT_THROW(computoc::resized(arr1({ {0, 0} }), {}), std::runtime_error);
 }
-*/
