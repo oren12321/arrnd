@@ -123,9 +123,9 @@ namespace computoc {
             }
         }
 
-        inline void ranges2dims(std::size_t ndims, const ND_range* ranges, std::size_t* dims)
+        inline void ranges2dims(std::size_t nranges, std::size_t ndims, const ND_range* ranges, std::size_t* dims)
         {
-            for (std::size_t i = 0; i < ndims; ++i) {
+            for (std::size_t i = 0; i < nranges; ++i) {
                 dims[i] = static_cast<std::size_t>(std::ceil((ranges[i].stop - ranges[i].start + 1.0) / ranges[i].step));
             }
         }
@@ -139,11 +139,11 @@ namespace computoc {
             return offset;
         }
 
-        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const std::size_t* subs)
+        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, std::size_t nsubs, const std::size_t* subs)
         {
             std::size_t ind{ offset };
-            for (std::size_t i = 0; i < ndims; ++i) {
-                ind += strides[i] * subs[i];
+            for (std::size_t i = ndims - nsubs; i < ndims; ++i) {
+                ind += strides[i] * subs[i - (ndims - nsubs)];
             }
             return ind;
         }
@@ -157,19 +157,19 @@ namespace computoc {
             return count;
         }
 
-        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, const std::size_t* subs)
+        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, std::size_t nsubs, const std::size_t* subs)
         {
             bool result{ true };
-            for (std::size_t i = 0; i < ndims && result; ++i) {
-                result &= (subs[i] < dims[i]);
+            for (std::size_t i = ndims - nsubs; i < ndims && result; ++i) {
+                result &= (subs[i - (ndims - nsubs)] < dims[i]);
             }
             return result;
         }
 
-        inline bool legal_ranges(std::size_t ndims, const ND_range* ranges)
+        inline bool legal_ranges(std::size_t nranges, const ND_range* ranges)
         {
             bool result{ true };
-            for (std::size_t i = 0; i < ndims && result; ++i) {
+            for (std::size_t i = 0; i < nranges && result; ++i) {
                 result &= (ranges[i].start <= ranges[i].stop);
             }
             return result;
@@ -192,6 +192,23 @@ namespace computoc {
                 result &= (dims1[i] == dims2[i]);
             }
             return result;
+        }
+
+        inline std::size_t ranges2ndims(std::size_t nranges, const ND_range* ranges)
+        {
+            if (nranges <= 2) {
+                return nranges == 0 ? 0 : 2;
+            }
+
+            std::size_t ndims{ nranges };
+            bool reduction_required{ true };
+            for (std::size_t i = 0; i < nranges - 2 && reduction_required; ++i) {
+                reduction_required = (ranges[i].start == ranges[i].stop);
+                if (reduction_required) {
+                    ndims--;
+                }
+            }
+            return ndims;
         }
 
         /*
@@ -276,33 +293,42 @@ namespace computoc {
             public:
                 Header() = default;
 
-                Header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
-                    : ndims_(ndims), size_info_(ndims* (3 * (sizeof(std::size_t) + sizeof(std::size_t)))), is_subarray_(is_subarray)
+                Header(std::size_t nranges, const ND_range* ranges, std::size_t ndims, const std::size_t* dims, const std::size_t* strides, std::size_t offset, bool is_subarray)
+                    : ndims_(ranges2ndims(nranges, ranges)), size_info_(ndims_* (3 * (sizeof(std::size_t) + sizeof(std::size_t)))), is_subarray_(is_subarray)
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                     COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
 
+                    const ND_range* rangesp = ranges + (ndims_ >= nranges ? 0 : nranges - ndims_);
+
                     std::size_t* dimsp = size_info_.data().p;
-                    ranges2dims(ndims_, ranges, dimsp);
+                    ranges2dims(nranges, ndims_, rangesp, dimsp);
+                    // Complete dimensions
+                    for (std::size_t i = nranges; i < ndims_; ++i) {
+                        dimsp[i] = dims[i];
+                    }
 
                     count_ = dims2count(ndims_, dimsp);
                     COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
 
                     std::size_t* stridesp = size_info_.data().p + ndims_;
-                    ranges2strides(ndims_, strides, ranges, stridesp);
+                    ranges2strides(ndims_, strides, rangesp, stridesp);
 
-                    offset_ = ranges2offset(ndims_, offset, strides, ranges);
+                    offset_ = ranges2offset(ndims_, offset, strides, rangesp);
                 }
 
                 Header(std::size_t ndims, const std::size_t* dims)
-                    : ndims_(ndims), size_info_(ndims* (2 * sizeof(std::size_t) + sizeof(ND_range)))
+                    : ndims_(ndims == 1 ? 2 : ndims), size_info_(ndims_* (2 * sizeof(std::size_t) + sizeof(ND_range)))
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                     COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
 
                     std::size_t* dimsp = size_info_.data().p;
-                    for (std::size_t i = 0; i < ndims_; ++i) {
-                        dimsp[i] = dims[i];
+                    for (std::size_t i = 0; i < ndims_ - ndims; ++i) {
+                        dimsp[i] = 1;
+                    }
+                    for (std::size_t i = ndims_ - ndims; i < ndims_; ++i) {
+                        dimsp[i] = dims[i - (ndims_ - ndims)];
                     }
 
                     count_ = dims2count(ndims_, dimsp);
@@ -426,9 +452,9 @@ namespace computoc {
 
             const T& operator()(std::size_t nsubs, const std::size_t* subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
             }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
@@ -437,25 +463,30 @@ namespace computoc {
 
             T& operator()(std::size_t nsubs, const std::size_t* subs)
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
             }
             T& operator()(std::initializer_list<std::size_t> subs)
             {
                 return (*this)(subs.size(), subs.begin());
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::initializer_list<ND_range> ranges)
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::size_t nranges, const ND_range* ranges)
             {
-                COMPUTOC_THROW_IF_FALSE(legal_ranges(hdr_.ndims(), ranges.begin()), std::invalid_argument, "ranges are not legal");
-                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges.begin()), std::out_of_range, "out of range ranges");
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nranges, std::invalid_argument, "number of ranges different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(legal_ranges(nranges, ranges), std::invalid_argument, "ranges are not legal");
+                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(nranges, hdr_.dims(), ranges), std::out_of_range, "out of range ranges");
 
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> slice{};
-                slice.hdr_ = Header{ ranges.size(), ranges.begin(), hdr_.strides(), hdr_.offset(), true };
+                slice.hdr_ = Header{ nranges, ranges, hdr_.ndims(), hdr_.dims(), hdr_.strides(), hdr_.offset(), true };
                 slice.buffsp_ = buffsp_;
 
                 return slice;
+            }
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> operator()(std::initializer_list<ND_range> ranges)
+            {
+                return (*this)(ranges.size(), ranges.begin());
             }
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
@@ -470,7 +501,7 @@ namespace computoc {
             friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> copy_of(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr);
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
-            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> reshaped(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<std::size_t> new_dims);
+            friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> reshaped(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::size_t new_ndims, const std::size_t* new_dims);
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o>
             friend ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o> resized(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o>& arr, std::initializer_list<std::size_t> new_dims);
@@ -491,8 +522,11 @@ namespace computoc {
                 return false;
             }
 
+            const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> rlhs{ reshaped(lhs, {lhs.hdr_.count()}) };
+            const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> rrhs{ reshaped(rhs, {rhs.hdr_.count()}) };
+
             for (std::size_t i = 0; i < lhs.hdr_.count(); ++i) {
-                if (!is_equal(lhs.buffsp_->data().p[i], rhs.buffsp_->data().p[i])) {
+                if (!is_equal(rlhs({ i }), rrhs({ i }))) {
                     return false;
                 }
             }
@@ -536,16 +570,20 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::size_t new_ndims, const std::size_t* new_dims)
         {
-            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "reshaping subarray is undefined");
             COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
-            COMPUTOC_THROW_IF_FALSE(dims2count(new_dims.size(), new_dims.begin()) == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
+            COMPUTOC_THROW_IF_FALSE(dims2count(new_ndims, new_dims) == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> res{ arr };
-            res.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>::Header( new_dims.size(), new_dims.begin() );
+            res.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>::Header( new_ndims, new_dims );
 
             return res;
+        }
+        template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        {
+            return reshaped(arr, new_dims.size(), new_dims.begin());
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer>
