@@ -516,16 +516,21 @@ namespace computoc {
                 return (*this)(subs.size(), subs.begin());
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges)
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::size_t nranges, const ND_range* ranges)
             {
-                COMPUTOC_THROW_IF_FALSE(legal_ranges(hdr_.ndims(), ranges.begin()), std::invalid_argument, "ranges are not legal");
-                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges.begin()), std::out_of_range, "out of range ranges");
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nranges, std::invalid_argument, "number of ranges different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(legal_ranges(hdr_.ndims(), ranges), std::invalid_argument, "ranges are not legal");
+                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.ndims(), hdr_.dims(), ranges), std::out_of_range, "out of range ranges");
 
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> slice{};
-                slice.hdr_ = Header{ ranges.size(), ranges.begin(), hdr_.strides(), hdr_.offset(), true };
+                slice.hdr_ = Header{ nranges, ranges, hdr_.strides(), hdr_.offset(), true };
                 slice.buffsp_ = buffsp_;
 
                 return slice;
+            }
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges)
+            {
+                return (*this)(ranges.size(), ranges.begin());
             }
 
             template <typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
@@ -561,6 +566,11 @@ namespace computoc {
                 return false;
             }
 
+            // empty arrays - equal dimensions and zero count for both input arrays
+            if (lhs.hdr_.count() == 0) {
+                return true;
+            }
+
             ND_subscriptor<Internal_subscriptor_buffer> ndstor{ lhs.hdr_.ndims(), lhs.hdr_.dims() };
 
             while (ndstor) {
@@ -577,14 +587,23 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> copy_to(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& src, ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& dst)
         {
+            if (is_empty(src)) {
+                dst = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
+                return dst;
+            }
+
             if (!equal_dims(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims())) {
                 COMPUTOC_THROW_IF_FALSE(!dst.hdr_.is_subarray(), std::runtime_error, "unable to reallocate subarray");
                 dst.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header( src.hdr_.ndims(), src.hdr_.dims() );
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(src.hdr_.count());
             }
 
-            for (std::size_t i = 0; i < src.hdr_.count(); ++i) {
-                dst.buffsp_->data.p[i] = src.buffsp_->data.p[i];
+            ND_subscriptor<Internal_subscriptor_buffer> ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
+
+            while (ndstor) {
+                const std::size_t* subs{ ndstor.subs() };
+                dst(ndstor.ndims(), subs) = src(ndstor.ndims(), subs);
+                ndstor.next();
             }
 
             return dst;
@@ -599,11 +618,21 @@ namespace computoc {
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> copy_of(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr)
         {
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone{};
+
+            if (is_empty(arr)) {
+                return clone;
+            }
+
             clone.hdr_ = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header( arr.hdr_.ndims(), arr.hdr_.dims() );
             if (arr.buffsp_) {
                 clone.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(arr.hdr_.count());
-                for (std::size_t i = 0; i < arr.hdr_.count(); ++i) {
-                    clone.buffsp_->data.p[i] = arr.buffsp_->data.p[i];
+
+                ND_subscriptor<Internal_subscriptor_buffer> ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
+
+                while (ndstor) {
+                    const std::size_t* subs{ ndstor.subs() };
+                    clone(ndstor.ndims(), subs) = arr(ndstor.ndims(), subs);
+                    ndstor.next();
                 }
             }
             return clone;
