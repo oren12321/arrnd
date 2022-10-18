@@ -106,7 +106,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
         EXPECT_EQ(0, arr.data()[i]);
     }
 }
-
+/*
 TEST(ND_array_test, have_read_write_access_to_its_cells)
 {
     using Integer_nd_array = computoc::ND_array<int>;
@@ -116,91 +116,59 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         3, 4,
         5, 6 };
 
-    Integer_nd_array arr1d{ { 6 }, data };
-    const std::size_t* dims1d{ arr1d.header().dims() };
-    for (std::size_t i = 0; i < dims1d[1]; ++i) {
+    computoc::Dims dims1d{ 6, 1 };
+    Integer_nd_array arr1d{ dims1d, data };
+    for (std::size_t i = 0; i < dims1d.n; ++i) {
         EXPECT_EQ(arr1d({ i }), data[i]);
     }
-    for (std::size_t i = 0; i < dims1d[1]; ++i) {
+    for (std::size_t i = 0; i < dims1d.n; ++i) {
         arr1d({ i }) = 0;
         EXPECT_EQ(arr1d({ i }), 0);
     }
 
-    EXPECT_THROW(arr1d({ dims1d[1] }), std::out_of_range);
-    EXPECT_THROW(arr1d({ 0, 0, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr1d({ dims1d.n, 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr1d({ 0, dims1d.m, 0 }), std::out_of_range);
+    EXPECT_THROW(arr1d({ 0, 0, 1 }), std::out_of_range);
 
-    Integer_nd_array arr2d{ { 3, 2 }, data };
-    const std::size_t* dims2d{ arr2d.header().dims() };
-    for (std::size_t i = 0; i < dims2d[0]; ++i) {
-        for (std::size_t j = 0; j < dims2d[1]; ++j) {
-            EXPECT_EQ(arr2d({ i, j }), data[i * dims2d[1] + j]);
+    computoc::Dims dims2d{ 3, 2 };
+    Integer_nd_array arr2d{ dims2d, data };
+    for (std::size_t i = 0; i < dims2d.n; ++i) {
+        for (std::size_t j = 0; j < dims2d.m; ++j) {
+            EXPECT_EQ(arr2d({ i, j }), data[i * dims2d.m + j]);
         }
     }
-    for (std::size_t i = 0; i < dims2d[0]; ++i) {
-        for (std::size_t j = 0; j < dims2d[1]; ++j) {
+    for (std::size_t i = 0; i < dims2d.n; ++i) {
+        for (std::size_t j = 0; j < dims2d.m; ++j) {
             arr2d({ i, j }) = 0;
             EXPECT_EQ(arr2d({ i, j }), 0);
         }
     }
 
-    EXPECT_THROW(arr2d({ dims2d[0], 0 }), std::out_of_range);
-    EXPECT_THROW(arr2d({ 0, dims2d[1] }), std::out_of_range);
-    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr2d({ dims2d.n, 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr2d({ 0, dims2d.m, 0 }), std::out_of_range);
+    EXPECT_THROW(arr2d({ 0, 0, 1 }), std::out_of_range);
 
-    Integer_nd_array arr3d{ {3, 1, 2}, data };
-    const std::size_t* dims3d{ arr3d.header().dims() };
-    for (std::size_t k = 0; k < dims3d[0]; ++k) {
-        for (std::size_t i = 0; i < dims3d[1]; ++i) {
-            for (std::size_t j = 0; j < dims3d[2]; ++j) {
-                EXPECT_EQ(arr3d({ k, i, j }), data[k * (dims3d[1] * dims3d[2]) + i * dims3d[2] + j]);
+    computoc::Dims dims3d{ 1, 2, 3 };
+    Integer_nd_array arr3d{ dims3d, data };
+    for (std::size_t k = 0; k < dims3d.p; ++k) {
+        for (std::size_t i = 0; i < dims3d.n; ++i) {
+            for (std::size_t j = 0; j < dims3d.m; ++j) {
+                EXPECT_EQ(arr3d({ i, j, k }), data[k * (dims3d.n * dims3d.m) + i * dims3d.m + j]);
             }
         }
     }
-    for (std::size_t k = 0; k < dims3d[0]; ++k) {
-        for (std::size_t i = 0; i < dims3d[1]; ++i) {
-            for (std::size_t j = 0; j < dims3d[2]; ++j) {
-                arr3d({ k, i, j }) = 0;
-                EXPECT_EQ(arr3d({ k, i, j }), 0);
+    for (std::size_t k = 0; k < dims3d.p; ++k) {
+        for (std::size_t i = 0; i < dims3d.n; ++i) {
+            for (std::size_t j = 0; j < dims3d.m; ++j) {
+                arr3d({ i, j, k }) = 0;
+                EXPECT_EQ(arr3d({ i, j, k }), 0);
             }
         }
     }
 
-    EXPECT_THROW(arr3d({ dims3d[0], 0, 0 }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, dims3d[1], 0 }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, 0, dims3d[2] }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::invalid_argument);
-}
-
-TEST(ND_array_test, reshape)
-{
-    using Integer_nd_array = computoc::ND_array<int>;
-
-    const int data1[] = {
-        1, 2,
-        3, 4,
-        5, 6 };
-    std::size_t dims1[]{ 3, 1, 2 };
-    Integer_nd_array arr1{ 3, dims1, data1 };
-
-    const int data2[] = { 1, 2, 3, 4, 5, 6 };
-    std::size_t dims2[]{ 6 };
-    Integer_nd_array arr2{ 1, dims2, data2 };
-
-    Integer_nd_array rarr1{ computoc::reshaped(arr1, {1, 6}) };
-    EXPECT_EQ(arr2, rarr1);
-
-    const int data3[] = {
-        1, 2,
-        3, 4,
-        5, 6 };
-    std::size_t dims3[]{ 3, 1, 2 };
-    Integer_nd_array arr3{ 3, dims3, data3 };
-
-    Integer_nd_array rarr2{ computoc::reshaped(arr1, {3, 1, 2}) };
-    EXPECT_EQ(arr3, rarr2);
-
-    EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
-    EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
+    EXPECT_THROW(arr3d({ dims3d.n, 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr3d({ 0, dims3d.m, 0 }), std::out_of_range);
+    EXPECT_THROW(arr3d({ 0, 0, dims3d.p }), std::out_of_range);
 }
 
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
@@ -211,14 +179,14 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
         1, 2,
         3, 4,
         5, 6 };
-    std::size_t dims1[]{ 3, 1, 2 };
-    Integer_nd_array arr1{ 3, dims1, data1 };
-    Integer_nd_array arr2{ 3, dims1, data1 };
+    computoc::Dims dims1{ 1, 2, 3 };
+    Integer_nd_array arr1{ dims1, data1 };
+    Integer_nd_array arr2{ dims1, data1 };
 
     EXPECT_EQ(arr1, arr2);
 
-    std::size_t dims2[]{ 3, 2 };
-    Integer_nd_array arr3{ 2, dims2, data1 };
+    computoc::Dims dims2{ 3, 2 };
+    Integer_nd_array arr3{ dims2, data1 };
 
     EXPECT_NE(arr1, arr3);
 
@@ -226,8 +194,8 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
         1, 2,
         3, 4,
         5, 5 };
-    Integer_nd_array arr4{ 3, dims1, data2 };
-    Integer_nd_array arr5{ 2, dims2, data2 };
+    Integer_nd_array arr4{ dims1, data2 };
+    Integer_nd_array arr5{ dims2, data2 };
 
     EXPECT_NE(arr1, arr4);
     EXPECT_NE(arr1, arr5);
@@ -242,61 +210,59 @@ TEST(ND_array_test, can_return_slice)
     3, 4,
     5, 6 };
 
-    std::size_t dims1[]{ 6 };
-    Integer_nd_array arr1{ 1, dims1, data };
+    computoc::Dims dims1{ 6, 1 };
+    Integer_nd_array arr1{ dims1, data };
 
     const int sdata1[] = { 1, 2, 3 };
-    std::size_t sdims1[]{ 3 };
-    Integer_nd_array sarr1{ 1, sdims1, sdata1 };
-    EXPECT_EQ(arr1({ {}, {0, sdims1[0] - 1} }), sarr1);
-    EXPECT_EQ(arr1({ {0, 0} }), arr1);
+    computoc::Dims sdims1{ 3, 1 };
+    Integer_nd_array sarr1{ sdims1, sdata1 };
+    EXPECT_EQ(arr1({ 0, 0 }, sarr1.header().dims), sarr1);
 
-    EXPECT_THROW(arr1({ {0, dims1[0]} }), std::out_of_range);
-    EXPECT_THROW(arr1({ {sdims1[0] - 1, 0} }), std::invalid_argument);
+    EXPECT_THROW(arr1({ 0, 0 }, { 0, dims1.m }), std::invalid_argument);
+    EXPECT_THROW(arr1({ 0, 0 }, { dims1.n, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr1({ 0, 0 }, { 1, dims1.m + 1 }), std::out_of_range);
+    EXPECT_THROW(arr1({ 0, 0 }, { dims1.n + 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr1({ dims1.n, 0 }, { 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr1({ 0, dims1.m }, { 1, 1 }), std::out_of_range);
 
-    std::size_t dims2[]{ 3, 2 };
-    Integer_nd_array arr2{ 2, dims2, data };
+    computoc::Dims dims2{ 3, 2 };
+    Integer_nd_array arr2{ dims2, data };
 
     const int sdata2[] = {
         1, 2,
         3, 4 };
-    std::size_t sdims2[]{ 2, 2 };
-    Integer_nd_array sarr2{ 2, sdims2, sdata2 };
-    EXPECT_EQ(arr2({ {0, sdims2[0] - 1}, {0, sdims2[1] - 1} }), sarr2);
+    computoc::Dims sdims2{ 2, 2 };
+    Integer_nd_array sarr2{ sdims2, sdata2 };
+    EXPECT_EQ(arr2({ 0, 0 }, sarr2.header().dims), sarr2);
 
-    EXPECT_THROW(arr2({ { 0, 0 }, { 0, 0 }, {0, 0} }), std::invalid_argument);
-    EXPECT_THROW(arr2({ {0, dims2[0]}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr2({ {0, 0}, {0, dims2[1]} }), std::out_of_range);
-    EXPECT_THROW(arr2({ {sdims2[0] - 1, 0}, {0, sdims2[1] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr2({ {0,sdims2[0] - 1}, {sdims2[1] - 1, 0} }), std::invalid_argument);
+    EXPECT_THROW(arr2({ 0, 0 }, { 0, dims2.m }), std::invalid_argument);
+    EXPECT_THROW(arr2({ 0, 0 }, { dims2.n, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr2({ 0, 0 }, { 1, dims2.m + 1 }), std::out_of_range);
+    EXPECT_THROW(arr2({ 0, 0 }, { dims2.n + 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr2({ dims2.n, 0 }, { 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr2({ 0, dims2.m }, { 1, 1 }), std::out_of_range);
 
-    std::size_t dims3[]{ 3, 1, 2 };
-    Integer_nd_array arr3{ 3, dims3, data };
+    computoc::Dims dims3{ 1, 2, 3 };
+    Integer_nd_array arr3{ dims3, data };
 
     const int sdata3[] = {
         1, 2,
         3, 4 };
-    std::size_t sdims3[]{ 2, 1, 2 };
-    Integer_nd_array sarr3{ 3, sdims3, sdata3 };
-    EXPECT_EQ(arr3({ {0, sdims3[0] - 1}, {0, sdims3[1] - 1}, {0, sdims3[2] - 1} }), sarr3);
+    computoc::Dims sdims3{ 1, 2, 2 };
+    Integer_nd_array sarr3{ sdims3, sdata3 };
+    EXPECT_EQ(arr3({ 0, 0 }, sarr3.header().dims), sarr3);
 
-    EXPECT_THROW(arr3({ { 0, 0 }, { 0, 0 }, {0, 0}, {0, 0} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0, dims3[0]}, {0, 0}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {0, 0}, {0, dims3[1]}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {0, 0}, {0, 0}, {0, dims3[2]} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {sdims3[0] - 1, 0}, {0, sdims3[1] - 1}, {0, sdims3[2] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0,sdims3[0] - 1}, {1, 0}, {0, sdims3[2] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0,sdims3[0] - 1}, {0, sdims3[1] - 1}, {sdims3[2] - 1, 0} }), std::invalid_argument);
-
-    // Complex slicing - dimensions reduction and element step bigger than one.
-    const int sdata4[] = {
-        1 };
-    std::size_t sdims4[]{ 1 };
-    Integer_nd_array sarr4{ 1, sdims4, sdata4 };
-    EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1, 2} }), sarr4);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { 0, dims3.m, dims3.p }), std::invalid_argument);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { dims3.n, 0, dims3.p }), std::invalid_argument);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { dims3.n, dims3.m, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { 1, dims3.m + 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { dims3.n + 1, 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr3({ 0, 0, 0 }, { 1, 1, dims3.p + 1 }), std::out_of_range);
+    EXPECT_THROW(arr3({ dims3.n, 0, 0 }, { 1, 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr3({ 0, dims3.m, 0 }, { 1, 1, 1 }), std::out_of_range);
+    EXPECT_THROW(arr3({ 0, 0, dims3.p }, { 1, 1, 1 }), std::out_of_range);
 }
 
-/*
 TEST(ND_array_test, copy_by_reference)
 {
     using Integer_nd_array = computoc::ND_array<int>;
@@ -453,6 +419,39 @@ TEST(ND_array_test, copy_to)
         computoc::copy_to(arr3({ 0, 0, 0 }, { 1, 2, 1 }), arr2);
         EXPECT_EQ(arr3({ 0, 0, 0 }, { 1, 2, 1 }), arr2);
     }
+}
+
+TEST(ND_array_test, reshape)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::Dims dims1{ 1, 2, 3 };
+    Integer_nd_array arr1{ dims1, data1 };
+
+    const int data2[] = { 1, 2, 3, 4, 5, 6 };
+    computoc::Dims dims2{ 1, 6 };
+    Integer_nd_array arr2{ dims2, data2 };
+
+    Integer_nd_array rarr1{ computoc::reshaped(arr1, {1, 6}) };
+    EXPECT_EQ(arr2, rarr1);
+
+    const int data3[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::Dims dims3{ 1, 2, 3 };
+    Integer_nd_array arr3{ dims3, data3 };
+
+    Integer_nd_array rarr2{ computoc::reshaped(arr1, {1, 2, 3}) };
+    EXPECT_EQ(arr3, rarr2);
+
+    EXPECT_THROW(computoc::reshaped(arr2({ 0, 0 }, { 1, 2 }), {}), std::runtime_error);
+    EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
+    EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
 }
 
 TEST(ND_array_test, resize)
