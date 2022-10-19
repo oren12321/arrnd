@@ -347,7 +347,7 @@ namespace computoc {
                 Header() = default;
 
                 Header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
-                    : ndims_(ndims), size_info_(ndims* (3 * (sizeof(std::size_t) + sizeof(std::size_t)))), is_subarray_(is_subarray)
+                    : ndims_(ndims), size_info_(ndims*2), is_subarray_(is_subarray)
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                     COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
@@ -365,7 +365,7 @@ namespace computoc {
                 }
 
                 Header(std::size_t ndims, const std::size_t* dims)
-                    : ndims_(ndims), size_info_(ndims* (2 * sizeof(std::size_t) + sizeof(ND_range)))
+                    : ndims_(ndims), size_info_(ndims*2)
                 {
                     COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                     COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
