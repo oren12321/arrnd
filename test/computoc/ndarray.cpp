@@ -61,6 +61,14 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions)
         counter.next();
     }
     EXPECT_EQ(nsubs, nsubs_counter);
+
+    counter.reset();
+    const std::size_t* subs{ counter.subs() };
+
+    EXPECT_EQ(0, subs[0]);
+    EXPECT_EQ(0, subs[1]);
+    EXPECT_EQ(0, subs[2]);
+    EXPECT_EQ(0, subs[3]);
 }
 
 TEST(ND_array_test, can_be_initialized_with_valid_size_and_data)
