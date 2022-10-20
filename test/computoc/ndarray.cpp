@@ -659,20 +659,13 @@ TEST(ND_array_test, complex_array)
 
         {{64, 65, 66},
         {67, 68, 69},
-        {70, 71, 72}}}},
-    };
+        {70, 71, 72}}}}};
     const std::size_t dims[]{ 2, 2, 2, 3, 3 };
-
     Integer_nd_array arr{ 5, dims, reinterpret_cast<const int*>(data) };
 
-    // create copy of arr
+    const int sdata[1][1][1][2][1]{ { {{{47},{53}}} } };
+    const std::size_t sdims[]{ 1, 1, 1, 2, 1 };
+    Integer_nd_array sarr{ 5, sdims, reinterpret_cast<const int*>(sdata) };
 
-    // copy of complex subarray
-    Integer_nd_array sub1{ arr({{1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2}}) };
-    for (std::size_t i = 0; i < sub1.header().dims()[3]; ++i) {
-        for (std::size_t j = 0; j < sub1.header().dims()[4]; ++j) {
-            std::cout << sub1({ 0, 0, 0, i, j }) << " ";
-        }
-        std::cout << "\n";
-    }
+    EXPECT_EQ(sarr, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }));
 }
