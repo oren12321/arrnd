@@ -258,76 +258,6 @@ namespace computoc {
         offset = 28
         */
 
-        using ND_subscriptor_allocator = memoc::Malloc_allocator;
-
-        using ND_subscriptor_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
-            memoc::Stack_buffer<3 * 2 * sizeof(std::size_t)>,
-            memoc::Allocated_buffer<ND_subscriptor_allocator, true>>>;
-
-        template <memoc::Buffer<std::size_t> Internal_buffer = ND_subscriptor_buffer>
-        class ND_subscriptor
-        {
-        public:
-            ND_subscriptor(std::size_t ndims, const std::size_t* dims /*not including edge values*/)
-                : ndims_(ndims), buff_(ndims*2), to_(dims)
-            {
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate subsscriptor buffer");
-                from_ = buff_.data().p;
-                subs_ = from_ + ndims_;
-                for (std::size_t i = 0; i < ndims; ++i) {
-                    from_[i] = 0;
-                    subs_[i] = 0;
-                }
-            }
-
-            void reset()
-            {
-                for (std::size_t i = 0; i < ndims_; ++i) {
-                    subs_[i] = 0;
-                }
-            }
-
-            ND_subscriptor<Internal_buffer>& next()
-            {
-                bool should_process_sub{ true };
-                for (std::size_t i = ndims_; i >= 1 && should_process_sub; --i)
-                {
-                    should_process_sub = (++subs_[i - 1] == to_[i - 1]);
-                    if (should_process_sub)
-                    {
-                        if (i > 1)
-                        {
-                            subs_[i - 1] = from_[i - 1];
-                        }
-                    }
-                }
-
-                return *this;
-            }
-
-            operator bool()
-            {
-                return subs_[0] != to_[0];
-            }
-
-            std::size_t ndims() const
-            {
-                return ndims_;
-            }
-
-            const std::size_t* subs() const
-            {
-                return subs_;
-            }
-
-        private:
-            std::size_t ndims_{ 0 };
-            Internal_buffer buff_{};
-            std::size_t* from_{ nullptr };
-            std::size_t* subs_{ nullptr };
-            const std::size_t* to_{ nullptr };
-        };
-
         using ND_array_allocator = memoc::Malloc_allocator;
 
         using ND_header_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
@@ -337,6 +267,10 @@ namespace computoc {
         template <typename T>
         using ND_array_buffer = memoc::Typed_buffer<T, memoc::Fallback_buffer<
             memoc::Stack_buffer<9 * sizeof(T)>,
+            memoc::Allocated_buffer<ND_array_allocator, true>>>;
+
+        using ND_subscriptor_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
+            memoc::Stack_buffer<3 * sizeof(std::size_t)>,
             memoc::Allocated_buffer<ND_array_allocator, true>>>;
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer = ND_array_buffer<T>, memoc::Allocator Internal_allocator = ND_array_allocator, memoc::Buffer<std::size_t> Internal_header_buffer = ND_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer = ND_subscriptor_buffer>
@@ -426,6 +360,63 @@ namespace computoc {
                 std::size_t count_{ 0 };
                 std::size_t offset_{ 0 };
                 bool is_subarray_{ false };
+            };
+
+
+            class ND_subscriptor
+            {
+            public:
+                ND_subscriptor(std::size_t ndims, const std::size_t* dims)
+                    : ndims_(ndims), buff_(ndims), to_(dims)
+                {
+                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate subsscriptor buffer");
+                    subs_ = buff_.data().p;
+                    reset();
+                }
+
+                void reset()
+                {
+                    for (std::size_t i = 0; i < ndims_; ++i) {
+                        subs_[i] = 0;
+                    }
+                }
+
+                ND_subscriptor& operator++() {
+                    bool should_process_sub{ true };
+                    for (std::size_t i = ndims_; i >= 1 && should_process_sub; --i)
+                    {
+                        should_process_sub = (++subs_[i - 1] == to_[i - 1]);
+                        if (should_process_sub)
+                        {
+                            if (i > 1)
+                            {
+                                subs_[i - 1] = 0;
+                            }
+                        }
+                    }
+                    return *this;
+                }
+
+                operator bool()
+                {
+                    return subs_[0] != to_[0];
+                }
+
+                std::size_t ndims() const
+                {
+                    return ndims_;
+                }
+
+                const std::size_t* subs() const
+                {
+                    return subs_;
+                }
+
+            private:
+                std::size_t ndims_{ 0 };
+                Internal_subscriptor_buffer buff_{};
+                std::size_t* subs_{ nullptr };
+                const std::size_t* to_{ nullptr };
             };
 
 
@@ -571,14 +562,14 @@ namespace computoc {
                 return true;
             }
 
-            ND_subscriptor<Internal_subscriptor_buffer> ndstor{ lhs.hdr_.ndims(), lhs.hdr_.dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ lhs.hdr_.ndims(), lhs.hdr_.dims() };
 
             while (ndstor) {
                 const std::size_t* subs{ ndstor.subs() };
                 if (!is_equal(lhs(ndstor.ndims(), subs), rhs(ndstor.ndims(), subs))) {
                     return false;
                 }
-                ndstor.next();
+                ++ndstor;
             }
 
             return true;
@@ -598,12 +589,12 @@ namespace computoc {
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(src.hdr_.count());
             }
 
-            ND_subscriptor<Internal_subscriptor_buffer> ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
 
             while (ndstor) {
                 const std::size_t* subs{ ndstor.subs() };
                 dst(ndstor.ndims(), subs) = src(ndstor.ndims(), subs);
-                ndstor.next();
+                ++ndstor;
             }
 
             return dst;
@@ -627,12 +618,12 @@ namespace computoc {
             if (arr.buffsp_) {
                 clone.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(arr.hdr_.count());
 
-                ND_subscriptor<Internal_subscriptor_buffer> ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
 
                 while (ndstor) {
                     const std::size_t* subs{ ndstor.subs() };
                     clone(ndstor.ndims(), subs) = arr(ndstor.ndims(), subs);
-                    ndstor.next();
+                    ++ndstor;
                 }
             }
             return clone;
@@ -696,7 +687,6 @@ namespace computoc {
     }
 
     using details::ND_range;
-    using details::ND_subscriptor;
     using details::ND_array;
     using details::copy_to;
     using details::copy_of;

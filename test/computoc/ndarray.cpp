@@ -26,7 +26,7 @@ TEST(ND_range, fields_initialization)
     EXPECT_EQ(3, r4.step);
 }
 
-TEST(ND_subscriptor, subscripts_generation_by_dimensions)
+TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 {
     const std::size_t ndims{ 4 };
     const std::size_t dims[]{ 2, 1, 3, 2 };
@@ -46,7 +46,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions)
         {1, 0, 2, 0},
         {1, 0, 2, 1} };
 
-    computoc::ND_subscriptor counter{ ndims, dims };
+    computoc::ND_array<int>::ND_subscriptor counter{ ndims, dims };
     std::size_t nsubs_counter{ 0 };
 
     while (counter && nsubs_counter < nsubs) {
@@ -58,9 +58,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions)
         EXPECT_EQ(rsubs[2], subs[2]);
         EXPECT_EQ(rsubs[3], subs[3]);
 
-        counter.next();
+        ++counter;
     }
     EXPECT_EQ(nsubs, nsubs_counter);
+    EXPECT_FALSE(counter);
 
     counter.reset();
     const std::size_t* subs{ counter.subs() };
