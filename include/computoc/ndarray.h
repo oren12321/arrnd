@@ -363,10 +363,10 @@ namespace computoc {
             };
 
 
-            class ND_subscriptor
+            class Subscriptor
             {
             public:
-                ND_subscriptor(std::size_t ndims, const std::size_t* dims)
+                Subscriptor(std::size_t ndims, const std::size_t* dims)
                     : ndims_(ndims), buff_(ndims), to_(dims)
                 {
                     COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate subsscriptor buffer");
@@ -381,7 +381,7 @@ namespace computoc {
                     }
                 }
 
-                ND_subscriptor& operator++() {
+                Subscriptor& operator++() {
                     bool should_process_sub{ true };
                     for (std::size_t i = ndims_; i >= 1 && should_process_sub; --i)
                     {
@@ -562,7 +562,7 @@ namespace computoc {
                 return true;
             }
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ lhs.hdr_.ndims(), lhs.hdr_.dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ lhs.hdr_.ndims(), lhs.hdr_.dims() };
 
             while (ndstor) {
                 const std::size_t* subs{ ndstor.subs() };
@@ -589,7 +589,7 @@ namespace computoc {
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(src.hdr_.count());
             }
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
 
             while (ndstor) {
                 const std::size_t* subs{ ndstor.subs() };
@@ -618,7 +618,7 @@ namespace computoc {
             if (arr.buffsp_) {
                 clone.buffsp_ = memoc::make_shared<Internal_data_buffer, Internal_allocator>(arr.hdr_.count());
 
-                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::ND_subscriptor ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
 
                 while (ndstor) {
                     const std::size_t* subs{ ndstor.subs() };

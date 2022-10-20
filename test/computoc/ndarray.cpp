@@ -46,7 +46,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         {1, 0, 2, 0},
         {1, 0, 2, 1} };
 
-    computoc::ND_array<int>::ND_subscriptor counter{ ndims, dims };
+    computoc::ND_array<int>::Subscriptor counter{ ndims, dims };
     std::size_t nsubs_counter{ 0 };
 
     while (counter && nsubs_counter < nsubs) {
