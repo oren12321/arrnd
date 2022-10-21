@@ -258,167 +258,176 @@ namespace computoc {
         offset = 28
         */
 
-        using ND_array_allocator = memoc::Malloc_allocator;
+        using ND_header_allocator = memoc::Malloc_allocator;
 
         using ND_header_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
             memoc::Stack_buffer<3 * (sizeof(std::size_t) + sizeof(std::size_t))>,
-            memoc::Allocated_buffer<ND_array_allocator, true>>>;
+            memoc::Allocated_buffer<ND_header_allocator, true>>>;
+
+        template <memoc::Buffer<std::size_t> Internal_buffer = ND_header_buffer>
+        class ND_header {
+        public:
+            ND_header() = default;
+
+            ND_header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
+                : ndims_(ndims), size_info_(ndims * 2), is_subarray_(is_subarray)
+            {
+                COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                std::size_t* dimsp = size_info_.data().p;
+                ranges2dims(ndims_, ranges, dimsp);
+
+                count_ = dims2count(ndims_, dimsp);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
+
+                std::size_t* stridesp = size_info_.data().p + ndims_;
+                ranges2strides(ndims_, strides, ranges, stridesp);
+
+                offset_ = ranges2offset(ndims_, offset, strides, ranges);
+            }
+
+            ND_header(std::size_t ndims, const std::size_t* dims)
+                : ndims_(ndims), size_info_(ndims * 2)
+            {
+                COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                std::size_t* dimsp = size_info_.data().p;
+                for (std::size_t i = 0; i < ndims_; ++i) {
+                    dimsp[i] = dims[i];
+                }
+
+                count_ = dims2count(ndims_, dimsp);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+
+                std::size_t* stridesp = size_info_.data().p + ndims_;
+                dims2strides(ndims_, dimsp, stridesp);
+            }
+
+            ND_header(ND_header&& other) = default;
+            ND_header& operator=(ND_header&& other) = default;
+
+            ND_header(const ND_header& other) = default;
+            ND_header& operator=(const ND_header& other) = default;
+
+            virtual ~ND_header() = default;
+
+            std::size_t ndims() const
+            {
+                return ndims_;
+            }
+
+            std::size_t count() const
+            {
+                return count_;
+            }
+
+            const std::size_t* dims() const
+            {
+                return size_info_.data().p;
+            }
+
+            const std::size_t* strides() const
+            {
+                return size_info_.data().p + ndims_;
+            }
+
+            std::size_t offset() const
+            {
+                return offset_;
+            }
+
+            bool is_subarray() const
+            {
+                return is_subarray_;
+            }
+
+        private:
+            std::size_t ndims_{ 0 };
+            Internal_buffer size_info_{};
+            std::size_t count_{ 0 };
+            std::size_t offset_{ 0 };
+            bool is_subarray_{ false };
+        };
+
+
+        using ND_subscriptor_allocator = memoc::Malloc_allocator;
+
+        using ND_subscriptor_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
+            memoc::Stack_buffer<3 * sizeof(std::size_t)>,
+            memoc::Allocated_buffer<ND_subscriptor_allocator, true>>>;
+
+        template <memoc::Buffer<std::size_t> Internal_buffer = ND_subscriptor_buffer>
+        class ND_subscriptor
+        {
+        public:
+            ND_subscriptor(std::size_t ndims, const std::size_t* dims)
+                : ndims_(ndims), buff_(ndims), to_(dims)
+            {
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate subsscriptor buffer");
+                subs_ = buff_.data().p;
+                reset();
+            }
+
+            void reset()
+            {
+                for (std::size_t i = 0; i < ndims_; ++i) {
+                    subs_[i] = 0;
+                }
+            }
+
+            ND_subscriptor& operator++() {
+                bool should_process_sub{ true };
+                for (std::size_t i = ndims_; i >= 1 && should_process_sub; --i)
+                {
+                    should_process_sub = (++subs_[i - 1] == to_[i - 1]);
+                    if (should_process_sub)
+                    {
+                        if (i > 1)
+                        {
+                            subs_[i - 1] = 0;
+                        }
+                    }
+                }
+                return *this;
+            }
+
+            operator bool()
+            {
+                return subs_[0] != to_[0];
+            }
+
+            std::size_t ndims() const
+            {
+                return ndims_;
+            }
+
+            const std::size_t* subs() const
+            {
+                return subs_;
+            }
+
+        private:
+            std::size_t ndims_{ 0 };
+            Internal_buffer buff_{};
+            std::size_t* subs_{ nullptr };
+            const std::size_t* to_{ nullptr };
+        };
+
+
+        using ND_array_allocator = memoc::Malloc_allocator;
 
         template <typename T>
         using ND_array_buffer = memoc::Typed_buffer<T, memoc::Fallback_buffer<
             memoc::Stack_buffer<9 * sizeof(T)>,
             memoc::Allocated_buffer<ND_array_allocator, true>>>;
 
-        using ND_subscriptor_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
-            memoc::Stack_buffer<3 * sizeof(std::size_t)>,
-            memoc::Allocated_buffer<ND_array_allocator, true>>>;
-
         template <typename T, memoc::Buffer<T> Internal_data_buffer = ND_array_buffer<T>, memoc::Allocator Internal_allocator = ND_array_allocator, memoc::Buffer<std::size_t> Internal_header_buffer = ND_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer = ND_subscriptor_buffer>
         class ND_array {
         public:
-            class Header {
-            public:
-                Header() = default;
-
-                Header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
-                    : ndims_(ndims), size_info_(ndims*2), is_subarray_(is_subarray)
-                {
-                    COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
-                    COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                    std::size_t* dimsp = size_info_.data().p;
-                    ranges2dims(ndims_, ranges, dimsp);
-
-                    count_ = dims2count(ndims_, dimsp);
-                    COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
-
-                    std::size_t* stridesp = size_info_.data().p + ndims_;
-                    ranges2strides(ndims_, strides, ranges, stridesp);
-
-                    offset_ = ranges2offset(ndims_, offset, strides, ranges);
-                }
-
-                Header(std::size_t ndims, const std::size_t* dims)
-                    : ndims_(ndims), size_info_(ndims*2)
-                {
-                    COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
-                    COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                    std::size_t* dimsp = size_info_.data().p;
-                    for (std::size_t i = 0; i < ndims_; ++i) {
-                        dimsp[i] = dims[i];
-                    }
-
-                    count_ = dims2count(ndims_, dimsp);
-                    COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
-
-                    std::size_t* stridesp = size_info_.data().p + ndims_;
-                    dims2strides(ndims_, dimsp, stridesp);
-                }
-
-                Header(Header&& other) = default;
-                Header& operator=(Header&& other) = default;
-
-                Header(const Header& other) = default;
-                Header& operator=(const Header& other) = default;
-
-                virtual ~Header() = default;
-
-                std::size_t ndims() const
-                {
-                    return ndims_;
-                }
-
-                std::size_t count() const
-                {
-                    return count_;
-                }
-
-                const std::size_t* dims() const
-                {
-                    return size_info_.data().p;
-                }
-
-                const std::size_t* strides() const
-                {
-                    return size_info_.data().p + ndims_;
-                }
-
-                std::size_t offset() const
-                {
-                    return offset_;
-                }
-
-                bool is_subarray() const
-                {
-                    return is_subarray_;
-                }
-
-            private:
-                std::size_t ndims_{ 0 };
-                Internal_header_buffer size_info_{};
-                std::size_t count_{ 0 };
-                std::size_t offset_{ 0 };
-                bool is_subarray_{ false };
-            };
-
-
-            class Subscriptor
-            {
-            public:
-                Subscriptor(std::size_t ndims, const std::size_t* dims)
-                    : ndims_(ndims), buff_(ndims), to_(dims)
-                {
-                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate subsscriptor buffer");
-                    subs_ = buff_.data().p;
-                    reset();
-                }
-
-                void reset()
-                {
-                    for (std::size_t i = 0; i < ndims_; ++i) {
-                        subs_[i] = 0;
-                    }
-                }
-
-                Subscriptor& operator++() {
-                    bool should_process_sub{ true };
-                    for (std::size_t i = ndims_; i >= 1 && should_process_sub; --i)
-                    {
-                        should_process_sub = (++subs_[i - 1] == to_[i - 1]);
-                        if (should_process_sub)
-                        {
-                            if (i > 1)
-                            {
-                                subs_[i - 1] = 0;
-                            }
-                        }
-                    }
-                    return *this;
-                }
-
-                operator bool()
-                {
-                    return subs_[0] != to_[0];
-                }
-
-                std::size_t ndims() const
-                {
-                    return ndims_;
-                }
-
-                const std::size_t* subs() const
-                {
-                    return subs_;
-                }
-
-            private:
-                std::size_t ndims_{ 0 };
-                Internal_subscriptor_buffer buff_{};
-                std::size_t* subs_{ nullptr };
-                const std::size_t* to_{ nullptr };
-            };
-
+            using Header = ND_header<Internal_header_buffer>;
+            using Subscriptor = ND_subscriptor<Internal_subscriptor_buffer>;
 
             ND_array() = default;
 
