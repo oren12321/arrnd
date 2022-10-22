@@ -322,6 +322,21 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
         Integer_nd_array sarr{ arr({{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}) };
         EXPECT_EQ(rarr, sarr);
     }
+
+    // different ND array types
+    {
+        const double data1d[] = {
+            1.0, 2.0,
+            3.0, 4.0,
+            5.0, 6.0 };
+        std::size_t dims1d[]{ 3, 1, 2 };
+        computoc::ND_array<double> arr1d{ 3, dims1d, data1d };
+
+        EXPECT_EQ(arr1, arr1d);
+        
+        arr1d({ 0, 0, 0 }) = 1.001;
+        EXPECT_NE(arr1, arr1d);
+    }
 }
 
 TEST(ND_array_test, can_return_slice)
@@ -538,6 +553,24 @@ TEST(ND_array_test, copy_to)
 
         computoc::copy_to(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
         EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
+    }
+
+    // copy to different type ND array
+    {
+        const int data1[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        Integer_nd_array arr1{ {3, 1, 2}, data1 };
+
+        const double data2d[] = {
+            2.1, 4.1,
+            6.1, 8.1,
+            10.1, 12.1 };
+        computoc::ND_array<double> arr2d{ {3, 1, 2}, data2d };
+        EXPECT_NE(arr1, arr2d);
+        computoc::copy_to(arr2d, arr1);
+        EXPECT_NE(arr1, arr2d);
     }
 }
 
