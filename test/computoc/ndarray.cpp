@@ -47,21 +47,24 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         {1, 0, 2, 1} };
 
     computoc::ND_array<int>::Subscriptor counter{ ndims, dims };
-    std::size_t nsubs_counter{ 0 };
 
-    while (counter && nsubs_counter < nsubs) {
-        const std::size_t* subs{ counter.subs() };
-        const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+    // prefix increment
+    {
+        std::size_t nsubs_counter{ 0 };
+        while (counter && nsubs_counter < nsubs) {
+            const std::size_t* subs{ counter.subs() };
+            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
 
-        EXPECT_EQ(rsubs[0], subs[0]);
-        EXPECT_EQ(rsubs[1], subs[1]);
-        EXPECT_EQ(rsubs[2], subs[2]);
-        EXPECT_EQ(rsubs[3], subs[3]);
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
 
-        ++counter;
+            ++counter;
+        }
+        EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
     }
-    EXPECT_EQ(nsubs, nsubs_counter);
-    EXPECT_FALSE(counter);
 
     counter.reset();
     const std::size_t* subs{ counter.subs() };
@@ -70,6 +73,40 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     EXPECT_EQ(0, subs[1]);
     EXPECT_EQ(0, subs[2]);
     EXPECT_EQ(0, subs[3]);
+
+    // postfix increment
+    {
+        std::size_t nsubs_counter{ 0 };
+        for (; counter; counter++) {
+            const std::size_t* subs{ counter.subs() };
+            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+        }
+
+        EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
+    }
+    
+    // with initial subscripts value
+    {
+        std::size_t nsubs_counter{ 6 };
+        for (computoc::ND_array<int>::Subscriptor counter{ {1, 0, 0, 0}, {2, 1, 3, 2} }; counter; ++counter) {
+            const std::size_t* subs{ counter.subs() };
+            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+        }
+
+        EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
+    }
 }
 
 TEST(ND_array_test, can_be_initialized_with_valid_size_and_data)
