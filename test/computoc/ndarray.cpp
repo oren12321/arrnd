@@ -171,7 +171,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     EXPECT_FALSE(ehdr.dims());
     EXPECT_FALSE(ehdr.strides());
     EXPECT_EQ(0, ehdr.offset());
-    EXPECT_FALSE(ehdr.is_subarray());
+    EXPECT_FALSE(ehdr.is_partial());
     EXPECT_FALSE(earr.data());
 
     const int value{ 0 };
@@ -183,7 +183,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     EXPECT_EQ(3, hdr.dims()[0]); EXPECT_EQ(1, hdr.dims()[1]); EXPECT_EQ(2, hdr.dims()[2]);
     EXPECT_EQ(2, hdr.strides()[0]); EXPECT_EQ(2, hdr.strides()[1]); EXPECT_EQ(1, hdr.strides()[2]);
     EXPECT_EQ(0, hdr.offset());
-    EXPECT_FALSE(hdr.is_subarray());
+    EXPECT_FALSE(hdr.is_partial());
     EXPECT_TRUE(arr.data());
     for (std::size_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
@@ -624,33 +624,63 @@ TEST(ND_array_test, reshape)
 {
     using Integer_nd_array = computoc::ND_array<int>;
 
-    const int data1[] = {
+    const int data[] = {
         1, 2,
         3, 4,
         5, 6 };
-    const std::size_t dims1[]{ 3, 1, 2 };
-    Integer_nd_array arr1{ 3, dims1, data1 };
+    const std::size_t dims[]{ 3, 1, 2 };
+    Integer_nd_array arr{ 3, dims, data };
 
-    const int data2[] = { 1, 2, 3, 4, 5, 6 };
-    const std::size_t dims2[]{ 6 };
-    Integer_nd_array arr2{ 1, dims2, data2 };
+    {
+        EXPECT_THROW(computoc::reshaped(arr, {}), std::invalid_argument);
+    }
 
-    Integer_nd_array rarr1{ computoc::reshaped(arr1, {6}) };
-    EXPECT_EQ(arr2, rarr1);
+    {
+        const int tdata[] = { 1, 2, 3, 4, 5, 6 };
+        const std::size_t tdims[]{ 6 };
+        Integer_nd_array tarr{ 1, tdims, tdata };
 
-    const int data3[] = {
-        1, 2,
-        3, 4,
-        5, 6 };
-    const std::size_t dims3[]{ 3, 1, 2 };
-    Integer_nd_array arr3{ 3, dims3, data3 };
+        Integer_nd_array rarr{ computoc::reshaped(arr, { 6 }) };
+        EXPECT_EQ(tarr, rarr);
+        EXPECT_EQ(arr.data(), rarr.data());
+    }
 
-    Integer_nd_array rarr2{ computoc::reshaped(arr1, {3, 1, 2}) };
-    EXPECT_EQ(arr3, rarr2);
+    {
+        Integer_nd_array rarr{ computoc::reshaped(arr, { 3, 1, 2 }) };
+        EXPECT_EQ(arr, rarr);
+        EXPECT_EQ(arr.data(), rarr.data());
+    }
 
-    EXPECT_THROW(computoc::reshaped(arr2({ {0, 0} }), {}), std::runtime_error);
-    EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
-    EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
+    {
+        const int tdata[] = { 1, 5 };
+        const std::size_t tdims[]{ 1, 2 };
+        Integer_nd_array tarr{ 2, tdims, tdata };
+
+        Integer_nd_array rarr{ computoc::reshaped(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
+        EXPECT_EQ(tarr, rarr);
+        EXPECT_NE(arr.data(), rarr.data());
+    }
+
+    //const int data2[] = { 1, 2, 3, 4, 5, 6 };
+    //const std::size_t dims2[]{ 6 };
+    //Integer_nd_array arr2{ 1, dims2, data2 };
+
+    //Integer_nd_array rarr1{ computoc::reshaped(arr1, {6}) };
+    //EXPECT_EQ(arr2, rarr1);
+
+    //const int data3[] = {
+    //    1, 2,
+    //    3, 4,
+    //    5, 6 };
+    //const std::size_t dims3[]{ 3, 1, 2 };
+    //Integer_nd_array arr3{ 3, dims3, data3 };
+
+    //Integer_nd_array rarr2{ computoc::reshaped(arr1, {3, 1, 2}) };
+    //EXPECT_EQ(arr3, rarr2);
+
+    //EXPECT_THROW(computoc::reshaped(arr2({ {0, 0} }), {}), std::runtime_error);
+    //EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
+    //EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
 }
 
 TEST(ND_array_test, resize)

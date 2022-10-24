@@ -269,8 +269,8 @@ namespace computoc {
         public:
             ND_header() = default;
 
-            ND_header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_subarray)
-                : ndims_(ndims), size_info_(ndims * 2), is_subarray_(is_subarray)
+            ND_header(std::size_t ndims, const ND_range* ranges, const std::size_t* strides, std::size_t offset, bool is_partial)
+                : ndims_(ndims), size_info_(ndims * 2), is_partial_(is_partial)
             {
                 COMPUTOC_THROW_IF_FALSE(ndims_ > 0, std::invalid_argument, "number of dimensions should be > 0");
                 COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
@@ -306,10 +306,10 @@ namespace computoc {
             }
 
             ND_header(ND_header&& other)
-                : ndims_(other.ndims_), size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+                : ndims_(other.ndims_), size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
                 other.ndims_ = other.count_ = other.offset_ = 0;
-                other.is_subarray_ = false;
+                other.is_partial_ = false;
             }
             ND_header& operator=(ND_header&& other)
             {
@@ -321,10 +321,10 @@ namespace computoc {
                 size_info_ = std::move(other.size_info_);
                 count_ = other.count_;
                 offset_ = other.offset_;
-                is_subarray_ = other.is_subarray_;
+                is_partial_ = other.is_partial_;
 
                 other.ndims_ = other.count_ = other.offset_ = 0;
-                other.is_subarray_ = false;
+                other.is_partial_ = false;
 
                 return *this;
             }
@@ -359,9 +359,9 @@ namespace computoc {
                 return offset_;
             }
 
-            bool is_subarray() const
+            bool is_partial() const
             {
-                return is_subarray_;
+                return is_partial_;
             }
 
         private:
@@ -369,7 +369,7 @@ namespace computoc {
             Internal_buffer size_info_{};
             std::size_t count_{ 0 };
             std::size_t offset_{ 0 };
-            bool is_subarray_{ false };
+            bool is_partial_{ false };
         };
 
 
@@ -669,9 +669,38 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::size_t new_ndims, const std::size_t* new_dims)
         {
-            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "reshaped is undefined for subarray");
-            COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
-            COMPUTOC_THROW_IF_FALSE(dims2count(new_ndims, new_dims) == arr.hdr_.count(), std::invalid_argument, "reshaped array should have the same amount of cells as the original");
+            /*
+            * Reshaping algorithm:
+            * - different number of elements -> throw an exception
+            * - empty array -> empty array
+            * - equal dimensions -> ref to input array
+            * - subarray -> new array with new size and copied elements from input array (reshape on subarray isn't always defined)
+            * - not subarray -> reference to input array with modified header
+            */
+            COMPUTOC_THROW_IF_FALSE(arr.hdr_.count() == dims2count(new_ndims, new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
+
+            if (is_empty(arr)) {
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
+            }
+
+            if (equal_dims(arr.hdr_.ndims(), arr.hdr_.dims(), new_ndims, new_dims)) {
+                return arr;
+            }
+
+            if (arr.hdr_.is_partial()) {
+                ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_ndims, new_dims };
+
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor prev_ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor{ new_ndims, new_dims };
+
+                while (prev_ndstor && new_ndstor) {
+                    res(new_ndstor.nsubs(), new_ndstor.subs()) = arr(prev_ndstor.nsubs(), prev_ndstor.subs());
+                    ++prev_ndstor;
+                    ++new_ndstor;
+                }
+
+                return res;
+            }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr };
             res.hdr_ = typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header( new_ndims, new_dims );
@@ -687,7 +716,7 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::size_t new_ndims, const std::size_t* new_dims)
         {
-            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_subarray(), std::runtime_error, "resize for subarray is undefined");
+            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_partial(), std::runtime_error, "resize for subarray is undefined");
             COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
 
             if (equal_dims(arr.hdr_.ndims(), arr.hdr_.dims(), new_ndims, new_dims)) {
