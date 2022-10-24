@@ -470,7 +470,9 @@ TEST(ND_array_test, copy_by_reference)
         0, 6 };
     Integer_nd_array rarr2{ 3, dims, rdata2 };
     EXPECT_EQ(rarr2, carr2);
-    EXPECT_THROW(carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1, std::runtime_error);
+
+    carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1;
+    EXPECT_EQ(rarr2, carr2);
 }
 
 TEST(ND_array_test, move_by_reference)
@@ -493,7 +495,11 @@ TEST(ND_array_test, move_by_reference)
     carr2 = std::move(carr1);
     EXPECT_EQ(sarr, carr2);
     EXPECT_TRUE(is_empty(carr1));
-    EXPECT_THROW(carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr), std::runtime_error);
+
+    Integer_nd_array sarr2{ 3, dims, data };
+    carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr2);
+    EXPECT_TRUE(is_empty(sarr2));
+    EXPECT_EQ(sarr, carr2);
 }
 
 TEST(ND_array_test, copy_of)

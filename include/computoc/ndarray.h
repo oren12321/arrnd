@@ -305,8 +305,29 @@ namespace computoc {
                 dims2strides(ndims_, dimsp, stridesp);
             }
 
-            ND_header(ND_header&& other) = default;
-            ND_header& operator=(ND_header&& other) = default;
+            ND_header(ND_header&& other)
+                : ndims_(other.ndims_), size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+            {
+                other.ndims_ = other.count_ = other.offset_ = 0;
+                other.is_subarray_ = false;
+            }
+            ND_header& operator=(ND_header&& other)
+            {
+                if (&other == this) {
+                    return *this;
+                }
+
+                ndims_ = other.ndims_;
+                size_info_ = std::move(other.size_info_);
+                count_ = other.count_;
+                offset_ = other.offset_;
+                is_subarray_ = other.is_subarray_;
+
+                other.ndims_ = other.count_ = other.offset_ = 0;
+                other.is_subarray_ = false;
+
+                return *this;
+            }
 
             ND_header(const ND_header& other) = default;
             ND_header& operator=(const ND_header& other) = default;
@@ -452,34 +473,10 @@ namespace computoc {
             ND_array() = default;
 
             ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)
-            {
-                COMPUTOC_THROW_IF_FALSE(!hdr_.is_subarray(), std::runtime_error, "move assignment to subarray is undefined");
-
-                if (this == &other) {
-                    return *this;
-                }
-
-                hdr_ = std::move(other.hdr_);
-                buffsp_ = std::move(other.buffsp_);
-
-                return *this;
-            }
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) = default;
 
             ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)
-            {
-                COMPUTOC_THROW_IF_FALSE(!hdr_.is_subarray(), std::runtime_error, "copy assignment to subarray is undefined");
-
-                if (this == &other) {
-                    return *this;
-                }
-
-                hdr_ = other.hdr_;
-                buffsp_ = other.buffsp_;
-
-                return *this;
-            }
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
 
             virtual ~ND_array() = default;
 
