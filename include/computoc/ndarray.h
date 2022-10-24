@@ -150,6 +150,9 @@ namespace computoc {
 
         inline std::size_t dims2count(std::size_t ndims, const std::size_t* dims)
         {
+            if (ndims == 0) {
+                return 0;
+            }
             std::size_t count{ 1 };
             for (std::size_t i = 0; i < ndims; ++i) {
                 count *= dims[i];
@@ -716,27 +719,33 @@ namespace computoc {
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
         inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::size_t new_ndims, const std::size_t* new_dims)
         {
-            COMPUTOC_THROW_IF_FALSE(!arr.hdr_.is_partial(), std::runtime_error, "resize for subarray is undefined");
-            COMPUTOC_THROW_IF_FALSE(arr.buffsp_, std::runtime_error, "array should not be empty");
+            /*
+            * Resizing algorithm:
+            * - return new array of the new size containing the original array data or part of it.
+            */
+            if (new_ndims == 0) {
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
+            }
+
+            if (is_empty(arr)) {
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{new_ndims, new_dims};
+            }
 
             if (equal_dims(arr.hdr_.ndims(), arr.hdr_.dims(), new_ndims, new_dims)) {
-                return arr;
-            }
-
-            std::size_t new_count{ dims2count(new_ndims, new_dims) };
-
-            if (new_count == arr.hdr_.count()) {
-                return reshaped(arr, new_ndims, new_dims);
-            }
-
-            if (new_count < arr.hdr_.count()) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{new_ndims, new_dims, arr.buffsp_->data().p};
+                return copy_of(arr);
             }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_ndims, new_dims };
-            for (std::size_t i = 0; i < arr.buffsp_->data().s; ++i) {
-                res.buffsp_->data().p[i] = arr.buffsp_->data().p[i];
+
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor prev_ndstor{ arr.hdr_.ndims(), arr.hdr_.dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor{ new_ndims, new_dims };
+
+            while (prev_ndstor && new_ndstor) {
+                res(new_ndstor.nsubs(), new_ndstor.subs()) = arr(prev_ndstor.nsubs(), prev_ndstor.subs());
+                ++prev_ndstor;
+                ++new_ndstor;
             }
+
             return res;
         }
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>

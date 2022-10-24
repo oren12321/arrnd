@@ -636,6 +636,10 @@ TEST(ND_array_test, reshape)
     }
 
     {
+        EXPECT_EQ(Integer_nd_array{}, computoc::reshaped(Integer_nd_array{}, {}));
+    }
+
+    {
         const int tdata[] = { 1, 2, 3, 4, 5, 6 };
         const std::size_t tdims[]{ 6 };
         Integer_nd_array tarr{ 1, tdims, tdata };
@@ -660,74 +664,63 @@ TEST(ND_array_test, reshape)
         EXPECT_EQ(tarr, rarr);
         EXPECT_NE(arr.data(), rarr.data());
     }
-
-    //const int data2[] = { 1, 2, 3, 4, 5, 6 };
-    //const std::size_t dims2[]{ 6 };
-    //Integer_nd_array arr2{ 1, dims2, data2 };
-
-    //Integer_nd_array rarr1{ computoc::reshaped(arr1, {6}) };
-    //EXPECT_EQ(arr2, rarr1);
-
-    //const int data3[] = {
-    //    1, 2,
-    //    3, 4,
-    //    5, 6 };
-    //const std::size_t dims3[]{ 3, 1, 2 };
-    //Integer_nd_array arr3{ 3, dims3, data3 };
-
-    //Integer_nd_array rarr2{ computoc::reshaped(arr1, {3, 1, 2}) };
-    //EXPECT_EQ(arr3, rarr2);
-
-    //EXPECT_THROW(computoc::reshaped(arr2({ {0, 0} }), {}), std::runtime_error);
-    //EXPECT_THROW(computoc::reshaped(Integer_nd_array{}, {}), std::runtime_error);
-    //EXPECT_THROW(computoc::reshaped(arr2, { 1, 1 }), std::invalid_argument);
 }
 
 TEST(ND_array_test, resize)
 {
     using Integer_nd_array = computoc::ND_array<int>;
 
-    const int data1[] = { 1, 2, 3, 4, 5, 6 };
-    const std::size_t dims1[]{ 1, 6 };
-    Integer_nd_array arr1{ 2, dims1, data1 };
+    const int data[] = { 1, 2, 3, 4, 5, 6 };
+    const std::size_t dims[]{ 6 };
+    Integer_nd_array arr{ 1, dims, data };
 
-    const int data2[] = {
-        1, 2,
-        3, 4,
-        5, 6 };
-    const std::size_t dims2[]{ 3, 1, 2 };
-    Integer_nd_array arr2{ 3, dims2, data2 };
+    {
+        EXPECT_EQ(Integer_nd_array{}, computoc::resized(arr, {}));
+    }
 
-    arr1 = computoc::resized(arr1, { 3, 1, 2 });
-    EXPECT_EQ(arr2, arr1);
+    {
+        Integer_nd_array rarr{ computoc::resized(Integer_nd_array{}, {6}) };
+        EXPECT_NE(arr, rarr);
+        EXPECT_EQ(arr.header().ndims(), rarr.header().ndims());
+        EXPECT_EQ(6, rarr.header().dims()[0]);
+        EXPECT_NE(arr.data(), rarr.data());
+    }
 
-    const int data3[] = { 1, 2 };
-    const std::size_t dims3[]{ 1, 2 };
-    Integer_nd_array arr3{ 2, dims3, data3 };
+    {
+        Integer_nd_array rarr{ computoc::resized(arr, {6}) };
+        EXPECT_EQ(arr, rarr);
+        EXPECT_NE(arr.data(), rarr.data());
+    }
 
-    arr1 = computoc::resized(arr1, { 1, 2 });
-    EXPECT_EQ(arr3, arr1);
+    {
+        const int tdata[] = { 1, 2 };
+        const std::size_t tdims[]{ 2 };
+        Integer_nd_array tarr{ 1, tdims, tdata };
 
-    const int data4[] = { 1, 2, 3, 4 };
-    const std::size_t dims4[]{ 1, 4 };
-    Integer_nd_array arr4{ 2, dims4, data4 };
+        Integer_nd_array rarr{ computoc::resized(arr, {2}) };
+        EXPECT_EQ(tarr, rarr);
+        EXPECT_NE(tarr.data(), rarr.data());
+    }
 
-    arr1 = computoc::resized(arr1, { 1, 4 });
-    EXPECT_NE(arr4, arr1);
-    EXPECT_EQ(arr4({ 0, 0 }), arr1({ 0, 0 }));
-    EXPECT_EQ(arr4({ 0, 1 }), arr1({ 0, 1 }));
+    {
+        const int tdata[] = { 
+            1, 2,
+            3, 4,
+            5, 6};
+        const std::size_t tdims[]{ 3, 1, 2 };
+        Integer_nd_array tarr{ 3, tdims, tdata };
 
-    Integer_nd_array arr5{ computoc::resized(arr1, {1, 2}) };
-    //EXPECT_NE(arr1.header().dims, arr5.header().dims);
-    EXPECT_EQ(arr3, arr5);
+        Integer_nd_array rarr{ computoc::resized(arr, {3, 1, 2}) };
+        EXPECT_EQ(tarr, rarr);
+        EXPECT_NE(tarr.data(), rarr.data());
+    }
 
-    Integer_nd_array arr6{ computoc::resized(arr1, arr1.header().ndims(), arr1.header().dims()) };
-    EXPECT_EQ(arr1, arr6);
-
-    EXPECT_THROW(computoc::resized(arr1({ {0, 0}, {0, 0} }), {}), std::runtime_error);
-
-    Integer_nd_array empty_arr{};
-    EXPECT_THROW(computoc::resized(empty_arr, {}), std::runtime_error);
+    {
+        Integer_nd_array rarr{ computoc::resized(arr, {10}) };
+        EXPECT_NE(arr, rarr);
+        EXPECT_EQ(arr, rarr({ {0, 5} }));
+        EXPECT_NE(arr.data(), rarr.data());
+    }
 }
 
 TEST(ND_array_test, complex_array)
