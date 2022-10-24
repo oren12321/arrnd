@@ -561,7 +561,8 @@ TEST(ND_array_test, copy_to)
         computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
 
-        EXPECT_THROW(computoc::copy_to(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} })), std::runtime_error);
+        computoc::copy_to(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} }));
+        EXPECT_EQ(arr3, arr2);
     }
 
     { // forward cases - copy from created array to other array
@@ -592,7 +593,9 @@ TEST(ND_array_test, copy_to)
         Integer_nd_array arr3{ {3, 1, 2}, data3 };
         computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
-        EXPECT_THROW(computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} })), std::runtime_error);
+
+        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} }));
+        EXPECT_EQ(arr3, arr2);
 
         computoc::copy_to(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
         EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);

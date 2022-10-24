@@ -620,7 +620,6 @@ namespace computoc {
             }
 
             if (!equal_dims(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims())) {
-                COMPUTOC_THROW_IF_FALSE(!dst.hdr_.is_subarray(), std::runtime_error, "unable to reallocate subarray");
                 dst.hdr_ = typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Header( src.hdr_.ndims(), src.hdr_.dims() );
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer2, Internal_allocator2>(src.hdr_.count());
             }
