@@ -383,62 +383,56 @@ TEST(ND_array_test, can_return_slice)
     const int data[] = {
         1, 2,
         3, 4,
-        5, 6 };
+        5, 6};
+    const std::size_t dims[] = { 3, 1, 2 };
+    Integer_nd_array arr{ 3, dims, data };
 
-    std::size_t dims1[]{ 6 };
-    Integer_nd_array arr1{ 1, dims1, data };
+    // empty ranges
+    {
+        std::initializer_list<computoc::ND_range> ranges{};
+        Integer_nd_array rarr{ arr(ranges) };
+        EXPECT_EQ(arr, rarr);
+        EXPECT_EQ(arr.data(), rarr.data());
+    }
 
-    const int sdata1[] = { 1, 2, 3 };
-    std::size_t sdims1[]{ 3 };
-    Integer_nd_array sarr1{ 1, sdims1, sdata1 };
-    EXPECT_EQ(arr1({ {0, sdims1[0] - 1} }), sarr1);
+    // more ranges than dimensions
+    {
+        EXPECT_THROW(arr({ {0, 0}, {0, 0}, {0, 0}, {0, 0} }), std::invalid_argument);
+    }
 
-    EXPECT_THROW(arr1({ {0, dims1[0]} }), std::out_of_range);
-    EXPECT_THROW(arr1({ {sdims1[0] - 1, 0} }), std::invalid_argument);
-    EXPECT_THROW(arr1({ {sdims1[0] - 1, 0}, {} }), std::invalid_argument);
+    // illegal ranges
+    {
+        EXPECT_THROW((Integer_nd_array{})({ {0, 0, 0} }), std::invalid_argument);
+        EXPECT_THROW((Integer_nd_array{})({ {2, 1, 1} }), std::invalid_argument);
+    }
 
-    std::size_t dims2[]{ 3, 2 };
-    Integer_nd_array arr2{ 2, dims2, data };
+    // empty array
+    {
+        EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}(std::initializer_list<computoc::ND_range>{}));
+        EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}({ {0,1}, {0,4,2} }));
+    }
 
-    const int sdata2[] = {
-        1, 2,
-        3, 4 };
-    std::size_t sdims2[]{ 2, 2 };
-    Integer_nd_array sarr2{ 2, sdims2, sdata2 };
-    EXPECT_EQ(arr2({ {0, sdims2[0] - 1}, {0, sdims2[1] - 1} }), sarr2);
+    // ranges in dims
+    {
+        // nranges == ndims
+        const int tdata1[] = {
+            1,
+            5 };
+        const std::size_t tdims1[] = { 2, 1, 1 };
+        Integer_nd_array tarr1{ 3, tdims1, tdata1 };
+        Integer_nd_array sarr1{ arr({{0, 2,2}, {0}, {0}}) };
+        EXPECT_EQ(tarr1, sarr1);
+        EXPECT_EQ(arr.data(), sarr1.data());
 
-    EXPECT_THROW(arr2({ { 0, 0 }, { 0, 0 }, {0, 0} }), std::invalid_argument);
-    EXPECT_THROW(arr2({ { 0, 0 } }), std::invalid_argument);
-    EXPECT_THROW(arr2({ {0, dims2[0]}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr2({ {0, 0}, {0, dims2[1]} }), std::out_of_range);
-    EXPECT_THROW(arr2({ {sdims2[0] - 1, 0}, {0, sdims2[1] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr2({ {0,sdims2[0] - 1}, {sdims2[1] - 1, 0} }), std::invalid_argument);
-
-    std::size_t dims3[]{ 3, 1, 2 };
-    Integer_nd_array arr3{ 3, dims3, data };
-
-    const int sdata3[] = {
-        1, 2,
-        3, 4 };
-    std::size_t sdims3[]{ 2, 1, 2 };
-    Integer_nd_array sarr3{ 3, sdims3, sdata3 };
-    EXPECT_EQ(arr3({ {0, sdims3[0] - 1}, {0, sdims3[1] - 1}, {0, sdims3[2] - 1} }), sarr3);
-
-    EXPECT_THROW(arr3({ { 0, 0 }, { 0, 0 }, {0, 0}, {0, 0} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ { 0, 0 } }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0, dims3[0]}, {0, 0}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {0, 0}, {0, dims3[1]}, {0, 0} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {0, 0}, {0, 0}, {0, dims3[2]} }), std::out_of_range);
-    EXPECT_THROW(arr3({ {sdims3[0] - 1, 0}, {0, sdims3[1] - 1}, {0, sdims3[2] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0,sdims3[0] - 1}, {1, 0}, {0, sdims3[2] - 1} }), std::invalid_argument);
-    EXPECT_THROW(arr3({ {0,sdims3[0] - 1}, {0, sdims3[1] - 1}, {sdims3[2] - 1, 0} }), std::invalid_argument);
-
-    // Complex slicing - step bigger than one.
-    const int sdata4[] = {
-        1 };
-    std::size_t sdims4[]{ 1, 1, 1 };
-    Integer_nd_array sarr4{ 3, sdims4, sdata4 };
-    EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1, 2} }), sarr4);
+        // nranges < ndims
+        const int tdata2[] = {
+            3, 4 };
+        const std::size_t tdims2[] = { 1, 1, 2 };
+        Integer_nd_array tarr2{ 3, tdims2, tdata2 };
+        Integer_nd_array sarr2{ arr({{1, 2, 2}}) };
+        EXPECT_EQ(tarr2, sarr2);
+        EXPECT_EQ(arr.data(), sarr2.data());
+    }
 }
 
 TEST(ND_array_test, copy_by_reference)
