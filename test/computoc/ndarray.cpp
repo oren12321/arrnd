@@ -435,6 +435,56 @@ TEST(ND_array_test, can_return_slice)
     }
 }
 
+TEST(ND_array_test, can_be_assigned_with_value)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    // empty array
+    {
+        Integer_nd_array arr{};
+        arr = 100;
+        EXPECT_EQ(Integer_nd_array{}, arr);
+    }
+
+    // normal array
+    {
+        const int data[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        const std::size_t dims[]{ 3, 1, 2 };
+        Integer_nd_array arr{ 3, dims, data };
+
+        const int tdata[] = {
+            100, 100,
+            100, 100,
+            100, 100 };
+        Integer_nd_array tarr{ 3, dims, tdata };
+
+        arr = 100;
+        EXPECT_EQ(tarr, arr);
+    }
+
+    // subarray
+    {
+        const int data[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        const std::size_t dims[]{ 3, 1, 2 };
+        Integer_nd_array arr{ 3, dims, data };
+
+        const int tdata[] = {
+            1, 2,
+            3, 100,
+            5, 100 };
+        Integer_nd_array tarr{ 3, dims, tdata };
+
+        arr({ {1,2}, {0}, {1} }) = 100;
+        EXPECT_EQ(tarr, arr);
+    }
+}
+
 TEST(ND_array_test, copy_by_reference)
 {
     using Integer_nd_array = computoc::ND_array<int>;

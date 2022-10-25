@@ -501,6 +501,19 @@ namespace computoc {
             ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
 
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const T& value)
+            {
+                if (is_empty(*this)) {
+                    return *this;
+                }
+                ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ hdr_.ndims(), hdr_.dims() };
+                while (ndstor) {
+                    (*this)(ndstor.nsubs(), ndstor.subs()) = value;
+                    ++ndstor;
+                }
+                return *this;
+            }
+
             virtual ~ND_array() = default;
 
             ND_array(std::size_t ndims, const std::size_t* dims, const T* data = nullptr)
