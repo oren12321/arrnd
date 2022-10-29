@@ -663,22 +663,30 @@ namespace computoc {
             typename T2, memoc::Buffer<T2> Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
         inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> copy_to(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& dst)
         {
+            /*
+            * Algorithm:
+            * - empty array     -> empty array
+            * - not equal count -> create new buffer
+            * - copy elements
+            */
+
             if (is_empty(src)) {
                 dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
                 return dst;
             }
 
-            if (!equal_dims(src.hdr_.ndims(), src.hdr_.dims(), dst.hdr_.ndims(), dst.hdr_.dims())) {
+            if (src.hdr_.count() != dst.hdr_.count()) {
                 dst.hdr_ = typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Header( src.hdr_.ndims(), src.hdr_.dims() );
                 dst.buffsp_ = memoc::make_shared<Internal_data_buffer2, Internal_allocator2>(src.hdr_.count());
             }
 
-            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor src_ndstor{ src.hdr_.ndims(), src.hdr_.dims() };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor dst_ndstor{ dst.hdr_.ndims(), dst.hdr_.dims() };
 
-            while (ndstor) {
-                const std::size_t* subs{ ndstor.subs() };
-                dst(ndstor.nsubs(), subs) = src(ndstor.nsubs(), subs);
-                ++ndstor;
+            while (src_ndstor && dst_ndstor) {
+                dst(dst_ndstor.nsubs(), dst_ndstor.subs()) = src(src_ndstor.nsubs(), src_ndstor.subs());
+                ++src_ndstor;
+                ++dst_ndstor;
             }
 
             return dst;

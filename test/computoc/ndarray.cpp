@@ -662,6 +662,19 @@ TEST(ND_array_test, copy_to)
         computoc::copy_to(arr2d, arr1);
         EXPECT_NE(arr1, arr2d);
     }
+
+    // copy to different dimensions and same count
+    {
+        const int data[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array arr{ {6}, data };
+
+        Integer_nd_array tarr{ {3, 1, 2}, data };
+
+        Integer_nd_array rarr{ {3, 1, 2}, 0 };
+        EXPECT_NE(tarr, rarr);
+        computoc::copy_to(arr, rarr);
+        EXPECT_EQ(tarr, rarr);
+    }
 }
 
 TEST(ND_array_test, reshape)
