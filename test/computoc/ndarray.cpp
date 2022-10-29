@@ -79,12 +79,14 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         std::size_t nsubs_counter{ 0 };
         for (; counter; counter++) {
             const std::size_t* subs{ counter.subs() };
-            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+            const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
             EXPECT_EQ(rsubs[1], subs[1]);
             EXPECT_EQ(rsubs[2], subs[2]);
             EXPECT_EQ(rsubs[3], subs[3]);
+
+            ++nsubs_counter;
         }
 
         EXPECT_EQ(nsubs, nsubs_counter);
@@ -93,15 +95,19 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     
     // with initial subscripts value
     {
+        std::initializer_list<std::size_t> from{1, 0, 0, 0};
+        std::initializer_list<std::size_t> to{2, 1, 3, 2};
         std::size_t nsubs_counter{ 6 };
-        for (computoc::ND_array<int>::Subscriptor counter{ {1, 0, 0, 0}, {2, 1, 3, 2} }; counter; ++counter) {
+        for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
             const std::size_t* subs{ counter.subs() };
-            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+            const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
             EXPECT_EQ(rsubs[1], subs[1]);
             EXPECT_EQ(rsubs[2], subs[2]);
             EXPECT_EQ(rsubs[3], subs[3]);
+
+            ++nsubs_counter;
         }
 
         EXPECT_EQ(nsubs, nsubs_counter);
