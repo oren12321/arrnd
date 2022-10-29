@@ -536,6 +536,35 @@ TEST(ND_array_test, copy_by_reference)
 
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1;
     EXPECT_EQ(rarr2, carr2);
+
+    // slice copying by assignment
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        Integer_nd_array starr3{ tarr3({ {0, 5, 2} }) };
+        rarr3({ {0, 5, 2} }) = starr3;
+        EXPECT_EQ(tarr3, rarr3);
+    }
+
+    // slice copying by assignment
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        Integer_nd_array starr3{ tarr3({ {0, 5, 2} }) };
+        Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
+        rarr3 = starr3;
+        EXPECT_NE(tarr3, rarr3);
+    }
 }
 
 TEST(ND_array_test, move_by_reference)
@@ -563,6 +592,35 @@ TEST(ND_array_test, move_by_reference)
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr2);
     EXPECT_TRUE(is_empty(sarr2));
     EXPECT_EQ(sarr, carr2);
+
+    // slice moving by assignment
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        rarr3({ {0, 5, 2} }) = std::move(tarr3({ {0, 5, 2} }));
+        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_FALSE(is_empty(tarr3));
+    }
+
+    // slice moving by assignment
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
+        srarr3 = std::move(tarr3({ {0, 5, 2} }));
+        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(is_empty(tarr3));
+    }
 }
 
 TEST(ND_array_test, copy_of)
