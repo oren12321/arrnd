@@ -146,11 +146,12 @@ namespace computoc {
             return offset;
         }
 
-        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const std::size_t* subs)
+        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, std::size_t nsubs, const std::size_t* subs)
         {
             std::size_t ind{ offset };
-            for (std::size_t i = 0; i < ndims; ++i) {
-                ind += strides[i] * subs[i];
+            std::size_t zero_nsubs{ ndims - nsubs };
+            for (std::size_t i = zero_nsubs; i < ndims; ++i) {
+                ind += strides[i] * subs[i - zero_nsubs];
             }
             return ind;
         }
@@ -167,11 +168,12 @@ namespace computoc {
             return count;
         }
 
-        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, const std::size_t* subs)
+        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, std::size_t nsubs, const std::size_t* subs)
         {
             bool result{ true };
-            for (std::size_t i = 0; i < ndims && result; ++i) {
-                result &= (subs[i] < dims[i]);
+            std::size_t zero_nsubs{ ndims - nsubs };
+            for (std::size_t i = zero_nsubs; i < ndims && result; ++i) {
+                result &= (subs[i - zero_nsubs] < dims[i]);
             }
             return result;
         }
@@ -549,9 +551,9 @@ namespace computoc {
 
             const T& operator()(std::size_t nsubs, const std::size_t* subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs && nsubs > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
             }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
@@ -560,9 +562,9 @@ namespace computoc {
 
             T& operator()(std::size_t nsubs, const std::size_t* subs)
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() == nsubs, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs && nsubs > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
             }
             T& operator()(std::initializer_list<std::size_t> subs)
             {

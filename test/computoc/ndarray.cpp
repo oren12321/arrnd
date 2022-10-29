@@ -210,6 +210,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     }
 
     EXPECT_THROW(arr1d({ dims1d[0] }), std::out_of_range);
+    EXPECT_THROW(arr1d({ 0, 0 }), std::invalid_argument);
 
     Integer_nd_array arr2d{ {3, 2}, data };
     const std::size_t* dims2d{ arr2d.header().dims() };
@@ -227,6 +228,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
 
     EXPECT_THROW(arr2d({ dims2d[0], 0 }), std::out_of_range);
     EXPECT_THROW(arr2d({ 0, dims2d[1] }), std::out_of_range);
+    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::invalid_argument);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
     const std::size_t* dims3d{ arr3d.header().dims() };
@@ -249,6 +251,17 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr3d({ dims3d[0], 0, 0 }), std::out_of_range);
     EXPECT_THROW(arr3d({ 0, dims3d[1], 0 }), std::out_of_range);
     EXPECT_THROW(arr3d({ 0, 0, dims3d[2] }), std::out_of_range);
+    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::invalid_argument);
+
+    // partial subscripts
+    {
+        Integer_nd_array parr{ {3, 1, 2}, data };
+
+        EXPECT_EQ(parr({ 0, 0, 0 }), parr({ 0 }));
+        EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 1 }));
+        EXPECT_EQ(parr({ 0, 0, 0 }), parr({ 0, 0 }));
+        EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 0, 1 }));
+    }
 }
 
 TEST(ND_array_test, have_read_write_access_to_slice)
