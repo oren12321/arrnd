@@ -106,6 +106,9 @@ namespace computoc {
         * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
         */
 
+        template <typename T>
+        using ND_param = memoc::Typed_block<T>;
+
         inline void dims2strides(std::size_t ndims, const std::size_t* dims, std::size_t* strides)
         {
             if (ndims > 0) {
@@ -146,12 +149,12 @@ namespace computoc {
             return offset;
         }
 
-        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, std::size_t nsubs, const std::size_t* subs)
+        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const std::size_t* strides, const ND_param<std::size_t>& subs)
         {
             std::size_t ind{ offset };
-            std::size_t zero_nsubs{ ndims - nsubs };
+            std::size_t zero_nsubs{ ndims - subs.s };
             for (std::size_t i = zero_nsubs; i < ndims; ++i) {
-                ind += strides[i] * subs[i - zero_nsubs];
+                ind += strides[i] * subs.p[i - zero_nsubs];
             }
             return ind;
         }
@@ -168,12 +171,12 @@ namespace computoc {
             return count;
         }
 
-        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, std::size_t nsubs, const std::size_t* subs)
+        inline bool subs_in_dims(std::size_t ndims, const std::size_t* dims, const ND_param<std::size_t>& subs)
         {
             bool result{ true };
-            std::size_t zero_nsubs{ ndims - nsubs };
+            std::size_t zero_nsubs{ ndims - subs.s };
             for (std::size_t i = zero_nsubs; i < ndims && result; ++i) {
-                result &= (subs[i - zero_nsubs] < dims[i]);
+                result &= (subs.p[i - zero_nsubs] < dims[i]);
             }
             return result;
         }
@@ -410,7 +413,7 @@ namespace computoc {
         {
         public:
             ND_subscriptor(std::size_t nsubs, const std::size_t* from, const std::size_t* to)
-                : nsubs_(nsubs), buff_(nsubs, from), subs_(buff_.data().p), from_(from), to_(to)
+                : buff_(nsubs, from), subs_(buff_.data()), from_(from), to_(to)
             {
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
             }
@@ -422,7 +425,7 @@ namespace computoc {
             }
 
             ND_subscriptor(std::size_t nsubs, const std::size_t* to)
-                :nsubs_(nsubs), buff_(nsubs), subs_(buff_.data().p), to_(to)
+                : buff_(nsubs), subs_(buff_.data()), to_(to)
             {
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
                 reset();
@@ -435,17 +438,17 @@ namespace computoc {
 
             void reset()
             {
-                for (std::size_t i = 0; i < nsubs_; ++i) {
-                    subs_[i] = 0;
+                for (std::size_t i = 0; i < subs_.s; ++i) {
+                    subs_.p[i] = 0;
                 }
             }
 
             ND_subscriptor& operator++()
             {
                 bool should_process_sub{ true };
-                for (std::size_t i = nsubs_; i >= 1 && should_process_sub; --i) {
-                    if ((should_process_sub = (++subs_[i - 1] == to_[i - 1])) && i > 1) {
-                        subs_[i - 1] = from_ ? from_[i - 1] : 0;
+                for (std::size_t i = subs_.s; i >= 1 && should_process_sub; --i) {
+                    if ((should_process_sub = (++subs_.p[i - 1] == to_[i - 1])) && i > 1) {
+                        subs_.p[i - 1] = from_ ? from_[i - 1] : 0;
                     }
                 }
                 return *this;
@@ -460,23 +463,17 @@ namespace computoc {
 
             operator bool()
             {
-                return subs_[0] != to_[0];
+                return subs_.p[0] != to_[0];
             }
 
-            std::size_t nsubs() const
-            {
-                return nsubs_;
-            }
-
-            const std::size_t* subs() const
+            const ND_param<std::size_t>& subs() const noexcept
             {
                 return subs_;
             }
 
         private:
-            std::size_t nsubs_{ 0 };
             Internal_buffer buff_{};
-            std::size_t* subs_{ nullptr };
+            ND_param<std::size_t> subs_{};
             const std::size_t* from_{ nullptr };
             const std::size_t* to_{ nullptr };
         };
@@ -542,7 +539,7 @@ namespace computoc {
                 }
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ hdr_.ndims(), hdr_.dims() };
                 while (ndstor) {
-                    (*this)(ndstor.nsubs(), ndstor.subs()) = value;
+                    (*this)(ndstor.subs()) = value;
                     ++ndstor;
                 }
                 return *this;
@@ -586,26 +583,26 @@ namespace computoc {
                 return (buffsp_ ? buffsp_->data().p : nullptr);
             }
 
-            const T& operator()(std::size_t nsubs, const std::size_t* subs) const
+            const T& operator()(const ND_param<std::size_t>& subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs && nsubs > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= subs.s && subs.s > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
             }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
-                return (*this)(subs.size(), subs.begin());
+                return (*this)(ND_param<std::size_t>{ subs.size(), const_cast<std::size_t*>(subs.begin()) });
             }
 
-            T& operator()(std::size_t nsubs, const std::size_t* subs)
+            T& operator()(const ND_param<std::size_t>& subs)
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= nsubs && nsubs > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), nsubs, subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), nsubs, subs)];
+                COMPUTOC_THROW_IF_FALSE(hdr_.ndims() >= subs.s && subs.s > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
+                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.ndims(), hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
+                return buffsp_->data().p[subs2ind(hdr_.ndims(), hdr_.offset(), hdr_.strides(), subs)];
             }
             T& operator()(std::initializer_list<std::size_t> subs)
             {
-                return (*this)(subs.size(), subs.begin());
+                return (*this)(ND_param<std::size_t>{ subs.size(), const_cast<std::size_t*>(subs.begin()) });
             }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::size_t nranges, const ND_range* ranges)
@@ -664,8 +661,7 @@ namespace computoc {
             typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor ndstor{ lhs.header().ndims(), lhs.header().dims() };
 
             while (ndstor) {
-                const std::size_t* subs{ ndstor.subs() };
-                if (!is_equal(lhs(ndstor.nsubs(), subs), rhs(ndstor.nsubs(), subs))) {
+                if (!is_equal(lhs(ndstor.subs()), rhs(ndstor.subs()))) {
                     return false;
                 }
                 ++ndstor;
@@ -699,7 +695,7 @@ namespace computoc {
             typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor dst_ndstor{ dst.header().ndims(), dst.header().dims() };
 
             while (src_ndstor && dst_ndstor) {
-                dst(dst_ndstor.nsubs(), dst_ndstor.subs()) = src(src_ndstor.nsubs(), src_ndstor.subs());
+                dst(dst_ndstor.subs()) = src(src_ndstor.subs());
                 ++src_ndstor;
                 ++dst_ndstor;
             }
@@ -728,8 +724,7 @@ namespace computoc {
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().ndims(), arr.header().dims() };
 
             while (ndstor) {
-                const std::size_t* subs{ ndstor.subs() };
-                clone(ndstor.nsubs(), subs) = arr(ndstor.nsubs(), subs);
+                clone(ndstor.subs()) = arr(ndstor.subs());
                 ++ndstor;
             }
             return clone;
@@ -763,7 +758,7 @@ namespace computoc {
                 typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor{ new_ndims, new_dims };
 
                 while (prev_ndstor && new_ndstor) {
-                    res(new_ndstor.nsubs(), new_ndstor.subs()) = arr(prev_ndstor.nsubs(), prev_ndstor.subs());
+                    res(new_ndstor.subs()) = arr(prev_ndstor.subs());
                     ++prev_ndstor;
                     ++new_ndstor;
                 }
@@ -807,7 +802,7 @@ namespace computoc {
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor{ new_ndims, new_dims };
 
             while (prev_ndstor && new_ndstor) {
-                res(new_ndstor.nsubs(), new_ndstor.subs()) = arr(prev_ndstor.nsubs(), prev_ndstor.subs());
+                res(new_ndstor.subs()) = arr(prev_ndstor.subs());
                 ++prev_ndstor;
                 ++new_ndstor;
             }

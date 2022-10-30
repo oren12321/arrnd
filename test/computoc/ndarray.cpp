@@ -52,7 +52,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     {
         std::size_t nsubs_counter{ 0 };
         while (counter && nsubs_counter < nsubs) {
-            const std::size_t* subs{ counter.subs() };
+            const std::size_t* subs{ counter.subs().p };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
@@ -67,7 +67,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     }
 
     counter.reset();
-    const std::size_t* subs{ counter.subs() };
+    const std::size_t* subs{ counter.subs().p };
 
     EXPECT_EQ(0, subs[0]);
     EXPECT_EQ(0, subs[1]);
@@ -78,7 +78,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     {
         std::size_t nsubs_counter{ 0 };
         for (; counter; counter++) {
-            const std::size_t* subs{ counter.subs() };
+            const std::size_t* subs{ counter.subs().p };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
@@ -99,7 +99,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         std::initializer_list<std::size_t> to{2, 1, 3, 2};
         std::size_t nsubs_counter{ 6 };
         for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
-            const std::size_t* subs{ counter.subs() };
+            const std::size_t* subs{ counter.subs().p };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
