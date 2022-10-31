@@ -175,7 +175,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     EXPECT_EQ(0, ehdr.dims().s);
     EXPECT_EQ(0, ehdr.count());
     EXPECT_TRUE(ehdr.dims().empty());
-    EXPECT_FALSE(ehdr.strides());
+    EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_partial());
     EXPECT_FALSE(earr.data());
@@ -187,7 +187,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     EXPECT_EQ(3, hdr.dims().s);
     EXPECT_EQ(6, hdr.count());
     EXPECT_EQ(3, hdr.dims().p[0]); EXPECT_EQ(1, hdr.dims().p[1]); EXPECT_EQ(2, hdr.dims().p[2]);
-    EXPECT_EQ(2, hdr.strides()[0]); EXPECT_EQ(2, hdr.strides()[1]); EXPECT_EQ(1, hdr.strides()[2]);
+    EXPECT_EQ(2, hdr.strides().p[0]); EXPECT_EQ(2, hdr.strides().p[1]); EXPECT_EQ(1, hdr.strides().p[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_partial());
     EXPECT_TRUE(arr.data());
