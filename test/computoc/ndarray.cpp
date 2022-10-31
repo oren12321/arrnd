@@ -393,6 +393,13 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
         arr1d({ 0, 0, 0 }) = 1.001;
         EXPECT_NE(arr1, arr1d);
     }
+
+    // empty arrays
+    {
+        EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{});
+        EXPECT_EQ(Integer_nd_array{}, Integer_nd_array({}));
+        EXPECT_EQ(Integer_nd_array{}, Integer_nd_array({}, 0));
+    }
 }
 
 TEST(ND_array_test, can_return_slice)
@@ -900,9 +907,15 @@ TEST(ND_array_test, complex_array)
     const std::size_t dims[]{ 2, 2, 2, 3, 3 };
     Integer_nd_array arr{ {5, dims}, reinterpret_cast<const int*>(data) };
 
-    const int sdata[1][1][1][2][1]{ { {{{47},{53}}} } };
-    const std::size_t sdims[]{ 1, 1, 1, 2, 1 };
-    Integer_nd_array sarr{ {5, sdims}, reinterpret_cast<const int*>(sdata) };
+    const int sdata1[1][1][1][2][1]{ { {{{47},{53}}} } };
+    const std::size_t sdims1[]{ 1, 1, 1, 2, 1 };
+    Integer_nd_array sarr1{ {5, sdims1}, reinterpret_cast<const int*>(sdata1) };
 
-    EXPECT_EQ(sarr, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }));
+    EXPECT_EQ(sarr1, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }));
+
+    const int sdata2[1][1][1][1][1]{ { {{{53}}} } };
+    const std::size_t sdims2[]{ 1, 1, 1, 1, 1 };
+    Integer_nd_array sarr2{ {5, sdims2}, reinterpret_cast<const int*>(sdata2) };
+
+    EXPECT_EQ(sarr2, sarr1({ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} }));
 }

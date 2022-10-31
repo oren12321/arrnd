@@ -306,7 +306,6 @@ namespace computoc {
                 if (previous_dims.s > ranges.s) {
                     ND_param<std::size_t> remained_dims{ previous_dims.s - ranges.s, previous_dims.p + ranges.s };
                     ND_param<std::size_t> remained_strides{ previous_dims.s - ranges.s, strides_.p + ranges.s };
-                    std::size_t remained = previous_dims.s - ranges.s;
                     dims2strides(remained_dims, remained_strides);
                 }
 
