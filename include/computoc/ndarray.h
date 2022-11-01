@@ -109,49 +109,94 @@ namespace computoc {
         template <typename T>
         using ND_param = memoc::Typed_block<T>;
 
-        inline void dims2strides(const ND_param<std::size_t>& dims, ND_param<std::size_t> strides)
+        inline void dims2strides(const ND_param<std::size_t>& dims, ND_param<std::size_t> strides) noexcept
         {
-            if (dims.s() > 0) {
-                strides.p()[dims.s() - 1] = 1;
-                for (std::size_t i = dims.s() - 1; i >= 1; --i) {
-                    strides.p()[i - 1] = strides.p()[i] * dims.p()[i];
-                }
+            if (dims.empty() || strides.empty()) {
+                return;
+            }
+
+            if (dims.s() != strides.s()) {
+                return;
+            }
+
+            strides.p()[dims.s() - 1] = 1;
+            for (std::size_t i = dims.s() - 1; i >= 1; --i) {
+                strides.p()[i - 1] = strides.p()[i] * dims.p()[i];
             }
         }
 
-        inline void ranges2strides(const ND_param<std::size_t>& previous_strides, const ND_param<ND_range>& ranges, ND_param<std::size_t> strides)
+        inline void ranges2strides(const ND_param<std::size_t>& previous_strides, const ND_param<ND_range>& ranges, ND_param<std::size_t> strides) noexcept
         {
+            if (previous_strides.empty() || ranges.empty() || strides.empty()) {
+                return;
+            }
+
+            if (previous_strides.s() != strides.s()) {
+                return;
+            }
+
+            if (ranges.s() > strides.s()) {
+                return;
+            }
+
             for (std::size_t i = 0; i < ranges.s(); ++i) {
                 strides.p()[i] = previous_strides.p()[i] * ranges.p()[i].step;
             }
         }
 
-        inline void ranges2dims(const ND_param<std::size_t>& previous_dims, const ND_param<ND_range>& ranges, ND_param<std::size_t> dims)
+        inline void ranges2dims(const ND_param<std::size_t>& previous_dims, const ND_param<ND_range>& ranges, ND_param<std::size_t> dims) noexcept
         {
-            // Assumption: size of dims is the bigger from ndims and nranges.
+            if (previous_dims.empty() || dims.empty()) {
+                return;
+            }
+
+            if (previous_dims.s() != dims.s()) {
+                return;
+            }
+
+            if (ranges.s() > dims.s()) {
+                return;
+            }
+
             for (std::size_t i = 0; i < ranges.s(); ++i) {
                 dims.p()[i] = static_cast<std::size_t>(std::ceil((ranges.p()[i].stop - ranges.p()[i].start + 1.0) / ranges.p()[i].step));
             }
-            if (previous_dims.s() > ranges.s()) {
-                for (std::size_t i = ranges.s(); i < previous_dims.s(); ++i) {
-                    dims.p()[i] = previous_dims.p()[i];
-                }
+
+            for (std::size_t i = ranges.s(); i < previous_dims.s(); ++i) {
+                dims.p()[i] = previous_dims.p()[i];
             }
         }
 
-        inline std::size_t ranges2offset(std::size_t previous_offset, const ND_param<std::size_t>& previous_strides, const ND_param<ND_range>& ranges)
+        inline std::size_t ranges2offset(std::size_t previous_offset, const ND_param<std::size_t>& previous_strides, const ND_param<ND_range>& ranges) noexcept
         {
             std::size_t offset{ previous_offset };
-            // Assumption: ndims >= nranges
+
+            if (previous_strides.empty() || ranges.empty()) {
+                return offset;
+            }
+
+            if (ranges.s() > previous_strides.s()) {
+                return offset;
+            }
+
             for (std::size_t i = 0; i < ranges.s(); ++i) {
                 offset += previous_strides.p()[i] * ranges.p()[i].start;
             }
             return offset;
         }
 
-        inline std::size_t subs2ind(std::size_t offset, const ND_param<std::size_t>& strides, const ND_param<std::size_t>& subs)
+        inline std::size_t subs2ind(std::size_t offset, const ND_param<std::size_t>& strides, const ND_param<std::size_t>& subs) noexcept
         {
             std::size_t ind{ offset };
+
+            if (strides.empty() || subs.empty()) {
+                return ind;
+            }
+
+            if (subs.s() > strides.s()) {
+                return ind;
+            }
+
             std::size_t zero_nsubs{ strides.s() - subs.s() };
             for (std::size_t i = zero_nsubs; i < strides.s(); ++i) {
                 ind += strides.p()[i] * subs.p()[i - zero_nsubs];
@@ -159,11 +204,12 @@ namespace computoc {
             return ind;
         }
 
-        inline std::size_t dims2count(const ND_param<std::size_t>& dims)
+        inline std::size_t dims2count(const ND_param<std::size_t>& dims) noexcept
         {
-            if (dims.s() == 0) {
+            if (dims.empty()) {
                 return 0;
             }
+
             std::size_t count{ 1 };
             for (std::size_t i = 0; i < dims.s(); ++i) {
                 count *= dims.p()[i];
@@ -171,13 +217,9 @@ namespace computoc {
             return count;
         }
 
-        inline bool subs_in_dims(const ND_param<std::size_t>& dims, const ND_param<std::size_t>& subs)
+        inline bool subs_in_dims(const ND_param<std::size_t>& dims, const ND_param<std::size_t>& subs) noexcept
         {
             if (subs.empty() || dims.empty()) {
-                return false;
-            }
-
-            if (subs.s() == 0 || dims.s() == 0) {
                 return false;
             }
 
@@ -193,8 +235,12 @@ namespace computoc {
             return result;
         }
 
-        inline bool legal_ranges(const ND_param<ND_range>& ranges)
+        inline bool legal_ranges(const ND_param<ND_range>& ranges) noexcept
         {
+            if (ranges.empty()) {
+                return false;
+            }
+
             bool result{ true };
             for (std::size_t i = 0; i < ranges.s() && result; ++i) {
                 result &= (ranges.p()[i].start <= ranges.p()[i].stop && ranges.p()[i].step > 0);
@@ -202,13 +248,9 @@ namespace computoc {
             return result;
         }
 
-        inline bool ranges_in_dims(const ND_param<std::size_t>& dims, const ND_param<ND_range>& ranges)
+        inline bool ranges_in_dims(const ND_param<std::size_t>& dims, const ND_param<ND_range>& ranges) noexcept
         {
             if (ranges.empty() || dims.empty()) {
-                return false;
-            }
-
-            if (ranges.s() == 0 || dims.s() == 0) {
                 return false;
             }
 
