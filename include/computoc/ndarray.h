@@ -111,30 +111,30 @@ namespace computoc {
 
         inline void dims2strides(const ND_param<std::size_t>& dims, ND_param<std::size_t> strides)
         {
-            if (dims.s > 0) {
-                strides.p[dims.s - 1] = 1;
-                for (std::size_t i = dims.s - 1; i >= 1; --i) {
-                    strides.p[i - 1] = strides.p[i] * dims.p[i];
+            if (dims.s() > 0) {
+                strides.p()[dims.s() - 1] = 1;
+                for (std::size_t i = dims.s() - 1; i >= 1; --i) {
+                    strides.p()[i - 1] = strides.p()[i] * dims.p()[i];
                 }
             }
         }
 
         inline void ranges2strides(const ND_param<std::size_t>& previous_strides, const ND_param<ND_range>& ranges, ND_param<std::size_t> strides)
         {
-            for (std::size_t i = 0; i < ranges.s; ++i) {
-                strides.p[i] = previous_strides.p[i] * ranges.p[i].step;
+            for (std::size_t i = 0; i < ranges.s(); ++i) {
+                strides.p()[i] = previous_strides.p()[i] * ranges.p()[i].step;
             }
         }
 
         inline void ranges2dims(const ND_param<std::size_t>& previous_dims, const ND_param<ND_range>& ranges, ND_param<std::size_t> dims)
         {
             // Assumption: size of dims is the bigger from ndims and nranges.
-            for (std::size_t i = 0; i < ranges.s; ++i) {
-                dims.p[i] = static_cast<std::size_t>(std::ceil((ranges.p[i].stop - ranges.p[i].start + 1.0) / ranges.p[i].step));
+            for (std::size_t i = 0; i < ranges.s(); ++i) {
+                dims.p()[i] = static_cast<std::size_t>(std::ceil((ranges.p()[i].stop - ranges.p()[i].start + 1.0) / ranges.p()[i].step));
             }
-            if (previous_dims.s > ranges.s) {
-                for (std::size_t i = ranges.s; i < previous_dims.s; ++i) {
-                    dims.p[i] = previous_dims.p[i];
+            if (previous_dims.s() > ranges.s()) {
+                for (std::size_t i = ranges.s(); i < previous_dims.s(); ++i) {
+                    dims.p()[i] = previous_dims.p()[i];
                 }
             }
         }
@@ -143,8 +143,8 @@ namespace computoc {
         {
             std::size_t offset{ previous_offset };
             // Assumption: ndims >= nranges
-            for (std::size_t i = 0; i < ranges.s; ++i) {
-                offset += previous_strides.p[i] * ranges.p[i].start;
+            for (std::size_t i = 0; i < ranges.s(); ++i) {
+                offset += previous_strides.p()[i] * ranges.p()[i].start;
             }
             return offset;
         }
@@ -152,21 +152,21 @@ namespace computoc {
         inline std::size_t subs2ind(std::size_t offset, const ND_param<std::size_t>& strides, const ND_param<std::size_t>& subs)
         {
             std::size_t ind{ offset };
-            std::size_t zero_nsubs{ strides.s - subs.s };
-            for (std::size_t i = zero_nsubs; i < strides.s; ++i) {
-                ind += strides.p[i] * subs.p[i - zero_nsubs];
+            std::size_t zero_nsubs{ strides.s() - subs.s() };
+            for (std::size_t i = zero_nsubs; i < strides.s(); ++i) {
+                ind += strides.p()[i] * subs.p()[i - zero_nsubs];
             }
             return ind;
         }
 
         inline std::size_t dims2count(const ND_param<std::size_t>& dims)
         {
-            if (dims.s == 0) {
+            if (dims.s() == 0) {
                 return 0;
             }
             std::size_t count{ 1 };
-            for (std::size_t i = 0; i < dims.s; ++i) {
-                count *= dims.p[i];
+            for (std::size_t i = 0; i < dims.s(); ++i) {
+                count *= dims.p()[i];
             }
             return count;
         }
@@ -177,18 +177,18 @@ namespace computoc {
                 return false;
             }
 
-            if (subs.s == 0 || dims.s == 0) {
+            if (subs.s() == 0 || dims.s() == 0) {
                 return false;
             }
 
-            if (subs.s > dims.s) {
+            if (subs.s() > dims.s()) {
                 return false;
             }
 
             bool result{ true };
-            std::size_t zero_nsubs{ dims.s - subs.s };
-            for (std::size_t i = zero_nsubs; i < dims.s && result; ++i) {
-                result &= (subs.p[i - zero_nsubs] < dims.p[i]);
+            std::size_t zero_nsubs{ dims.s() - subs.s() };
+            for (std::size_t i = zero_nsubs; i < dims.s() && result; ++i) {
+                result &= (subs.p()[i - zero_nsubs] < dims.p()[i]);
             }
             return result;
         }
@@ -196,8 +196,8 @@ namespace computoc {
         inline bool legal_ranges(const ND_param<ND_range>& ranges)
         {
             bool result{ true };
-            for (std::size_t i = 0; i < ranges.s && result; ++i) {
-                result &= (ranges.p[i].start <= ranges.p[i].stop && ranges.p[i].step > 0);
+            for (std::size_t i = 0; i < ranges.s() && result; ++i) {
+                result &= (ranges.p()[i].start <= ranges.p()[i].stop && ranges.p()[i].step > 0);
             }
             return result;
         }
@@ -208,17 +208,17 @@ namespace computoc {
                 return false;
             }
 
-            if (ranges.s == 0 || dims.s == 0) {
+            if (ranges.s() == 0 || dims.s() == 0) {
                 return false;
             }
 
-            if (ranges.s > dims.s) {
+            if (ranges.s() > dims.s()) {
                 return false;
             }
 
             bool result{ true };
-            for (std::size_t i = 0; i < ranges.s && result; ++i) {
-                result &= (ranges.p[i].stop < dims.p[i]);
+            for (std::size_t i = 0; i < ranges.s() && result; ++i) {
+                result &= (ranges.p()[i].stop < dims.p()[i]);
             }
             return result;
         }
@@ -305,22 +305,22 @@ namespace computoc {
                     return;
                 }
 
-                std::size_t new_ndims = previous_dims.s >= ranges.s ? previous_dims.s : ranges.s;
+                std::size_t new_ndims = previous_dims.s() >= ranges.s() ? previous_dims.s() : ranges.s();
 
                 size_info_ = Internal_buffer(new_ndims * 2);
                 COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { new_ndims, size_info_.data().p };
+                dims_ = { new_ndims, size_info_.data().p() };
                 ranges2dims(previous_dims, ranges, dims_);
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
 
-                strides_ = { new_ndims, size_info_.data().p + new_ndims };
+                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
                 ranges2strides(previous_strides, ranges, strides_);
-                if (previous_dims.s > ranges.s) {
-                    ND_param<std::size_t> remained_dims{ previous_dims.s - ranges.s, previous_dims.p + ranges.s };
-                    ND_param<std::size_t> remained_strides{ previous_dims.s - ranges.s, strides_.p + ranges.s };
+                if (previous_dims.s() > ranges.s()) {
+                    ND_param<std::size_t> remained_dims{ previous_dims.s() - ranges.s(), previous_dims.p() + ranges.s() };
+                    ND_param<std::size_t> remained_strides{ previous_dims.s() - ranges.s(), strides_.p() + ranges.s() };
                     dims2strides(remained_dims, remained_strides);
                 }
 
@@ -328,7 +328,7 @@ namespace computoc {
             }
 
             ND_header(const ND_param<std::size_t>& dims)
-                : size_info_(dims.s * 2)
+                : size_info_(dims.s() * 2)
             {
                 if (dims.empty()) {
                     return;
@@ -336,12 +336,12 @@ namespace computoc {
 
                 COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { dims.s, size_info_.data().p };
-                for (std::size_t i = 0; i < dims_.s; ++i) {
-                    dims_.p[i] = dims.p[i];
+                dims_ = { dims.s(), size_info_.data().p() };
+                for (std::size_t i = 0; i < dims_.s(); ++i) {
+                    dims_.p()[i] = dims.p()[i];
                 }
 
-                strides_ = { dims.s, size_info_.data().p + dims.s };
+                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -352,8 +352,8 @@ namespace computoc {
             ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
-                dims_ = { other.dims_.s, size_info_.data().p };
-                strides_ = { other.strides_.s, size_info_.data().p + other.dims_.s };
+                dims_ = { other.dims_.s(), size_info_.data().p() };
+                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
 
                 other.dims_.clear();
                 other.strides_.clear();
@@ -371,8 +371,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_partial_ = other.is_partial_;
 
-                dims_ = { other.dims_.s, size_info_.data().p };
-                strides_ = { other.strides_.s, size_info_.data().p + other.dims_.s };
+                dims_ = { other.dims_.s(), size_info_.data().p() };
+                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
 
                 other.dims_.clear();
                 other.strides_.clear();
@@ -385,8 +385,8 @@ namespace computoc {
             ND_header(const ND_header& other) noexcept
                 : size_info_(other.size_info_), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
-                dims_ = { other.dims_.s, size_info_.data().p };
-                strides_ = { other.strides_.s, size_info_.data().p + other.dims_.s };
+                dims_ = { other.dims_.s(), size_info_.data().p() };
+                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
             }
             ND_header& operator=(const ND_header& other) noexcept
             {
@@ -399,8 +399,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_partial_ = other.is_partial_;
 
-                dims_ = { other.dims_.s, size_info_.data().p };
-                strides_ = { other.strides_.s, size_info_.data().p + other.dims_.s };
+                dims_ = { other.dims_.s(), size_info_.data().p() };
+                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
 
                 return *this;
             }
@@ -454,10 +454,10 @@ namespace computoc {
         {
         public:
             ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to)
-                : buff_(from.s, from.p), subs_(buff_.data()), from_(from.p), to_(to.p)
+                : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty(), std::invalid_argument, "'from' and/or 'to' subscripts size is zero");
-                COMPUTOC_THROW_IF_FALSE(from.s == to.s, std::invalid_argument, "'froms' and 'to' subscripts size are not equal");
+                COMPUTOC_THROW_IF_FALSE(from.s() == to.s(), std::invalid_argument, "'froms' and 'to' subscripts size are not equal");
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
             }
@@ -467,7 +467,7 @@ namespace computoc {
             }
 
             ND_subscriptor(const ND_param<std::size_t>& to)
-                : buff_(to.s), subs_(buff_.data()), to_(to.p)
+                : buff_(to.s()), subs_(buff_.data()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!to.empty(), std::invalid_argument, "'to' subscripts size is zero");
 
@@ -525,17 +525,17 @@ namespace computoc {
 
             void reset() noexcept
             {
-                for (std::size_t i = 0; i < subs_.s; ++i) {
-                    subs_.p[i] = 0;
+                for (std::size_t i = 0; i < subs_.s(); ++i) {
+                    subs_.p()[i] = 0;
                 }
             }
 
             ND_subscriptor& operator++() noexcept
             {
                 bool should_process_sub{ true };
-                for (std::size_t i = subs_.s; i >= 1 && should_process_sub; --i) {
-                    if ((should_process_sub = (++subs_.p[i - 1] == to_[i - 1])) && i > 1) {
-                        subs_.p[i - 1] = from_ ? from_[i - 1] : 0;
+                for (std::size_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
+                    if ((should_process_sub = (++subs_.p()[i - 1] == to_[i - 1])) && i > 1) {
+                        subs_.p()[i - 1] = from_ ? from_[i - 1] : 0;
                     }
                 }
                 return *this;
@@ -550,7 +550,7 @@ namespace computoc {
 
             operator bool() const noexcept
             {
-                return subs_.p[0] != to_[0];
+                return subs_.p()[0] != to_[0];
             }
 
             const ND_param<std::size_t>& subs() const noexcept
@@ -646,8 +646,8 @@ namespace computoc {
             ND_array(const ND_param<std::size_t>& dims, const T& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<Internal_data_buffer, Internal_allocator>(hdr_.count()))
             {
-                for (std::size_t i = 0; i < buffsp_->data().s; ++i) {
-                    buffsp_->data().p[i] = value;
+                for (std::size_t i = 0; i < buffsp_->data().s(); ++i) {
+                    buffsp_->data().p()[i] = value;
                 }
             }
             ND_array(std::initializer_list<std::size_t> dims, const T& value)
@@ -667,13 +667,13 @@ namespace computoc {
 
             T* data() const noexcept
             {
-                return (buffsp_ ? buffsp_->data().p : nullptr);
+                return (buffsp_ ? buffsp_->data().p() : nullptr);
             }
 
             const T& operator()(const ND_param<std::size_t>& subs) const
             {
                 COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
+                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
             }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
@@ -683,7 +683,7 @@ namespace computoc {
             T& operator()(const ND_param<std::size_t>& subs)
             {
                 COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
+                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
             }
             T& operator()(std::initializer_list<std::size_t> subs)
             {

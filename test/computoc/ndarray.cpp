@@ -52,7 +52,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     {
         std::size_t nsubs_counter{ 0 };
         while (counter && nsubs_counter < nsubs) {
-            const std::size_t* subs{ counter.subs().p };
+            const std::size_t* subs{ counter.subs().p() };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
@@ -67,7 +67,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     }
 
     counter.reset();
-    const std::size_t* subs{ counter.subs().p };
+    const std::size_t* subs{ counter.subs().p() };
 
     EXPECT_EQ(0, subs[0]);
     EXPECT_EQ(0, subs[1]);
@@ -78,7 +78,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     {
         std::size_t nsubs_counter{ 0 };
         for (; counter; counter++) {
-            const std::size_t* subs{ counter.subs().p };
+            const std::size_t* subs{ counter.subs().p() };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
@@ -99,7 +99,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         std::initializer_list<std::size_t> to{2, 1, 3, 2};
         std::size_t nsubs_counter{ 6 };
         for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
-            const std::size_t* subs{ counter.subs().p };
+            const std::size_t* subs{ counter.subs().p() };
             const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
@@ -172,7 +172,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     Integer_nd_array earr{};
     const Integer_nd_array::Header& ehdr{ earr.header() };
 
-    EXPECT_EQ(0, ehdr.dims().s);
+    EXPECT_EQ(0, ehdr.dims().s());
     EXPECT_EQ(0, ehdr.count());
     EXPECT_TRUE(ehdr.dims().empty());
     EXPECT_TRUE(ehdr.strides().empty());
@@ -184,10 +184,10 @@ TEST(ND_array_test, can_return_its_header_and_data)
     Integer_nd_array arr{ {3, 1, 2}, value };
     const Integer_nd_array::Header& hdr{ arr.header() };
 
-    EXPECT_EQ(3, hdr.dims().s);
+    EXPECT_EQ(3, hdr.dims().s());
     EXPECT_EQ(6, hdr.count());
-    EXPECT_EQ(3, hdr.dims().p[0]); EXPECT_EQ(1, hdr.dims().p[1]); EXPECT_EQ(2, hdr.dims().p[2]);
-    EXPECT_EQ(2, hdr.strides().p[0]); EXPECT_EQ(2, hdr.strides().p[1]); EXPECT_EQ(1, hdr.strides().p[2]);
+    EXPECT_EQ(3, hdr.dims().p()[0]); EXPECT_EQ(1, hdr.dims().p()[1]); EXPECT_EQ(2, hdr.dims().p()[2]);
+    EXPECT_EQ(2, hdr.strides().p()[0]); EXPECT_EQ(2, hdr.strides().p()[1]); EXPECT_EQ(1, hdr.strides().p()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_partial());
     EXPECT_TRUE(arr.data());
@@ -206,7 +206,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         5, 6 };
 
     Integer_nd_array arr1d{ {6}, data };
-    const std::size_t* dims1d{ arr1d.header().dims().p };
+    const std::size_t* dims1d{ arr1d.header().dims().p() };
     for (std::size_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ(arr1d({ i }), data[i]);
     }
@@ -219,7 +219,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr1d({ 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr2d{ {3, 2}, data };
-    const std::size_t* dims2d{ arr2d.header().dims().p };
+    const std::size_t* dims2d{ arr2d.header().dims().p() };
     for (std::size_t i = 0; i < dims2d[0]; ++i) {
         for (std::size_t j = 0; j < dims2d[1]; ++j) {
             EXPECT_EQ(arr2d({ i, j }), data[i * dims2d[1] + j]);
@@ -237,7 +237,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr2d({ 0, 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
-    const std::size_t* dims3d{ arr3d.header().dims().p };
+    const std::size_t* dims3d{ arr3d.header().dims().p() };
     for (std::size_t k = 0; k < dims3d[0]; ++k) {
         for (std::size_t i = 0; i < dims3d[1]; ++i) {
             for (std::size_t j = 0; j < dims3d[2]; ++j) {
@@ -827,8 +827,8 @@ TEST(ND_array_test, resize)
     {
         Integer_nd_array rarr{ computoc::resized(Integer_nd_array{}, {6}) };
         EXPECT_NE(arr, rarr);
-        EXPECT_EQ(arr.header().dims().s, rarr.header().dims().s);
-        EXPECT_EQ(6, rarr.header().dims().p[0]);
+        EXPECT_EQ(arr.header().dims().s(), rarr.header().dims().s());
+        EXPECT_EQ(6, rarr.header().dims().p()[0]);
         EXPECT_NE(arr.data(), rarr.data());
     }
 
