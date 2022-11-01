@@ -149,11 +149,11 @@ namespace computoc {
             return offset;
         }
 
-        inline std::size_t subs2ind(std::size_t ndims, std::size_t offset, const ND_param<std::size_t>& strides, const ND_param<std::size_t>& subs)
+        inline std::size_t subs2ind(std::size_t offset, const ND_param<std::size_t>& strides, const ND_param<std::size_t>& subs)
         {
             std::size_t ind{ offset };
-            std::size_t zero_nsubs{ ndims - subs.s };
-            for (std::size_t i = zero_nsubs; i < ndims; ++i) {
+            std::size_t zero_nsubs{ strides.s - subs.s };
+            for (std::size_t i = zero_nsubs; i < strides.s; ++i) {
                 ind += strides.p[i] * subs.p[i - zero_nsubs];
             }
             return ind;
@@ -173,6 +173,18 @@ namespace computoc {
 
         inline bool subs_in_dims(const ND_param<std::size_t>& dims, const ND_param<std::size_t>& subs)
         {
+            if (subs.empty() || dims.empty()) {
+                return false;
+            }
+
+            if (subs.s == 0 || dims.s == 0) {
+                return false;
+            }
+
+            if (subs.s > dims.s) {
+                return false;
+            }
+
             bool result{ true };
             std::size_t zero_nsubs{ dims.s - subs.s };
             for (std::size_t i = zero_nsubs; i < dims.s && result; ++i) {
@@ -192,15 +204,18 @@ namespace computoc {
 
         inline bool ranges_in_dims(const ND_param<std::size_t>& dims, const ND_param<ND_range>& ranges)
         {
-            if (dims.s == 0) {
+            if (ranges.empty() || dims.empty()) {
                 return false;
             }
-            if (ranges.empty()) {
-                return true; // empty group of ranges considered to be inside group of dimensions
+
+            if (ranges.s == 0 || dims.s == 0) {
+                return false;
             }
+
             if (ranges.s > dims.s) {
                 return false;
             }
+
             bool result{ true };
             for (std::size_t i = 0; i < ranges.s && result; ++i) {
                 result &= (ranges.p[i].stop < dims.p[i]);
@@ -657,9 +672,8 @@ namespace computoc {
 
             const T& operator()(const ND_param<std::size_t>& subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.dims().s >= subs.s && subs.s > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
                 COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.dims().s, hdr_.offset(), hdr_.strides(), subs)];
+                return buffsp_->data().p[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
             }
             const T& operator()(std::initializer_list<std::size_t> subs) const
             {
@@ -668,34 +682,30 @@ namespace computoc {
 
             T& operator()(const ND_param<std::size_t>& subs)
             {
-                COMPUTOC_THROW_IF_FALSE(hdr_.dims().s >= subs.s && subs.s > 0, std::invalid_argument, "number of subscripts different from number of dimensions");
                 COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p[subs2ind(hdr_.dims().s, hdr_.offset(), hdr_.strides(), subs)];
+                return buffsp_->data().p[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
             }
             T& operator()(std::initializer_list<std::size_t> subs)
             {
                 return (*this)(ND_param<std::size_t>{ subs.size(), subs.begin() });
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(const ND_param<ND_range>& ranges)
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(const ND_param<ND_range>& ranges) const
             {
                 /*
                 * Slicing algorithm:
-                * - empty group of ranges -> original input array
-                * - illegal ranges -> throw exception
-                * - more ranges than dimensions -> throw exception
-                * - empty array -> empty array
-                * - ranges not inside dimensions -> throw exception
-                * - return subarray
+                * - empty ranges group -> input array
+                * - ranges should be legal
+                * - input empty array -> input array
+                * - ranges should be inside dimensions
+                * - -> slice
                 */
-                COMPUTOC_THROW_IF_FALSE(legal_ranges(ranges), std::invalid_argument, "illegal ranges");
-
                 if (ranges.empty() || is_empty(*this)) {
                     return (*this);
                 }
 
-                COMPUTOC_THROW_IF_FALSE(ranges.s <= hdr_.dims().s, std::invalid_argument, "more ranges than dimensions");
-                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.dims(), ranges), std::invalid_argument, "ranges invalid for dimensions");
+                COMPUTOC_THROW_IF_FALSE(legal_ranges(ranges), std::invalid_argument, "illegal ranges");
+                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.dims(), ranges), std::out_of_range, "ranges invalid for dimensions");
 
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> slice{};
                 slice.hdr_ = Header{ hdr_.dims(), ranges, hdr_.strides(), hdr_.offset() };

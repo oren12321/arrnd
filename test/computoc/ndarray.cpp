@@ -216,7 +216,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     }
 
     EXPECT_THROW(arr1d({ dims1d[0] }), std::out_of_range);
-    EXPECT_THROW(arr1d({ 0, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr1d({ 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr2d{ {3, 2}, data };
     const std::size_t* dims2d{ arr2d.header().dims().p };
@@ -234,7 +234,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
 
     EXPECT_THROW(arr2d({ dims2d[0], 0 }), std::out_of_range);
     EXPECT_THROW(arr2d({ 0, dims2d[1] }), std::out_of_range);
-    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
     const std::size_t* dims3d{ arr3d.header().dims().p };
@@ -257,7 +257,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr3d({ dims3d[0], 0, 0 }), std::out_of_range);
     EXPECT_THROW(arr3d({ 0, dims3d[1], 0 }), std::out_of_range);
     EXPECT_THROW(arr3d({ 0, 0, dims3d[2] }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::invalid_argument);
+    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::out_of_range);
 
     // partial subscripts
     {
@@ -423,19 +423,24 @@ TEST(ND_array_test, can_return_slice)
 
     // more ranges than dimensions
     {
-        EXPECT_THROW(arr({ {0, 0}, {0, 0}, {0, 0}, {0, 0} }), std::invalid_argument);
+        EXPECT_THROW(arr({ {0, 0}, {0, 0}, {0, 0}, {0, 0} }), std::out_of_range);
     }
 
     // illegal ranges
     {
-        EXPECT_THROW((Integer_nd_array{})({ {0, 0, 0} }), std::invalid_argument);
-        EXPECT_THROW((Integer_nd_array{})({ {2, 1, 1} }), std::invalid_argument);
+        EXPECT_THROW(arr({ {0, 0, 0} }), std::invalid_argument);
+        EXPECT_THROW(arr({ {2, 1, 1} }), std::invalid_argument);
     }
 
     // empty array
     {
         EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}(std::initializer_list<computoc::ND_range>{}));
         EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}({ {0,1}, {0,4,2} }));
+    }
+
+    // out of range ranges
+    {
+        EXPECT_THROW(arr({ { 0, 3 }, { 0 }, { 2 } }), std::out_of_range);
     }
 
     // ranges in dims
