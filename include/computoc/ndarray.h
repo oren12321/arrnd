@@ -349,7 +349,7 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
-            ND_header(ND_header&& other)
+            ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
                 dims_ = { other.dims_.s, size_info_.data().p };
@@ -360,7 +360,7 @@ namespace computoc {
                 other.count_ = other.offset_ = 0;
                 other.is_partial_ = false;
             }
-            ND_header& operator=(ND_header&& other)
+            ND_header& operator=(ND_header&& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -382,13 +382,13 @@ namespace computoc {
                 return *this;
             }
 
-            ND_header(const ND_header& other)
+            ND_header(const ND_header& other) noexcept
                 : size_info_(other.size_info_), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
                 dims_ = { other.dims_.s, size_info_.data().p };
                 strides_ = { other.strides_.s, size_info_.data().p + other.dims_.s };
             }
-            ND_header& operator=(const ND_header& other)
+            ND_header& operator=(const ND_header& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -407,7 +407,7 @@ namespace computoc {
 
             virtual ~ND_header() = default;
 
-            std::size_t count() const
+            std::size_t count() const noexcept
             {
                 return count_;
             }
@@ -422,12 +422,12 @@ namespace computoc {
                 return strides_;
             }
 
-            std::size_t offset() const
+            std::size_t offset() const noexcept
             {
                 return offset_;
             }
 
-            bool is_partial() const
+            bool is_partial() const noexcept
             {
                 return is_partial_;
             }
@@ -456,7 +456,7 @@ namespace computoc {
             ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to)
                 : buff_(from.s, from.p), subs_(buff_.data()), from_(from.p), to_(to.p)
             {
-                COMPUTOC_THROW_IF_FALSE(from.s && to.s, std::invalid_argument, "'from' and/or 'to' subscripts size is zero");
+                COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty(), std::invalid_argument, "'from' and/or 'to' subscripts size is zero");
                 COMPUTOC_THROW_IF_FALSE(from.s == to.s, std::invalid_argument, "'froms' and 'to' subscripts size are not equal");
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
@@ -469,7 +469,7 @@ namespace computoc {
             ND_subscriptor(const ND_param<std::size_t>& to)
                 : buff_(to.s), subs_(buff_.data()), to_(to.p)
             {
-                COMPUTOC_THROW_IF_FALSE(to.s, std::invalid_argument, "'to' subscripts size is zero");
+                COMPUTOC_THROW_IF_FALSE(!to.empty(), std::invalid_argument, "'to' subscripts size is zero");
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
                 reset();
@@ -481,12 +481,12 @@ namespace computoc {
 
             ND_subscriptor() = default;
 
-            ND_subscriptor(const ND_subscriptor<Internal_buffer>& other)
+            ND_subscriptor(const ND_subscriptor<Internal_buffer>& other) noexcept
                 : buff_(other.buff_), from_(other.from_), to_(other.to_)
             {
                 subs_ = buff_.data();
             }
-            ND_subscriptor& operator=(const ND_subscriptor<Internal_buffer>& other)
+            ND_subscriptor& operator=(const ND_subscriptor<Internal_buffer>& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -498,7 +498,7 @@ namespace computoc {
                 subs_ = buff_.data();
             }
 
-            ND_subscriptor(ND_subscriptor<Internal_buffer>&& other)
+            ND_subscriptor(ND_subscriptor<Internal_buffer>&& other) noexcept
                 : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_)
             {
                 subs_ = buff_.data();
@@ -506,7 +506,7 @@ namespace computoc {
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
             }
-            ND_subscriptor& operator=(ND_subscriptor&& other)
+            ND_subscriptor& operator=(ND_subscriptor&& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -523,14 +523,14 @@ namespace computoc {
 
             virtual ~ND_subscriptor() = default;
 
-            void reset()
+            void reset() noexcept
             {
                 for (std::size_t i = 0; i < subs_.s; ++i) {
                     subs_.p[i] = 0;
                 }
             }
 
-            ND_subscriptor& operator++()
+            ND_subscriptor& operator++() noexcept
             {
                 bool should_process_sub{ true };
                 for (std::size_t i = subs_.s; i >= 1 && should_process_sub; --i) {
@@ -541,14 +541,14 @@ namespace computoc {
                 return *this;
             }
 
-            ND_subscriptor operator++(int)
+            ND_subscriptor operator++(int) noexcept
             {
                 ND_subscriptor temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            operator bool()
+            operator bool() const noexcept
             {
                 return subs_.p[0] != to_[0];
             }
@@ -583,7 +583,7 @@ namespace computoc {
 
             ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) = default;
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)&&
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)&& noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -602,7 +602,7 @@ namespace computoc {
 
             ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)&&
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)&& noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -665,7 +665,7 @@ namespace computoc {
                 return hdr_;
             }
 
-            T* data() const
+            T* data() const noexcept
             {
                 return (buffsp_ ? buffsp_->data().p : nullptr);
             }
@@ -712,7 +712,7 @@ namespace computoc {
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges)
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges) const
             {
                 return (*this)(ND_param<ND_range>{ranges.size(), ranges.begin()});
             }
@@ -817,17 +817,17 @@ namespace computoc {
         {
             /*
             * Reshaping algorithm:
-            * - different number of elements -> throw an exception
             * - empty array -> empty array
+            * - different number of elements -> throw an exception
             * - equal dimensions -> ref to input array
             * - subarray -> new array with new size and copied elements from input array (reshape on subarray isn't always defined)
             * - not subarray -> reference to input array with modified header
             */
-            COMPUTOC_THROW_IF_FALSE(arr.header().count() == dims2count(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
-
             if (is_empty(arr)) {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
+
+            COMPUTOC_THROW_IF_FALSE(arr.header().count() == dims2count(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
 
             if (arr.header().dims() == new_dims) {
                 return arr;
@@ -866,7 +866,7 @@ namespace computoc {
             * Resizing algorithm:
             * - return new array of the new size containing the original array data or part of it.
             */
-            if (new_dims.s == 0) {
+            if (new_dims.empty()) {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
@@ -898,9 +898,9 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline bool is_empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr)
+        inline bool is_empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr) noexcept
         {
-            return !arr.data();
+            return !arr.data() || (arr.header().count() == 0);
         }
     }
 
