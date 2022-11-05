@@ -785,7 +785,7 @@ namespace computoc {
             typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor ndstor{ lhs.header().dims() };
 
             while (ndstor) {
-                if (!is_equal(lhs(ndstor.subs()), rhs(ndstor.subs()))) {
+                if (!equal(lhs(ndstor.subs()), rhs(ndstor.subs()))) {
                     return false;
                 }
                 ++ndstor;
