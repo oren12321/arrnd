@@ -593,16 +593,16 @@ TEST(ND_array_test, move_by_reference)
     Integer_nd_array arr{ {3, dims}, data };
     Integer_nd_array carr1{ std::move(arr) };
     EXPECT_EQ(sarr, carr1);
-    EXPECT_TRUE(is_empty(arr));
+    EXPECT_TRUE(empty(arr));
 
     Integer_nd_array carr2{};
     carr2 = std::move(carr1);
     EXPECT_EQ(sarr, carr2);
-    EXPECT_TRUE(is_empty(carr1));
+    EXPECT_TRUE(empty(carr1));
 
     Integer_nd_array sarr2{ {3, dims}, data };
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr2);
-    EXPECT_TRUE(is_empty(sarr2));
+    EXPECT_TRUE(empty(sarr2));
     EXPECT_EQ(sarr, carr2);
 
     // slice moving by assignment
@@ -616,7 +616,7 @@ TEST(ND_array_test, move_by_reference)
         EXPECT_NE(tarr3, rarr3);
         rarr3({ {0, 5, 2} }) = std::move(tarr3({ {0, 5, 2} }));
         EXPECT_EQ(tarr3, rarr3);
-        EXPECT_FALSE(is_empty(tarr3));
+        EXPECT_FALSE(empty(tarr3));
     }
 
     // slice moving by assignment
@@ -631,7 +631,7 @@ TEST(ND_array_test, move_by_reference)
         Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
         srarr3 = std::move(tarr3({ {0, 5, 2} }));
         EXPECT_NE(tarr3, rarr3);
-        EXPECT_FALSE(is_empty(tarr3));
+        EXPECT_FALSE(empty(tarr3));
     }
 }
 

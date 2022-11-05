@@ -663,7 +663,7 @@ namespace computoc {
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const T& value)
             {
-                if (is_empty(*this)) {
+                if (empty(*this)) {
                     return *this;
                 }
                 ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ ND_param<std::size_t>(hdr_.dims()) };
@@ -742,7 +742,7 @@ namespace computoc {
                 * - ranges should be inside dimensions
                 * - -> slice
                 */
-                if (ranges.empty() || is_empty(*this)) {
+                if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
 
@@ -806,7 +806,7 @@ namespace computoc {
             * - copy elements
             */
 
-            if (is_empty(src)) {
+            if (empty(src)) {
                 dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
                 return dst;
             }
@@ -839,7 +839,7 @@ namespace computoc {
         {
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone{};
 
-            if (is_empty(arr)) {
+            if (empty(arr)) {
                 return clone;
             }
 
@@ -865,7 +865,7 @@ namespace computoc {
             * - subarray -> new array with new size and copied elements from input array (reshape on subarray isn't always defined)
             * - not subarray -> reference to input array with modified header
             */
-            if (is_empty(arr)) {
+            if (empty(arr)) {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
@@ -912,7 +912,7 @@ namespace computoc {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            if (is_empty(arr)) {
+            if (empty(arr)) {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>(new_dims);
             }
 
@@ -940,7 +940,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer<T> Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline bool is_empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr) noexcept
+        inline bool empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr) noexcept
         {
             return !arr.data() || (arr.header().count() == 0);
         }
@@ -953,7 +953,7 @@ namespace computoc {
     using details::copy_of;
     using details::reshaped;
     using details::resized;
-    using details::is_empty;
+    using details::empty;
 }
 
 #endif // COMPUTOC_TYPES_NDARRAY_H
