@@ -624,8 +624,15 @@ namespace computoc {
             ND_array() = default;
 
             ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) = default;
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)
+            {
+                copy_to(other, *this);
+
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
+            }
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)&& noexcept
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -641,10 +648,31 @@ namespace computoc {
 
                 return *this;
             }
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)&
+            {
+                copy_to(other, *this);
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
+                return *this;
+            }
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)&&
+            {
+                if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
+                    copy_to(other, *this);
+                }
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{std::move(other)};
+                return *this;
+            }
 
             ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)
+            {
+                copy_to(other, *this);
+            }
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)&& noexcept
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -658,6 +686,20 @@ namespace computoc {
                 hdr_ = other.hdr_;
                 buffsp_ = other.buffsp_;
 
+                return *this;
+            }
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)&
+            {
+                copy_to(other, *this);
+                return *this;
+            }
+            template< typename T_o, memoc::Buffer<T_o> Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)&&
+            {
+                if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
+                    copy_to(other, *this);
+                }
                 return *this;
             }
 

@@ -549,7 +549,7 @@ TEST(ND_array_test, copy_by_reference)
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1;
     EXPECT_EQ(rarr2, carr2);
 
-    // slice copying by assignment
+    // slice copying by assignment (rvalue)
     {
         const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
         Integer_nd_array tarr3{ {6}, tdata3 };
@@ -563,7 +563,7 @@ TEST(ND_array_test, copy_by_reference)
         EXPECT_EQ(tarr3, rarr3);
     }
 
-    // slice copying by assignment
+    // slice copying by assignment (lvalue)
     {
         const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
         Integer_nd_array tarr3{ {6}, tdata3 };
@@ -573,6 +573,72 @@ TEST(ND_array_test, copy_by_reference)
 
         EXPECT_NE(tarr3, rarr3);
         Integer_nd_array starr3{ tarr3({ {0, 5, 2} }) };
+        Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
+        rarr3 = starr3;
+        EXPECT_NE(tarr3, rarr3);
+    }
+
+    // different template arguments
+    {
+        const int idata[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        const std::size_t dims[]{ 3, 1, 2 };
+        Integer_nd_array iarr{ {3, dims}, idata };
+
+        const double ddata[] = {
+            1.1, 2.1,
+            3.1, 4.1,
+            5.1, 6.1 };
+        computoc::ND_array<double> darr{ {3, dims}, ddata };
+
+        Integer_nd_array cdarr1{ darr };
+        EXPECT_EQ(iarr, cdarr1);
+
+        Integer_nd_array cdarr2{};
+        cdarr2 = darr;
+        EXPECT_EQ(iarr, cdarr2);
+    }
+
+    // slice copying by assignment (rvalue) - different template arguments
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        computoc::ND_array<double> starr3{ tarr3({ {0, 5, 2} }) };
+        rarr3({ {0, 5, 2} }) = starr3;
+        EXPECT_EQ(tarr3, rarr3);
+    }
+
+    // slice copying by assignment (rvalue) - different template arguments and different dimensions
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        computoc::ND_array<double> starr3{ tarr3({ {0, 5, 2} }) };
+        rarr3({ {0, 3, 2} }) = starr3;
+        EXPECT_NE(tarr3, rarr3);
+    }
+
+    // slice copying by assignment (lvalue) - different template arguments
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        computoc::ND_array<double> starr3{ tarr3({ {0, 5, 2} }) };
         Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
         rarr3 = starr3;
         EXPECT_NE(tarr3, rarr3);
@@ -629,6 +695,74 @@ TEST(ND_array_test, move_by_reference)
 
         EXPECT_NE(tarr3, rarr3);
         Integer_nd_array srarr3{ rarr3({ {0, 5, 2} }) };
+        srarr3 = std::move(tarr3({ {0, 5, 2} }));
+        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(empty(tarr3));
+    }
+
+    // different template arguments
+    {
+        const int idata[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        const std::size_t dims[]{ 3, 1, 2 };
+        Integer_nd_array iarr{ {3, dims}, idata };
+
+        const double ddata[] = {
+            1.1, 2.1,
+            3.1, 4.1,
+            5.1, 6.1 };
+        computoc::ND_array<double> darr{ {3, dims}, ddata };
+
+        Integer_nd_array cdarr1{ std::move(darr) };
+        EXPECT_EQ(iarr, cdarr1);
+        EXPECT_TRUE(empty(darr));
+
+        computoc::ND_array<double> cdarr2{};
+        cdarr2 = std::move(cdarr1);
+        EXPECT_EQ((Integer_nd_array{ {3, dims}, idata }), cdarr2);
+        EXPECT_TRUE(empty(cdarr1));
+    }
+
+    // slice moving by assignment (rvalue) - different template arguments
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const double rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        computoc::ND_array<double> rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        rarr3({ {0, 5, 2} }) = std::move(tarr3({ {0, 5, 2} }));
+        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_FALSE(empty(tarr3));
+    }
+
+    // slice moving by assignment (rvalue) - different template arguments and different dimensions
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const double rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        computoc::ND_array<double> rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        rarr3({ {0, 3, 2} }) = std::move(tarr3({ {0, 5, 2} }));
+        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(empty(tarr3));
+    }
+
+    // slice moving by assignment (lvalue) - different template arguments
+    {
+        const int tdata3[] = { 1, 2, 3, 4, 5, 6 };
+        Integer_nd_array tarr3{ {6}, tdata3 };
+
+        const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
+        Integer_nd_array rarr3{ {6}, rdata3 };
+
+        EXPECT_NE(tarr3, rarr3);
+        computoc::ND_array<double> srarr3{ rarr3({ {0, 5, 2} }) };
         srarr3 = std::move(tarr3({ {0, 5, 2} }));
         EXPECT_NE(tarr3, rarr3);
         EXPECT_FALSE(empty(tarr3));
