@@ -126,6 +126,13 @@ TEST(ND_array_test, can_be_initialized_with_valid_size_and_data)
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, data }));
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, data }));
 
+    const double ddata[] = { 0.0, 0.0, 0.0 };
+    EXPECT_NO_THROW((Integer_nd_array{ {1, 1}, ddata }));
+    EXPECT_NO_THROW((Integer_nd_array{ {1, 3}, ddata }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1}, ddata }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, ddata }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, ddata }));
+
     EXPECT_THROW((Integer_nd_array{ {0, 0}, data }), std::invalid_argument);
     EXPECT_THROW((Integer_nd_array{ {1, 0}, data }), std::invalid_argument);
     EXPECT_THROW((Integer_nd_array{ {0, 1}, data }), std::invalid_argument);
@@ -150,6 +157,13 @@ TEST(ND_array_test, can_be_initialized_with_valid_size_and_value)
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1}, value }));
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, value }));
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, value }));
+
+    const double dvalue{ 0.0 };
+    EXPECT_NO_THROW((Integer_nd_array{ {1, 1}, dvalue }));
+    EXPECT_NO_THROW((Integer_nd_array{ {1, 3}, dvalue }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1}, dvalue }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, dvalue }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, dvalue }));
 
     EXPECT_THROW((Integer_nd_array{ {0, 0}, value }), std::invalid_argument);
     EXPECT_THROW((Integer_nd_array{ {1, 0}, value }), std::invalid_argument);
@@ -267,6 +281,22 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 1 }));
         EXPECT_EQ(parr({ 0, 0, 0 }), parr({ 0, 0 }));
         EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 0, 1 }));
+    }
+
+    // different data type
+    {
+        const int rdata[6]{ 0 };
+
+        Integer_nd_array arr1({ 6 }, 0.5);
+        for (std::size_t i = 0; i < 6; ++i) {
+            EXPECT_EQ(rdata[i], arr1({ i }));
+        }
+
+        const double data2[]{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 };
+        Integer_nd_array arr2({ 6 }, data2);
+        for (std::size_t i = 0; i < 6; ++i) {
+            EXPECT_EQ(rdata[i], arr2({ i }));
+        }
     }
 }
 
@@ -506,12 +536,14 @@ TEST(ND_array_test, can_be_assigned_with_value)
         Integer_nd_array arr{ {3, dims}, data };
 
         const int tdata[] = {
-            1, 2,
+            1, 50,
             3, 100,
             5, 100 };
         Integer_nd_array tarr{ {3, dims}, tdata };
 
         arr({ {1,2}, {0}, {1} }) = 100;
+        // assignment of different type
+        arr({ {0,0}, {0}, {1} }) = 50.5;
         EXPECT_EQ(tarr, arr);
     }
 }

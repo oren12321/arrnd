@@ -702,7 +702,8 @@ namespace computoc {
                 return *this;
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const T& value)
+            template <typename U>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
@@ -721,19 +722,30 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count(), data))
             {
             }
-            ND_array(std::initializer_list<std::size_t> dims, const T* data = nullptr)
+            template <typename U>
+            ND_array(const ND_param<std::size_t>& dims, const U* data = nullptr)
+                : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count()))
+            {
+                for (std::size_t i = 0; i < buffsp_->data().s(); ++i) {
+                    buffsp_->data().p()[i] = data[i];
+                }
+            }
+            template <typename U = T>
+            ND_array(std::initializer_list<std::size_t> dims, const U* data = nullptr)
                 : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, data)
             {
             }
 
-            ND_array(const ND_param<std::size_t>& dims, const T& value)
+            template <typename U = T>
+            ND_array(const ND_param<std::size_t>& dims, const U& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count()))
             {
                 for (std::size_t i = 0; i < buffsp_->data().s(); ++i) {
                     buffsp_->data().p()[i] = value;
                 }
             }
-            ND_array(std::initializer_list<std::size_t> dims, const T& value)
+            template <typename U = T>
+            ND_array(std::initializer_list<std::size_t> dims, const U& value)
                 : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, value)
             {
             }
