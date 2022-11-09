@@ -827,14 +827,14 @@ TEST(ND_array_test, copy_of)
     EXPECT_NE(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr);
 }
 
-TEST(ND_array_test, copy_to)
+TEST(ND_array_test, copy)
 {
     using Integer_nd_array = computoc::ND_array<int>;
 
     { // backward cases - copy from other array to created array
         Integer_nd_array empty_arr{};
         Integer_nd_array cempty_arr{};
-        computoc::copy_to(Integer_nd_array{}, cempty_arr);
+        computoc::copy(Integer_nd_array{}, cempty_arr);
         EXPECT_EQ(empty_arr, cempty_arr);
 
         const int data1[] = {
@@ -849,7 +849,7 @@ TEST(ND_array_test, copy_to)
             10, 12 };
         Integer_nd_array arr2{ {3, 1, 2}, data2 };
         EXPECT_NE(arr1, arr2);
-        computoc::copy_to(arr2, arr1);
+        computoc::copy(arr2, arr1);
         EXPECT_EQ(arr1, arr2);
 
         const int data3[] = {
@@ -857,17 +857,17 @@ TEST(ND_array_test, copy_to)
             6, 8,
             10, 12 };
         Integer_nd_array arr3{ {3, 1, 2}, data3 };
-        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
+        computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
 
-        computoc::copy_to(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} }));
+        computoc::copy(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
     }
 
     { // forward cases - copy from created array to other array
         Integer_nd_array empty_arr{};
         Integer_nd_array cempty_arr{};
-        computoc::copy_to(cempty_arr, empty_arr);
+        computoc::copy(cempty_arr, empty_arr);
         EXPECT_EQ(empty_arr, cempty_arr);
 
         const int data1[] = {
@@ -882,7 +882,7 @@ TEST(ND_array_test, copy_to)
             10, 12 };
         Integer_nd_array arr2{ {3, 1, 2}, data2 };
         EXPECT_NE(arr1, arr2);
-        computoc::copy_to(arr2, arr1);
+        computoc::copy(arr2, arr1);
         EXPECT_EQ(arr1, arr2);
 
         const int data3[] = {
@@ -890,13 +890,13 @@ TEST(ND_array_test, copy_to)
             6, 8,
             10, 12 };
         Integer_nd_array arr3{ {3, 1, 2}, data3 };
-        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
+        computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
 
-        computoc::copy_to(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} }));
+        computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} }));
         EXPECT_EQ(arr3, arr2);
 
-        computoc::copy_to(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
+        computoc::copy(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
         EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
     }
 
@@ -914,7 +914,7 @@ TEST(ND_array_test, copy_to)
             10.1, 12.1 };
         computoc::ND_array<double> arr2d{ {3, 1, 2}, data2d };
         EXPECT_NE(arr1, arr2d);
-        computoc::copy_to(arr2d, arr1);
+        computoc::copy(arr2d, arr1);
         EXPECT_NE(arr1, arr2d);
     }
 
@@ -927,7 +927,7 @@ TEST(ND_array_test, copy_to)
 
         Integer_nd_array rarr{ {3, 1, 2}, 0 };
         EXPECT_NE(tarr, rarr);
-        computoc::copy_to(arr, rarr);
+        computoc::copy(arr, rarr);
         EXPECT_EQ(tarr, rarr);
     }
 }
