@@ -801,12 +801,12 @@ TEST(ND_array_test, move_by_reference)
     }
 }
 
-TEST(ND_array_test, copy_of)
+TEST(ND_array_test, clone)
 {
     using Integer_nd_array = computoc::ND_array<int>;
 
     Integer_nd_array empty_arr{};
-    Integer_nd_array cempty_arr{ computoc::copy_of(empty_arr) };
+    Integer_nd_array cempty_arr{ computoc::clone(empty_arr) };
     EXPECT_EQ(empty_arr, cempty_arr);
 
     const int data[] = {
@@ -816,12 +816,12 @@ TEST(ND_array_test, copy_of)
     const std::size_t dims[]{ 3, 1, 2 };
     Integer_nd_array sarr{ {3, dims}, data };
 
-    Integer_nd_array carr{ computoc::copy_of(sarr) };
+    Integer_nd_array carr{ computoc::clone(sarr) };
     EXPECT_EQ(carr, sarr);
     carr({ 0, 0, 0 }) = 0;
     EXPECT_NE(carr, sarr);
 
-    Integer_nd_array csubarr{ computoc::copy_of(sarr({{1, 1}, {0, 0}, {0, 0}})) };
+    Integer_nd_array csubarr{ computoc::clone(sarr({{1, 1}, {0, 0}, {0, 0}})) };
     EXPECT_EQ(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr);
     csubarr({ 0, 0, 0 }) = 5;
     EXPECT_NE(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr);

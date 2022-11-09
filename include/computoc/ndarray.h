@@ -888,7 +888,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> copy_of(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr)
         {
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone{};
 
@@ -970,7 +970,7 @@ namespace computoc {
             }
 
             if (arr.header().dims() == new_dims) {
-                return copy_of(arr);
+                return clone(arr);
             }
 
             ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_dims };
@@ -1003,7 +1003,7 @@ namespace computoc {
     using details::ND_param;
     using details::ND_array;
     using details::copy;
-    using details::copy_of;
+    using details::clone;
     using details::reshaped;
     using details::resized;
     using details::empty;
