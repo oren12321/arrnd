@@ -722,6 +722,10 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count(), data))
             {
             }
+            ND_array(std::initializer_list<std::size_t> dims, const T* data = nullptr)
+                : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, data)
+            {
+            }
             template <typename U>
             ND_array(const ND_param<std::size_t>& dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count()))
@@ -730,13 +734,25 @@ namespace computoc {
                     buffsp_->data().p()[i] = data[i];
                 }
             }
-            template <typename U = T>
+            template <typename U>
             ND_array(std::initializer_list<std::size_t> dims, const U* data = nullptr)
                 : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, data)
             {
             }
 
-            template <typename U = T>
+
+            ND_array(const ND_param<std::size_t>& dims, const T& value)
+                : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count()))
+            {
+                for (std::size_t i = 0; i < buffsp_->data().s(); ++i) {
+                    buffsp_->data().p()[i] = value;
+                }
+            }
+            ND_array(std::initializer_list<std::size_t> dims, const T& value)
+                : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, value)
+            {
+            }
+            template <typename U>
             ND_array(const ND_param<std::size_t>& dims, const U& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator>(hdr_.count()))
             {
@@ -744,7 +760,7 @@ namespace computoc {
                     buffsp_->data().p()[i] = value;
                 }
             }
-            template <typename U = T>
+            template <typename U>
             ND_array(std::initializer_list<std::size_t> dims, const U& value)
                 : ND_array(ND_param<std::size_t>{dims.size(), dims.begin()}, value)
             {
@@ -834,6 +850,32 @@ namespace computoc {
             while (ndstor) {
                 res(ndstor.subs()) = func(arr(ndstor.subs()));
                 ++ndstor;
+            }
+
+            return res;
+        }
+
+        template <
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2,
+            typename Func,
+            typename T3 = decltype(Func{}(T1{}, T2{})), memoc::Buffer Internal_data_buffer3 = Internal_data_buffer1, memoc::Allocator Internal_allocator3 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer3 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer3 = Internal_subscriptor_buffer1 >
+        inline ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3> binary(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& lhs, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& rhs, Func func)
+        {
+            COMPUTOC_THROW_IF_FALSE(lhs.header().dims() == rhs.header().dims(), std::invalid_argument, "different input array dimensions");
+
+            ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3> res{ lhs.header().dims() };
+
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor lhs_ndstor{ lhs.header().dims() };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor rhs_ndstor{ rhs.header().dims() };
+
+            typename ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3>::Subscriptor res_ndstor{ res.header().dims() };
+
+            while (lhs_ndstor && rhs_ndstor && res_ndstor) {
+                res(res_ndstor.subs()) = func(lhs(lhs_ndstor.subs()), rhs(rhs_ndstor.subs()));
+                ++lhs_ndstor;
+                ++rhs_ndstor;
+                ++res_ndstor;
             }
 
             return res;
@@ -1025,6 +1067,7 @@ namespace computoc {
     using details::ND_param;
     using details::ND_array;
     using details::unary;
+    using details::binary;
     using details::copy;
     using details::clone;
     using details::reshaped;

@@ -363,6 +363,29 @@ TEST(ND_array_test, element_wise_transformation)
     EXPECT_EQ(oarr, computoc::unary(iarr, [](int n) {return n * 0.5; }));
 }
 
+TEST(ND_array_test, element_wise_binary_operation)
+{
+    EXPECT_THROW(computoc::binary(computoc::ND_array<int>({ 3, 1, 2 }), computoc::ND_array<double>({ 6 }), [](int, double) {return 0.0; }), std::invalid_argument);
+
+    std::size_t dims[]{ 3, 1, 2 };
+
+    const int idata1[]{
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::ND_array iarr1{ {3, 1, 2}, idata1 };
+
+    const double idata2[]{
+        0.5, 1.0,
+        1.5, 2.0,
+        2.5, 3.0 };
+    computoc::ND_array iarr2{ {3, dims}, idata2 };
+
+    computoc::ND_array oarr{ {3, dims}, 0.5 };
+
+    EXPECT_EQ(oarr, computoc::binary(iarr1, iarr2, [](int a, double b) { return b / a; }));
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
