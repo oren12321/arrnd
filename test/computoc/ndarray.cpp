@@ -344,6 +344,25 @@ TEST(ND_array_test, have_read_write_access_to_slice)
     }
 }
 
+TEST(ND_array_test, element_wise_transformation)
+{
+    std::size_t dims[]{ 3, 1, 2 };
+
+    const int idata[]{
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::ND_array iarr{ {3, dims}, idata };
+
+    const double odata[]{
+        0.5, 1.0,
+        1.5, 2.0,
+        2.5, 3.0 };
+    computoc::ND_array oarr{ {3, dims}, odata };
+
+    EXPECT_EQ(oarr, computoc::unary(iarr, [](int n) {return n * 0.5; }));
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
