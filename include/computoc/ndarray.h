@@ -495,13 +495,39 @@ namespace computoc {
         class ND_subscriptor
         {
         public:
-            ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to)
-                : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p())
+            ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to, std::size_t axis)
+                : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p()), axis_(axis)
             {
                 COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty(), std::invalid_argument, "'from' and/or 'to' subscripts size is zero");
                 COMPUTOC_THROW_IF_FALSE(from.s() == to.s(), std::invalid_argument, "'froms' and 'to' subscripts size are not equal");
 
+                COMPUTOC_THROW_IF_FALSE(axis < to.s(), std::invalid_argument, "'axis' size is bigger or equal to 'to' size");
+
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+            }
+            ND_subscriptor(std::initializer_list<std::size_t> from, std::initializer_list<std::size_t> to, std::size_t axis)
+                : ND_subscriptor(ND_param<std::size_t>(from.size(), from.begin()), ND_param<std::size_t>(to.size(), to.begin()), axis)
+            {
+            }
+
+            ND_subscriptor(const ND_param<std::size_t>& to, std::size_t axis)
+                : buff_(to.s()), subs_(buff_.data()), to_(to.p()), axis_(axis)
+            {
+                COMPUTOC_THROW_IF_FALSE(!to.empty(), std::invalid_argument, "'to' subscripts size is zero");
+
+                COMPUTOC_THROW_IF_FALSE(axis < to.s(), std::invalid_argument, "'axis' size is bigger or equal to 'to' size");
+
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+                reset();
+            }
+            ND_subscriptor(std::initializer_list<std::size_t> to, std::size_t axis)
+                : ND_subscriptor(ND_param<std::size_t>(to.size(), to.begin()), axis)
+            {
+            }
+
+            ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to)
+                : ND_subscriptor(from, to, to.s() - 1)
+            {
             }
             ND_subscriptor(std::initializer_list<std::size_t> from, std::initializer_list<std::size_t> to)
                 : ND_subscriptor(ND_param<std::size_t>(from.size(), from.begin()), ND_param<std::size_t>(to.size(), to.begin()))
@@ -509,12 +535,8 @@ namespace computoc {
             }
 
             ND_subscriptor(const ND_param<std::size_t>& to)
-                : buff_(to.s()), subs_(buff_.data()), to_(to.p())
+                : ND_subscriptor(to, to.s() - 1)
             {
-                COMPUTOC_THROW_IF_FALSE(!to.empty(), std::invalid_argument, "'to' subscripts size is zero");
-
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
-                reset();
             }
             ND_subscriptor(std::initializer_list<std::size_t> to)
                 : ND_subscriptor(ND_param<std::size_t>(to.size(), to.begin()))
@@ -524,7 +546,7 @@ namespace computoc {
             ND_subscriptor() = default;
 
             ND_subscriptor(const ND_subscriptor<Internal_buffer>& other) noexcept
-                : buff_(other.buff_), from_(other.from_), to_(other.to_)
+                : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
                 subs_ = buff_.data();
             }
@@ -538,15 +560,17 @@ namespace computoc {
                 from_ = other.from_;
                 to_ = other.to_;
                 subs_ = buff_.data();
+                axis_ = other.axis_;
             }
 
             ND_subscriptor(ND_subscriptor<Internal_buffer>&& other) noexcept
-                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_)
+                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
                 subs_ = buff_.data();
 
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
+                other.axis_ = 0;
             }
             ND_subscriptor& operator=(ND_subscriptor&& other) noexcept
             {
@@ -558,9 +582,11 @@ namespace computoc {
                 from_ = other.from_;
                 to_ = other.to_;
                 subs_ = buff_.data();
+                axis_ = other.axis_;
 
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
+                other.axis_ = 0;
             }
 
             virtual ~ND_subscriptor() = default;
@@ -575,8 +601,14 @@ namespace computoc {
             ND_subscriptor& operator++() noexcept
             {
                 bool should_process_sub{ true };
+                const size_t stop_axis{ axis_ > 0 ? size_t{0} : (subs_.s() > 1 ? size_t{1} : size_t{0}) };
+
+                if ((should_process_sub = (++subs_.p()[axis_] == to_[axis_])) && axis_ != stop_axis) {
+                    subs_.p()[axis_] = 0;
+                }
+
                 for (std::size_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
-                    if ((should_process_sub = (++subs_.p()[i - 1] == to_[i - 1])) && i > 1) {
+                    if (axis_ != i - 1 && (should_process_sub = (++subs_.p()[i - 1] == to_[i - 1])) && i != stop_axis + 1) {
                         subs_.p()[i - 1] = from_ ? from_[i - 1] : 0;
                     }
                 }
@@ -592,7 +624,8 @@ namespace computoc {
 
             operator bool() const noexcept
             {
-                return subs_.p()[0] != to_[0];
+                const size_t stop_axis{ axis_ > 0 ? size_t{0} : (subs_.s() > 1 ? size_t{1} : size_t{0}) };
+                return subs_.p()[stop_axis] != to_[stop_axis];
             }
 
             const ND_param<std::size_t>& subs() const noexcept
@@ -605,6 +638,7 @@ namespace computoc {
             ND_param<std::size_t> subs_{};
             const std::size_t* from_{ nullptr };
             const std::size_t* to_{ nullptr };
+            std::size_t axis_{ 0 };
         };
 
 
