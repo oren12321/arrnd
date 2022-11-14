@@ -891,6 +891,72 @@ namespace computoc {
 
         template <
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename Func,
+            typename T2 = decltype(Func{}(T1{}, T1{})) >
+        inline T2 reduce(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, Func func)
+        {
+            if (empty(arr)) {
+                return T2{};
+            }
+
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor ndstor{ arr.header().dims() };
+
+            T2 res{ static_cast<T2>(arr(ndstor.subs())) };
+            ++ndstor;
+
+            while (ndstor) {
+                res = func(arr(ndstor.subs()), res);
+                ++ndstor;
+            }
+
+            return res;
+        }
+
+        template <
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename Func,
+            typename T2 = decltype(Func{}(T1{}, T1{})), memoc::Buffer Internal_data_buffer2 = Internal_data_buffer1, memoc::Allocator Internal_allocator2 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer2 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2 = Internal_subscriptor_buffer1 >
+        inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> reduce(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, Func func, std::size_t axis)
+        {
+            if (empty(arr)) {
+                return ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
+            }
+
+            ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
+            if (arr.header().dims().s() > 1) {
+                Internal_header_buffer2 new_dims{ arr.header().dims().s() - 1 };
+
+                std::size_t res_dim_index{ 0 };
+                for (std::size_t i = 0; i < axis; ++i, res_dim_index += 1) {
+                    new_dims.data().p()[res_dim_index] = arr.header().dims().p()[i];
+                }
+                for (std::size_t i = axis + 1; i < arr.header().dims().s(); ++i, res_dim_index += 1) {
+                    new_dims.data().p()[res_dim_index] = arr.header().dims().p()[i];
+                }
+
+                res.header() = typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Header{ new_dims.data() };
+            }
+
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor arr_ndstor{ arr.header().dims(), axis };
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor res_ndstor{ res.header().dims() };
+
+            const std::size_t reduction_iteration_cycle{ arr.header().dims().p()[axis] };
+
+            while (arr_ndstor && res_ndstor) {
+                T2 res_element{ static_cast<T2>(arr(arr_ndstor.subs())) };
+                ++arr_ndstor;
+                for (std::size_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_ndstor) {
+                    res_element = func(arr(arr_ndstor.subs()), res_element);
+                }
+                res(res_ndstor.subs()) = res_element;
+                ++res_ndstor;
+            }
+
+            return res;
+        }
+
+        template <
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2,
             typename Func,
             typename T3 = decltype(Func{}(T1{}, T2{})), memoc::Buffer Internal_data_buffer3 = Internal_data_buffer1, memoc::Allocator Internal_allocator3 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer3 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer3 = Internal_subscriptor_buffer1 >
@@ -1102,6 +1168,7 @@ namespace computoc {
     using details::ND_array;
     using details::unary;
     using details::binary;
+    using details::reduce;
     using details::copy;
     using details::clone;
     using details::reshaped;

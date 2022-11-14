@@ -535,6 +535,56 @@ TEST(ND_array_test, element_wise_binary_operation)
     EXPECT_EQ(oarr, computoc::binary(iarr1, iarr2, [](int a, double b) { return b / a; }));
 }
 
+TEST(ND_array_test, reduce_elements)
+{
+    std::size_t dims[]{ 3, 1, 2 };
+
+    const int idata[]{
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::ND_array iarr{ {3, dims}, idata };
+
+    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), computoc::reduce(iarr, [](int value, double previous) {return previous / value; }));
+
+    std::size_t dims2[]{ 3, 1 };
+    const double rdata2[]{
+        3.0,
+        7.0,
+        11.0
+    };
+    computoc::ND_array rarr2{ {2, dims2}, rdata2 };
+    EXPECT_EQ(rarr2, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2));
+
+    std::size_t dims1[]{ 3, 2 };
+    const double rdata1[]{
+        1.0, 2.0,
+        3.0, 4.0,
+        5.0, 6.0 };
+    computoc::ND_array rarr1{ {2, dims1}, rdata1 };
+    EXPECT_EQ(rarr1, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1));
+
+    std::size_t dims0[]{ 1, 2 };
+    const double rdata0[]{
+        9.0, 12.0 };
+    computoc::ND_array rarr0{ {2, dims0}, rdata0 };
+    EXPECT_EQ(rarr0, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 0));
+
+    computoc::ND_array iarr1d{ {6}, idata };
+    const double data1d[]{ 21.0 };
+    computoc::ND_array rarr1d{ {1}, data1d };
+    EXPECT_EQ(rarr1d, computoc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0));
+
+    // complex array reduction
+    {
+        auto sum = [](int value, double previous) {
+            return previous + value;
+        };
+
+        EXPECT_EQ(rarr1d, computoc::reduce(computoc::reduce(computoc::reduce(iarr, sum, 2), sum, 1), sum, 0));
+    }
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
