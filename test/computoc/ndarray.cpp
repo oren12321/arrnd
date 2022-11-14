@@ -92,11 +92,11 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         EXPECT_EQ(nsubs, nsubs_counter);
         EXPECT_FALSE(counter);
     }
-    
+
     // with initial subscripts value
     {
-        std::initializer_list<std::size_t> from{1, 0, 0, 0};
-        std::initializer_list<std::size_t> to{2, 1, 3, 2};
+        std::initializer_list<std::size_t> from{ 1, 0, 0, 0 };
+        std::initializer_list<std::size_t> to{ 2, 1, 3, 2 };
         std::size_t nsubs_counter{ 6 };
         for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
             const std::size_t* subs{ counter.subs().p() };
@@ -112,6 +112,155 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         EXPECT_EQ(nsubs, nsubs_counter);
         EXPECT_FALSE(counter);
+    }
+
+    // 1d subs with index
+    {
+        EXPECT_THROW(computoc::ND_array<int>::Subscriptor({ 5 }, 1), std::invalid_argument);
+
+        const std::size_t nsubs{ 6 };
+        const std::size_t subs[]{ 0, 1, 2, 3, 4, 5 };
+        computoc::ND_array<int>::Subscriptor counter({ 1 }, { 6 }, 0);
+        std::size_t nsubs_counter{ 1 };
+        for (; counter; ++counter) {
+            EXPECT_EQ(subs[nsubs_counter], counter.subs().p()[0]);
+            ++nsubs_counter;
+        }
+        EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
+    }
+
+    // 4d subs with different axis
+    {
+        EXPECT_THROW(computoc::ND_array<int>::Subscriptor({ ndims, dims }, 5), std::invalid_argument);
+
+        // axis 0
+        {
+            const std::size_t rsubs_list0[][4]{
+                {0, 0, 0, 0},
+                {1, 0, 0, 0},
+                {0, 0, 0, 1},
+                {1, 0, 0, 1},
+                {0, 0, 1, 0},
+                {1, 0, 1, 0},
+                {0, 0, 1, 1},
+                {1, 0, 1, 1},
+                {0, 0, 2, 0},
+                {1, 0, 2, 0},
+                {0, 0, 2, 1},
+                {1, 0, 2, 1} };
+            computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 0);
+            std::size_t nsubs_counter{ 0 };
+            for (; counter; counter++) {
+                const std::size_t* subs{ counter.subs().p() };
+                const std::size_t* rsubs{ rsubs_list0[nsubs_counter] };
+
+                EXPECT_EQ(rsubs[0], subs[0]);
+                EXPECT_EQ(rsubs[1], subs[1]);
+                EXPECT_EQ(rsubs[2], subs[2]);
+                EXPECT_EQ(rsubs[3], subs[3]);
+
+                ++nsubs_counter;
+            }
+            EXPECT_EQ(nsubs, nsubs_counter);
+            EXPECT_FALSE(counter);
+        }
+
+        // axis 1
+        {
+            const std::size_t rsubs_list1[][4]{
+                {0, 0, 0, 0},
+                {0, 0, 0, 1},
+                {0, 0, 1, 0},
+                {0, 0, 1, 1},
+                {0, 0, 2, 0},
+                {0, 0, 2, 1},
+                {1, 0, 0, 0},
+                {1, 0, 0, 1},
+                {1, 0, 1, 0},
+                {1, 0, 1, 1},
+                {1, 0, 2, 0},
+                {1, 0, 2, 1} };
+            computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 1);
+            std::size_t nsubs_counter{ 0 };
+            for (; counter; counter++) {
+                const std::size_t* subs{ counter.subs().p() };
+                const std::size_t* rsubs{ rsubs_list1[nsubs_counter] };
+
+                EXPECT_EQ(rsubs[0], subs[0]);
+                EXPECT_EQ(rsubs[1], subs[1]);
+                EXPECT_EQ(rsubs[2], subs[2]);
+                EXPECT_EQ(rsubs[3], subs[3]);
+
+                ++nsubs_counter;
+            }
+            EXPECT_EQ(nsubs, nsubs_counter);
+            EXPECT_FALSE(counter);
+        }
+
+        // axis 2
+        {
+            const std::size_t rsubs_list2[][4]{
+                {0, 0, 0, 0},
+                {0, 0, 1, 0},
+                {0, 0, 2, 0},
+                {0, 0, 0, 1},
+                {0, 0, 1, 1},
+                {0, 0, 2, 1},
+                {1, 0, 0, 0},
+                {1, 0, 1, 0},
+                {1, 0, 2, 0},
+                {1, 0, 0, 1},
+                {1, 0, 1, 1},
+                {1, 0, 2, 1} };
+            computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 2);
+            std::size_t nsubs_counter{ 0 };
+            for (; counter; counter++) {
+                const std::size_t* subs{ counter.subs().p() };
+                const std::size_t* rsubs{ rsubs_list2[nsubs_counter] };
+
+                EXPECT_EQ(rsubs[0], subs[0]);
+                EXPECT_EQ(rsubs[1], subs[1]);
+                EXPECT_EQ(rsubs[2], subs[2]);
+                EXPECT_EQ(rsubs[3], subs[3]);
+
+                ++nsubs_counter;
+            }
+            EXPECT_EQ(nsubs, nsubs_counter);
+            EXPECT_FALSE(counter);
+        }
+
+        // axis 3
+        {
+            const std::size_t rsubs_list3[][4]{
+                {0, 0, 0, 0},
+                {0, 0, 0, 1},
+                {0, 0, 1, 0},
+                {0, 0, 1, 1},
+                {0, 0, 2, 0},
+                {0, 0, 2, 1},
+                {1, 0, 0, 0},
+                {1, 0, 0, 1},
+                {1, 0, 1, 0},
+                {1, 0, 1, 1},
+                {1, 0, 2, 0},
+                {1, 0, 2, 1} };
+            computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 3);
+            std::size_t nsubs_counter{ 0 };
+            for (; counter; counter++) {
+                const std::size_t* subs{ counter.subs().p() };
+                const std::size_t* rsubs{ rsubs_list3[nsubs_counter] };
+
+                EXPECT_EQ(rsubs[0], subs[0]);
+                EXPECT_EQ(rsubs[1], subs[1]);
+                EXPECT_EQ(rsubs[2], subs[2]);
+                EXPECT_EQ(rsubs[3], subs[3]);
+
+                ++nsubs_counter;
+            }
+            EXPECT_EQ(nsubs, nsubs_counter);
+            EXPECT_FALSE(counter);
+        }
     }
 }
 
