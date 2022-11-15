@@ -585,6 +585,72 @@ TEST(ND_array_test, reduce_elements)
     }
 }
 
+TEST(ND_array_test, filter_elements_by_condition)
+{
+    std::size_t dims[]{ 3, 1, 2 };
+
+    const int idata[]{
+        1, 2,
+        3, 0,
+        5, 6 };
+    computoc::ND_array iarr{ {3, dims}, idata };
+
+    const int rdata0[]{ 1, 2, 3, 0, 5, 6 };
+    computoc::ND_array rarr0{ {6}, rdata0 };
+    EXPECT_EQ(rarr0, computoc::filter(iarr, [](int) {return 1; }));
+
+    const int rdata1[]{ 1, 2, 3, 5, 6 };
+    computoc::ND_array rarr1{ {5}, rdata1 };
+    EXPECT_EQ(rarr1, computoc::filter(iarr, [](int a) { return a; }));
+
+    const double rdata2[]{ 2.0, 0.0, 6.0 };
+    computoc::ND_array rarr2{ {3}, rdata2 };
+    EXPECT_EQ(rarr2, computoc::filter(iarr, [](int a) { return a % 2 == 0; }));
+
+    EXPECT_EQ(computoc::ND_array<int>{}, computoc::filter(iarr, [](int a) { return a > 6; }));
+    EXPECT_EQ(computoc::ND_array<int>{}, computoc::filter(computoc::ND_array<int>{}, [](int) {return 1; }));
+}
+
+TEST(ND_array_test, filter_elements_by_maks)
+{
+    std::size_t dims[]{ 3, 1, 2 };
+
+    const int idata[]{
+        1, 2,
+        3, 4,
+        5, 6 };
+    computoc::ND_array iarr{ {3, dims}, idata };
+
+    EXPECT_THROW(computoc::filter(iarr, computoc::ND_array<int>{}), std::invalid_argument);
+
+    const int imask_data0[]{
+        1, 0,
+        0, 1,
+        0, 1 };
+    computoc::ND_array imask0{ {3, dims}, imask_data0 };
+    const int rdata0[]{ 1, 4, 6 };
+    computoc::ND_array rarr0{ {3}, rdata0 };
+    EXPECT_EQ(rarr0, computoc::filter(iarr, imask0));
+
+    const int imask_data1[]{
+        0, 0,
+        0, 0,
+        0, 0 };
+    computoc::ND_array imask1{ {3, dims}, imask_data1 };
+    EXPECT_EQ(computoc::ND_array<int>{}, computoc::filter(iarr, imask1));
+
+    const int imask_data2[]{
+        1, 1,
+        1, 1,
+        1, 1 };
+    computoc::ND_array imask2{ {3, dims}, imask_data2 };
+    const int rdata2[]{ 1, 2, 3, 4, 5, 6 };
+    computoc::ND_array rarr2{ {6}, rdata2 };
+    EXPECT_EQ(rarr2, computoc::filter(iarr, imask2));
+
+    EXPECT_EQ(computoc::ND_array<int>{}, computoc::filter(computoc::ND_array<int>{}, imask0));
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
