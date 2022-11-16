@@ -643,9 +643,9 @@ namespace computoc {
                 {
                     bool should_process_sub{ true };
 
-                    for (size_t i = 0; i < order_.data().s() && should_process_sub; ++i) {
-                        if ((should_process_sub = (++subs_.p()[order_.data().p()[i]] == to_[order_.data().p()[i]])) && order_.data().p()[i] != order_.data().p()[order_.data().s() - 1]) {
-                            subs_.p()[order_.data().p()[i]] = 0;
+                    for (size_t i = order_.data().s(); i >=1 && should_process_sub; --i) {
+                        if ((should_process_sub = (++subs_.p()[order_.data().p()[i-1]] == to_[order_.data().p()[i-1]])) && order_.data().p()[i-1] != order_.data().p()[0]) {
+                            subs_.p()[order_.data().p()[i-1]] = 0;
                         }
                     }
 
@@ -678,7 +678,7 @@ namespace computoc {
             operator bool() const noexcept
             {
                 if (order_.usable()) {
-                    return subs_.p()[order_.data().p()[order_.data().s() - 1]] != to_[order_.data().p()[order_.data().s() - 1]];
+                    return subs_.p()[order_.data().p()[0]] != to_[order_.data().p()[0]];
                 }
 
                 const std::size_t stop_axis{ axis_ > 0 ? std::size_t{0} : (subs_.s() > 1 ? std::size_t{1} : std::size_t{0}) };
