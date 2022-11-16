@@ -1120,6 +1120,47 @@ namespace computoc {
 
         template <
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2 = T1, memoc::Buffer Internal_data_buffer2 = Internal_data_buffer1, memoc::Allocator Internal_allocator2 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer2 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2 = Internal_subscriptor_buffer1 >
+        inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> transpose(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, ND_param<std::size_t> order)
+        {
+            if (empty(arr)) {
+                return ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
+            }
+
+            COMPUTOC_THROW_IF_FALSE(arr.header().dims().s() == order.s(), std::invalid_argument, "order and dimensions sizes are different");
+
+            Internal_header_buffer2 new_dims{ arr.header().dims().s() };
+            COMPUTOC_THROW_IF_FALSE(new_dims.usable(), std::runtime_error, "invalid new dimensions buffer");
+
+            for (std::size_t i = 0; i < new_dims.data().s(); ++i) {
+                COMPUTOC_THROW_IF_FALSE(order.p()[i] < arr.header().dims().s(), std::out_of_range, "order index not in dimensions range");
+                new_dims.data().p()[i] = arr.header().dims().p()[order.p()[i]];
+            }
+
+            ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> res{ new_dims.data() };
+
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor res_ndstor{ res.header().dims() };
+
+            while (arr_ndstor && res_ndstor) {
+                res(res_ndstor.subs()) = arr(arr_ndstor.subs());
+                ++arr_ndstor;
+                ++res_ndstor;
+            }
+
+            return res;
+        }
+
+        template <
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2 = T1, memoc::Buffer Internal_data_buffer2 = Internal_data_buffer1, memoc::Allocator Internal_allocator2 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer2 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2 = Internal_subscriptor_buffer1 >
+        inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> transpose(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, std::initializer_list<std::size_t> order)
+        {
+            return transpose(arr, ND_param<std::size_t>{order.size(), order.begin()});
+        }
+
+        template <
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
         inline bool operator==(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& lhs, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& rhs)
         {
@@ -1307,6 +1348,7 @@ namespace computoc {
     using details::binary;
     using details::reduce;
     using details::filter;
+    using details::transpose;
     using details::copy;
     using details::clone;
     using details::reshaped;
