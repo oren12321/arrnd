@@ -112,6 +112,25 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         EXPECT_EQ(nsubs, nsubs_counter);
         EXPECT_FALSE(counter);
+
+        // test counter reset with initial subscripts
+        {
+            computoc::ND_array<int>::Subscriptor counter{ from, to };
+            EXPECT_EQ(1, counter.subs().p()[0]);
+            EXPECT_EQ(0, counter.subs().p()[1]);
+            EXPECT_EQ(0, counter.subs().p()[2]);
+            EXPECT_EQ(0, counter.subs().p()[3]);
+            ++counter;
+            EXPECT_EQ(1, counter.subs().p()[0]);
+            EXPECT_EQ(0, counter.subs().p()[1]);
+            EXPECT_EQ(0, counter.subs().p()[2]);
+            EXPECT_EQ(1, counter.subs().p()[3]);
+            counter.reset();
+            EXPECT_EQ(1, counter.subs().p()[0]);
+            EXPECT_EQ(0, counter.subs().p()[1]);
+            EXPECT_EQ(0, counter.subs().p()[2]);
+            EXPECT_EQ(0, counter.subs().p()[3]);
+        }
     }
 
     // 1d subs with index
@@ -260,6 +279,101 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
             }
             EXPECT_EQ(nsubs, nsubs_counter);
             EXPECT_FALSE(counter);
+        }
+
+        // specific order
+        {
+            const std::size_t ordered_subs_list[][4]{
+                {0, 0, 0, 0},
+                {0, 0, 1, 0},
+                {0, 0, 2, 0},
+                {1, 0, 0, 0},
+                {1, 0, 1, 0},
+                {1, 0, 2, 0},
+                {2, 0, 0, 0},
+                {2, 0, 1, 0},
+                {2, 0, 2, 0},
+                {3, 0, 0, 0},
+                {3, 0, 1, 0},
+                {3, 0, 2, 0},
+                {0, 1, 0, 0},
+                {0, 1, 1, 0},
+                {0, 1, 2, 0},
+                {1, 1, 0, 0},
+                {1, 1, 1, 0},
+                {1, 1, 2, 0},
+                {2, 1, 0, 0},
+                {2, 1, 1, 0},
+                {2, 1, 2, 0},
+                {3, 1, 0, 0},
+                {3, 1, 1, 0},
+                {3, 1, 2, 0},
+                {0, 0, 0, 1},
+                {0, 0, 1, 1},
+                {0, 0, 2, 1},
+                {1, 0, 0, 1},
+                {1, 0, 1, 1},
+                {1, 0, 2, 1},
+                {2, 0, 0, 1},
+                {2, 0, 1, 1},
+                {2, 0, 2, 1},
+                {3, 0, 0, 1},
+                {3, 0, 1, 1},
+                {3, 0, 2, 1},
+                {0, 1, 0, 1},
+                {0, 1, 1, 1},
+                {0, 1, 2, 1},
+                {1, 1, 0, 1},
+                {1, 1, 1, 1},
+                {1, 1, 2, 1},
+                {2, 1, 0, 1},
+                {2, 1, 1, 1},
+                {2, 1, 2, 1},
+                {3, 1, 0, 1},
+                {3, 1, 1, 1},
+                {3, 1, 2, 1} };
+            const std::size_t ordered_ndims{ 4 };
+            const std::size_t ordered_dims[]{ 4, 2, 3, 2 };
+            const std::size_t order[]{ 2, 0, 1, 3 };
+
+            // full count
+            {
+                computoc::ND_array<int>::Subscriptor counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                std::size_t nsubs_counter{ 0 };
+                for (; counter; counter++) {
+                    const std::size_t* subs{ counter.subs().p() };
+                    const std::size_t* rsubs{ ordered_subs_list[nsubs_counter] };
+
+                    EXPECT_EQ(rsubs[0], subs[0]);
+                    EXPECT_EQ(rsubs[1], subs[1]);
+                    EXPECT_EQ(rsubs[2], subs[2]);
+                    EXPECT_EQ(rsubs[3], subs[3]);
+
+                    ++nsubs_counter;
+                }
+                EXPECT_EQ(48, nsubs_counter);
+                EXPECT_FALSE(counter);
+            }
+
+            // partial count
+            {
+                const std::size_t from[]{ 2, 1, 2, 1 };
+                computoc::ND_array<int>::Subscriptor counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                std::size_t nsubs_counter{ 44 };
+                for (; counter; counter++) {
+                    const std::size_t* subs{ counter.subs().p() };
+                    const std::size_t* rsubs{ ordered_subs_list[nsubs_counter] };
+
+                    EXPECT_EQ(rsubs[0], subs[0]);
+                    EXPECT_EQ(rsubs[1], subs[1]);
+                    EXPECT_EQ(rsubs[2], subs[2]);
+                    EXPECT_EQ(rsubs[3], subs[3]);
+
+                    ++nsubs_counter;
+                }
+                EXPECT_EQ(48, nsubs_counter);
+                EXPECT_FALSE(counter);
+            }
         }
     }
 }

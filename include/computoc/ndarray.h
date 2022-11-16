@@ -525,6 +525,43 @@ namespace computoc {
             {
             }
 
+            ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to, const ND_param<std::size_t>& order, ND_param<std::size_t> dummy)
+                : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p()), order_(order.s(), order.p())
+            {
+                COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty() && !order.empty(), std::invalid_argument, "'from', 'to' and/or 'order' subscripts size is zero");
+                COMPUTOC_THROW_IF_FALSE(from.s() == to.s() && to.s() == order.s(), std::invalid_argument, "'froms', 'to' and 'order' subscripts size are not equal");
+
+                for (std::size_t i = 0; i < order.s(); ++i) {
+                    COMPUTOC_THROW_IF_FALSE(order.p()[i] < order.s(), std::out_of_range, "out of range order value");
+                }
+
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+                COMPUTOC_THROW_IF_FALSE(order_.usable(), std::runtime_error, "order buffer allocation failed");
+            }
+            ND_subscriptor(std::initializer_list<std::size_t> from, std::initializer_list<std::size_t> to, std::initializer_list<std::size_t> order, ND_param<std::size_t> dummy)
+                : ND_subscriptor(ND_param<std::size_t>(from.size(), from.begin()), ND_param<std::size_t>(to.size(), to.begin()), ND_param<std::size_t>(order.size(), order.begin()))
+            {
+            }
+
+            ND_subscriptor(const ND_param<std::size_t>& to, const ND_param<std::size_t>& order, ND_param<std::size_t> dummy)
+                : buff_(to.s()), subs_(buff_.data()), to_(to.p()), order_(order.s(), order.p())
+            {
+                COMPUTOC_THROW_IF_FALSE(!to.empty() && !order.empty(), std::invalid_argument, "'to' subscripts size is zero");
+                COMPUTOC_THROW_IF_FALSE(to.s() == order.s(), std::invalid_argument, "'to' and 'order' subscripts size are not equal");
+
+                for (std::size_t i = 0; i < order.s(); ++i) {
+                    COMPUTOC_THROW_IF_FALSE(order.p()[i] < order.s(), std::out_of_range, "out of range order value");
+                }
+
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+                COMPUTOC_THROW_IF_FALSE(order_.usable(), std::runtime_error, "order buffer allocation failed");
+                reset();
+            }
+            ND_subscriptor(std::initializer_list<std::size_t> to, std::initializer_list<std::size_t> order, ND_param<std::size_t> dummy)
+                : ND_subscriptor(ND_param<std::size_t>(to.size(), to.begin()), ND_param<std::size_t>(order.size(), order.begin()))
+            {
+            }
+
             ND_subscriptor(const ND_param<std::size_t>& from, const ND_param<std::size_t>& to)
                 : ND_subscriptor(from, to, to.s() - 1)
             {
@@ -546,7 +583,7 @@ namespace computoc {
             ND_subscriptor() = default;
 
             ND_subscriptor(const ND_subscriptor<Internal_buffer>& other) noexcept
-                : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_)
+                : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_), order_(other.order_)
             {
                 subs_ = buff_.data();
             }
@@ -561,10 +598,11 @@ namespace computoc {
                 to_ = other.to_;
                 subs_ = buff_.data();
                 axis_ = other.axis_;
+                order_ = other.order_;
             }
 
             ND_subscriptor(ND_subscriptor<Internal_buffer>&& other) noexcept
-                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_)
+                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_), order_(std::move(other.order_))
             {
                 subs_ = buff_.data();
 
@@ -583,6 +621,7 @@ namespace computoc {
                 to_ = other.to_;
                 subs_ = buff_.data();
                 axis_ = other.axis_;
+                order_ = std::move(other.order_);
 
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
@@ -594,14 +633,28 @@ namespace computoc {
             void reset() noexcept
             {
                 for (std::size_t i = 0; i < subs_.s(); ++i) {
-                    subs_.p()[i] = 0;
+                    subs_.p()[i] = from_ ? from_[i] : 0;
                 }
             }
 
             ND_subscriptor& operator++() noexcept
             {
+                if (order_.usable())
+                {
+                    bool should_process_sub{ true };
+
+                    for (size_t i = 0; i < order_.data().s() && should_process_sub; ++i) {
+                        if ((should_process_sub = (++subs_.p()[order_.data().p()[i]] == to_[order_.data().p()[i]])) && order_.data().p()[i] != order_.data().p()[order_.data().s() - 1]) {
+                            subs_.p()[order_.data().p()[i]] = 0;
+                        }
+                    }
+
+                    return *this;
+                }
+
+
                 bool should_process_sub{ true };
-                const size_t stop_axis{ axis_ > 0 ? size_t{0} : (subs_.s() > 1 ? size_t{1} : size_t{0}) };
+                const std::size_t stop_axis{ axis_ > 0 ? std::size_t{0} : (subs_.s() > 1 ? std::size_t{1} : std::size_t{0}) };
 
                 if ((should_process_sub = (++subs_.p()[axis_] == to_[axis_])) && axis_ != stop_axis) {
                     subs_.p()[axis_] = 0;
@@ -609,7 +662,7 @@ namespace computoc {
 
                 for (std::size_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
                     if (axis_ != i - 1 && (should_process_sub = (++subs_.p()[i - 1] == to_[i - 1])) && i != stop_axis + 1) {
-                        subs_.p()[i - 1] = from_ ? from_[i - 1] : 0;
+                        subs_.p()[i - 1] = 0;
                     }
                 }
                 return *this;
@@ -624,7 +677,11 @@ namespace computoc {
 
             operator bool() const noexcept
             {
-                const size_t stop_axis{ axis_ > 0 ? size_t{0} : (subs_.s() > 1 ? size_t{1} : size_t{0}) };
+                if (order_.usable()) {
+                    return subs_.p()[order_.data().p()[order_.data().s() - 1]] != to_[order_.data().p()[order_.data().s() - 1]];
+                }
+
+                const std::size_t stop_axis{ axis_ > 0 ? std::size_t{0} : (subs_.s() > 1 ? std::size_t{1} : std::size_t{0}) };
                 return subs_.p()[stop_axis] != to_[stop_axis];
             }
 
@@ -639,6 +696,7 @@ namespace computoc {
             const std::size_t* from_{ nullptr };
             const std::size_t* to_{ nullptr };
             std::size_t axis_{ 0 };
+            Internal_buffer order_{};
         };
 
 
