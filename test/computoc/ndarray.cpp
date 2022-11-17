@@ -139,7 +139,9 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         const std::size_t nsubs{ 6 };
         const std::size_t subs[]{ 0, 1, 2, 3, 4, 5 };
-        computoc::ND_array<int>::Subscriptor counter({ 1 }, { 6 }, 0);
+        std::initializer_list<std::size_t> from{ 1 };
+        std::initializer_list<std::size_t> to{ 6 };
+        computoc::ND_array<int>::Subscriptor counter(from, to, 0);
         std::size_t nsubs_counter{ 1 };
         for (; counter; ++counter) {
             EXPECT_EQ(subs[nsubs_counter], counter.subs().p()[0]);
