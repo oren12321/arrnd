@@ -789,6 +789,11 @@ TEST(ND_array_test, select_elements_indices_by_condition)
 
     EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::indices(iarr, [](int a) { return a > 6; }));
     EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::indices(computoc::ND_array<int>{}, [](int) {return 1; }));
+
+    // subarray
+    const std::size_t rdatas[]{ 2 };
+    computoc::ND_array rarrs{ {1}, rdatas };
+    EXPECT_EQ(rarrs, computoc::indices(iarr({ {1, 1} }), [](int a) { return a; }));
 }
 
 TEST(ND_array_test, select_elements_indices_by_maks)
