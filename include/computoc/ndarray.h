@@ -1122,7 +1122,7 @@ namespace computoc {
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename Func,
             typename T2 = std::size_t, memoc::Buffer Internal_data_buffer2 = Internal_data_buffer1, memoc::Allocator Internal_allocator2 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer2 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2 = Internal_subscriptor_buffer1 >
-            inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> indices(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, Func func)
+            inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> find(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, Func func)
         {
             if (empty(arr)) {
                 return ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
@@ -1159,7 +1159,7 @@ namespace computoc {
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2,
             typename T3 = std::size_t, memoc::Buffer Internal_data_buffer3 = Internal_data_buffer1, memoc::Allocator Internal_allocator3 = Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer3 = Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer3 = Internal_subscriptor_buffer1 >
-            inline ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3> indices(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& mask)
+            inline ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3> find(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& arr, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& mask)
         {
             if (empty(arr)) {
                 return ND_array<T3, Internal_data_buffer3, Internal_allocator3, Internal_header_buffer3, Internal_subscriptor_buffer3>{};
@@ -1427,7 +1427,7 @@ namespace computoc {
     using details::binary;
     using details::reduce;
     using details::filter;
-    using details::indices;
+    using details::find;
     using details::transpose;
     using details::copy;
     using details::clone;
