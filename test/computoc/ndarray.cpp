@@ -1522,11 +1522,11 @@ TEST(ND_array_test, reshape)
     Integer_nd_array arr{ {3, dims}, data };
 
     {
-        EXPECT_THROW(computoc::reshaped(arr, {}), std::invalid_argument);
+        EXPECT_THROW(computoc::reshape(arr, {}), std::invalid_argument);
     }
 
     {
-        EXPECT_EQ(Integer_nd_array{}, computoc::reshaped(Integer_nd_array{}, {}));
+        EXPECT_EQ(Integer_nd_array{}, computoc::reshape(Integer_nd_array{}, {}));
     }
 
     {
@@ -1534,13 +1534,13 @@ TEST(ND_array_test, reshape)
         const std::size_t tdims[]{ 6 };
         Integer_nd_array tarr{ {1, tdims}, tdata };
 
-        Integer_nd_array rarr{ computoc::reshaped(arr, { 6 }) };
+        Integer_nd_array rarr{ computoc::reshape(arr, { 6 }) };
         EXPECT_EQ(tarr, rarr);
         EXPECT_EQ(arr.data(), rarr.data());
     }
 
     {
-        Integer_nd_array rarr{ computoc::reshaped(arr, { 3, 1, 2 }) };
+        Integer_nd_array rarr{ computoc::reshape(arr, { 3, 1, 2 }) };
         EXPECT_EQ(arr, rarr);
         EXPECT_EQ(arr.data(), rarr.data());
     }
@@ -1550,7 +1550,7 @@ TEST(ND_array_test, reshape)
         const std::size_t tdims[]{ 1, 2 };
         Integer_nd_array tarr{ {2, tdims}, tdata };
 
-        Integer_nd_array rarr{ computoc::reshaped(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
+        Integer_nd_array rarr{ computoc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
         EXPECT_EQ(tarr, rarr);
         EXPECT_NE(arr.data(), rarr.data());
     }
@@ -1565,11 +1565,11 @@ TEST(ND_array_test, resize)
     Integer_nd_array arr{ {1, dims}, data };
 
     {
-        EXPECT_EQ(Integer_nd_array{}, computoc::resized(arr, {}));
+        EXPECT_EQ(Integer_nd_array{}, computoc::resize(arr, {}));
     }
 
     {
-        Integer_nd_array rarr{ computoc::resized(Integer_nd_array{}, {6}) };
+        Integer_nd_array rarr{ computoc::resize(Integer_nd_array{}, {6}) };
         EXPECT_NE(arr, rarr);
         EXPECT_EQ(arr.header().dims().s(), rarr.header().dims().s());
         EXPECT_EQ(6, rarr.header().dims().p()[0]);
@@ -1577,7 +1577,7 @@ TEST(ND_array_test, resize)
     }
 
     {
-        Integer_nd_array rarr{ computoc::resized(arr, {6}) };
+        Integer_nd_array rarr{ computoc::resize(arr, {6}) };
         EXPECT_EQ(arr, rarr);
         EXPECT_NE(arr.data(), rarr.data());
     }
@@ -1587,7 +1587,7 @@ TEST(ND_array_test, resize)
         const std::size_t tdims[]{ 2 };
         Integer_nd_array tarr{ {1, tdims}, tdata };
 
-        Integer_nd_array rarr{ computoc::resized(arr, {2}) };
+        Integer_nd_array rarr{ computoc::resize(arr, {2}) };
         EXPECT_EQ(tarr, rarr);
         EXPECT_NE(tarr.data(), rarr.data());
     }
@@ -1600,13 +1600,13 @@ TEST(ND_array_test, resize)
         const std::size_t tdims[]{ 3, 1, 2 };
         Integer_nd_array tarr{ {3, tdims}, tdata };
 
-        Integer_nd_array rarr{ computoc::resized(arr, {3, 1, 2}) };
+        Integer_nd_array rarr{ computoc::resize(arr, {3, 1, 2}) };
         EXPECT_EQ(tarr, rarr);
         EXPECT_NE(tarr.data(), rarr.data());
     }
 
     {
-        Integer_nd_array rarr{ computoc::resized(arr, {10}) };
+        Integer_nd_array rarr{ computoc::resize(arr, {10}) };
         EXPECT_NE(arr, rarr);
         EXPECT_EQ(arr, rarr({ {0, 5} }));
         EXPECT_NE(arr.data(), rarr.data());

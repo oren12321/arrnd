@@ -1070,7 +1070,7 @@ namespace computoc {
             }
 
             if (res_count < arr.header().count()) {
-                return resized(res, { res_count });
+                return resize(res, { res_count });
             }
 
             return res;
@@ -1112,7 +1112,7 @@ namespace computoc {
             }
 
             if (res_count < arr.header().count()) {
-                return resized(res, { res_count });
+                return resize(res, { res_count });
             }
 
             return res;
@@ -1149,7 +1149,7 @@ namespace computoc {
             }
 
             if (res_count < arr.header().count()) {
-                return resized(res, { res_count });
+                return resize(res, { res_count });
             }
 
             return res;
@@ -1191,7 +1191,7 @@ namespace computoc {
             }
 
             if (res_count < arr.header().count()) {
-                return resized(res, { res_count });
+                return resize(res, { res_count });
             }
 
             return res;
@@ -1329,7 +1329,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_param<std::size_t>& new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_param<std::size_t>& new_dims)
         {
             /*
             * Reshaping algorithm:
@@ -1370,13 +1370,13 @@ namespace computoc {
             return res;
         }
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshaped(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
-            return reshaped(arr, ND_param<std::size_t>(new_dims.size(), new_dims.begin()));
+            return reshape(arr, ND_param<std::size_t>(new_dims.size(), new_dims.begin()));
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_param<std::size_t>& new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_param<std::size_t>& new_dims)
         {
             /*
             * Resizing algorithm:
@@ -1408,9 +1408,9 @@ namespace computoc {
             return res;
         }
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resized(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
-            return resized(arr, ND_param<std::size_t>(new_dims.size(), new_dims.begin()));
+            return resize(arr, ND_param<std::size_t>(new_dims.size(), new_dims.begin()));
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
@@ -1431,8 +1431,8 @@ namespace computoc {
     using details::transpose;
     using details::copy;
     using details::clone;
-    using details::reshaped;
-    using details::resized;
+    using details::reshape;
+    using details::resize;
     using details::empty;
 }
 
