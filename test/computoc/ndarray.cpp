@@ -625,7 +625,7 @@ TEST(ND_array_test, element_wise_transformation)
         2.5, 3.0 };
     computoc::ND_array oarr{ {3, dims}, odata };
 
-    EXPECT_EQ(oarr, computoc::unary(iarr, [](int n) {return n * 0.5; }));
+    EXPECT_EQ(oarr, computoc::transform(iarr, [](int n) {return n * 0.5; }));
 }
 
 TEST(ND_array_test, element_wise_binary_operation)
