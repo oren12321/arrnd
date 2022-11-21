@@ -1271,7 +1271,7 @@ namespace computoc {
         template <
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
-        inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& dst)
+        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& dst)
         {
             /*
             * Algorithm:
@@ -1282,7 +1282,7 @@ namespace computoc {
 
             if (empty(src)) {
                 dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
-                return dst;
+                return;
             }
 
             if (src.header().count() != dst.header().count()) {
@@ -1297,15 +1297,13 @@ namespace computoc {
                 ++src_ndstor;
                 ++dst_ndstor;
             }
-
-            return dst;
         }
         template <
             typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
             typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
-        inline ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2> copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>&& dst)
+        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>&& dst)
         {
-            return copy(src, dst);
+            copy(src, dst);
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
