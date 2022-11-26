@@ -388,6 +388,41 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
+            ND_header(const Params<std::size_t>& previous_dims, std::size_t omitted_axis)
+            {
+                if (previous_dims.empty()) {
+                    return;
+                }
+
+                COMPUTOC_THROW_IF_FALSE(omitted_axis < previous_dims.s(), std::invalid_argument, "axis is invalid for number of dimensions");
+
+                std::size_t new_ndims{previous_dims.s() > 1 ? previous_dims.s() - 1 : 1};
+
+                size_info_ = Internal_buffer(new_ndims * 2);
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                dims_ = { new_ndims, size_info_.data().p() };
+                if (previous_dims.s() > 1) {
+                    std::size_t res_dim_index{ 0 };
+                    for (std::size_t i = 0; i < omitted_axis; ++i, res_dim_index += 1) {
+                        dims_.p()[res_dim_index] = previous_dims.p()[i];
+                    }
+                    for (std::size_t i = omitted_axis + 1; i < previous_dims.s(); ++i, res_dim_index += 1) {
+                        dims_.p()[res_dim_index] = previous_dims.p()[i];
+                    }
+                }
+                else {
+                    dims_.p()[0] = 1;
+                }
+
+                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
+
+                count_ = dims2count(dims_);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+
+                dims2strides(dims_, strides_);
+            }
+
             ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
@@ -974,19 +1009,8 @@ namespace computoc {
             COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::invalid_argument, "axis is invalid for number of dimensions");
 
             ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
-            if (arr.header().dims().s() > 1) {
-                Internal_header_buffer new_dims{ arr.header().dims().s() - 1 };
 
-                std::size_t res_dim_index{ 0 };
-                for (std::size_t i = 0; i < axis; ++i, res_dim_index += 1) {
-                    new_dims.data().p()[res_dim_index] = arr.header().dims().p()[i];
-                }
-                for (std::size_t i = axis + 1; i < arr.header().dims().s(); ++i, res_dim_index += 1) {
-                    new_dims.data().p()[res_dim_index] = arr.header().dims().p()[i];
-                }
-
-                res.header() = typename ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header{ new_dims.data() };
-            }
+            res.header() = typename ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header{ arr.header().dims(), axis };
 
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), axis };
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
