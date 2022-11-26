@@ -423,6 +423,30 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
+            ND_header(const Params<std::size_t>& previous_dims, const Params<std::size_t>& order)
+                : size_info_(previous_dims.s() * 2)
+            {
+                if (previous_dims.empty()) {
+                    return;
+                }
+
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                COMPUTOC_THROW_IF_FALSE(previous_dims.s() == order.s(), std::invalid_argument, "order and dimensions sizes are different");
+
+                dims_ = { previous_dims.s(), size_info_.data().p() };
+                for (std::size_t i = 0; i < dims_.s(); ++i) {
+                    COMPUTOC_THROW_IF_FALSE(order.p()[i] < dims_.s(), std::out_of_range, "order index not in dimensions range");
+                    dims_.p()[i] = previous_dims.p()[order.p()[i]];
+                }
+
+                strides_ = { previous_dims.s(), size_info_.data().p() + previous_dims.s() };
+
+                count_ = dims2count(dims_);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+
+                dims2strides(dims_, strides_);
+            }
+
             ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
@@ -1196,23 +1220,14 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Params<std::size_t> order)
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& order)
         {
             if (empty(arr)) {
                 return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            COMPUTOC_THROW_IF_FALSE(arr.header().dims().s() == order.s(), std::invalid_argument, "order and dimensions sizes are different");
-
-            Internal_header_buffer new_dims{ arr.header().dims().s() };
-            COMPUTOC_THROW_IF_FALSE(new_dims.usable(), std::runtime_error, "invalid new dimensions buffer");
-
-            for (std::size_t i = 0; i < new_dims.data().s(); ++i) {
-                COMPUTOC_THROW_IF_FALSE(order.p()[i] < arr.header().dims().s(), std::out_of_range, "order index not in dimensions range");
-                new_dims.data().p()[i] = arr.header().dims().p()[order.p()[i]];
-            }
-
-            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_dims.data() };
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
+            res.header() = typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header{ arr.header().dims(), order };
 
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
             typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
