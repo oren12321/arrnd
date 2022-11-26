@@ -691,6 +691,8 @@ TEST(ND_array_test, reduce_elements)
     computoc::ND_array rarr1d{ {1}, data1d };
     EXPECT_EQ(rarr1d, computoc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0));
 
+    EXPECT_THROW(computoc::reduce(iarr, [](int, double) { return 0; }, 3), std::invalid_argument);
+
     // complex array reduction
     {
         auto sum = [](int value, double previous) {
@@ -920,6 +922,9 @@ TEST(ND_array_test, transpose)
     computoc::ND_array rarr{ {4, rdims}, rdata };
 
     EXPECT_EQ(rarr, computoc::transpose(iarr, { 2, 0, 1, 3 }));
+
+    EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 3, 2 }), std::invalid_argument);
+    EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 4 }), std::out_of_range);
 }
 
 TEST(ND_array_test, can_be_compared_with_another_nd_array)

@@ -971,6 +971,8 @@ namespace computoc {
                 return ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
+            COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::invalid_argument, "axis is invalid for number of dimensions");
+
             ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
             if (arr.header().dims().s() > 1) {
                 Internal_header_buffer new_dims{ arr.header().dims().s() - 1 };
