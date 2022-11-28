@@ -326,13 +326,11 @@ namespace computoc {
         offset = 28
         */
 
-        using ND_header_allocator = memoc::Malloc_allocator;
-
-        using ND_header_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
+        using ND_array_default_internals_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
             memoc::Stack_buffer<3 * (sizeof(std::size_t) + sizeof(std::size_t))>,
-            memoc::Allocated_buffer<ND_header_allocator, true>>>;
+            memoc::Allocated_buffer<memoc::Malloc_allocator, true>>>;
 
-        template <memoc::Buffer<std::size_t> Internal_buffer = ND_header_buffer>
+        template <memoc::Buffer<std::size_t> Internal_buffer = ND_array_default_internals_buffer>
         class ND_header {
         public:
             ND_header() = default;
@@ -540,14 +538,7 @@ namespace computoc {
         };
 
 
-        using ND_subscriptor_allocator = memoc::Malloc_allocator;
-
-        using ND_subscriptor_buffer = memoc::Typed_buffer<std::size_t, memoc::Fallback_buffer<
-            memoc::Stack_buffer<3 * sizeof(std::size_t)>,
-            memoc::Allocated_buffer<ND_subscriptor_allocator, true>>>;
-
-
-        template <memoc::Buffer<std::size_t> Internal_buffer = ND_subscriptor_buffer>
+        template <memoc::Buffer<std::size_t> Internal_buffer = ND_array_default_internals_buffer>
         class ND_subscriptor
         {
         public:
@@ -582,7 +573,7 @@ namespace computoc {
             }
 
             ND_subscriptor(const Params<std::size_t>& from, const Params<std::size_t>& to, const Params<std::size_t>& order, Params<std::size_t> dummy)
-                : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p()), order_(order.s(), order.p())
+                : buff_(from.s() + order.s()), from_(from.p()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty() && !order.empty(), std::invalid_argument, "'from', 'to' and/or 'order' subscripts size is zero");
                 COMPUTOC_THROW_IF_FALSE(from.s() == to.s() && to.s() == order.s(), std::invalid_argument, "'froms', 'to' and 'order' subscripts size are not equal");
@@ -592,7 +583,14 @@ namespace computoc {
                 }
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
-                COMPUTOC_THROW_IF_FALSE(order_.usable(), std::runtime_error, "order buffer allocation failed");
+                subs_ = { from.s(), buff_.data().p() };
+                for (std::size_t i = 0; i < subs_.s(); ++i) {
+                    subs_.p()[i] = from.p()[i];
+                }
+                order_ = { order.s(), buff_.data().p() + from.s() };
+                for (std::size_t i = 0; i < order_.s(); ++i) {
+                    order_.p()[i] = order.p()[i];
+                }
             }
             ND_subscriptor(std::initializer_list<std::size_t> from, std::initializer_list<std::size_t> to, std::initializer_list<std::size_t> order, Params<std::size_t> dummy)
                 : ND_subscriptor(Params<std::size_t>(from.size(), from.begin()), Params<std::size_t>(to.size(), to.begin()), Params<std::size_t>(order.size(), order.begin()))
@@ -600,7 +598,7 @@ namespace computoc {
             }
 
             ND_subscriptor(const Params<std::size_t>& to, const Params<std::size_t>& order, Params<std::size_t> dummy)
-                : buff_(to.s()), subs_(buff_.data()), to_(to.p()), order_(order.s(), order.p())
+                : buff_(to.s() + order.s()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!to.empty() && !order.empty(), std::invalid_argument, "'to' subscripts size is zero");
                 COMPUTOC_THROW_IF_FALSE(to.s() == order.s(), std::invalid_argument, "'to' and 'order' subscripts size are not equal");
@@ -610,7 +608,11 @@ namespace computoc {
                 }
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
-                COMPUTOC_THROW_IF_FALSE(order_.usable(), std::runtime_error, "order buffer allocation failed");
+                subs_ = { to.s(), buff_.data().p() };
+                order_ = { order.s(), buff_.data().p() + to.s() };
+                for (std::size_t i = 0; i < order_.s(); ++i) {
+                    order_.p()[i] = order.p()[i];
+                }
                 reset();
             }
             ND_subscriptor(std::initializer_list<std::size_t> to, std::initializer_list<std::size_t> order, Params<std::size_t> dummy)
@@ -639,9 +641,10 @@ namespace computoc {
             ND_subscriptor() = default;
 
             ND_subscriptor(const ND_subscriptor<Internal_buffer>& other) noexcept
-                : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_), order_(other.order_)
+                : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
-                subs_ = buff_.data();
+                subs_ = { other.subs_.s(), buff_.data().p() };
+                order_ = { other.order_.s(), buff_.data().p() + other.subs_.s() };
             }
             ND_subscriptor& operator=(const ND_subscriptor<Internal_buffer>& other) noexcept
             {
@@ -652,18 +655,20 @@ namespace computoc {
                 buff_ = other.buff_;
                 from_ = other.from_;
                 to_ = other.to_;
-                subs_ = buff_.data();
+                subs_ = { other.subs_.s(), buff_.data().p() };
+                order_ = { other.order_.s(), buff_.data().p() + other.subs_.s() };
                 axis_ = other.axis_;
-                order_ = other.order_;
             }
 
             ND_subscriptor(ND_subscriptor<Internal_buffer>&& other) noexcept
-                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_), order_(std::move(other.order_))
+                : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
-                subs_ = buff_.data();
+                subs_ = { other.subs_.s(), buff_.data().p() };
+                order_ = { other.order_.s(), buff_.data().p() + other.subs_.s() };
 
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
+                other.order_.clear();
                 other.axis_ = 0;
             }
             ND_subscriptor& operator=(ND_subscriptor&& other) noexcept
@@ -675,12 +680,13 @@ namespace computoc {
                 buff_ = std::move(other.buff_);
                 from_ = other.from_;
                 to_ = other.to_;
-                subs_ = buff_.data();
+                subs_ = { other.subs_.s(), buff_.data().p() };
+                order_ = { other.order_.s(), buff_.data().p() + other.subs_.s() };
                 axis_ = other.axis_;
-                order_ = std::move(other.order_);
 
                 other.from_ = other.to_ = nullptr;
                 other.subs_.clear();
+                other.order_.clear();
                 other.axis_ = 0;
             }
 
@@ -695,13 +701,13 @@ namespace computoc {
 
             ND_subscriptor& operator++() noexcept
             {
-                if (order_.usable())
+                if (!order_.empty())
                 {
                     bool should_process_sub{ true };
 
-                    for (size_t i = order_.data().s(); i >=1 && should_process_sub; --i) {
-                        if ((should_process_sub = (++subs_.p()[order_.data().p()[i-1]] == to_[order_.data().p()[i-1]])) && order_.data().p()[i-1] != order_.data().p()[0]) {
-                            subs_.p()[order_.data().p()[i-1]] = 0;
+                    for (size_t i = order_.s(); i >=1 && should_process_sub; --i) {
+                        if ((should_process_sub = (++subs_.p()[order_.p()[i-1]] == to_[order_.p()[i-1]])) && order_.p()[i-1] != order_.p()[0]) {
+                            subs_.p()[order_.p()[i-1]] = 0;
                         }
                     }
 
@@ -733,8 +739,8 @@ namespace computoc {
 
             operator bool() const noexcept
             {
-                if (order_.usable()) {
-                    return subs_.p()[order_.data().p()[0]] != to_[order_.data().p()[0]];
+                if (!order_.empty()) {
+                    return subs_.p()[order_.p()[0]] != to_[order_.p()[0]];
                 }
 
                 const std::size_t stop_axis{ axis_ > 0 ? std::size_t{0} : (subs_.s() > 1 ? std::size_t{1} : std::size_t{0}) };
@@ -751,8 +757,8 @@ namespace computoc {
             Params<std::size_t> subs_{};
             const std::size_t* from_{ nullptr };
             const std::size_t* to_{ nullptr };
+            Params<std::size_t> order_{};
             std::size_t axis_{ 0 };
-            Internal_buffer order_{};
         };
 
         using ND_array_default_data_reference_allocator = memoc::Malloc_allocator;
@@ -761,7 +767,7 @@ namespace computoc {
             memoc::Stack_buffer<9 * sizeof(std::size_t)>,
             memoc::Allocated_buffer<memoc::Malloc_allocator, true>>;
 
-        template <typename T, memoc::Buffer Data_buffer = ND_array_default_data_buffer, memoc::Allocator Data_reference_allocator = ND_array_default_data_reference_allocator, memoc::Buffer<std::size_t> Internals_buffer = ND_header_buffer>
+        template <typename T, memoc::Buffer Data_buffer = ND_array_default_data_buffer, memoc::Allocator Data_reference_allocator = ND_array_default_data_reference_allocator, memoc::Buffer<std::size_t> Internals_buffer = ND_array_default_internals_buffer>
         class ND_array {
         public:
             using Header = ND_header<Internals_buffer>;
