@@ -337,35 +337,6 @@ namespace computoc {
         public:
             ND_header() = default;
 
-            ND_header(const Params<std::size_t>& previous_dims, const Params<ND_range>& ranges, const Params<std::size_t>& previous_strides, std::size_t previous_offset)
-                : is_partial_(true)
-            {
-                if (previous_dims.empty()) {
-                    return;
-                }
-
-                std::size_t new_ndims = previous_dims.s() >= ranges.s() ? previous_dims.s() : ranges.s();
-
-                size_info_ = Internal_buffer(new_ndims * 2);
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                dims_ = { new_ndims, size_info_.data().p() };
-                ranges2dims(previous_dims, ranges, dims_);
-
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
-
-                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
-                ranges2strides(previous_strides, ranges, strides_);
-                if (previous_dims.s() > ranges.s()) {
-                    Params<std::size_t> remained_dims{ previous_dims.s() - ranges.s(), previous_dims.p() + ranges.s() };
-                    Params<std::size_t> remained_strides{ previous_dims.s() - ranges.s(), strides_.p() + ranges.s() };
-                    dims2strides(remained_dims, remained_strides);
-                }
-
-                offset_ = ranges2offset(previous_offset, previous_strides, ranges);
-            }
-
             ND_header(const Params<std::size_t>& dims)
                 : size_info_(dims.s() * 2)
             {
@@ -386,6 +357,35 @@ namespace computoc {
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
 
                 dims2strides(dims_, strides_);
+            }
+
+            ND_header(const Params<std::size_t>& previous_dims, const Params<std::size_t>& previous_strides, std::size_t previous_offset, const Params<ND_range>& derived_ranges)
+                : is_partial_(true)
+            {
+                if (previous_dims.empty()) {
+                    return;
+                }
+
+                std::size_t new_ndims = previous_dims.s() >= derived_ranges.s() ? previous_dims.s() : derived_ranges.s();
+
+                size_info_ = Internal_buffer(new_ndims * 2);
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                dims_ = { new_ndims, size_info_.data().p() };
+                ranges2dims(previous_dims, derived_ranges, dims_);
+
+                count_ = dims2count(dims_);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
+
+                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
+                ranges2strides(previous_strides, derived_ranges, strides_);
+                if (previous_dims.s() > derived_ranges.s()) {
+                    Params<std::size_t> remained_dims{ previous_dims.s() - derived_ranges.s(), previous_dims.p() + derived_ranges.s() };
+                    Params<std::size_t> remained_strides{ previous_dims.s() - derived_ranges.s(), strides_.p() + derived_ranges.s() };
+                    dims2strides(remained_dims, remained_strides);
+                }
+
+                offset_ = ranges2offset(previous_offset, previous_strides, derived_ranges);
             }
 
             ND_header(const Params<std::size_t>& previous_dims, std::size_t omitted_axis)
@@ -423,7 +423,7 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
-            ND_header(const Params<std::size_t>& previous_dims, const Params<std::size_t>& order)
+            ND_header(const Params<std::size_t>& previous_dims, const Params<std::size_t>& new_order)
                 : size_info_(previous_dims.s() * 2)
             {
                 if (previous_dims.empty()) {
@@ -431,12 +431,12 @@ namespace computoc {
                 }
 
                 COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
-                COMPUTOC_THROW_IF_FALSE(previous_dims.s() == order.s(), std::invalid_argument, "order and dimensions sizes are different");
+                COMPUTOC_THROW_IF_FALSE(previous_dims.s() == new_order.s(), std::invalid_argument, "new_order and dimensions sizes are different");
 
                 dims_ = { previous_dims.s(), size_info_.data().p() };
                 for (std::size_t i = 0; i < dims_.s(); ++i) {
-                    COMPUTOC_THROW_IF_FALSE(order.p()[i] < dims_.s(), std::out_of_range, "order index not in dimensions range");
-                    dims_.p()[i] = previous_dims.p()[order.p()[i]];
+                    COMPUTOC_THROW_IF_FALSE(new_order.p()[i] < dims_.s(), std::out_of_range, "new_order index not in dimensions range");
+                    dims_.p()[i] = previous_dims.p()[new_order.p()[i]];
                 }
 
                 strides_ = { previous_dims.s(), size_info_.data().p() + previous_dims.s() };
@@ -967,7 +967,7 @@ namespace computoc {
                 COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.dims(), ranges), std::out_of_range, "ranges invalid for dimensions");
 
                 ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor> slice{};
-                slice.hdr_ = Header{ hdr_.dims(), ranges, hdr_.strides(), hdr_.offset() };
+                slice.hdr_ = Header{ hdr_.dims(), hdr_.strides(), hdr_.offset(), ranges };
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
