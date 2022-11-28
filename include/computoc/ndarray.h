@@ -762,24 +762,24 @@ namespace computoc {
             memoc::Stack_buffer<9 * sizeof(std::size_t)>,
             memoc::Allocated_buffer<ND_array_allocator, true>>;
 
-        template <typename T, memoc::Buffer Internal_data_buffer = ND_array_buffer, memoc::Allocator Internal_allocator = ND_array_allocator, typename Interanl_header = ND_header<>, memoc::Buffer<std::size_t> Internal_subscriptor_buffer = ND_subscriptor_buffer>
+        template <typename T, memoc::Buffer Internal_data_buffer = ND_array_buffer, memoc::Allocator Internal_allocator = ND_array_allocator, memoc::Buffer<std::size_t> Internal_header_buffer = ND_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer = ND_subscriptor_buffer>
         class ND_array {
         public:
-            using Header = Interanl_header;
+            using Header = ND_header<Internal_header_buffer>;
             using Subscriptor = ND_subscriptor<Internal_subscriptor_buffer>;
 
             ND_array() = default;
 
-            ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>&& other) = default;
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>&& other)
+            ND_array(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) = default;
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)
             {
                 copy(other, *this);
 
-                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
             }
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>&& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>&& other)&&
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other) & = default;
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>&& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -795,31 +795,31 @@ namespace computoc {
 
                 return *this;
             }
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>&& other)&
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)&
             {
                 copy(other, *this);
-                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>&& other)&&
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>&& other)&&
             {
                 if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
                     copy(other, *this);
                 }
-                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o> dummy{std::move(other)};
+                ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o> dummy{std::move(other)};
                 return *this;
             }
 
-            ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& other) = default;
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>& other)
+            ND_array(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) = default;
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)
             {
                 copy(other, *this);
             }
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& other) & = default;
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& other)&&
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other) & = default;
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -835,14 +835,14 @@ namespace computoc {
 
                 return *this;
             }
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>& other)&
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)&
             {
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, typename Interanl_header_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Interanl_header_o, Internal_subscriptor_buffer_o>& other)&&
+            template< typename T_o, memoc::Buffer Internal_data_buffer_o, memoc::Allocator Internal_allocator_o, memoc::Buffer<std::size_t> Internal_header_buffer_o, memoc::Buffer<std::size_t> Internal_subscriptor_buffer_o>
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const ND_array<T_o, Internal_data_buffer_o, Internal_allocator_o, Internal_header_buffer_o, Internal_subscriptor_buffer_o>& other)&&
             {
                 if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
                     copy(other, *this);
@@ -851,12 +851,12 @@ namespace computoc {
             }
 
             template <typename U>
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& operator=(const U& value)
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
                 }
-                ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor ndstor{ Params<std::size_t>(hdr_.dims()) };
+                ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ Params<std::size_t>(hdr_.dims()) };
                 while (ndstor) {
                     (*this)(ndstor.subs()) = value;
                     ++ndstor;
@@ -949,7 +949,7 @@ namespace computoc {
                 return (*this)(Params<std::size_t>{ subs.size(), subs.begin() });
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> operator()(const Params<ND_range>& ranges) const
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(const Params<ND_range>& ranges) const
             {
                 /*
                 * Slicing algorithm:
@@ -971,7 +971,7 @@ namespace computoc {
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges) const
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> operator()(std::initializer_list<ND_range> ranges) const
             {
                 return (*this)(Params<ND_range>{ranges.size(), ranges.begin()});
             }
@@ -981,17 +981,17 @@ namespace computoc {
             memoc::Shared_ptr<memoc::Typed_buffer<T, Internal_data_buffer>, Internal_allocator> buffsp_{ nullptr };
         };
 
-        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>    
-        inline auto transform(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, Func func)
-            -> ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>
+        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>    
+        inline auto transform(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Func func)
+            -> ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>
         {
             if (empty(arr)) {
-                return ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().dims() };
+            ND_array<decltype(func(arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().dims() };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(arr(ndstor.subs()));
@@ -1001,15 +1001,15 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline auto reduce(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, Func func)
+        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline auto reduce(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Func func)
             -> decltype(func(arr.data()[0], arr.data()[0]))
         {
             if (empty(arr)) {
                 return decltype(func(arr.data()[0], arr.data()[0])){};
             }
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
 
             decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(ndstor.subs())) };
             ++ndstor;
@@ -1022,22 +1022,22 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline auto reduce(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, Func func, std::size_t axis)
-            -> ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>
+        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline auto reduce(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Func func, std::size_t axis)
+            -> ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>
         {
             if (empty(arr)) {
-                return ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::invalid_argument, "axis is invalid for number of dimensions");
 
-            ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
+            ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
 
-            res.header() = typename ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Header{ arr.header().dims(), axis };
+            res.header() = typename ND_array<decltype(func(arr.data()[0], arr.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header{ arr.header().dims(), axis };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), axis };
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), axis };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             const std::size_t reduction_iteration_cycle{ arr.header().dims().p()[axis] };
 
@@ -1054,15 +1054,15 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline auto binary(const ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& lhs, const ND_array<T2, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& rhs, Func func)
-            -> ND_array<decltype(func(lhs.data()[0], rhs.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>
+        template <typename T1, typename T2, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline auto binary(const ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& lhs, const ND_array<T2, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& rhs, Func func)
+            -> ND_array<decltype(func(lhs.data()[0], rhs.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>
         {
             COMPUTOC_THROW_IF_FALSE(lhs.header().dims() == rhs.header().dims(), std::invalid_argument, "different input array dimensions");
 
-            ND_array<decltype(func(lhs.data()[0], rhs.data()[0])), Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ lhs.header().dims() };
+            ND_array<decltype(func(lhs.data()[0], rhs.data()[0])), Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ lhs.header().dims() };
 
-            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ lhs.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs(ndstor.subs()));
@@ -1072,17 +1072,17 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> filter(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, Func func)
+        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> filter(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Func func)
         {
             if (empty(arr)) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().count() };
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             std::size_t res_count{ 0 };
 
@@ -1096,7 +1096,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             if (res_count < arr.header().count()) {
@@ -1106,21 +1106,21 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> filter(const ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, const ND_array<T2, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& mask)
+        template <typename T1, typename T2, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> filter(const ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_array<T2, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& mask)
         {
             if (empty(arr)) {
-                return ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             COMPUTOC_THROW_IF_FALSE(arr.header().dims() == mask.header().dims(), std::invalid_argument, "different input array dimensions");
 
-            ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().count() };
+            ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
 
-            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename ND_array<T2, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
+            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
+            typename ND_array<T2, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
 
-            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             std::size_t res_count{ 0 };
 
@@ -1135,7 +1135,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             if (res_count < arr.header().count()) {
@@ -1145,17 +1145,17 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> find(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, Func func)
+        template <typename T, typename Func, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> find(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, Func func)
         {
             if (empty(arr)) {
-                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().count() };
+            ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
+            typename ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             std::size_t res_count{ 0 };
 
@@ -1169,7 +1169,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             if (res_count < arr.header().count()) {
@@ -1180,21 +1180,21 @@ namespace computoc {
         }
 
         template <
-            typename T1, typename T2, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> find(const ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, const ND_array<T2, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& mask)
+            typename T1, typename T2, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> find(const ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const ND_array<T2, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& mask)
         {
             if (empty(arr)) {
-                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             COMPUTOC_THROW_IF_FALSE(arr.header().dims() == mask.header().dims(), std::invalid_argument, "different input array dimensions");
 
-            ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().count() };
+            ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
 
-            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename ND_array<T2, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
+            typename ND_array<T1, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
+            typename ND_array<T2, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
 
-            typename ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             std::size_t res_count{ 0 };
 
@@ -1209,7 +1209,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<std::size_t, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             if (res_count < arr.header().count()) {
@@ -1219,18 +1219,18 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& order)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& order)
         {
             if (empty(arr)) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr.header().count() };
-            res.header() = typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Header{ arr.header().dims(), order };
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr.header().count() };
+            res.header() = typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header{ arr.header().dims(), order };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor res_ndstor{ res.header().dims() };
 
             while (arr_ndstor && res_ndstor) {
                 res(res_ndstor.subs()) = arr(arr_ndstor.subs());
@@ -1241,16 +1241,16 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> order)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> transpose(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> order)
         {
             return transpose(arr, Params<std::size_t>{order.size(), order.begin()});
         }
 
         template <
-            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, typename Interanl_header1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
-            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, typename Interanl_header2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
-        inline bool operator==(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Interanl_header1, Internal_subscriptor_buffer1>& lhs, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>& rhs)
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
+        inline bool operator==(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& lhs, const ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& rhs)
         {
             if (lhs.header().dims() != rhs.header().dims()) {
                 return false;
@@ -1265,8 +1265,8 @@ namespace computoc {
                 return true;
             }
 
-            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Interanl_header1, Internal_subscriptor_buffer1>::Subscriptor lhs_ndstor{ lhs.header().dims() };
-            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>::Subscriptor rhs_ndstor{ rhs.header().dims() };
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor lhs_ndstor{ lhs.header().dims() };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor rhs_ndstor{ rhs.header().dims() };
 
             while (lhs_ndstor && rhs_ndstor) {
                 if (!equal(lhs(lhs_ndstor.subs()), rhs(rhs_ndstor.subs()))) {
@@ -1280,9 +1280,9 @@ namespace computoc {
         }
 
         template <
-            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, typename Interanl_header1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
-            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, typename Interanl_header2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
-        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Interanl_header1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>& dst)
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
+        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>& dst)
         {
             /*
             * Algorithm:
@@ -1292,16 +1292,16 @@ namespace computoc {
             */
 
             if (empty(src)) {
-                dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>{};
+                dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>{};
                 return;
             }
 
             if (src.header().count() != dst.header().count()) {
-                dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>(src.header().dims());
+                dst = ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>(src.header().dims());
             }
 
-            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Interanl_header1, Internal_subscriptor_buffer1>::Subscriptor src_ndstor{ src.header().dims() };
-            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>::Subscriptor dst_ndstor{ dst.header().dims() };
+            typename ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>::Subscriptor src_ndstor{ src.header().dims() };
+            typename ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>::Subscriptor dst_ndstor{ dst.header().dims() };
 
             while (src_ndstor && dst_ndstor) {
                 dst(dst_ndstor.subs()) = src(src_ndstor.subs());
@@ -1310,25 +1310,25 @@ namespace computoc {
             }
         }
         template <
-            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, typename Interanl_header1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
-            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, typename Interanl_header2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
-        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Interanl_header1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Interanl_header2, Internal_subscriptor_buffer2>&& dst)
+            typename T1, memoc::Buffer Internal_data_buffer1, memoc::Allocator Internal_allocator1, memoc::Buffer<std::size_t> Internal_header_buffer1, memoc::Buffer<std::size_t> Internal_subscriptor_buffer1,
+            typename T2, memoc::Buffer Internal_data_buffer2, memoc::Allocator Internal_allocator2, memoc::Buffer<std::size_t> Internal_header_buffer2, memoc::Buffer<std::size_t> Internal_subscriptor_buffer2>
+        inline void copy(const ND_array<T1, Internal_data_buffer1, Internal_allocator1, Internal_header_buffer1, Internal_subscriptor_buffer1>& src, ND_array<T2, Internal_data_buffer2, Internal_allocator2, Internal_header_buffer2, Internal_subscriptor_buffer2>&& dst)
         {
             copy(src, dst);
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> clone(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr)
         {
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> clone{};
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> clone{};
 
             if (empty(arr)) {
                 return clone;
             }
 
-            clone = ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{ arr.header().dims() };
+            clone = ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{ arr.header().dims() };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor ndstor{ arr.header().dims() };
 
             while (ndstor) {
                 clone(ndstor.subs()) = arr(ndstor.subs());
@@ -1337,8 +1337,8 @@ namespace computoc {
             return clone;
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& new_dims)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& new_dims)
         {
             /*
             * Reshaping algorithm:
@@ -1349,7 +1349,7 @@ namespace computoc {
             * - not subarray -> reference to input array with modified header
             */
             if (empty(arr)) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             COMPUTOC_THROW_IF_FALSE(arr.header().count() == dims2count(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
@@ -1359,10 +1359,10 @@ namespace computoc {
             }
 
             if (arr.header().is_partial()) {
-                ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ new_dims };
+                ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_dims };
 
-                typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor prev_ndstor(arr.header().dims());
-                typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor new_ndstor(new_dims);
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor prev_ndstor(arr.header().dims());
+                typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor(new_dims);
 
                 while (prev_ndstor && new_ndstor) {
                     res(new_ndstor.subs()) = arr(prev_ndstor.subs());
@@ -1373,40 +1373,40 @@ namespace computoc {
                 return res;
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ arr };
-            res.header() = typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Header(new_dims);
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ arr };
+            res.header() = typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Header(new_dims);
 
             return res;
         }
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> reshape(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
             return reshape(arr, Params<std::size_t>(new_dims.size(), new_dims.begin()));
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& new_dims)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, const Params<std::size_t>& new_dims)
         {
             /*
             * Resizing algorithm:
             * - return new array of the new size containing the original array data or part of it.
             */
             if (new_dims.empty()) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>{};
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>{};
             }
 
             if (empty(arr)) {
-                return ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>(new_dims);
+                return ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>(new_dims);
             }
 
             if (arr.header().dims() == new_dims) {
                 return clone(arr);
             }
 
-            ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> res{ new_dims };
+            ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> res{ new_dims };
 
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor prev_ndstor(arr.header().dims());
-            typename ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>::Subscriptor new_ndstor(new_dims);
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor prev_ndstor(arr.header().dims());
+            typename ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>::Subscriptor new_ndstor(new_dims);
 
             while (prev_ndstor && new_ndstor) {
                 res(new_ndstor.subs()) = arr(prev_ndstor.subs());
@@ -1416,14 +1416,14 @@ namespace computoc {
 
             return res;
         }
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer> resize(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr, std::initializer_list<std::size_t> new_dims)
         {
             return resize(arr, Params<std::size_t>(new_dims.size(), new_dims.begin()));
         }
 
-        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, typename Interanl_header, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
-        inline bool empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Interanl_header, Internal_subscriptor_buffer>& arr) noexcept
+        template <typename T, memoc::Buffer Internal_data_buffer, memoc::Allocator Internal_allocator, memoc::Buffer<std::size_t> Internal_header_buffer, memoc::Buffer<std::size_t> Internal_subscriptor_buffer>
+        inline bool empty(const ND_array<T, Internal_data_buffer, Internal_allocator, Internal_header_buffer, Internal_subscriptor_buffer>& arr) noexcept
         {
             return !arr.data() || (arr.header().count() == 0);
         }
