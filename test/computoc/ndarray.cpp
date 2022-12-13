@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cstdint>
+
 #include <computoc/ndarray.h>
 
 
@@ -28,11 +30,11 @@ TEST(ND_range, fields_initialization)
 
 TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 {
-    const std::size_t ndims{ 4 };
-    const std::size_t dims[]{ 2, 1, 3, 2 };
+    const std::int64_t ndims{ 4 };
+    const std::int64_t dims[]{ 2, 1, 3, 2 };
 
-    const std::size_t nsubs{ 12 };
-    const std::size_t rsubs_list[][4]{
+    const std::int64_t nsubs{ 12 };
+    const std::int64_t rsubs_list[][4]{
         {0, 0, 0, 0},
         {0, 0, 0, 1},
         {0, 0, 1, 0},
@@ -50,10 +52,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
     // prefix increment
     {
-        std::size_t nsubs_counter{ 0 };
+        std::int64_t nsubs_counter{ 0 };
         while (counter && nsubs_counter < nsubs) {
-            const std::size_t* subs{ counter.subs().p() };
-            const std::size_t* rsubs{ rsubs_list[nsubs_counter++] };
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter++] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
             EXPECT_EQ(rsubs[1], subs[1]);
@@ -67,7 +69,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     }
 
     counter.reset();
-    const std::size_t* subs{ counter.subs().p() };
+    const std::int64_t* subs{ counter.subs().p() };
 
     EXPECT_EQ(0, subs[0]);
     EXPECT_EQ(0, subs[1]);
@@ -76,10 +78,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
     // postfix increment
     {
-        std::size_t nsubs_counter{ 0 };
+        std::int64_t nsubs_counter{ 0 };
         for (; counter; counter++) {
-            const std::size_t* subs{ counter.subs().p() };
-            const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
             EXPECT_EQ(rsubs[1], subs[1]);
@@ -95,12 +97,12 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
     // with initial subscripts value
     {
-        std::initializer_list<std::size_t> from{ 1, 0, 0, 0 };
-        std::initializer_list<std::size_t> to{ 2, 1, 3, 2 };
-        std::size_t nsubs_counter{ 6 };
+        std::initializer_list<std::int64_t> from{ 1, 0, 0, 0 };
+        std::initializer_list<std::int64_t> to{ 2, 1, 3, 2 };
+        std::int64_t nsubs_counter{ 6 };
         for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
-            const std::size_t* subs{ counter.subs().p() };
-            const std::size_t* rsubs{ rsubs_list[nsubs_counter] };
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
 
             EXPECT_EQ(rsubs[0], subs[0]);
             EXPECT_EQ(rsubs[1], subs[1]);
@@ -137,12 +139,12 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
     {
         EXPECT_THROW(computoc::ND_array<int>::Subscriptor({ 5 }, 1), std::invalid_argument);
 
-        const std::size_t nsubs{ 6 };
-        const std::size_t subs[]{ 0, 1, 2, 3, 4, 5 };
-        std::initializer_list<std::size_t> from{ 1 };
-        std::initializer_list<std::size_t> to{ 6 };
+        const std::int64_t nsubs{ 6 };
+        const std::int64_t subs[]{ 0, 1, 2, 3, 4, 5 };
+        std::initializer_list<std::int64_t> from{ 1 };
+        std::initializer_list<std::int64_t> to{ 6 };
         computoc::ND_array<int>::Subscriptor counter(from, to, 0);
-        std::size_t nsubs_counter{ 1 };
+        std::int64_t nsubs_counter{ 1 };
         for (; counter; ++counter) {
             EXPECT_EQ(subs[nsubs_counter], counter.subs().p()[0]);
             ++nsubs_counter;
@@ -157,7 +159,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         // axis 0
         {
-            const std::size_t rsubs_list0[][4]{
+            const std::int64_t rsubs_list0[][4]{
                 {0, 0, 0, 0},
                 {1, 0, 0, 0},
                 {0, 0, 0, 1},
@@ -171,10 +173,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
                 {0, 0, 2, 1},
                 {1, 0, 2, 1} };
             computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 0);
-            std::size_t nsubs_counter{ 0 };
+            std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
-                const std::size_t* subs{ counter.subs().p() };
-                const std::size_t* rsubs{ rsubs_list0[nsubs_counter] };
+                const std::int64_t* subs{ counter.subs().p() };
+                const std::int64_t* rsubs{ rsubs_list0[nsubs_counter] };
 
                 EXPECT_EQ(rsubs[0], subs[0]);
                 EXPECT_EQ(rsubs[1], subs[1]);
@@ -189,7 +191,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         // axis 1
         {
-            const std::size_t rsubs_list1[][4]{
+            const std::int64_t rsubs_list1[][4]{
                 {0, 0, 0, 0},
                 {0, 0, 0, 1},
                 {0, 0, 1, 0},
@@ -203,10 +205,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
             computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 1);
-            std::size_t nsubs_counter{ 0 };
+            std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
-                const std::size_t* subs{ counter.subs().p() };
-                const std::size_t* rsubs{ rsubs_list1[nsubs_counter] };
+                const std::int64_t* subs{ counter.subs().p() };
+                const std::int64_t* rsubs{ rsubs_list1[nsubs_counter] };
 
                 EXPECT_EQ(rsubs[0], subs[0]);
                 EXPECT_EQ(rsubs[1], subs[1]);
@@ -221,7 +223,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         // axis 2
         {
-            const std::size_t rsubs_list2[][4]{
+            const std::int64_t rsubs_list2[][4]{
                 {0, 0, 0, 0},
                 {0, 0, 1, 0},
                 {0, 0, 2, 0},
@@ -235,10 +237,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
                 {1, 0, 1, 1},
                 {1, 0, 2, 1} };
             computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 2);
-            std::size_t nsubs_counter{ 0 };
+            std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
-                const std::size_t* subs{ counter.subs().p() };
-                const std::size_t* rsubs{ rsubs_list2[nsubs_counter] };
+                const std::int64_t* subs{ counter.subs().p() };
+                const std::int64_t* rsubs{ rsubs_list2[nsubs_counter] };
 
                 EXPECT_EQ(rsubs[0], subs[0]);
                 EXPECT_EQ(rsubs[1], subs[1]);
@@ -253,7 +255,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         // axis 3
         {
-            const std::size_t rsubs_list3[][4]{
+            const std::int64_t rsubs_list3[][4]{
                 {0, 0, 0, 0},
                 {0, 0, 0, 1},
                 {0, 0, 1, 0},
@@ -267,10 +269,10 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
             computoc::ND_array<int>::Subscriptor counter({ ndims, dims }, 3);
-            std::size_t nsubs_counter{ 0 };
+            std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
-                const std::size_t* subs{ counter.subs().p() };
-                const std::size_t* rsubs{ rsubs_list3[nsubs_counter] };
+                const std::int64_t* subs{ counter.subs().p() };
+                const std::int64_t* rsubs{ rsubs_list3[nsubs_counter] };
 
                 EXPECT_EQ(rsubs[0], subs[0]);
                 EXPECT_EQ(rsubs[1], subs[1]);
@@ -285,7 +287,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
         // specific order
         {
-            const std::size_t ordered_subs_list[][4]{
+            const std::int64_t ordered_subs_list[][4]{
                 {0, 0, 0, 0},
                 {0, 0, 0, 1},
                 {0, 1, 0, 0},
@@ -334,17 +336,17 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
                 {3, 0, 2, 1},
                 {3, 1, 2, 0},
                 {3, 1, 2, 1} };
-            const std::size_t ordered_ndims{ 4 };
-            const std::size_t ordered_dims[]{ 4, 2, 3, 2 };
-            const std::size_t order[]{ 2, 0, 1, 3 };
+            const std::int64_t ordered_ndims{ 4 };
+            const std::int64_t ordered_dims[]{ 4, 2, 3, 2 };
+            const std::int64_t order[]{ 2, 0, 1, 3 };
 
             // full count
             {
                 computoc::ND_array<int>::Subscriptor counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
-                std::size_t nsubs_counter{ 0 };
+                std::int64_t nsubs_counter{ 0 };
                 for (; counter; counter++) {
-                    const std::size_t* subs{ counter.subs().p() };
-                    const std::size_t* rsubs{ ordered_subs_list[nsubs_counter] };
+                    const std::int64_t* subs{ counter.subs().p() };
+                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter] };
 
                     EXPECT_EQ(rsubs[0], subs[0]);
                     EXPECT_EQ(rsubs[1], subs[1]);
@@ -359,12 +361,12 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
 
             // partial count
             {
-                const std::size_t from[]{ 3, 0, 2, 0 };
+                const std::int64_t from[]{ 3, 0, 2, 0 };
                 computoc::ND_array<int>::Subscriptor counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
-                std::size_t nsubs_counter{ 44 };
+                std::int64_t nsubs_counter{ 44 };
                 for (; counter; counter++) {
-                    const std::size_t* subs{ counter.subs().p() };
-                    const std::size_t* rsubs{ ordered_subs_list[nsubs_counter] };
+                    const std::int64_t* subs{ counter.subs().p() };
+                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter] };
 
                     EXPECT_EQ(rsubs[0], subs[0]);
                     EXPECT_EQ(rsubs[1], subs[1]);
@@ -470,7 +472,7 @@ TEST(ND_array_test, can_return_its_header_and_data)
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_partial());
     EXPECT_TRUE(arr.data());
-    for (std::size_t i = 0; i < hdr.count(); ++i) {
+    for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
 }
@@ -485,11 +487,11 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         5, 6 };
 
     Integer_nd_array arr1d{ {6}, data };
-    const std::size_t* dims1d{ arr1d.header().dims().p() };
-    for (std::size_t i = 0; i < dims1d[0]; ++i) {
+    const std::int64_t* dims1d{ arr1d.header().dims().p() };
+    for (std::int64_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ(arr1d({ i }), data[i]);
     }
-    for (std::size_t i = 0; i < dims1d[0]; ++i) {
+    for (std::int64_t i = 0; i < dims1d[0]; ++i) {
         arr1d({ i }) = 0;
         EXPECT_EQ(arr1d({ i }), 0);
     }
@@ -498,14 +500,14 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr1d({ 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr2d{ {3, 2}, data };
-    const std::size_t* dims2d{ arr2d.header().dims().p() };
-    for (std::size_t i = 0; i < dims2d[0]; ++i) {
-        for (std::size_t j = 0; j < dims2d[1]; ++j) {
+    const std::int64_t* dims2d{ arr2d.header().dims().p() };
+    for (std::int64_t i = 0; i < dims2d[0]; ++i) {
+        for (std::int64_t j = 0; j < dims2d[1]; ++j) {
             EXPECT_EQ(arr2d({ i, j }), data[i * dims2d[1] + j]);
         }
     }
-    for (std::size_t i = 0; i < dims2d[0]; ++i) {
-        for (std::size_t j = 0; j < dims2d[1]; ++j) {
+    for (std::int64_t i = 0; i < dims2d[0]; ++i) {
+        for (std::int64_t j = 0; j < dims2d[1]; ++j) {
             arr2d({ i, j }) = 0;
             EXPECT_EQ(arr2d({ i, j }), 0);
         }
@@ -516,17 +518,17 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     EXPECT_THROW(arr2d({ 0, 0, 0 }), std::out_of_range);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
-    const std::size_t* dims3d{ arr3d.header().dims().p() };
-    for (std::size_t k = 0; k < dims3d[0]; ++k) {
-        for (std::size_t i = 0; i < dims3d[1]; ++i) {
-            for (std::size_t j = 0; j < dims3d[2]; ++j) {
+    const std::int64_t* dims3d{ arr3d.header().dims().p() };
+    for (std::int64_t k = 0; k < dims3d[0]; ++k) {
+        for (std::int64_t i = 0; i < dims3d[1]; ++i) {
+            for (std::int64_t j = 0; j < dims3d[2]; ++j) {
                 EXPECT_EQ(arr3d({ k, i, j }), data[k * (dims3d[1] * dims3d[2]) + i * dims3d[2] + j]);
             }
         }
     }
-    for (std::size_t k = 0; k < dims3d[0]; ++k) {
-        for (std::size_t i = 0; i < dims3d[1]; ++i) {
-            for (std::size_t j = 0; j < dims3d[2]; ++j) {
+    for (std::int64_t k = 0; k < dims3d[0]; ++k) {
+        for (std::int64_t i = 0; i < dims3d[1]; ++i) {
+            for (std::int64_t j = 0; j < dims3d[2]; ++j) {
                 arr3d({ k, i, j }) = 0;
                 EXPECT_EQ(arr3d({ k, i, j }), 0);
             }
@@ -553,13 +555,13 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         const int rdata[6]{ 0 };
 
         Integer_nd_array arr1({ 6 }, 0.5);
-        for (std::size_t i = 0; i < 6; ++i) {
+        for (std::int64_t i = 0; i < 6; ++i) {
             EXPECT_EQ(rdata[i], arr1({ i }));
         }
 
         const double data2[]{ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 };
         Integer_nd_array arr2({ 6 }, data2);
-        for (std::size_t i = 0; i < 6; ++i) {
+        for (std::int64_t i = 0; i < 6; ++i) {
             EXPECT_EQ(rdata[i], arr2({ i }));
         }
     }
@@ -585,7 +587,7 @@ TEST(ND_array_test, have_read_write_access_to_slice)
         28, 29, 30,
         31, 32, 33,
         34, 35, 36 };
-    const std::size_t dims[]{ 2, 2, 3, 3 };
+    const std::int64_t dims[]{ 2, 2, 3, 3 };
     Integer_nd_array arr{ {4, dims}, data };
 
     const int rdata[] = {
@@ -595,14 +597,14 @@ TEST(ND_array_test, have_read_write_access_to_slice)
         29,
         32
     };
-    const std::size_t rdims[]{ 2, 2, 1 };
+    const std::int64_t rdims[]{ 2, 2, 1 };
     Integer_nd_array rarr{ {3, rdims}, rdata };
 
     Integer_nd_array sarr{ arr({{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}) };
 
-    for (std::size_t k = 0; k < rdims[0]; ++k) {
-        for (std::size_t i = 0; i < rdims[1]; ++i) {
-            for (std::size_t j = 0; j < rdims[2]; ++j) {
+    for (std::int64_t k = 0; k < rdims[0]; ++k) {
+        for (std::int64_t i = 0; i < rdims[1]; ++i) {
+            for (std::int64_t j = 0; j < rdims[2]; ++j) {
                 EXPECT_EQ(rarr({ k, i, j }), sarr({ k, 0, i, j }));
             }
         }
@@ -611,7 +613,7 @@ TEST(ND_array_test, have_read_write_access_to_slice)
 
 TEST(ND_array_test, element_wise_transformation)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -632,7 +634,7 @@ TEST(ND_array_test, element_wise_binary_operation)
 {
     EXPECT_THROW(computoc::binary(computoc::ND_array<int>({ 3, 1, 2 }), computoc::ND_array<double>({ 6 }), [](int, double) {return 0.0; }), std::invalid_argument);
 
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata1[]{
         1, 2,
@@ -653,7 +655,7 @@ TEST(ND_array_test, element_wise_binary_operation)
 
 TEST(ND_array_test, reduce_elements)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -663,7 +665,7 @@ TEST(ND_array_test, reduce_elements)
 
     EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), computoc::reduce(iarr, [](int value, double previous) {return previous / value; }));
 
-    std::size_t dims2[]{ 3, 1 };
+    std::int64_t dims2[]{ 3, 1 };
     const double rdata2[]{
         3.0,
         7.0,
@@ -672,7 +674,7 @@ TEST(ND_array_test, reduce_elements)
     computoc::ND_array rarr2{ {2, dims2}, rdata2 };
     EXPECT_EQ(rarr2, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2));
 
-    std::size_t dims1[]{ 3, 2 };
+    std::int64_t dims1[]{ 3, 2 };
     const double rdata1[]{
         1.0, 2.0,
         3.0, 4.0,
@@ -680,7 +682,7 @@ TEST(ND_array_test, reduce_elements)
     computoc::ND_array rarr1{ {2, dims1}, rdata1 };
     EXPECT_EQ(rarr1, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1));
 
-    std::size_t dims0[]{ 1, 2 };
+    std::int64_t dims0[]{ 1, 2 };
     const double rdata0[]{
         9.0, 12.0 };
     computoc::ND_array rarr0{ {2, dims0}, rdata0 };
@@ -705,7 +707,7 @@ TEST(ND_array_test, reduce_elements)
 
 TEST(ND_array_test, filter_elements_by_condition)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -731,7 +733,7 @@ TEST(ND_array_test, filter_elements_by_condition)
 
 TEST(ND_array_test, filter_elements_by_maks)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -771,7 +773,7 @@ TEST(ND_array_test, filter_elements_by_maks)
 
 TEST(ND_array_test, select_elements_indices_by_condition)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -779,30 +781,30 @@ TEST(ND_array_test, select_elements_indices_by_condition)
         5, 6 };
     computoc::ND_array iarr{ {3, dims}, idata };
 
-    const std::size_t rdata0[]{ 0, 1, 2, 3, 4, 5 };
+    const std::int64_t rdata0[]{ 0, 1, 2, 3, 4, 5 };
     computoc::ND_array rarr0{ {6}, rdata0 };
     EXPECT_EQ(rarr0, computoc::find(iarr, [](int) {return 1; }));
 
-    const std::size_t rdata1[]{ 0, 1, 2, 4, 5 };
+    const std::int64_t rdata1[]{ 0, 1, 2, 4, 5 };
     computoc::ND_array rarr1{ {5}, rdata1 };
     EXPECT_EQ(rarr1, computoc::find(iarr, [](int a) { return a; }));
 
-    const std::size_t rdata2[]{ 1, 3, 5 };
+    const std::int64_t rdata2[]{ 1, 3, 5 };
     computoc::ND_array rarr2{ {3}, rdata2 };
     EXPECT_EQ(rarr2, computoc::find(iarr, [](int a) { return a % 2 == 0; }));
 
-    EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::find(iarr, [](int a) { return a > 6; }));
-    EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::find(computoc::ND_array<int>{}, [](int) {return 1; }));
+    EXPECT_EQ(computoc::ND_array<std::int64_t>{}, computoc::find(iarr, [](int a) { return a > 6; }));
+    EXPECT_EQ(computoc::ND_array<std::int64_t>{}, computoc::find(computoc::ND_array<int>{}, [](int) {return 1; }));
 
     // subarray
-    const std::size_t rdatas[]{ 2 };
+    const std::int64_t rdatas[]{ 2 };
     computoc::ND_array rarrs{ {1}, rdatas };
     EXPECT_EQ(rarrs, computoc::find(iarr({ {1, 1} }), [](int a) { return a; }));
 }
 
 TEST(ND_array_test, select_elements_indices_by_maks)
 {
-    std::size_t dims[]{ 3, 1, 2 };
+    std::int64_t dims[]{ 3, 1, 2 };
 
     const int idata[]{
         1, 2,
@@ -817,7 +819,7 @@ TEST(ND_array_test, select_elements_indices_by_maks)
         0, 1,
         0, 1 };
     computoc::ND_array imask0{ {3, dims}, imask_data0 };
-    const std::size_t rdata0[]{ 0, 3, 5 };
+    const std::int64_t rdata0[]{ 0, 3, 5 };
     computoc::ND_array rarr0{ {3}, rdata0 };
     EXPECT_EQ(rarr0, computoc::find(iarr, imask0));
 
@@ -826,23 +828,23 @@ TEST(ND_array_test, select_elements_indices_by_maks)
         0, 0,
         0, 0 };
     computoc::ND_array imask1{ {3, dims}, imask_data1 };
-    EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::find(iarr, imask1));
+    EXPECT_EQ(computoc::ND_array<std::int64_t>{}, computoc::find(iarr, imask1));
 
     const int imask_data2[]{
         1, 1,
         1, 1,
         1, 1 };
     computoc::ND_array imask2{ {3, dims}, imask_data2 };
-    const std::size_t rdata2[]{ 0, 1, 2, 3, 4, 5 };
+    const std::int64_t rdata2[]{ 0, 1, 2, 3, 4, 5 };
     computoc::ND_array rarr2{ {6}, rdata2 };
     EXPECT_EQ(rarr2, computoc::find(iarr, imask2));
 
-    EXPECT_EQ(computoc::ND_array<std::size_t>{}, computoc::find(computoc::ND_array<std::size_t>{}, imask0));
+    EXPECT_EQ(computoc::ND_array<std::int64_t>{}, computoc::find(computoc::ND_array<std::int64_t>{}, imask0));
 }
 
 TEST(ND_array_test, transpose)
 {
-    const std::size_t idims[]{ 4, 2, 3, 2 };
+    const std::int64_t idims[]{ 4, 2, 3, 2 };
     const int idata[]{
         1,  2,
         3,  4,
@@ -880,7 +882,7 @@ TEST(ND_array_test, transpose)
         47, 48 };
     computoc::ND_array iarr{ {4, idims}, idata };
 
-    const std::size_t rdims[]{ 3, 4, 2, 2 };
+    const std::int64_t rdims[]{ 3, 4, 2, 2 };
     const double rdata[]{
         1.0,  2.0,
         7.0,  8.0,
@@ -935,13 +937,13 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
         1, 2,
         3, 4,
         5, 6 };
-    std::size_t dims1[]{ 3, 1, 2 };
+    std::int64_t dims1[]{ 3, 1, 2 };
     Integer_nd_array arr1{ {3, dims1}, data1 };
     Integer_nd_array arr2{ {3, dims1}, data1 };
 
     EXPECT_EQ(arr1, arr2);
 
-    std::size_t dims2[]{ 3, 2 };
+    std::int64_t dims2[]{ 3, 2 };
     Integer_nd_array arr3{ {2, dims2}, data1 };
 
     EXPECT_NE(arr1, arr3);
@@ -975,7 +977,7 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
             28, 29, 30,
             31, 32, 33,
             34, 35, 36 };
-        const std::size_t dims[]{ 2, 2, 3, 3 };
+        const std::int64_t dims[]{ 2, 2, 3, 3 };
         Integer_nd_array arr{ {4, dims}, data };
 
         const int rdata[] = {
@@ -985,7 +987,7 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
             29,
             32
         };
-        const std::size_t rdims[]{ 2, 1, 2, 1 };
+        const std::int64_t rdims[]{ 2, 1, 2, 1 };
         Integer_nd_array rarr{ {4, rdims}, rdata };
 
         Integer_nd_array sarr{ arr({{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}) };
@@ -998,7 +1000,7 @@ TEST(ND_array_test, can_be_compared_with_another_nd_array)
             1.0, 2.0,
             3.0, 4.0,
             5.0, 6.0 };
-        std::size_t dims1d[]{ 3, 1, 2 };
+        std::int64_t dims1d[]{ 3, 1, 2 };
         computoc::ND_array<double> arr1d{ {3, dims1d}, data1d };
 
         EXPECT_EQ(arr1, arr1d);
@@ -1023,7 +1025,7 @@ TEST(ND_array_test, can_return_slice)
         1, 2,
         3, 4,
         5, 6};
-    const std::size_t dims[] = { 3, 1, 2 };
+    const std::int64_t dims[] = { 3, 1, 2 };
     Integer_nd_array arr{ {3, dims}, data };
 
     // empty ranges
@@ -1062,7 +1064,7 @@ TEST(ND_array_test, can_return_slice)
         const int tdata1[] = {
             1,
             5 };
-        const std::size_t tdims1[] = { 2, 1, 1 };
+        const std::int64_t tdims1[] = { 2, 1, 1 };
         Integer_nd_array tarr1{ {3, tdims1}, tdata1 };
         Integer_nd_array sarr1{ arr({{0, 2,2}, {0}, {0}}) };
         EXPECT_EQ(tarr1, sarr1);
@@ -1071,7 +1073,7 @@ TEST(ND_array_test, can_return_slice)
         // nranges < ndims
         const int tdata2[] = {
             3, 4 };
-        const std::size_t tdims2[] = { 1, 1, 2 };
+        const std::int64_t tdims2[] = { 1, 1, 2 };
         Integer_nd_array tarr2{ {3, tdims2}, tdata2 };
         Integer_nd_array sarr2{ arr({{1, 2, 2}}) };
         EXPECT_EQ(tarr2, sarr2);
@@ -1096,7 +1098,7 @@ TEST(ND_array_test, can_be_assigned_with_value)
             1, 2,
             3, 4,
             5, 6 };
-        const std::size_t dims[]{ 3, 1, 2 };
+        const std::int64_t dims[]{ 3, 1, 2 };
         Integer_nd_array arr{ {3, dims}, data };
 
         const int tdata[] = {
@@ -1115,7 +1117,7 @@ TEST(ND_array_test, can_be_assigned_with_value)
             1, 2,
             3, 4,
             5, 6 };
-        const std::size_t dims[]{ 3, 1, 2 };
+        const std::int64_t dims[]{ 3, 1, 2 };
         Integer_nd_array arr{ {3, dims}, data };
 
         const int tdata[] = {
@@ -1139,7 +1141,7 @@ TEST(ND_array_test, copy_by_reference)
         1, 2,
         3, 4,
         5, 6 };
-    const std::size_t dims[]{ 3, 1, 2 };
+    const std::int64_t dims[]{ 3, 1, 2 };
     Integer_nd_array arr{ {3, dims}, data };
 
     Integer_nd_array carr1{ arr };
@@ -1199,7 +1201,7 @@ TEST(ND_array_test, copy_by_reference)
             1, 2,
             3, 4,
             5, 6 };
-        const std::size_t dims[]{ 3, 1, 2 };
+        const std::int64_t dims[]{ 3, 1, 2 };
         Integer_nd_array iarr{ {3, dims}, idata };
 
         const double ddata[] = {
@@ -1268,7 +1270,7 @@ TEST(ND_array_test, move_by_reference)
         1, 2,
         3, 4,
         5, 6 };
-    const std::size_t dims[]{ 3, 1, 2 };
+    const std::int64_t dims[]{ 3, 1, 2 };
     Integer_nd_array sarr{ {3, dims}, data };
 
     Integer_nd_array arr{ {3, dims}, data };
@@ -1321,7 +1323,7 @@ TEST(ND_array_test, move_by_reference)
             1, 2,
             3, 4,
             5, 6 };
-        const std::size_t dims[]{ 3, 1, 2 };
+        const std::int64_t dims[]{ 3, 1, 2 };
         Integer_nd_array iarr{ {3, dims}, idata };
 
         const double ddata[] = {
@@ -1396,7 +1398,7 @@ TEST(ND_array_test, clone)
         1, 2,
         3, 4,
         5, 6 };
-    const std::size_t dims[]{ 3, 1, 2 };
+    const std::int64_t dims[]{ 3, 1, 2 };
     Integer_nd_array sarr{ {3, dims}, data };
 
     Integer_nd_array carr{ computoc::clone(sarr) };
@@ -1523,7 +1525,7 @@ TEST(ND_array_test, reshape)
         1, 2,
         3, 4,
         5, 6 };
-    const std::size_t dims[]{ 3, 1, 2 };
+    const std::int64_t dims[]{ 3, 1, 2 };
     Integer_nd_array arr{ {3, dims}, data };
 
     {
@@ -1536,7 +1538,7 @@ TEST(ND_array_test, reshape)
 
     {
         const int tdata[] = { 1, 2, 3, 4, 5, 6 };
-        const std::size_t tdims[]{ 6 };
+        const std::int64_t tdims[]{ 6 };
         Integer_nd_array tarr{ {1, tdims}, tdata };
 
         Integer_nd_array rarr{ computoc::reshape(arr, { 6 }) };
@@ -1552,7 +1554,7 @@ TEST(ND_array_test, reshape)
 
     {
         const int tdata[] = { 1, 5 };
-        const std::size_t tdims[]{ 1, 2 };
+        const std::int64_t tdims[]{ 1, 2 };
         Integer_nd_array tarr{ {2, tdims}, tdata };
 
         Integer_nd_array rarr{ computoc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
@@ -1566,7 +1568,7 @@ TEST(ND_array_test, resize)
     using Integer_nd_array = computoc::ND_array<int>;
 
     const int data[] = { 1, 2, 3, 4, 5, 6 };
-    const std::size_t dims[]{ 6 };
+    const std::int64_t dims[]{ 6 };
     Integer_nd_array arr{ {1, dims}, data };
 
     {
@@ -1589,7 +1591,7 @@ TEST(ND_array_test, resize)
 
     {
         const int tdata[] = { 1, 2 };
-        const std::size_t tdims[]{ 2 };
+        const std::int64_t tdims[]{ 2 };
         Integer_nd_array tarr{ {1, tdims}, tdata };
 
         Integer_nd_array rarr{ computoc::resize(arr, {2}) };
@@ -1602,7 +1604,7 @@ TEST(ND_array_test, resize)
             1, 2,
             3, 4,
             5, 6};
-        const std::size_t tdims[]{ 3, 1, 2 };
+        const std::int64_t tdims[]{ 3, 1, 2 };
         Integer_nd_array tarr{ {3, tdims}, tdata };
 
         Integer_nd_array rarr{ computoc::resize(arr, {3, 1, 2}) };
@@ -1658,17 +1660,17 @@ TEST(ND_array_test, complex_array)
         {{64, 65, 66},
         {67, 68, 69},
         {70, 71, 72}}}}};
-    const std::size_t dims[]{ 2, 2, 2, 3, 3 };
+    const std::int64_t dims[]{ 2, 2, 2, 3, 3 };
     Integer_nd_array arr{ {5, dims}, reinterpret_cast<const int*>(data) };
 
     const int sdata1[1][1][1][2][1]{ { {{{47},{53}}} } };
-    const std::size_t sdims1[]{ 1, 1, 1, 2, 1 };
+    const std::int64_t sdims1[]{ 1, 1, 1, 2, 1 };
     Integer_nd_array sarr1{ {5, sdims1}, reinterpret_cast<const int*>(sdata1) };
 
     EXPECT_EQ(sarr1, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }));
 
     const int sdata2[1][1][1][1][1]{ { {{{53}}} } };
-    const std::size_t sdims2[]{ 1, 1, 1, 1, 1 };
+    const std::int64_t sdims2[]{ 1, 1, 1, 1, 1 };
     Integer_nd_array sarr2{ {5, sdims2}, reinterpret_cast<const int*>(sdata2) };
 
     EXPECT_EQ(sarr2, sarr1({ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} }));
