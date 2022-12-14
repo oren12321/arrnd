@@ -59,6 +59,13 @@ namespace computoc {
         * N-dimensional array indexing:
         * =============================
         * 
+        * Normalize subscripts:
+        * ---------------------
+        * Index can be any whole number.
+        * If it is negative or beyond dimensions it should be normalize.
+        * Let i be an index and d its related dimension.
+        * norm(i) = f(i,d) = (i mod d) + (d if i<0)
+        * 
         * Dimensions to strides:
         * ----------------------
         * Relates to the original array dimensions for the base strides calculation.
@@ -90,10 +97,6 @@ namespace computoc {
         * ----------------------------
         * count = f(D) = n(1) * n(2) * ... n(N)
         * 
-        * Check if subscripts inside array dimensions:
-        * ---------------------------------------
-        * are_inside = f(D,I) = I(1)<D(1) and I(2)<D(2) and ... and I(N)<D(N)
-        * 
         * Check if ranges are legal:
         * --------------------------
         * are_legal = f(R) = Rs(1)<=Re(1) and Rs(2)<=Re(2) and ... and Rs(N)<=Re(N)
@@ -106,6 +109,11 @@ namespace computoc {
         * ----------------------------------
         * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
         */
+
+        inline std::int64_t norm_sub(std::int64_t sub, std::int64_t dim) {
+            std::int64_t r = sub % dim;
+            return (r >= 0 ? r : (dim + r));
+        }
 
         inline void dims2strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
         {
@@ -183,21 +191,21 @@ namespace computoc {
             return offset;
         }
 
-        inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& subs) noexcept
+        inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
         {
             std::int64_t ind{ offset };
 
-            if (strides.empty() || subs.empty()) {
+            if (strides.empty() || dims.empty() || subs.empty()) {
                 return ind;
             }
 
-            if (subs.s() > strides.s()) {
+            if (subs.s() > strides.s() || subs.s() > dims.s()) {
                 return ind;
             }
 
             std::int64_t zero_nsubs{ strides.s() - subs.s() };
             for (std::int64_t i = zero_nsubs; i < strides.s(); ++i) {
-                ind += strides.p()[i] * subs.p()[i - zero_nsubs];
+                ind += strides.p()[i] * norm_sub(subs.p()[i - zero_nsubs], dims.p()[i]);
             }
             return ind;
         }
@@ -213,24 +221,6 @@ namespace computoc {
                 count *= dims.p()[i];
             }
             return count;
-        }
-
-        inline bool subs_in_dims(const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
-        {
-            if (subs.empty() || dims.empty()) {
-                return false;
-            }
-
-            if (subs.s() > dims.s()) {
-                return false;
-            }
-
-            bool result{ true };
-            std::int64_t zero_nsubs{ dims.s() - subs.s() };
-            for (std::int64_t i = zero_nsubs; i < dims.s() && result; ++i) {
-                result &= (subs.p()[i - zero_nsubs] < dims.p()[i]);
-            }
-            return result;
         }
 
         inline bool legal_ranges(const Params<ND_range>& ranges) noexcept
@@ -937,8 +927,8 @@ namespace computoc {
 
             const T& operator()(const Params<std::int64_t>& subs) const
             {
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(subs.s() <= hdr_.dims().s(), std::invalid_argument, "number of subscripts bigger than number of dimensions");
+                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             const T& operator()(std::initializer_list<std::int64_t> subs) const
             {
@@ -947,8 +937,8 @@ namespace computoc {
 
             T& operator()(const Params<std::int64_t>& subs)
             {
-                COMPUTOC_THROW_IF_FALSE(subs_in_dims(hdr_.dims(), subs), std::out_of_range, "out of range subscripts");
-                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), subs)];
+                COMPUTOC_THROW_IF_FALSE(subs.s() <= hdr_.dims().s(), std::invalid_argument, "number of subscripts bigger than number of dimensions");
+                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             T& operator()(std::initializer_list<std::int64_t> subs)
             {
@@ -1167,7 +1157,7 @@ namespace computoc {
 
             while (arr_ndstor && res_ndstor) {
                 if (func(arr(arr_ndstor.subs()))) {
-                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr_ndstor.subs());
+                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), arr_ndstor.subs());
                     ++res_count;
                     ++res_ndstor;
                 }
@@ -1206,7 +1196,7 @@ namespace computoc {
 
             while (arr_ndstor && mask_ndstor && res_ndstor) {
                 if (mask(mask_ndstor.subs())) {
-                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr_ndstor.subs());
+                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), arr_ndstor.subs());
                     ++res_count;
                     ++res_ndstor;
                 }

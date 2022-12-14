@@ -491,13 +491,14 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
     for (std::int64_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ(arr1d({ i }), data[i]);
     }
+    EXPECT_EQ(1, arr1d({ 6 }));
+    EXPECT_EQ(6, arr1d({ -1 }));
     for (std::int64_t i = 0; i < dims1d[0]; ++i) {
         arr1d({ i }) = 0;
         EXPECT_EQ(arr1d({ i }), 0);
     }
 
-    EXPECT_THROW(arr1d({ dims1d[0] }), std::out_of_range);
-    EXPECT_THROW(arr1d({ 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr1d({ 0, 0 }), std::invalid_argument);
 
     Integer_nd_array arr2d{ {3, 2}, data };
     const std::int64_t* dims2d{ arr2d.header().dims().p() };
@@ -506,6 +507,8 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
             EXPECT_EQ(arr2d({ i, j }), data[i * dims2d[1] + j]);
         }
     }
+    EXPECT_EQ(1, arr2d({ 3, 2 }));
+    EXPECT_EQ(6, arr2d({ -1, -1 }));
     for (std::int64_t i = 0; i < dims2d[0]; ++i) {
         for (std::int64_t j = 0; j < dims2d[1]; ++j) {
             arr2d({ i, j }) = 0;
@@ -513,9 +516,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         }
     }
 
-    EXPECT_THROW(arr2d({ dims2d[0], 0 }), std::out_of_range);
-    EXPECT_THROW(arr2d({ 0, dims2d[1] }), std::out_of_range);
-    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::invalid_argument);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
     const std::int64_t* dims3d{ arr3d.header().dims().p() };
@@ -526,6 +527,8 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
             }
         }
     }
+    EXPECT_EQ(1, arr3d({ 3, 1, 2 }));
+    EXPECT_EQ(6, arr3d({ -1, -1, -1 }));
     for (std::int64_t k = 0; k < dims3d[0]; ++k) {
         for (std::int64_t i = 0; i < dims3d[1]; ++i) {
             for (std::int64_t j = 0; j < dims3d[2]; ++j) {
@@ -535,10 +538,7 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         }
     }
 
-    EXPECT_THROW(arr3d({ dims3d[0], 0, 0 }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, dims3d[1], 0 }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, 0, dims3d[2] }), std::out_of_range);
-    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::out_of_range);
+    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::invalid_argument);
 
     // partial subscripts
     {
