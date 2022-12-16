@@ -498,8 +498,6 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         EXPECT_EQ(arr1d({ i }), 0);
     }
 
-    EXPECT_THROW(arr1d({ 0, 0 }), std::invalid_argument);
-
     Integer_nd_array arr2d{ {3, 2}, data };
     const std::int64_t* dims2d{ arr2d.header().dims().p() };
     for (std::int64_t i = 0; i < dims2d[0]; ++i) {
@@ -515,8 +513,6 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
             EXPECT_EQ(arr2d({ i, j }), 0);
         }
     }
-
-    EXPECT_THROW(arr2d({ 0, 0, 0 }), std::invalid_argument);
 
     Integer_nd_array arr3d{ {3, 1, 2}, data };
     const std::int64_t* dims3d{ arr3d.header().dims().p() };
@@ -538,8 +534,6 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         }
     }
 
-    EXPECT_THROW(arr3d({ 0, 0, 0, 0 }), std::invalid_argument);
-
     // partial subscripts
     {
         Integer_nd_array parr{ {3, 1, 2}, data };
@@ -548,6 +542,10 @@ TEST(ND_array_test, have_read_write_access_to_its_cells)
         EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 1 }));
         EXPECT_EQ(parr({ 0, 0, 0 }), parr({ 0, 0 }));
         EXPECT_EQ(parr({ 0, 0, 1 }), parr({ 0, 1 }));
+
+        // extra subscripts are being ignored
+        EXPECT_EQ(parr({ 0, 0, 0 }), parr({ 0, 0, 0, 10 }));
+        EXPECT_EQ(parr({ 2, 0, 1 }), parr({ 2, 0, 1, 10 }));
     }
 
     // different data type

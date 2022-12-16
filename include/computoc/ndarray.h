@@ -199,11 +199,10 @@ namespace computoc {
                 return ind;
             }
 
-            if (subs.s() > strides.s() || subs.s() > dims.s()) {
-                return ind;
-            }
-
             std::int64_t zero_nsubs{ strides.s() - subs.s() };
+            if (zero_nsubs < 0) { // ignore extra subscripts
+                zero_nsubs = 0;
+            }
             for (std::int64_t i = zero_nsubs; i < strides.s(); ++i) {
                 ind += strides.p()[i] * norm_sub(subs.p()[i - zero_nsubs], dims.p()[i]);
             }
@@ -925,22 +924,20 @@ namespace computoc {
                 return (buffsp_ ? buffsp_->data().p() : nullptr);
             }
 
-            const T& operator()(const Params<std::int64_t>& subs) const
+            const T& operator()(const Params<std::int64_t>& subs) const noexcept
             {
-                COMPUTOC_THROW_IF_FALSE(subs.s() <= hdr_.dims().s(), std::invalid_argument, "number of subscripts bigger than number of dimensions");
                 return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            const T& operator()(std::initializer_list<std::int64_t> subs) const
+            const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
                 return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
             }
 
-            T& operator()(const Params<std::int64_t>& subs)
+            T& operator()(const Params<std::int64_t>& subs) noexcept
             {
-                COMPUTOC_THROW_IF_FALSE(subs.s() <= hdr_.dims().s(), std::invalid_argument, "number of subscripts bigger than number of dimensions");
                 return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            T& operator()(std::initializer_list<std::int64_t> subs)
+            T& operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
                 return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
             }
