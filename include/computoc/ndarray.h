@@ -52,7 +52,35 @@ namespace computoc {
         */
 
         struct ND_range {
-            std::int64_t start{ 0 }, stop{ start }, step{ 1 };
+            ND_range(std::int64_t nstart, std::int64_t nstop, std::int64_t nstep) noexcept
+            {
+                if (nstep >= 0) {
+                    start = nstart;
+                    stop = nstop;
+                    step = nstep;
+                }
+                else {
+                    start = nstop;
+                    stop = nstart;
+                    step = -nstep;
+                }
+            }
+
+            ND_range(std::int64_t nstart, std::int64_t nstop) noexcept
+                : ND_range(nstart, nstop, 1) {}
+
+            ND_range(std::int64_t nstart) noexcept
+                : ND_range(nstart, nstart, 1) {}
+
+            ND_range() = default;
+            ND_range(const ND_range&) = default;
+            ND_range& operator=(const ND_range&) = default;
+            ND_range(ND_range&) = default;
+            ND_range& operator=(ND_range&) = default;
+
+            std::int64_t start{ 0 };
+            std::int64_t stop{ 0 };
+            std::int64_t step{ 1 };
         };
 
         /*
@@ -97,17 +125,13 @@ namespace computoc {
         * ----------------------------
         * count = f(D) = n(1) * n(2) * ... n(N)
         * 
-        * Check if ranges are legal:
-        * --------------------------
-        * are_legal = f(R) = Rs(1)<=Re(1) and Rs(2)<=Re(2) and ... and Rs(N)<=Re(N)
-        * 
-        * Check if ranges inside array dimensions:
-        * ----------------------------------------
-        * are_inside = f(D,R) = Re(1)<D(1) and Re(2)<D(2) and ... and Re(N)<D(N)
-        * 
         * Check if two dimensions are equal:
         * ----------------------------------
         * are_equal = f(D1,D2) = D1(1)=D2(1) and D1(2)=D2(2) and ... and D1(N)=D2(N)
+        * 
+        * Check if ranges are valid/legal:
+        * --------------------------------
+        * are_legal - f(R) = Rt(1)>0 and Rt(2)>0 and ... and Rt(N)>0
         */
 
         inline std::int64_t norm_sub(std::int64_t sub, std::int64_t dim) {
@@ -141,11 +165,9 @@ namespace computoc {
                 return;
             }
 
-            if (ranges.s() > strides.s()) {
-                return;
-            }
+            std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
-            for (std::int64_t i = 0; i < ranges.s(); ++i) {
+            for (std::int64_t i = 0; i < last; ++i) {
                 strides.p()[i] = previous_strides.p()[i] * ranges.p()[i].step;
             }
         }
@@ -160,20 +182,18 @@ namespace computoc {
                 return;
             }
 
-            if (ranges.s() > dims.s()) {
-                return;
+            std::int64_t middle{ previous_dims.s() >= ranges.s() ? ranges.s() : previous_dims.s() };
+
+            for (std::int64_t i = 0; i < middle; ++i) {
+                dims.p()[i] = static_cast<std::int64_t>(std::ceil((norm_sub(ranges.p()[i].stop, previous_dims.p()[i]) - norm_sub(ranges.p()[i].start, previous_dims.p()[i]) + 1.0) / ranges.p()[i].step));
             }
 
-            for (std::int64_t i = 0; i < ranges.s(); ++i) {
-                dims.p()[i] = static_cast<std::int64_t>(std::ceil((ranges.p()[i].stop - ranges.p()[i].start + 1.0) / ranges.p()[i].step));
-            }
-
-            for (std::int64_t i = ranges.s(); i < previous_dims.s(); ++i) {
+            for (std::int64_t i = middle; i < previous_dims.s(); ++i) {
                 dims.p()[i] = previous_dims.p()[i];
             }
         }
 
-        inline std::int64_t ranges2offset(std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<ND_range>& ranges) noexcept
+        inline std::int64_t ranges2offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<ND_range>& ranges) noexcept
         {
             std::int64_t offset{ previous_offset };
 
@@ -181,12 +201,10 @@ namespace computoc {
                 return offset;
             }
 
-            if (ranges.s() > previous_strides.s()) {
-                return offset;
-            }
+            std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
-            for (std::int64_t i = 0; i < ranges.s(); ++i) {
-                offset += previous_strides.p()[i] * ranges.p()[i].start;
+            for (std::int64_t i = 0; i < last; ++i) {
+                offset += previous_strides.p()[i] * norm_sub(ranges.p()[i].start, previous_dims.p()[i]);
             }
             return offset;
         }
@@ -222,33 +240,18 @@ namespace computoc {
             return count;
         }
 
-        inline bool legal_ranges(const Params<ND_range>& ranges) noexcept
+        inline bool valid_ranges(const Params<std::int64_t>& dims, const Params<ND_range>& ranges) noexcept
         {
-            if (ranges.empty()) {
-                return false;
-            }
-
             bool result{ true };
-            for (std::int64_t i = 0; i < ranges.s() && result; ++i) {
-                result &= (ranges.p()[i].start <= ranges.p()[i].stop && ranges.p()[i].step > 0);
-            }
-            return result;
-        }
+            std::int64_t last{ ranges.s() < dims.s() ? ranges.s() : dims.s() };
 
-        inline bool ranges_in_dims(const Params<std::int64_t>& dims, const Params<ND_range>& ranges) noexcept
-        {
-            if (ranges.empty() || dims.empty()) {
-                return false;
+            for (std::int64_t i = 0; i < last && result; ++i) {
+                std::int64_t dim{ dims.p()[i] };
+                ND_range range{ norm_sub(ranges.p()[i].start, dim), norm_sub(ranges.p()[i].stop, dim), ranges.p()[i].step };
+
+                result &= (range.start <= range.stop && range.step > 0);
             }
 
-            if (ranges.s() > dims.s()) {
-                return false;
-            }
-
-            bool result{ true };
-            for (std::int64_t i = 0; i < ranges.s() && result; ++i) {
-                result &= (ranges.p()[i].stop < dims.p()[i]);
-            }
             return result;
         }
 
@@ -354,7 +357,11 @@ namespace computoc {
                     return;
                 }
 
-                std::int64_t new_ndims = previous_dims.s() >= derived_ranges.s() ? previous_dims.s() : derived_ranges.s();
+                if (!valid_ranges(previous_dims, derived_ranges)) {
+                    return;
+                }
+
+                std::int64_t new_ndims = previous_dims.s();
 
                 size_info_ = Internal_buffer(new_ndims * 2);
                 COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
@@ -373,7 +380,7 @@ namespace computoc {
                     dims2strides(remained_dims, remained_strides);
                 }
 
-                offset_ = ranges2offset(previous_offset, previous_strides, derived_ranges);
+                offset_ = ranges2offset(previous_dims, previous_offset, previous_strides, derived_ranges);
             }
 
             ND_header(const Params<std::int64_t>& previous_dims, std::int64_t omitted_axis)
@@ -955,9 +962,6 @@ namespace computoc {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
-
-                COMPUTOC_THROW_IF_FALSE(legal_ranges(ranges), std::invalid_argument, "illegal ranges");
-                COMPUTOC_THROW_IF_FALSE(ranges_in_dims(hdr_.dims(), ranges), std::out_of_range, "ranges invalid for dimensions");
 
                 ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> slice{};
                 slice.hdr_ = Header{ hdr_.dims(), hdr_.strides(), hdr_.offset(), ranges };

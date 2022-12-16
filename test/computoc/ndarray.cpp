@@ -26,6 +26,11 @@ TEST(ND_range, fields_initialization)
     EXPECT_EQ(1, r4.start);
     EXPECT_EQ(2, r4.stop);
     EXPECT_EQ(3, r4.step);
+
+    computoc::ND_range r5{2, 1, -3};
+    EXPECT_EQ(1, r5.start);
+    EXPECT_EQ(2, r5.stop);
+    EXPECT_EQ(3, r5.step);
 }
 
 TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
@@ -1034,26 +1039,16 @@ TEST(ND_array_test, can_return_slice)
         EXPECT_EQ(arr.data(), rarr.data());
     }
 
-    // more ranges than dimensions
-    {
-        EXPECT_THROW(arr({ {0, 0}, {0, 0}, {0, 0}, {0, 0} }), std::out_of_range);
-    }
-
     // illegal ranges
     {
-        EXPECT_THROW(arr({ {0, 0, 0} }), std::invalid_argument);
-        EXPECT_THROW(arr({ {2, 1, 1} }), std::invalid_argument);
+        EXPECT_EQ(Integer_nd_array{}, arr({ {0, 0, 0} }));
+        EXPECT_EQ(Integer_nd_array{}, arr({ {2, 1, 1} }));
     }
 
     // empty array
     {
         EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}(std::initializer_list<computoc::ND_range>{}));
         EXPECT_EQ(Integer_nd_array{}, Integer_nd_array{}({ {0,1}, {0,4,2} }));
-    }
-
-    // out of range ranges
-    {
-        EXPECT_THROW(arr({ { 0, 3 }, { 0 }, { 2 } }), std::out_of_range);
     }
 
     // ranges in dims
@@ -1076,6 +1071,16 @@ TEST(ND_array_test, can_return_slice)
         Integer_nd_array sarr2{ arr({{1, 2, 2}}) };
         EXPECT_EQ(tarr2, sarr2);
         EXPECT_EQ(arr.data(), sarr2.data());
+
+        // nranges > ndims - ignore extra ranges
+        Integer_nd_array sarr3{ arr({{0, 2, 2}, {0}, {0}, {100, 100, 5}}) };
+        EXPECT_EQ(sarr1, sarr3);
+        EXPECT_EQ(arr.data(), sarr3.data());
+
+        // out of range and negative indices
+        Integer_nd_array sarr4{ arr({{-1, 3, -2}, {1}, {-2}}) };
+        EXPECT_EQ(sarr1, sarr4);
+        EXPECT_EQ(arr.data(), sarr4.data());
     }
 }
 
