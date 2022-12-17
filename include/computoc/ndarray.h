@@ -702,9 +702,12 @@ namespace computoc {
                 {
                     bool should_process_sub{ true };
 
-                    for (int64_t i = order_.s(); i >=1 && should_process_sub; --i) {
-                        if ((should_process_sub = (++subs_.p()[order_.p()[i-1]] == to_[order_.p()[i-1]])) && order_.p()[i-1] != order_.p()[0]) {
-                            subs_.p()[order_.p()[i-1]] = 0;
+                    for (int64_t i = order_.s(); i >= 1 && should_process_sub; --i) {
+                        if (subs_.p()[order_.p()[i - 1]] < to_[order_.p()[i - 1]]) {
+                            ++subs_.p()[order_.p()[i - 1]];
+                        }
+                        if ((should_process_sub = (subs_.p()[order_.p()[i - 1]] == to_[order_.p()[i - 1]])) && order_.p()[i - 1] != order_.p()[0]) {
+                            subs_.p()[order_.p()[i - 1]] = from_ ? from_[i-1] : 0;
                         }
                     }
 
@@ -715,13 +718,19 @@ namespace computoc {
                 bool should_process_sub{ true };
                 const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
 
-                if ((should_process_sub = (++subs_.p()[axis_] == to_[axis_])) && axis_ != stop_axis) {
-                    subs_.p()[axis_] = 0;
+                if (subs_.p()[axis_] < to_[axis_]) {
+                    ++subs_.p()[axis_];
+                }
+                if ((should_process_sub = (subs_.p()[axis_] == to_[axis_])) && axis_ != stop_axis) {
+                    subs_.p()[axis_] = from_ ? from_[axis_] : 0;
                 }
 
                 for (std::int64_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
-                    if (axis_ != i - 1 && (should_process_sub = (++subs_.p()[i - 1] == to_[i - 1])) && i != stop_axis + 1) {
-                        subs_.p()[i - 1] = 0;
+                    if (axis_ != i - 1 && subs_.p()[i - 1] < to_[i - 1]) {
+                        ++subs_.p()[i - 1];
+                    }
+                    if (axis_ != i - 1 && (should_process_sub = (subs_.p()[i - 1] == to_[i - 1])) && i != stop_axis + 1) {
+                        subs_.p()[i - 1] = from_ ? from_[i-1] : 0;
                     }
                 }
                 return *this;

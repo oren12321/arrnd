@@ -100,6 +100,35 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_nd_array)
         EXPECT_FALSE(counter);
     }
 
+    // with negative initial subscript value
+    {
+        const std::int64_t nsubs1{ 6 };
+        const std::int64_t rsubs_list1[][3]{
+            {-1, 0, -2},
+            {-1, 0, -1},
+            {0, 0, -2},
+            {0, 0, -1},
+            {1, 0, -2},
+            {1, 0, -1} };
+
+        std::initializer_list<std::int64_t> from{ -1, 0, -2 };
+        std::initializer_list<std::int64_t> to{ 2, 0, 0 };
+        std::int64_t nsubs_counter{ 0 };
+        for (computoc::ND_array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list1[nsubs_counter] };
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+
+            ++nsubs_counter;
+        }
+
+        EXPECT_EQ(nsubs1, nsubs_counter);
+        EXPECT_FALSE(counter);
+    }
+
     // with initial subscripts value
     {
         std::initializer_list<std::int64_t> from{ 1, 0, 0, 0 };
