@@ -87,13 +87,6 @@ namespace computoc {
         * N-dimensional array indexing:
         * =============================
         * 
-        * Normalize subscripts:
-        * ---------------------
-        * Index can be any whole number.
-        * If it is negative or beyond dimensions it should be normalize.
-        * Let i be an index and d its related dimension.
-        * norm(i) = f(i,d) = (i mod d) + (d if i<0)
-        * 
         * Dimensions to strides:
         * ----------------------
         * Relates to the original array dimensions for the base strides calculation.
@@ -133,11 +126,6 @@ namespace computoc {
         * --------------------------------
         * are_legal - f(R) = Rt(1)>0 and Rt(2)>0 and ... and Rt(N)>0
         */
-
-        inline std::int64_t norm_sub(std::int64_t sub, std::int64_t dim) {
-            std::int64_t r = sub % dim;
-            return (r >= 0 ? r : (dim + r));
-        }
 
         inline void dims2strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
         {
@@ -185,7 +173,7 @@ namespace computoc {
             std::int64_t middle{ previous_dims.s() >= ranges.s() ? ranges.s() : previous_dims.s() };
 
             for (std::int64_t i = 0; i < middle; ++i) {
-                dims.p()[i] = static_cast<std::int64_t>(std::ceil((norm_sub(ranges.p()[i].stop, previous_dims.p()[i]) - norm_sub(ranges.p()[i].start, previous_dims.p()[i]) + 1.0) / ranges.p()[i].step));
+                dims.p()[i] = static_cast<std::int64_t>(std::ceil((modulo(ranges.p()[i].stop, previous_dims.p()[i]) - modulo(ranges.p()[i].start, previous_dims.p()[i]) + 1.0) / ranges.p()[i].step));
             }
 
             for (std::int64_t i = middle; i < previous_dims.s(); ++i) {
@@ -204,7 +192,7 @@ namespace computoc {
             std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
             for (std::int64_t i = 0; i < last; ++i) {
-                offset += previous_strides.p()[i] * norm_sub(ranges.p()[i].start, previous_dims.p()[i]);
+                offset += previous_strides.p()[i] * modulo(ranges.p()[i].start, previous_dims.p()[i]);
             }
             return offset;
         }
@@ -222,7 +210,7 @@ namespace computoc {
                 zero_nsubs = 0;
             }
             for (std::int64_t i = zero_nsubs; i < strides.s(); ++i) {
-                ind += strides.p()[i] * norm_sub(subs.p()[i - zero_nsubs], dims.p()[i]);
+                ind += strides.p()[i] * modulo(subs.p()[i - zero_nsubs], dims.p()[i]);
             }
             return ind;
         }
@@ -247,7 +235,7 @@ namespace computoc {
 
             for (std::int64_t i = 0; i < last && result; ++i) {
                 std::int64_t dim{ dims.p()[i] };
-                ND_range range{ norm_sub(ranges.p()[i].start, dim), norm_sub(ranges.p()[i].stop, dim), ranges.p()[i].step };
+                ND_range range{ modulo(ranges.p()[i].start, dim), modulo(ranges.p()[i].stop, dim), ranges.p()[i].step };
 
                 result &= (range.start <= range.stop && range.step > 0);
             }
