@@ -1652,6 +1652,97 @@ TEST(ND_array_test, resize)
     }
 }
 
+TEST(ND_array_test, append)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+    using Double_nd_array = computoc::ND_array<double>;
+
+    // No axis specified
+    {
+        const int data1[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+        const double data2[] = { 7.0, 8.0, 9.0, 10.0, 11.0 };
+        Double_nd_array arr2{ {5}, data2 };
+
+        const int rdata1[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+        Integer_nd_array rarr{ {11}, rdata1 };
+        EXPECT_EQ(rarr, computoc::append(arr1, arr2));
+
+        EXPECT_EQ(arr1, computoc::append(arr1, Integer_nd_array{}));
+        EXPECT_EQ(arr2, computoc::append(Integer_nd_array{}, arr2));
+    }
+
+    // Axis specified
+    {
+        const int data1[] = {
+            1, 2, 3,
+            4, 5, 6,
+
+            7, 8, 9,
+            10, 11, 12 };
+        Integer_nd_array arr1{ { 2, 2, 3 }, data1 };
+
+        const double data2[] = {
+            13.0, 14.0, 15.0,
+            16.0, 17.0, 18.0,
+
+            19.0, 20.0, 21.0,
+            22.0, 23.0, 24.0 };
+        Double_nd_array arr2{ { 2, 2, 3 }, data2 };
+
+        const int rdata1[] = {
+            1,  2,  3,
+            4,  5,  6,
+
+            7,  8,  9,
+            10, 11, 12,
+
+            13, 14, 15,
+            16, 17, 18,
+
+            19, 20, 21,
+            22, 23, 24 };
+        Integer_nd_array rarr1{ { 4, 2, 3 }, rdata1 };
+        EXPECT_EQ(rarr1, computoc::append(arr1, arr2, 0));
+
+        const int rdata2[] = {
+            1,  2,  3,
+            4,  5,  6,
+            13, 14, 15,
+            16, 17, 18,
+
+            7,  8,  9,
+            10, 11, 12,
+            19, 20, 21,
+            22, 23, 24 };
+        Integer_nd_array rarr2{ { 2, 4, 3 }, rdata2 };
+        EXPECT_EQ(rarr2, computoc::append(arr1, arr2, 1));
+
+        const int rdata3[] = {
+            1,  2,  3, 13, 14, 15,
+            4,  5,  6, 16, 17, 18,
+            
+            7,  8,  9, 19, 20, 21,
+            10, 11, 12, 22, 23, 24 };
+            
+        Integer_nd_array rarr3{ { 2, 2, 6 }, rdata3 };
+        EXPECT_EQ(rarr3, computoc::append(arr1, arr2, 2));
+
+        EXPECT_EQ(arr1, computoc::append(arr1, Integer_nd_array{}, 0));
+        EXPECT_EQ(arr2, computoc::append(Integer_nd_array{}, arr2, 0));
+
+        EXPECT_THROW(computoc::append(arr1, arr2, 3), std::out_of_range);
+        const int invalid_data1[] = { 1 };
+        Integer_nd_array invalid_arr1{ {1}, invalid_data1 };
+        EXPECT_THROW(computoc::append(invalid_arr1, arr2, 0), std::invalid_argument);
+        EXPECT_THROW(computoc::append(arr1, rarr2, 0), std::invalid_argument);;
+    }
+}
+
 TEST(ND_array_test, complex_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;

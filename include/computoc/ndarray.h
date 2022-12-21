@@ -430,6 +430,29 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
+            ND_header(const Params<std::int64_t>& dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
+                : size_info_(dims.s() * 2)
+            {
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                dims_ = { dims.s(), size_info_.data().p() };
+                for (std::int64_t i = 0; i < dims_.s(); ++i) {
+                    if (axis == i) {
+                        dims_.p()[i] = dims.p()[i] + appended_dims.p()[i];
+                    }
+                    else {
+                        dims_.p()[i] = dims.p()[i];
+                    }
+                }
+
+                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
+
+                count_ = dims2count(dims_);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+
+                dims2strides(dims_, strides_);
+            }
+
             ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
@@ -1421,6 +1444,78 @@ namespace computoc {
         {
             return !arr.data() || (arr.header().count() == 0);
         }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t axis)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
+
+            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
+            COMPUTOC_THROW_IF_FALSE(axis < lhs.header().dims().s(), std::out_of_range, "axis out of dimensions range");
+            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
+                if (i != axis) {
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
+                }
+            }
+
+            res.header() = typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
+
+            // Set first array values
+            {
+                typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+
+                while (ndstor) {
+                    res(ndstor.subs()) = lhs(ndstor.subs());
+                    ++ndstor;
+                }
+            }
+
+            // Set second array values
+            {
+                typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
+
+                Internals_buffer subs_buff(rhs.header().dims().s());
+                Params<int64_t> modified_subs{ subs_buff.data() };
+
+                while (ndstor) {
+                    for (std::int64_t i = 0; i < modified_subs.s(); ++i) {
+                        modified_subs.p()[i] = ndstor.subs().p()[i];
+                    }
+                    modified_subs.p()[axis] += lhs.header().dims().p()[axis];
+
+                    res(modified_subs) = rhs(ndstor.subs());
+                    ++ndstor;
+                }
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ resize(lhs, {lhs.header().count() + rhs.header().count()}) };
+            for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
+                res({ i }) = rhs({ i - lhs.header().count() });
+            }
+            return res;
+        }
     }
 
     using details::ND_range;
@@ -1437,6 +1532,7 @@ namespace computoc {
     using details::reshape;
     using details::resize;
     using details::empty;
+    using details::append;
 }
 
 #endif // COMPUTOC_TYPES_NDARRAY_H
