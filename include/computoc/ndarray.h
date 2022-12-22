@@ -1480,7 +1480,7 @@ namespace computoc {
 
             // Set second array values
             {
-                typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
+                typename ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
 
                 Internals_buffer subs_buff(rhs.header().dims().s());
                 Params<int64_t> modified_subs{ subs_buff.data() };
@@ -1511,8 +1511,82 @@ namespace computoc {
             }
 
             ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ resize(lhs, {lhs.header().count() + rhs.header().count()}) };
+            ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
             for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
                 res({ i }) = rhs({ i - lhs.header().count() });
+            }
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind, std::int64_t axis)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
+            COMPUTOC_THROW_IF_FALSE(axis < lhs.header().dims().s(), std::out_of_range, "axis out of dimensions range");
+            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
+                if (i != axis) {
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
+                }
+            }
+            COMPUTOC_THROW_IF_FALSE(ind < lhs.header().dims().p()[axis], std::out_of_range, "index not in array dimension range");
+
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
+            res.header() = typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
+
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor lhsndstor(lhs.header().dims());
+            typename ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor rhsndstor(rhs.header().dims());
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
+
+            Internals_buffer subs_buff(rhs.header().dims().s());
+            Params<int64_t> modified_subs{ subs_buff.data() };
+
+            while (resndstor || lhsndstor || rhsndstor) {
+                if (resndstor.subs().p()[axis] < ind || resndstor.subs().p()[axis] >= ind + rhs.header().dims().p()[axis]) {
+                    res(resndstor.subs()) = lhs(lhsndstor.subs());
+                    ++lhsndstor;
+                }
+                else if (resndstor.subs().p()[axis] >= ind && resndstor.subs().p()[axis] < ind + rhs.header().dims().p()[axis]) {
+                    res(resndstor.subs()) = rhs(rhsndstor.subs());
+                    ++rhsndstor;
+                }
+                ++resndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            COMPUTOC_THROW_IF_FALSE(ind < lhs.header().count(), std::out_of_range, "index not in array dimension range");
+
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {lhs.header().count() + rhs.header().count()} };
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs{ reshape(lhs, {lhs.header().count()}) };
+            ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
+            for (std::int64_t i = 0; i < ind; ++i) {
+                res({ i }) = rlhs({ i });
+            }
+            for (std::int64_t i = 0; i < rhs.header().count(); ++i) {
+                res({ ind + i }) = rrhs({ i });
+            }
+            for (std::int64_t i = 0; i < lhs.header().count() - ind; ++i) {
+                res({ ind + rhs.header().count() + i }) = rlhs({ ind + i });
             }
             return res;
         }
@@ -1533,6 +1607,7 @@ namespace computoc {
     using details::resize;
     using details::empty;
     using details::append;
+    using details::insert;
 }
 
 #endif // COMPUTOC_TYPES_NDARRAY_H
