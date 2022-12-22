@@ -1545,15 +1545,12 @@ namespace computoc {
             typename ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor rhsndstor(rhs.header().dims());
             typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
 
-            Internals_buffer subs_buff(rhs.header().dims().s());
-            Params<int64_t> modified_subs{ subs_buff.data() };
-
-            while (resndstor || lhsndstor || rhsndstor) {
-                if (resndstor.subs().p()[axis] < ind || resndstor.subs().p()[axis] >= ind + rhs.header().dims().p()[axis]) {
+            while (resndstor) {
+                if (lhsndstor && resndstor.subs().p()[axis] < ind || resndstor.subs().p()[axis] >= ind + rhs.header().dims().p()[axis]) {
                     res(resndstor.subs()) = lhs(lhsndstor.subs());
                     ++lhsndstor;
                 }
-                else if (resndstor.subs().p()[axis] >= ind && resndstor.subs().p()[axis] < ind + rhs.header().dims().p()[axis]) {
+                else if (rhsndstor && resndstor.subs().p()[axis] >= ind && resndstor.subs().p()[axis] < ind + rhs.header().dims().p()[axis]) {
                     res(resndstor.subs()) = rhs(rhsndstor.subs());
                     ++rhsndstor;
                 }
