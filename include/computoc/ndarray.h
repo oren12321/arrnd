@@ -1456,8 +1456,6 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-
             COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
             COMPUTOC_THROW_IF_FALSE(axis < lhs.header().dims().s(), std::out_of_range, "axis out of dimensions range");
             for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
@@ -1466,34 +1464,23 @@ namespace computoc {
                 }
             }
 
+            ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
             res.header() = typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
 
-            // Set first array values
-            {
-                typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor lhsndstor(lhs.header().dims());
+            typename ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor rhsndstor(rhs.header().dims());
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
 
-                while (ndstor) {
-                    res(ndstor.subs()) = lhs(ndstor.subs());
-                    ++ndstor;
+            while (resndstor) {
+                if (lhsndstor && resndstor.subs().p()[axis] < lhs.header().dims().p()[axis] || resndstor.subs().p()[axis] >= lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                    res(resndstor.subs()) = lhs(lhsndstor.subs());
+                    ++lhsndstor;
                 }
-            }
-
-            // Set second array values
-            {
-                typename ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
-
-                Internals_buffer subs_buff(rhs.header().dims().s());
-                Params<int64_t> modified_subs{ subs_buff.data() };
-
-                while (ndstor) {
-                    for (std::int64_t i = 0; i < modified_subs.s(); ++i) {
-                        modified_subs.p()[i] = ndstor.subs().p()[i];
-                    }
-                    modified_subs.p()[axis] += lhs.header().dims().p()[axis];
-
-                    res(modified_subs) = rhs(ndstor.subs());
-                    ++ndstor;
+                else if (rhsndstor && resndstor.subs().p()[axis] >= lhs.header().dims().p()[axis] && resndstor.subs().p()[axis] < lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                    res(resndstor.subs()) = rhs(rhsndstor.subs());
+                    ++rhsndstor;
                 }
+                ++resndstor;
             }
 
             return res;
