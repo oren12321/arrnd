@@ -1536,7 +1536,7 @@ namespace computoc {
                     COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
                 }
             }
-            COMPUTOC_THROW_IF_FALSE(ind < lhs.header().dims().p()[axis], std::out_of_range, "index not in array dimension range");
+            COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().dims().p()[axis], std::out_of_range, "index not in array dimension range");
 
             ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
             res.header() = typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
@@ -1574,7 +1574,7 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            COMPUTOC_THROW_IF_FALSE(ind < lhs.header().count(), std::out_of_range, "index not in array dimension range");
+            COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().count(), std::out_of_range, "index not in array dimension range");
 
             ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {lhs.header().count() + rhs.header().count()} };
             ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs{ reshape(lhs, {lhs.header().count()}) };
@@ -1593,7 +1593,6 @@ namespace computoc {
     }
 
     using details::ND_range;
-    using details::Params;
     using details::ND_array;
     using details::transform;
     using details::binary;

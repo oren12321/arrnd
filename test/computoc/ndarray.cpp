@@ -1762,7 +1762,7 @@ TEST(ND_array_test, insert)
         const int rdata1[] = { 1, 2, 3, 7, 8, 9, 10, 11, 4, 5, 6 };
         Integer_nd_array rarr{ {11}, rdata1 };
         EXPECT_EQ(rarr, computoc::insert(arr1, arr2, 3));
-        EXPECT_THROW(computoc::insert(arr1, arr2, 6), std::out_of_range);
+        EXPECT_THROW(computoc::insert(arr1, arr2, 7), std::out_of_range);
 
         EXPECT_EQ(arr1, computoc::insert(arr1, Integer_nd_array{}, 0));
         EXPECT_EQ(arr2, computoc::insert(Integer_nd_array{}, arr2, 0));
