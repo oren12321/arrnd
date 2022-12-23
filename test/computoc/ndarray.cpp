@@ -961,6 +961,56 @@ TEST(ND_array_test, transpose)
     EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 4 }), std::out_of_range);
 }
 
+TEST(ND_array_test, equal)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        true, true,
+        true, false,
+        true, false };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+    
+    EXPECT_EQ(rarr, computoc::equal(arr1, arr2));
+}
+
+TEST(ND_array_test, close)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 1,
+        1, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        true, true,
+        true, false,
+        true, false };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, computoc::close(arr1, arr2, 1));
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
