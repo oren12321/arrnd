@@ -453,6 +453,29 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
+            ND_header(const Params<std::int64_t>& dims, std::int64_t count, std::int64_t axis)
+                : size_info_(dims.s() * 2)
+            {
+                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+
+                dims_ = { dims.s(), size_info_.data().p() };
+                for (std::int64_t i = 0; i < dims_.s(); ++i) {
+                    if (axis == i) {
+                        dims_.p()[i] = dims.p()[i] + count;
+                    }
+                    else {
+                        dims_.p()[i] = dims.p()[i];
+                    }
+                }
+
+                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
+
+                count_ = dims2count(dims_);
+                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+
+                dims2strides(dims_, strides_);
+            }
+
             ND_header(ND_header&& other) noexcept
                 : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
@@ -1574,6 +1597,53 @@ namespace computoc {
             }
             return res;
         }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
+        {
+            if (empty(arr)) {
+                return ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::out_of_range, "axis out of dimensions range");
+            COMPUTOC_THROW_IF_FALSE(ind + count <= arr.header().dims().p()[axis], std::out_of_range, "index plus count not in array dimension range");
+
+            ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims().p()[axis]) * count  };
+            res.header() = typename ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(arr.header().dims(), -count, axis);
+
+            typename ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arrndstor(arr.header().dims());
+            typename ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
+
+            while (arrndstor) {
+                if (resndstor && arrndstor.subs().p()[axis] < ind || arrndstor.subs().p()[axis] >= ind + count) {
+                    res(resndstor.subs()) = arr(arrndstor.subs());
+                    ++resndstor;
+                }
+                ++arrndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count)
+        {
+            if (empty(arr)) {
+                return ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            COMPUTOC_THROW_IF_FALSE(ind + count < arr.header().count(), std::out_of_range, "index plus count are not in array dimension range");
+
+            ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {arr.header().count() - count} };
+            ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> rarr{ reshape(arr, {arr.header().count()}) };
+            for (std::int64_t i = 0; i < ind; ++i) {
+                res({ i }) = rarr({ i });
+            }
+            for (std::int64_t i = ind + count; i < arr.header().count(); ++i) {
+                res({ ind + i - count + 1 }) = rarr({ i });
+            }
+            return res;
+        }
     }
 
     using details::ND_range;
@@ -1591,6 +1661,7 @@ namespace computoc {
     using details::empty;
     using details::append;
     using details::insert;
+    using details::remove;
 }
 
 #endif // COMPUTOC_TYPES_NDARRAY_H

@@ -1838,6 +1838,65 @@ TEST(ND_array_test, insert)
     }
 }
 
+TEST(ND_array_test, remove)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    // No axis specified
+    {
+        const int data1[] = {
+            1, 2,
+            3, 4,
+            5, 6 };
+        Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+        const int rdata1[] = { 1, 2, 3, 6 };
+        Integer_nd_array rarr{ {4}, rdata1 };
+        EXPECT_EQ(rarr, computoc::remove(arr1, 3, 2));
+        EXPECT_THROW(computoc::remove(arr1, 3, 4), std::out_of_range);
+
+        EXPECT_EQ(Integer_nd_array{}, computoc::remove(Integer_nd_array{}, 3, 2));
+    }
+
+    // Axis specified
+    {
+        const int data1[] = {
+            1, 2, 3,
+            4, 5, 6,
+
+            7, 8, 9,
+            10, 11, 12 };
+        Integer_nd_array arr1{ { 2, 2, 3 }, data1 };
+
+        const int rdata1[] = {
+            7,  8,  9,
+            10, 11, 12 };
+        Integer_nd_array rarr1{ { 1, 2, 3 }, rdata1 };
+        EXPECT_EQ(rarr1, computoc::remove(arr1, 0, 1, 0));
+        EXPECT_THROW(computoc::remove(arr1, 0, 3, 0), std::out_of_range);
+
+        const int rdata2[] = {
+            1, 2, 3,
+
+            7, 8, 9 };
+        Integer_nd_array rarr2{ { 2, 1, 3 }, rdata2 };
+        EXPECT_EQ(rarr2, computoc::remove(arr1, 1, 1, 1));
+        EXPECT_THROW(computoc::remove(arr1, 1, 2, 1), std::out_of_range);
+
+        const int rdata3[] = {
+            3,
+            6,
+
+            9,
+            12 };
+        Integer_nd_array rarr3{ { 2, 2, 1 }, rdata3 };
+        EXPECT_EQ(rarr3, computoc::remove(arr1, 0, 2, 2));
+        EXPECT_THROW(computoc::remove(arr1, 2, 2, 2), std::out_of_range);
+
+        EXPECT_THROW(computoc::remove(arr1, 0, 1, 3), std::out_of_range);
+    }
+}
+
 TEST(ND_array_test, complex_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
