@@ -737,6 +737,36 @@ TEST(ND_array_test, reduce_elements)
     }
 }
 
+TEST(ND_array_test, all)
+{
+    const bool data[] = {
+        1, 0,
+        1, 1 };
+    computoc::ND_array<int> arr{ {2, 2}, data };
+
+    EXPECT_EQ(false, computoc::all(arr));
+
+    const bool rdata[] = { true, false };
+    computoc::ND_array<bool> rarr{ {2}, rdata };
+
+    EXPECT_EQ(rarr, computoc::all(arr, 0));
+}
+
+TEST(ND_array_test, any)
+{
+    const bool data[] = {
+        1, 0,
+        0, 0 };
+    computoc::ND_array<int> arr{ {2, 2}, data };
+
+    EXPECT_EQ(true, computoc::any(arr));
+
+    const bool rdata[] = { true, false };
+    computoc::ND_array<bool> rarr{ {2}, rdata };
+
+    EXPECT_EQ(rarr, computoc::any(arr, 0));
+}
+
 TEST(ND_array_test, filter_elements_by_condition)
 {
     std::int64_t dims[]{ 3, 1, 2 };

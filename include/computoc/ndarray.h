@@ -1094,6 +1094,30 @@ namespace computoc {
             return res;
         }
 
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return reduce(arr, [](const T& value, const T& previous) { return static_cast<bool>(value) && static_cast<bool>(previous); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> all(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t axis)
+        {
+            return reduce(arr, [](const T& value, const T& previous) { return static_cast<bool>(value) && static_cast<bool>(previous); }, axis);
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool any(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return reduce(arr, [](const T& value, const T& previous) { return static_cast<bool>(value) || static_cast<bool>(previous); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> any(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t axis)
+        {
+            return reduce(arr, [](const T& value, const T& previous) { return static_cast<bool>(value) || static_cast<bool>(previous); }, axis);
+        }
+
         template <typename T1, typename T2, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline auto binary(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Func func)
             -> ND_array<decltype(func(lhs.data()[0], rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
@@ -1693,6 +1717,8 @@ namespace computoc {
     using details::transform;
     using details::binary;
     using details::reduce;
+    using details::all;
+    using details::any;
     using details::filter;
     using details::find;
     using details::transpose;
