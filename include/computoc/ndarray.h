@@ -1294,9 +1294,39 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> not_equal(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return !equal(a, b); });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> close(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return binary(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> operator>(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> operator>=(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> operator<(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> operator<=(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <
@@ -1667,6 +1697,7 @@ namespace computoc {
     using details::find;
     using details::transpose;
     using details::equal;
+    using details::not_equal;
     using details::close;
     using details::copy;
     using details::clone;

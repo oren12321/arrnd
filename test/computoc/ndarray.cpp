@@ -986,6 +986,131 @@ TEST(ND_array_test, equal)
     EXPECT_EQ(rarr, computoc::equal(arr1, arr2));
 }
 
+TEST(ND_array_test, not_equal)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        false, false,
+        false, true,
+        false, true };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, computoc::not_equal(arr1, arr2));
+}
+
+TEST(ND_array_test, greater)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        false, false,
+        false, false,
+        false, false };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, arr1 > arr2);
+}
+
+TEST(ND_array_test, greater_equal)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        true, true,
+        true, false,
+        true, false };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, arr1 >= arr2);
+}
+
+TEST(ND_array_test, less)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        false, false,
+        false, true,
+        false, true };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, arr1 < arr2);
+}
+
+TEST(ND_array_test, less_equal)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const bool rdata[] = {
+        true, true,
+        true, true,
+        true, true };
+    computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_EQ(rarr, arr1 <= arr2);
+}
+
 TEST(ND_array_test, close)
 {
     using Integer_nd_array = computoc::ND_array<int>;
