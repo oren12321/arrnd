@@ -1030,6 +1030,7 @@ TEST(ND_array_test, equal)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
     
     EXPECT_EQ(rarr, computoc::equal(arr1, arr2));
+    EXPECT_THROW(computoc::equal(arr1, Integer_nd_array{ {1} }), std::invalid_argument);
 }
 
 TEST(ND_array_test, not_equal)
@@ -1055,6 +1056,7 @@ TEST(ND_array_test, not_equal)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, computoc::not_equal(arr1, arr2));
+    EXPECT_THROW(computoc::not_equal(arr1, Integer_nd_array{ {1} }), std::invalid_argument);
 }
 
 TEST(ND_array_test, greater)
@@ -1080,6 +1082,7 @@ TEST(ND_array_test, greater)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 > arr2);
+    EXPECT_THROW(arr1 > Integer_nd_array{ {1} }, std::invalid_argument);
 }
 
 TEST(ND_array_test, greater_equal)
@@ -1105,6 +1108,7 @@ TEST(ND_array_test, greater_equal)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 >= arr2);
+    EXPECT_THROW(arr1 >= Integer_nd_array{ {1} }, std::invalid_argument);
 }
 
 TEST(ND_array_test, less)
@@ -1130,6 +1134,7 @@ TEST(ND_array_test, less)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 < arr2);
+    EXPECT_THROW(arr1 < Integer_nd_array{ {1} }, std::invalid_argument);
 }
 
 TEST(ND_array_test, less_equal)
@@ -1155,6 +1160,7 @@ TEST(ND_array_test, less_equal)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 <= arr2);
+    EXPECT_THROW(arr1 <= Integer_nd_array{ {1} }, std::invalid_argument);
 }
 
 TEST(ND_array_test, close)
@@ -1180,6 +1186,185 @@ TEST(ND_array_test, close)
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, computoc::close(arr1, arr2, 2));
+    EXPECT_THROW(computoc::close(arr1, Integer_nd_array{ {1} }), std::invalid_argument);
+}
+
+TEST(ND_array_test, plus)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        2, 4,
+        6, 4,
+        10, 6 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 + arr2);
+    arr1 += arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 + Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 += Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        11, 12,
+        13, 14,
+        15, 16 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 + 10);
+    EXPECT_EQ(rarr2, 10 + arr2);
+    arr2 += 10;
+    EXPECT_EQ(rarr2, arr2);
+}
+
+TEST(ND_array_test, minus)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        0, 0,
+        0, -4,
+        0, -6 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 - arr2);
+    arr1 -= arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 - Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 -= Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 - 1);
+
+    const int rdata3[] = {
+        0, -1,
+        -2, -3,
+        -4, -5 };
+    Integer_nd_array rarr3{ {3, 1, 2}, rdata3 };
+
+    EXPECT_EQ(rarr3, 1 - arr2);
+    arr2 -= 1;
+    EXPECT_EQ(rarr2, arr2);
+}
+
+TEST(ND_array_test, multiply)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        1, 4,
+        9, 0,
+        25, 0 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 * arr2);
+    arr1 *= arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 * Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 *= Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        10, 20,
+        30, 40,
+        50, 60 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 * 10);
+    EXPECT_EQ(rarr2, 10 * arr2);
+    arr2 *= 10;
+    EXPECT_EQ(rarr2, arr2);
+}
+
+TEST(ND_array_test, divide)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 0,
+        5, 0 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        1, 1,
+        1, 0,
+        1, 0 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 / arr2);
+    arr1 /= arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 / Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 /= Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        0, 1,
+        1, 2,
+        2, 3 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 / 2);
+
+    const int rdata3[] = {
+        2, 1,
+        0, 0,
+        0, 0 };
+    Integer_nd_array rarr3{ {3, 1, 2}, rdata3 };
+
+    EXPECT_EQ(rarr3, 2 / arr2);
+    arr2 /= 2;
+    EXPECT_EQ(rarr2, arr2);
 }
 
 TEST(ND_array_test, can_be_compared_with_another_nd_array)

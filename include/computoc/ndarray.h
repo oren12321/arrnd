@@ -1385,6 +1385,134 @@ namespace computoc {
             return binary(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator+(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator+(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator+(const T1& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator+=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator+=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator-(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator-(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator-(const T1& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator-=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator-=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator*(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator*(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator*(const T1& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator*=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator*=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator/(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator/(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator/(const T1& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator/=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator/=(ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            lhs = binary(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs;
+        }
+
         template <
             typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
             typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>
