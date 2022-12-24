@@ -1008,7 +1008,7 @@ TEST(ND_array_test, close)
         true, false };
     computoc::ND_array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, computoc::close(arr1, arr2, 1));
+    EXPECT_EQ(rarr, computoc::close(arr1, arr2, 2));
 }
 
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
