@@ -1136,6 +1136,38 @@ namespace computoc {
             return res;
         }
 
+        template <typename T1, typename T2, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto binary(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs, Func func)
+            -> ND_array<decltype(func(lhs.data()[0], rhs)), Data_buffer, Data_reference_allocator, Internals_buffer>
+        {
+            ND_array<decltype(func(lhs.data()[0], rhs)), Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().dims() };
+
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+
+            while (ndstor) {
+                res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs);
+                ++ndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto binary(const T1& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Func func)
+            -> ND_array<decltype(func(lhs, rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
+        {
+            ND_array<decltype(func(lhs, rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ rhs.header().dims() };
+
+            typename ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
+
+            while (ndstor) {
+                res(ndstor.subs()) = func(lhs, rhs(ndstor.subs()));
+                ++ndstor;
+            }
+
+            return res;
+        }
+
         template <typename T, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> filter(const ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Func func)
         {

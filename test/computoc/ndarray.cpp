@@ -672,7 +672,7 @@ TEST(ND_array_test, element_wise_binary_operation)
         1, 2,
         3, 4,
         5, 6 };
-    computoc::ND_array iarr1{ {3, 1, 2}, idata1 };
+    computoc::ND_array iarr1{ {3, dims}, idata1 };
 
     const double idata2[]{
         0.5, 1.0,
@@ -680,9 +680,25 @@ TEST(ND_array_test, element_wise_binary_operation)
         2.5, 3.0 };
     computoc::ND_array iarr2{ {3, dims}, idata2 };
 
-    computoc::ND_array oarr{ {3, dims}, 0.5 };
+    computoc::ND_array oarr1{ {3, dims}, 0.5 };
 
-    EXPECT_EQ(oarr, computoc::binary(iarr1, iarr2, [](int a, double b) { return b / a; }));
+    EXPECT_EQ(oarr1, computoc::binary(iarr1, iarr2, [](int a, double b) { return b / a; }));
+
+    const int odata2[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    computoc::ND_array oarr2{ {3, dims}, odata2 };
+
+    EXPECT_EQ(oarr2, computoc::binary(iarr1, 1, [](int a, int b) { return a - b; }));
+
+    const int odata3[] = {
+        0, -1,
+        -2, -3,
+        -4, -5 };
+    computoc::ND_array oarr3{ {3, dims}, odata3 };
+
+    EXPECT_EQ(oarr3, computoc::binary(1, iarr1, [](int a, int b) { return a - b; }));
 }
 
 TEST(ND_array_test, reduce_elements)
