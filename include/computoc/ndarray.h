@@ -1346,13 +1346,13 @@ namespace computoc {
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> equal(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
-            return binary(lhs, rhs, [](const T1& a, const T2& b) { return equal(a, b); });
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline ND_array<bool, Data_buffer, Data_reference_allocator, Internals_buffer> not_equal(const ND_array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const ND_array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
-            return binary(lhs, rhs, [](const T1& a, const T2& b) { return !equal(a, b); });
+            return binary(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
@@ -1844,7 +1844,7 @@ namespace computoc {
             typename ND_array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Subscriptor rhs_ndstor{ rhs.header().dims() };
 
             while (lhs_ndstor && rhs_ndstor) {
-                if (!equal(lhs(lhs_ndstor.subs()), rhs(rhs_ndstor.subs()))) {
+                if (lhs(lhs_ndstor.subs()) != rhs(rhs_ndstor.subs())) {
                     return false;
                 }
                 ++lhs_ndstor;
