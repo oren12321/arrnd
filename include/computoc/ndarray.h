@@ -1754,6 +1754,74 @@ namespace computoc {
             return binary(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator++(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            if (empty(arr)) {
+                return arr;
+            }
+            typename ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            while (ndstor) {
+                ++arr(ndstor.subs());
+                ++ndstor;
+            }
+            return arr;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator++(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>&& arr)
+        {
+            return operator++(arr);
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator++(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
+        {
+            ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> old = clone(arr);
+            operator++(arr);
+            return old;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator++(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>&& arr, int)
+        {
+            return operator++(arr, int{});
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto& operator--(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            if (empty(arr)) {
+                return arr;
+            }
+            typename ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            while (ndstor) {
+                --arr(ndstor.subs());
+                ++ndstor;
+            }
+            return arr;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator--(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>&& arr)
+        {
+            return operator--(arr);
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator--(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
+        {
+            ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer> old = clone(arr);
+            operator--(arr);
+            return old;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator--(ND_array<T, Data_buffer, Data_reference_allocator, Internals_buffer>&& arr, int)
+        {
+            return operator--(arr, int{});
+        }
+
         template <
             typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
             typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>

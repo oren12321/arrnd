@@ -1746,6 +1746,68 @@ TEST(ND_array_test, logic_or)
     EXPECT_EQ(rarr2, 1 || arr2);
 }
 
+TEST(ND_array_test, increment)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr{ { 3, 1, 2 }, data };
+
+    const int rdata1[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    const int rdata2[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    Integer_nd_array old{ arr++ };
+
+    EXPECT_EQ(rarr1, old);
+    EXPECT_EQ(rarr2, arr);
+    EXPECT_EQ(Integer_nd_array{}, ++Integer_nd_array{});
+    EXPECT_EQ(arr, ++(Integer_nd_array{ { 3, 1, 2 }, data }));
+    EXPECT_EQ((Integer_nd_array{ { 3, 1, 2 }, data }), (Integer_nd_array{ { 3, 1, 2 }, data })++);
+}
+
+TEST(ND_array_test, decrement)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr{ { 3, 1, 2 }, data };
+
+    const int rdata1[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    const int rdata2[] = {
+        -1, 0,
+        1, 2,
+        3, 4 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    Integer_nd_array old{ arr-- };
+
+    EXPECT_EQ(rarr1, old);
+    EXPECT_EQ(rarr2, arr);
+    EXPECT_EQ(Integer_nd_array{}, --Integer_nd_array{});
+    EXPECT_EQ(arr, --(Integer_nd_array{ { 3, 1, 2 }, data }));
+    EXPECT_EQ((Integer_nd_array{ { 3, 1, 2 }, data }), (Integer_nd_array{ { 3, 1, 2 }, data })--);
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
