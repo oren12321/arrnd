@@ -424,15 +424,15 @@ TEST(ND_array_test, can_be_initialized_with_valid_size_and_data)
     EXPECT_NO_THROW((Integer_nd_array{ {1, 1}, data }));
     EXPECT_NO_THROW((Integer_nd_array{ {1, 3}, data }));
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1}, data }));
-    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, data }));
-    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, data }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, { 0, 0, 0 } }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, { 0, 0, 0 } }));
 
     const double ddata[] = { 0.0, 0.0, 0.0 };
     EXPECT_NO_THROW((Integer_nd_array{ {1, 1}, ddata }));
     EXPECT_NO_THROW((Integer_nd_array{ {1, 3}, ddata }));
     EXPECT_NO_THROW((Integer_nd_array{ {3, 1}, ddata }));
-    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, ddata }));
-    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, ddata }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, { 0.0, 0.0, 0.0 } }));
+    EXPECT_NO_THROW((Integer_nd_array{ {3, 1, 1}, { 0.0, 0.0, 0.0 } }));
 
     EXPECT_THROW((Integer_nd_array{ {0, 0}, data }), std::invalid_argument);
     EXPECT_THROW((Integer_nd_array{ {1, 0}, data }), std::invalid_argument);

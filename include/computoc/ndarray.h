@@ -915,8 +915,16 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count(), data))
             {
             }
+            ND_array(const Params<std::int64_t>& dims, std::initializer_list<T> data)
+                : ND_array(dims, data.begin())
+            {
+            }
             ND_array(std::initializer_list<std::int64_t> dims, const T* data = nullptr)
                 : ND_array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data)
+            {
+            }
+            ND_array(std::initializer_list<std::int64_t> dims, std::initializer_list<T> data)
+                : ND_array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data.begin())
             {
             }
             template <typename U>
@@ -928,8 +936,18 @@ namespace computoc {
                 }
             }
             template <typename U>
+            ND_array(const Params<std::int64_t>& dims, std::initializer_list<U> data)
+                : ND_array(dims, data.begin())
+            {
+            }
+            template <typename U>
             ND_array(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
                 : ND_array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data)
+            {
+            }
+            template <typename U>
+            ND_array(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
+                : ND_array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data.begin())
             {
             }
 
