@@ -1538,6 +1538,102 @@ TEST(ND_array_test, or)
     EXPECT_EQ(rarr2, arr2);
 }
 
+TEST(ND_array_test, shift_left)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        0, 2,
+        8, 24,
+        64, 160 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 << arr2);
+    arr1 <<= arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 << Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 <<= Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        0, 4,
+        8, 12,
+        16, 20 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 << 2);
+
+    const int rdata3[] = {
+        2, 4,
+        8, 16,
+        32, 64 };
+    Integer_nd_array rarr3{ {3, 1, 2}, rdata3 };
+
+    EXPECT_EQ(rarr3, 2 << arr2);
+    arr2 <<= 2;
+    EXPECT_EQ(rarr2, arr2);
+}
+
+TEST(ND_array_test, shift_right)
+{
+    using Integer_nd_array = computoc::ND_array<int>;
+
+    const int data1[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr1{ { 3, 1, 2 }, data1 };
+
+    const int data2[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_nd_array arr2{ { 3, 1, 2 }, data2 };
+
+    const int rdata1[] = {
+        0, 0,
+        0, 0,
+        0, 0 };
+    Integer_nd_array rarr1{ {3, 1, 2}, rdata1 };
+
+    EXPECT_EQ(rarr1, arr1 >> arr2);
+    arr1 >>= arr2;
+    EXPECT_EQ(rarr1, arr1);
+
+    EXPECT_THROW(arr1 >> Integer_nd_array{ {1} }, std::invalid_argument);
+    EXPECT_THROW(arr1 >>= Integer_nd_array{ {1} }, std::invalid_argument);
+
+    const int rdata2[] = {
+        0, 0,
+        0, 0,
+        1, 1 };
+    Integer_nd_array rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, arr2 >> 2);
+
+    const int rdata3[] = {
+        2, 1,
+        0, 0,
+        0, 0 };
+    Integer_nd_array rarr3{ {3, 1, 2}, rdata3 };
+
+    EXPECT_EQ(rarr3, 2 >> arr2);
+    arr2 >>= 2;
+    EXPECT_EQ(rarr2, arr2);
+}
+
 TEST(ND_array_test, can_be_compared_with_another_nd_array)
 {
     using Integer_nd_array = computoc::ND_array<int>;
