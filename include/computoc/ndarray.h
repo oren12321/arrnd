@@ -51,37 +51,7 @@ namespace computoc {
         * s.t. I is a group of subscripts of specific value in the array.
         */
 
-        struct ND_range {
-            ND_range(std::int64_t nstart, std::int64_t nstop, std::int64_t nstep) noexcept
-            {
-                if (nstep >= 0) {
-                    start = nstart;
-                    stop = nstop;
-                    step = nstep;
-                }
-                else {
-                    start = nstop;
-                    stop = nstart;
-                    step = -nstep;
-                }
-            }
-
-            ND_range(std::int64_t nstart, std::int64_t nstop) noexcept
-                : ND_range(nstart, nstop, 1) {}
-
-            ND_range(std::int64_t nstart) noexcept
-                : ND_range(nstart, nstart, 1) {}
-
-            ND_range() = default;
-            ND_range(const ND_range&) = default;
-            ND_range& operator=(const ND_range&) = default;
-            ND_range(ND_range&) = default;
-            ND_range& operator=(ND_range&) = default;
-
-            std::int64_t start{ 0 };
-            std::int64_t stop{ 0 };
-            std::int64_t step{ 1 };
-        };
+        using ND_range = Interval<std::int64_t>;
 
         /*
         * N-dimensional array indexing:
@@ -156,7 +126,7 @@ namespace computoc {
             std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
             for (std::int64_t i = 0; i < last; ++i) {
-                strides.p()[i] = previous_strides.p()[i] * ranges.p()[i].step;
+                strides.p()[i] = previous_strides.p()[i] * forward(ranges.p()[i]).step;
             }
         }
 
@@ -173,7 +143,8 @@ namespace computoc {
             std::int64_t middle{ previous_dims.s() >= ranges.s() ? ranges.s() : previous_dims.s() };
 
             for (std::int64_t i = 0; i < middle; ++i) {
-                dims.p()[i] = static_cast<std::int64_t>(std::ceil((modulo(ranges.p()[i].stop, previous_dims.p()[i]) - modulo(ranges.p()[i].start, previous_dims.p()[i]) + 1.0) / ranges.p()[i].step));
+                ND_range r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
+                dims.p()[i] = static_cast<std::int64_t>(std::ceil((r.stop - r.start + 1.0) / r.step));
             }
 
             for (std::int64_t i = middle; i < previous_dims.s(); ++i) {
@@ -192,7 +163,8 @@ namespace computoc {
             std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
             for (std::int64_t i = 0; i < last; ++i) {
-                offset += previous_strides.p()[i] * modulo(ranges.p()[i].start, previous_dims.p()[i]);
+                ND_range r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
+                offset += previous_strides.p()[i] * r.start;
             }
             return offset;
         }
@@ -234,10 +206,9 @@ namespace computoc {
             std::int64_t last{ ranges.s() < dims.s() ? ranges.s() : dims.s() };
 
             for (std::int64_t i = 0; i < last && result; ++i) {
-                std::int64_t dim{ dims.p()[i] };
-                ND_range range{ modulo(ranges.p()[i].start, dim), modulo(ranges.p()[i].stop, dim), ranges.p()[i].step };
+                ND_range r{ forward(modulo(ranges.p()[i], dims.p()[i])) };
 
-                result &= (range.start <= range.stop && range.step > 0);
+                result &= (r.start <= r.stop && r.step > 0);
             }
 
             return result;
