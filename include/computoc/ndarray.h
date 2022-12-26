@@ -8,6 +8,7 @@
 
 #include <computoc/errors.h>
 #include <computoc/utils.h>
+#include <computoc/math.h>
 #include <memoc/allocators.h>
 #include <memoc/buffers.h>
 #include <memoc/pointers.h>
