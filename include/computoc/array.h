@@ -540,10 +540,10 @@ namespace computoc {
 
 
         template <memoc::Buffer<std::int64_t> Internal_buffer = Array_default_internals_buffer>
-        class Array_subscriptor
+        class Array_indices_iterator
         {
         public:
-            Array_subscriptor(const Params<std::int64_t>& from, const Params<std::int64_t>& to, std::int64_t axis)
+            Array_indices_iterator(const Params<std::int64_t>& from, const Params<std::int64_t>& to, std::int64_t axis)
                 : buff_(from.s(), from.p()), subs_(buff_.data()), from_(from.p()), to_(to.p()), axis_(axis)
             {
                 COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty(), std::invalid_argument, "'from' and/or 'to' subscripts size is zero");
@@ -553,12 +553,12 @@ namespace computoc {
 
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
             }
-            Array_subscriptor(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::int64_t axis)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), axis)
+            Array_indices_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::int64_t axis)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), axis)
             {
             }
 
-            Array_subscriptor(const Params<std::int64_t>& to, std::int64_t axis)
+            Array_indices_iterator(const Params<std::int64_t>& to, std::int64_t axis)
                 : buff_(to.s()), subs_(buff_.data()), to_(to.p()), axis_(axis)
             {
                 COMPUTOC_THROW_IF_FALSE(!to.empty(), std::invalid_argument, "'to' subscripts size is zero");
@@ -568,12 +568,12 @@ namespace computoc {
                 COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
                 reset();
             }
-            Array_subscriptor(std::initializer_list<std::int64_t> to, std::int64_t axis)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(to), to.begin()), axis)
+            Array_indices_iterator(std::initializer_list<std::int64_t> to, std::int64_t axis)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(to), to.begin()), axis)
             {
             }
 
-            Array_subscriptor(const Params<std::int64_t>& from, const Params<std::int64_t>& to, const Params<std::int64_t>& order, Params<std::int64_t> dummy)
+            Array_indices_iterator(const Params<std::int64_t>& from, const Params<std::int64_t>& to, const Params<std::int64_t>& order, Params<std::int64_t> dummy)
                 : buff_(from.s() + order.s()), from_(from.p()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!from.empty() && !to.empty() && !order.empty(), std::invalid_argument, "'from', 'to' and/or 'order' subscripts size is zero");
@@ -593,12 +593,12 @@ namespace computoc {
                     order_.p()[i] = order.p()[i];
                 }
             }
-            Array_subscriptor(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order, Params<std::int64_t> dummy)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), Params<std::int64_t>(std::ssize(order), order.begin()))
+            Array_indices_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order, Params<std::int64_t> dummy)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), Params<std::int64_t>(std::ssize(order), order.begin()))
             {
             }
 
-            Array_subscriptor(const Params<std::int64_t>& to, const Params<std::int64_t>& order, Params<std::int64_t> dummy)
+            Array_indices_iterator(const Params<std::int64_t>& to, const Params<std::int64_t>& order, Params<std::int64_t> dummy)
                 : buff_(to.s() + order.s()), to_(to.p())
             {
                 COMPUTOC_THROW_IF_FALSE(!to.empty() && !order.empty(), std::invalid_argument, "'to' subscripts size is zero");
@@ -616,38 +616,38 @@ namespace computoc {
                 }
                 reset();
             }
-            Array_subscriptor(std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order, Params<std::int64_t> dummy)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(to), to.begin()), Params<std::int64_t>(std::ssize(order), order.begin()))
+            Array_indices_iterator(std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order, Params<std::int64_t> dummy)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(to), to.begin()), Params<std::int64_t>(std::ssize(order), order.begin()))
             {
             }
 
-            Array_subscriptor(const Params<std::int64_t>& from, const Params<std::int64_t>& to)
-                : Array_subscriptor(from, to, to.s() - 1)
+            Array_indices_iterator(const Params<std::int64_t>& from, const Params<std::int64_t>& to)
+                : Array_indices_iterator(from, to, to.s() - 1)
             {
             }
-            Array_subscriptor(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()))
-            {
-            }
-
-            Array_subscriptor(const Params<std::int64_t>& to)
-                : Array_subscriptor(to, to.s() - 1)
-            {
-            }
-            Array_subscriptor(std::initializer_list<std::int64_t> to)
-                : Array_subscriptor(Params<std::int64_t>(std::ssize(to), to.begin()))
+            Array_indices_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()))
             {
             }
 
-            Array_subscriptor() = default;
+            Array_indices_iterator(const Params<std::int64_t>& to)
+                : Array_indices_iterator(to, to.s() - 1)
+            {
+            }
+            Array_indices_iterator(std::initializer_list<std::int64_t> to)
+                : Array_indices_iterator(Params<std::int64_t>(std::ssize(to), to.begin()))
+            {
+            }
 
-            Array_subscriptor(const Array_subscriptor<Internal_buffer>& other) noexcept
+            Array_indices_iterator() = default;
+
+            Array_indices_iterator(const Array_indices_iterator<Internal_buffer>& other) noexcept
                 : buff_(other.buff_), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
                 subs_ = { other.subs_.s(), buff_.data().p() };
                 order_ = { other.order_.s(), buff_.data().p() + other.subs_.s() };
             }
-            Array_subscriptor& operator=(const Array_subscriptor<Internal_buffer>& other) noexcept
+            Array_indices_iterator& operator=(const Array_indices_iterator<Internal_buffer>& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -661,7 +661,7 @@ namespace computoc {
                 axis_ = other.axis_;
             }
 
-            Array_subscriptor(Array_subscriptor<Internal_buffer>&& other) noexcept
+            Array_indices_iterator(Array_indices_iterator<Internal_buffer>&& other) noexcept
                 : buff_(std::move(other.buff_)), from_(other.from_), to_(other.to_), axis_(other.axis_)
             {
                 subs_ = { other.subs_.s(), buff_.data().p() };
@@ -672,7 +672,7 @@ namespace computoc {
                 other.order_.clear();
                 other.axis_ = 0;
             }
-            Array_subscriptor& operator=(Array_subscriptor&& other) noexcept
+            Array_indices_iterator& operator=(Array_indices_iterator&& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -691,7 +691,7 @@ namespace computoc {
                 other.axis_ = 0;
             }
 
-            virtual ~Array_subscriptor() = default;
+            virtual ~Array_indices_iterator() = default;
 
             void reset() noexcept
             {
@@ -700,7 +700,7 @@ namespace computoc {
                 }
             }
 
-            Array_subscriptor& operator++() noexcept
+            Array_indices_iterator& operator++() noexcept
             {
                 if (!order_.empty())
                 {
@@ -740,9 +740,9 @@ namespace computoc {
                 return *this;
             }
 
-            Array_subscriptor operator++(int) noexcept
+            Array_indices_iterator operator++(int) noexcept
             {
-                Array_subscriptor temp{ *this };
+                Array_indices_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
@@ -781,7 +781,7 @@ namespace computoc {
         class Array {
         public:
             using Header = Array_header<Internals_buffer>;
-            using Subscriptor = Array_subscriptor<Internals_buffer>;
+            using Indices_iterator = Array_indices_iterator<Internals_buffer>;
 
             Array() = default;
 
@@ -871,7 +871,7 @@ namespace computoc {
                 if (empty(*this)) {
                     return *this;
                 }
-                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ Params<std::int64_t>(hdr_.dims()) };
+                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ Params<std::int64_t>(hdr_.dims()) };
                 while (ndstor) {
                     (*this)(ndstor.subs()) = value;
                     ++ndstor;
@@ -1019,7 +1019,7 @@ namespace computoc {
 
             Array<decltype(func(arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().dims() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ arr.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(arr(ndstor.subs()));
@@ -1037,7 +1037,7 @@ namespace computoc {
                 return decltype(func(arr.data()[0], arr.data()[0])){};
             }
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ arr.header().dims() };
 
             decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(ndstor.subs())) };
             ++ndstor;
@@ -1064,8 +1064,8 @@ namespace computoc {
 
             res.header() = typename Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>::Header{ arr.header().dims(), axis };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), axis };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims(), axis };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims().p()[axis] };
 
@@ -1114,7 +1114,7 @@ namespace computoc {
 
             Array<decltype(func(lhs.data()[0], rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ lhs.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs(ndstor.subs()));
@@ -1130,7 +1130,7 @@ namespace computoc {
         {
             Array<decltype(func(lhs.data()[0], rhs)), Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ lhs.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs);
@@ -1146,7 +1146,7 @@ namespace computoc {
         {
             Array<decltype(func(lhs, rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ rhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ rhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ rhs.header().dims() };
 
             while (ndstor) {
                 res(ndstor.subs()) = func(lhs, rhs(ndstor.subs()));
@@ -1165,8 +1165,8 @@ namespace computoc {
 
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
@@ -1201,10 +1201,10 @@ namespace computoc {
 
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims() };
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator mask_ndstor{ mask.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
@@ -1238,8 +1238,8 @@ namespace computoc {
 
             Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims() };
+            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
@@ -1275,10 +1275,10 @@ namespace computoc {
 
             Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims() };
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor mask_ndstor{ mask.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims() };
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator mask_ndstor{ mask.header().dims() };
 
-            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
@@ -1313,8 +1313,8 @@ namespace computoc {
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
             res.header() = typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header{ arr.header().dims(), order };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor res_ndstor{ res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arr_ndstor{ arr.header().dims(), order, {0, nullptr} };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator res_ndstor{ res.header().dims() };
 
             while (arr_ndstor && res_ndstor) {
                 res(res_ndstor.subs()) = arr(arr_ndstor.subs());
@@ -1748,7 +1748,7 @@ namespace computoc {
             if (empty(arr)) {
                 return arr;
             }
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ arr.header().dims() };
             while (ndstor) {
                 ++arr(ndstor.subs());
                 ++ndstor;
@@ -1782,7 +1782,7 @@ namespace computoc {
             if (empty(arr)) {
                 return arr;
             }
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ arr.header().dims() };
             while (ndstor) {
                 --arr(ndstor.subs());
                 ++ndstor;
@@ -1828,8 +1828,8 @@ namespace computoc {
                 return true;
             }
 
-            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Subscriptor lhs_ndstor{ lhs.header().dims() };
-            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Subscriptor rhs_ndstor{ rhs.header().dims() };
+            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Indices_iterator lhs_ndstor{ lhs.header().dims() };
+            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Indices_iterator rhs_ndstor{ rhs.header().dims() };
 
             while (lhs_ndstor && rhs_ndstor) {
                 if (lhs(lhs_ndstor.subs()) != rhs(rhs_ndstor.subs())) {
@@ -1863,8 +1863,8 @@ namespace computoc {
                 dst = Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>(src.header().dims());
             }
 
-            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Subscriptor src_ndstor{ src.header().dims() };
-            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Subscriptor dst_ndstor{ dst.header().dims() };
+            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Indices_iterator src_ndstor{ src.header().dims() };
+            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Indices_iterator dst_ndstor{ dst.header().dims() };
 
             while (src_ndstor && dst_ndstor) {
                 dst(dst_ndstor.subs()) = src(src_ndstor.subs());
@@ -1891,7 +1891,7 @@ namespace computoc {
 
             clone = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{ arr.header().dims() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor ndstor{ arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ arr.header().dims() };
 
             while (ndstor) {
                 clone(ndstor.subs()) = arr(ndstor.subs());
@@ -1924,8 +1924,8 @@ namespace computoc {
             if (arr.header().is_partial()) {
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
 
-                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor prev_ndstor(arr.header().dims());
-                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor new_ndstor(new_dims);
+                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator prev_ndstor(arr.header().dims());
+                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator new_ndstor(new_dims);
 
                 while (prev_ndstor && new_ndstor) {
                     res(new_ndstor.subs()) = arr(prev_ndstor.subs());
@@ -1968,8 +1968,8 @@ namespace computoc {
 
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor prev_ndstor(arr.header().dims());
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor new_ndstor(new_dims);
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator prev_ndstor(arr.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator new_ndstor(new_dims);
 
             while (prev_ndstor && new_ndstor) {
                 res(new_ndstor.subs()) = arr(prev_ndstor.subs());
@@ -2013,9 +2013,9 @@ namespace computoc {
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
             res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor lhsndstor(lhs.header().dims());
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor rhsndstor(rhs.header().dims());
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator lhsndstor(lhs.header().dims());
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator rhsndstor(rhs.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator resndstor(res.header().dims());
 
             while (resndstor) {
                 if (lhsndstor && resndstor.subs().p()[axis] < lhs.header().dims().p()[axis] || resndstor.subs().p()[axis] >= lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
@@ -2074,9 +2074,9 @@ namespace computoc {
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
             res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor lhsndstor(lhs.header().dims());
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor rhsndstor(rhs.header().dims());
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator lhsndstor(lhs.header().dims());
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator rhsndstor(rhs.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator resndstor(res.header().dims());
 
             while (resndstor) {
                 if (lhsndstor && resndstor.subs().p()[axis] < ind || resndstor.subs().p()[axis] >= ind + rhs.header().dims().p()[axis]) {
@@ -2134,8 +2134,8 @@ namespace computoc {
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims().p()[axis]) * count  };
             res.header() = typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(arr.header().dims(), -count, axis);
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor arrndstor(arr.header().dims());
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscriptor resndstor(res.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator arrndstor(arr.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator resndstor(res.header().dims());
 
             while (arrndstor) {
                 if (resndstor && arrndstor.subs().p()[axis] < ind || arrndstor.subs().p()[axis] >= ind + count) {

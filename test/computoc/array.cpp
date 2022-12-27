@@ -26,7 +26,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
         {1, 0, 2, 0},
         {1, 0, 2, 1} };
 
-    computoc::Array<int>::Subscriptor counter{ {ndims, dims} };
+    computoc::Array<int>::Indices_iterator counter{ {ndims, dims} };
 
     // prefix increment
     {
@@ -87,7 +87,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
         std::initializer_list<std::int64_t> from{ -1, 0, -2 };
         std::initializer_list<std::int64_t> to{ 2, 0, 0 };
         std::int64_t nsubs_counter{ 0 };
-        for (computoc::Array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
+        for (computoc::Array<int>::Indices_iterator counter{ from, to }; counter; ++counter) {
             const std::int64_t* subs{ counter.subs().p() };
             const std::int64_t* rsubs{ rsubs_list1[nsubs_counter] };
 
@@ -107,7 +107,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
         std::initializer_list<std::int64_t> from{ 1, 0, 0, 0 };
         std::initializer_list<std::int64_t> to{ 2, 1, 3, 2 };
         std::int64_t nsubs_counter{ 6 };
-        for (computoc::Array<int>::Subscriptor counter{ from, to }; counter; ++counter) {
+        for (computoc::Array<int>::Indices_iterator counter{ from, to }; counter; ++counter) {
             const std::int64_t* subs{ counter.subs().p() };
             const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
 
@@ -124,7 +124,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
         // test counter reset with initial subscripts
         {
-            computoc::Array<int>::Subscriptor counter{ from, to };
+            computoc::Array<int>::Indices_iterator counter{ from, to };
             EXPECT_EQ(1, counter.subs().p()[0]);
             EXPECT_EQ(0, counter.subs().p()[1]);
             EXPECT_EQ(0, counter.subs().p()[2]);
@@ -144,13 +144,13 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
     // 1d subs with index
     {
-        EXPECT_THROW(computoc::Array<int>::Subscriptor({ 5 }, 1), std::invalid_argument);
+        EXPECT_THROW(computoc::Array<int>::Indices_iterator({ 5 }, 1), std::invalid_argument);
 
         const std::int64_t nsubs{ 6 };
         const std::int64_t subs[]{ 0, 1, 2, 3, 4, 5 };
         std::initializer_list<std::int64_t> from{ 1 };
         std::initializer_list<std::int64_t> to{ 6 };
-        computoc::Array<int>::Subscriptor counter(from, to, 0);
+        computoc::Array<int>::Indices_iterator counter(from, to, 0);
         std::int64_t nsubs_counter{ 1 };
         for (; counter; ++counter) {
             EXPECT_EQ(subs[nsubs_counter], counter.subs().p()[0]);
@@ -162,7 +162,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
     // 4d subs with different axis
     {
-        EXPECT_THROW(computoc::Array<int>::Subscriptor({ ndims, dims }, 5), std::invalid_argument);
+        EXPECT_THROW(computoc::Array<int>::Indices_iterator({ ndims, dims }, 5), std::invalid_argument);
 
         // axis 0
         {
@@ -179,7 +179,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 2, 0},
                 {0, 0, 2, 1},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscriptor counter({ ndims, dims }, 0);
+            computoc::Array<int>::Indices_iterator counter({ ndims, dims }, 0);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -211,7 +211,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 1, 1},
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscriptor counter({ ndims, dims }, 1);
+            computoc::Array<int>::Indices_iterator counter({ ndims, dims }, 1);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -243,7 +243,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 0, 1},
                 {1, 0, 1, 1},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscriptor counter({ ndims, dims }, 2);
+            computoc::Array<int>::Indices_iterator counter({ ndims, dims }, 2);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -275,7 +275,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 1, 1},
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscriptor counter({ ndims, dims }, 3);
+            computoc::Array<int>::Indices_iterator counter({ ndims, dims }, 3);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -349,7 +349,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
             // full count
             {
-                computoc::Array<int>::Subscriptor counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                computoc::Array<int>::Indices_iterator counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
                 std::int64_t nsubs_counter{ 0 };
                 for (; counter; counter++) {
                     const std::int64_t* subs{ counter.subs().p() };
@@ -369,7 +369,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
             // partial count
             {
                 const std::int64_t from[]{ 3, 0, 2, 0 };
-                computoc::Array<int>::Subscriptor counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                computoc::Array<int>::Indices_iterator counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
                 std::int64_t nsubs_counter{ 44 };
                 for (; counter; counter++) {
                     const std::int64_t* subs{ counter.subs().p() };
