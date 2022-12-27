@@ -289,20 +289,20 @@ namespace computoc {
             Array_header() = default;
 
             Array_header(const Params<std::int64_t>& dims)
-                : size_info_(dims.s() * 2)
+                : buff_(dims.s() * 2)
             {
                 if (dims.empty()) {
                     return;
                 }
 
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { dims.s(), size_info_.data().p() };
+                dims_ = { dims.s(), buff_.data().p() };
                 for (std::int64_t i = 0; i < dims_.s(); ++i) {
                     dims_.p()[i] = dims.p()[i];
                 }
 
-                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
+                strides_ = { dims.s(), buff_.data().p() + dims.s() };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -323,16 +323,16 @@ namespace computoc {
 
                 std::int64_t new_ndims = previous_dims.s();
 
-                size_info_ = Internal_buffer(new_ndims * 2);
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                buff_ = Internal_buffer(new_ndims * 2);
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { new_ndims, size_info_.data().p() };
+                dims_ = { new_ndims, buff_.data().p() };
                 ranges2dims(previous_dims, derived_ranges, dims_);
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
 
-                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
+                strides_ = { new_ndims, buff_.data().p() + new_ndims };
                 ranges2strides(previous_strides, derived_ranges, strides_);
                 if (previous_dims.s() > derived_ranges.s()) {
                     Params<std::int64_t> remained_dims{ previous_dims.s() - derived_ranges.s(), previous_dims.p() + derived_ranges.s() };
@@ -353,10 +353,10 @@ namespace computoc {
 
                 std::int64_t new_ndims{previous_dims.s() > 1 ? previous_dims.s() - 1 : 1};
 
-                size_info_ = Internal_buffer(new_ndims * 2);
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                buff_ = Internal_buffer(new_ndims * 2);
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { new_ndims, size_info_.data().p() };
+                dims_ = { new_ndims, buff_.data().p() };
                 if (previous_dims.s() > 1) {
                     std::int64_t res_dim_index{ 0 };
                     for (std::int64_t i = 0; i < omitted_axis; ++i, res_dim_index += 1) {
@@ -370,7 +370,7 @@ namespace computoc {
                     dims_.p()[0] = 1;
                 }
 
-                strides_ = { new_ndims, size_info_.data().p() + new_ndims };
+                strides_ = { new_ndims, buff_.data().p() + new_ndims };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -379,22 +379,22 @@ namespace computoc {
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& new_order)
-                : size_info_(previous_dims.s() * 2)
+                : buff_(previous_dims.s() * 2)
             {
                 if (previous_dims.empty()) {
                     return;
                 }
 
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
                 COMPUTOC_THROW_IF_FALSE(previous_dims.s() == new_order.s(), std::invalid_argument, "new_order and dimensions sizes are different");
 
-                dims_ = { previous_dims.s(), size_info_.data().p() };
+                dims_ = { previous_dims.s(), buff_.data().p() };
                 for (std::int64_t i = 0; i < dims_.s(); ++i) {
                     COMPUTOC_THROW_IF_FALSE(new_order.p()[i] < dims_.s(), std::out_of_range, "new_order index not in dimensions range");
                     dims_.p()[i] = previous_dims.p()[new_order.p()[i]];
                 }
 
-                strides_ = { previous_dims.s(), size_info_.data().p() + previous_dims.s() };
+                strides_ = { previous_dims.s(), buff_.data().p() + previous_dims.s() };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -403,11 +403,11 @@ namespace computoc {
             }
 
             Array_header(const Params<std::int64_t>& dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
-                : size_info_(dims.s() * 2)
+                : buff_(dims.s() * 2)
             {
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { dims.s(), size_info_.data().p() };
+                dims_ = { dims.s(), buff_.data().p() };
                 for (std::int64_t i = 0; i < dims_.s(); ++i) {
                     if (axis == i) {
                         dims_.p()[i] = dims.p()[i] + appended_dims.p()[i];
@@ -417,7 +417,7 @@ namespace computoc {
                     }
                 }
 
-                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
+                strides_ = { dims.s(), buff_.data().p() + dims.s() };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -426,11 +426,11 @@ namespace computoc {
             }
 
             Array_header(const Params<std::int64_t>& dims, std::int64_t count, std::int64_t axis)
-                : size_info_(dims.s() * 2)
+                : buff_(dims.s() * 2)
             {
-                COMPUTOC_THROW_IF_FALSE(size_info_.usable(), std::runtime_error, "failed to allocate header buffer");
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
 
-                dims_ = { dims.s(), size_info_.data().p() };
+                dims_ = { dims.s(), buff_.data().p() };
                 for (std::int64_t i = 0; i < dims_.s(); ++i) {
                     if (axis == i) {
                         dims_.p()[i] = dims.p()[i] + count;
@@ -440,7 +440,7 @@ namespace computoc {
                     }
                 }
 
-                strides_ = { dims.s(), size_info_.data().p() + dims.s() };
+                strides_ = { dims.s(), buff_.data().p() + dims.s() };
 
                 count_ = dims2count(dims_);
                 COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
@@ -449,10 +449,10 @@ namespace computoc {
             }
 
             Array_header(Array_header&& other) noexcept
-                : size_info_(std::move(other.size_info_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
+                : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
-                dims_ = { other.dims_.s(), size_info_.data().p() };
-                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
+                dims_ = { other.dims_.s(), buff_.data().p() };
+                strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
 
                 other.dims_.clear();
                 other.strides_.clear();
@@ -465,13 +465,13 @@ namespace computoc {
                     return *this;
                 }
 
-                size_info_ = std::move(other.size_info_);
+                buff_ = std::move(other.buff_);
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_partial_ = other.is_partial_;
 
-                dims_ = { other.dims_.s(), size_info_.data().p() };
-                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
+                dims_ = { other.dims_.s(), buff_.data().p() };
+                strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
 
                 other.dims_.clear();
                 other.strides_.clear();
@@ -482,10 +482,10 @@ namespace computoc {
             }
 
             Array_header(const Array_header& other) noexcept
-                : size_info_(other.size_info_), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
+                : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
             {
-                dims_ = { other.dims_.s(), size_info_.data().p() };
-                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
+                dims_ = { other.dims_.s(), buff_.data().p() };
+                strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
             }
             Array_header& operator=(const Array_header& other) noexcept
             {
@@ -493,13 +493,13 @@ namespace computoc {
                     return *this;
                 }
 
-                size_info_ = other.size_info_;
+                buff_ = other.buff_;
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_partial_ = other.is_partial_;
 
-                dims_ = { other.dims_.s(), size_info_.data().p() };
-                strides_ = { other.strides_.s(), size_info_.data().p() + other.dims_.s() };
+                dims_ = { other.dims_.s(), buff_.data().p() };
+                strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
 
                 return *this;
             }
@@ -534,7 +534,7 @@ namespace computoc {
         private:
             Params<std::int64_t> dims_{};
             Params<std::int64_t> strides_{};
-            Internal_buffer size_info_{};
+            Internal_buffer buff_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             bool is_partial_{ false };
