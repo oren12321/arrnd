@@ -1263,8 +1263,7 @@ namespace computoc {
             return res;
         }
 
-        template <
-            typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer> find(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& mask)
         {
             if (empty(arr)) {
@@ -1810,10 +1809,8 @@ namespace computoc {
             return operator--(arr, int{});
         }
 
-        template <
-            typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
-            typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>
-        inline bool operator==(const Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>& lhs, const Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>& rhs)
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool operator==(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             if (lhs.header().dims() != rhs.header().dims()) {
                 return false;
@@ -1828,15 +1825,13 @@ namespace computoc {
                 return true;
             }
 
-            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Indices_iterator lhs_ndstor{ lhs.header().dims() };
-            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Indices_iterator rhs_ndstor{ rhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ lhs.header().dims() };
 
-            while (lhs_ndstor && rhs_ndstor) {
-                if (lhs(lhs_ndstor.subs()) != rhs(rhs_ndstor.subs())) {
+            while (ndstor) {
+                if (lhs(ndstor.subs()) != rhs(ndstor.subs())) {
                     return false;
                 }
-                ++lhs_ndstor;
-                ++rhs_ndstor;
+                ++ndstor;
             }
 
             return true;
