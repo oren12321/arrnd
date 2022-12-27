@@ -635,9 +635,9 @@ TEST(Array_test, element_wise_transformation)
     EXPECT_EQ(oarr, computoc::transform(iarr, [](int n) {return n * 0.5; }));
 }
 
-TEST(Array_test, element_wise_binary_operation)
+TEST(Array_test, element_wise_transform_operation)
 {
-    EXPECT_THROW(computoc::binary(computoc::Array<int>({ 3, 1, 2 }), computoc::Array<double>({ 6 }), [](int, double) {return 0.0; }), std::invalid_argument);
+    EXPECT_THROW(computoc::transform(computoc::Array<int>({ 3, 1, 2 }), computoc::Array<double>({ 6 }), [](int, double) {return 0.0; }), std::invalid_argument);
 
     std::int64_t dims[]{ 3, 1, 2 };
 
@@ -655,7 +655,7 @@ TEST(Array_test, element_wise_binary_operation)
 
     computoc::Array oarr1{ {3, dims}, 0.5 };
 
-    EXPECT_EQ(oarr1, computoc::binary(iarr1, iarr2, [](int a, double b) { return b / a; }));
+    EXPECT_EQ(oarr1, computoc::transform(iarr1, iarr2, [](int a, double b) { return b / a; }));
 
     const int odata2[] = {
         0, 1,
@@ -663,7 +663,7 @@ TEST(Array_test, element_wise_binary_operation)
         4, 5 };
     computoc::Array oarr2{ {3, dims}, odata2 };
 
-    EXPECT_EQ(oarr2, computoc::binary(iarr1, 1, [](int a, int b) { return a - b; }));
+    EXPECT_EQ(oarr2, computoc::transform(iarr1, 1, [](int a, int b) { return a - b; }));
 
     const int odata3[] = {
         0, -1,
@@ -671,7 +671,7 @@ TEST(Array_test, element_wise_binary_operation)
         -4, -5 };
     computoc::Array oarr3{ {3, dims}, odata3 };
 
-    EXPECT_EQ(oarr3, computoc::binary(1, iarr1, [](int a, int b) { return a - b; }));
+    EXPECT_EQ(oarr3, computoc::transform(1, iarr1, [](int a, int b) { return a - b; }));
 }
 
 TEST(Array_test, reduce_elements)
