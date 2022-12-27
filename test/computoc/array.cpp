@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include <computoc/utils.h>
 #include <computoc/array.h>
 
 
@@ -1881,7 +1882,7 @@ TEST(Array_test, can_return_slice)
 
     // empty ranges
     {
-        std::initializer_list<computoc::ND_range> ranges{};
+        std::initializer_list<computoc::Interval<std::int64_t>> ranges{};
         Integer_array rarr{ arr(ranges) };
         EXPECT_EQ(arr, rarr);
         EXPECT_EQ(arr.data(), rarr.data());
@@ -1895,7 +1896,7 @@ TEST(Array_test, can_return_slice)
 
     // empty array
     {
-        EXPECT_EQ(Integer_array{}, Integer_array{}(std::initializer_list<computoc::ND_range>{}));
+        EXPECT_EQ(Integer_array{}, Integer_array{}(std::initializer_list<computoc::Interval<std::int64_t>>{}));
         EXPECT_EQ(Integer_array{}, Integer_array{}({ {0,1}, {0,4,2} }));
     }
 

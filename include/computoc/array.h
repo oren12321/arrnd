@@ -52,8 +52,6 @@ namespace computoc {
         * s.t. I is a group of subscripts of specific value in the array.
         */
 
-        using ND_range = Interval<std::int64_t>;
-
         /*
         * N-dimensional array indexing:
         * =============================
@@ -114,7 +112,7 @@ namespace computoc {
             }
         }
 
-        inline void ranges2strides(const Params<std::int64_t>& previous_strides, const Params<ND_range>& ranges, Params<std::int64_t> strides) noexcept
+        inline void ranges2strides(const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges, Params<std::int64_t> strides) noexcept
         {
             if (previous_strides.empty() || ranges.empty() || strides.empty()) {
                 return;
@@ -131,7 +129,7 @@ namespace computoc {
             }
         }
 
-        inline void ranges2dims(const Params<std::int64_t>& previous_dims, const Params<ND_range>& ranges, Params<std::int64_t> dims) noexcept
+        inline void ranges2dims(const Params<std::int64_t>& previous_dims, const Params<Interval<std::int64_t>>& ranges, Params<std::int64_t> dims) noexcept
         {
             if (previous_dims.empty() || dims.empty()) {
                 return;
@@ -144,7 +142,7 @@ namespace computoc {
             std::int64_t middle{ previous_dims.s() >= ranges.s() ? ranges.s() : previous_dims.s() };
 
             for (std::int64_t i = 0; i < middle; ++i) {
-                ND_range r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
+                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
                 dims.p()[i] = static_cast<std::int64_t>(std::ceil((r.stop - r.start + 1.0) / r.step));
             }
 
@@ -153,7 +151,7 @@ namespace computoc {
             }
         }
 
-        inline std::int64_t ranges2offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<ND_range>& ranges) noexcept
+        inline std::int64_t ranges2offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges) noexcept
         {
             std::int64_t offset{ previous_offset };
 
@@ -164,7 +162,7 @@ namespace computoc {
             std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
 
             for (std::int64_t i = 0; i < last; ++i) {
-                ND_range r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
+                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
                 offset += previous_strides.p()[i] * r.start;
             }
             return offset;
@@ -201,13 +199,13 @@ namespace computoc {
             return count;
         }
 
-        inline bool valid_ranges(const Params<std::int64_t>& dims, const Params<ND_range>& ranges) noexcept
+        inline bool valid_ranges(const Params<std::int64_t>& dims, const Params<Interval<std::int64_t>>& ranges) noexcept
         {
             bool result{ true };
             std::int64_t last{ ranges.s() < dims.s() ? ranges.s() : dims.s() };
 
             for (std::int64_t i = 0; i < last && result; ++i) {
-                ND_range r{ forward(modulo(ranges.p()[i], dims.p()[i])) };
+                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], dims.p()[i])) };
 
                 result &= (r.start <= r.stop && r.step > 0);
             }
@@ -310,7 +308,7 @@ namespace computoc {
                 dims2strides(dims_, strides_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<ND_range>& derived_ranges)
+            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& derived_ranges)
                 : is_partial_(true)
             {
                 if (previous_dims.empty()) {
@@ -982,7 +980,7 @@ namespace computoc {
                 return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Params<ND_range>& ranges) const
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Params<Interval<std::int64_t>>& ranges) const
             {
                 /*
                 * Slicing algorithm:
@@ -1001,9 +999,9 @@ namespace computoc {
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(std::initializer_list<ND_range> ranges) const
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
-                return (*this)(Params<ND_range>{std::ssize(ranges), ranges.begin()});
+                return (*this)(Params<Interval<std::int64_t>>{std::ssize(ranges), ranges.begin()});
             }
 
         private:
@@ -2171,7 +2169,6 @@ namespace computoc {
         }
     }
 
-    using details::ND_range;
     using details::Array;
     using details::transform;
     using details::binary;
