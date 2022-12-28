@@ -1845,6 +1845,103 @@ TEST(Array_test, decrement)
     EXPECT_EQ((Integer_array{ { 3, 1, 2 }, data }), (Integer_array{ { 3, 1, 2 }, data })--);
 }
 
+TEST(Array_test, can_be_matched_with_another_array_or_value)
+{
+    using Integer_array = computoc::Array<int>;
+
+    const int data1[] = {
+        1, 2,
+        3, 4,
+        5, 6 };
+    std::int64_t dims1[]{ 3, 1, 2 };
+    Integer_array arr1{ {3, dims1}, data1 };
+    Integer_array arr2{ {3, dims1}, data1 };
+
+    EXPECT_TRUE(computoc::all_match(arr1, arr2, [](int a, int b) { return a / b == 1; }));
+
+    std::int64_t dims2[]{ 3, 2 };
+    Integer_array arr3{ {2, dims2}, data1 };
+
+    EXPECT_FALSE(computoc::all_match(arr1, arr3, [](int, int) {return true; }));
+
+    const int data2[] = {
+        1, 2,
+        3, 4,
+        5, 5 };
+    Integer_array arr4{ {3, dims1}, data2 };
+    Integer_array arr5{ {2, dims2}, data2 };
+
+    EXPECT_FALSE(computoc::all_match(arr1, arr4, [](int a, int b) {return a == b; }));
+    EXPECT_FALSE(computoc::all_match(arr1, arr4, [](int a, int b) {return a == b; }));
+
+    {
+        using Integer_array = computoc::Array<int>;
+
+        const int data[] = {
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9,
+
+            10, 11, 12,
+            13, 14, 15,
+            16, 17, 18,
+
+            19, 20, 21,
+            22, 23, 24,
+            25, 26, 27,
+
+            28, 29, 30,
+            31, 32, 33,
+            34, 35, 36 };
+        const std::int64_t dims[]{ 2, 2, 3, 3 };
+        Integer_array arr{ {4, dims}, data };
+
+        const int rdata[] = {
+            11,
+            14,
+
+            29,
+            32
+        };
+        const std::int64_t rdims[]{ 2, 1, 2, 1 };
+        Integer_array rarr{ {4, rdims}, rdata };
+
+        Integer_array sarr{ arr({{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}) };
+        EXPECT_EQ(rarr, sarr);
+        EXPECT_TRUE(computoc::all_match(rarr, sarr, [](int a, int b) { return a == b; }));
+    }
+
+    // different ND array types
+    {
+        const double data1d[] = {
+            1.0, 2.0,
+            3.0, 4.0,
+            5.0, 6.0 };
+        std::int64_t dims1d[]{ 3, 1, 2 };
+        computoc::Array<double> arr1d{ {3, dims1d}, data1d };
+
+        EXPECT_EQ(arr1, arr1d);
+        EXPECT_TRUE(computoc::all_match(arr1, arr1d, [](int a, int b) { return a == b; }));
+
+        arr1d({ 0, 0, 0 }) = 1.001;
+        EXPECT_NE(arr1, arr1d);
+        EXPECT_TRUE(computoc::all_match(arr1, arr1d, [](int a, int b) { return a == b; }));
+    }
+    
+    // empty arrays
+    {
+        EXPECT_TRUE(computoc::all_match(Integer_array{}, Integer_array{}, [](int, int) { return false; }));
+        EXPECT_TRUE(computoc::all_match(Integer_array{}, Integer_array({}), [](int, int) { return false; }));
+        EXPECT_TRUE(computoc::all_match(Integer_array{}, Integer_array({}, 0), [](int, int) { return false; }));
+    }
+
+    // scalar
+    {
+        EXPECT_TRUE(computoc::all_match(arr1, 1, [](int a, int b) { return a * b == a; }));
+        EXPECT_FALSE(computoc::all_match(2, arr2, [](int a, int b) { return a * b == a; }));
+    }
+}
+
 TEST(Array_test, can_be_compared_with_another_array)
 {
     using Integer_array = computoc::Array<int>;
