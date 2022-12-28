@@ -1055,6 +1055,8 @@ TEST(Array_test, greater)
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 > arr2);
+    EXPECT_EQ(rarr, arr1 > 6);
+    EXPECT_EQ(rarr, 0 > arr1);
     EXPECT_THROW(arr1 > Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1081,6 +1083,16 @@ TEST(Array_test, greater_equal)
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 >= arr2);
+    EXPECT_EQ(rarr, arr1 >= 1);
+
+    const bool rdata2[] = {
+        true, true,
+        true, true,
+        true, false };
+    computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, 5 >= arr2);
+
     EXPECT_THROW(arr1 >= Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1107,6 +1119,16 @@ TEST(Array_test, less)
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 < arr2);
+    EXPECT_EQ(rarr, arr1 < 1);
+
+    const bool rdata2[] = {
+        false, true,
+        true, true,
+        true, true };
+    computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
+
+    EXPECT_EQ(rarr2, 1 < arr2);
+
     EXPECT_THROW(arr1 < Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1133,6 +1155,8 @@ TEST(Array_test, less_equal)
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, arr1 <= arr2);
+    EXPECT_EQ(rarr, arr1 <= 5);
+    EXPECT_EQ(rarr, 0 <= arr1);
     EXPECT_THROW(arr1 <= Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1159,6 +1183,8 @@ TEST(Array_test, close)
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_EQ(rarr, computoc::close(arr1, arr2, 2));
+    EXPECT_EQ(rarr, computoc::close(arr1, 3, 2));
+    EXPECT_EQ(rarr, computoc::close(3, arr1, 2));
     EXPECT_THROW(computoc::close(arr1, Integer_array{ {1} }), std::invalid_argument);
 }
 
