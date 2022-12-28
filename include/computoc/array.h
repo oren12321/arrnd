@@ -1976,6 +1976,42 @@ namespace computoc {
             return true;
         }
 
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_equal(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_equal(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        {
+            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_equal(const T1& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_close(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        {
+            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_close(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        {
+            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool all_close(const T1& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        {
+            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+        }
+
         template <
             typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
             typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>
@@ -2315,6 +2351,8 @@ namespace computoc {
     using details::equal;
     using details::not_equal;
     using details::close;
+    using details::all_equal;
+    using details::all_close;
     using details::copy;
     using details::clone;
     using details::reshape;
