@@ -1004,6 +1004,19 @@ namespace computoc {
                 return (*this)(Params<Interval<std::int64_t>>{std::ssize(ranges), ranges.begin()});
             }
 
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>& indices) const noexcept
+            {
+                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ indices.header().dims() };
+
+                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Indices_iterator ndstor{ indices.header().dims() };
+                while (ndstor) {
+                    res(ndstor.subs()) = buffsp_->data().p()[indices(ndstor.subs())];
+                    ++ndstor;
+                }
+
+                return res;
+            }
+
         private:
             Header hdr_{};
             memoc::Shared_ptr<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator> buffsp_{ nullptr };

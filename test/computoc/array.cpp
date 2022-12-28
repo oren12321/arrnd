@@ -851,6 +851,24 @@ TEST(Array_test, select_elements_indices_by_condition)
     const std::int64_t rdatas[]{ 2 };
     computoc::Array rarrs{ {1}, rdatas };
     EXPECT_EQ(rarrs, computoc::find(iarr({ {1, 1} }), [](int a) { return a; }));
+
+    // Get subarray, find values indices by predicate,
+    // and use this indices in different array.
+    {
+        computoc::Array sarr{ iarr({{1, 2}, {0}, {0, 1}}) };
+        computoc::Array not_zeros_inds{ computoc::find(sarr, [](int a) {return a != 0; }) };
+
+        computoc::Array<std::int64_t> rinds1{ {3}, {2, 4, 5} };
+        EXPECT_EQ(rinds1, not_zeros_inds);
+
+        computoc::Array<std::int64_t> rvals1{ {3}, {12, 14, 15} };
+
+        computoc::Array rallvals1{ {3, 1, 2}, {
+            10, 11,
+            12, 13,
+            14, 15 } };
+        EXPECT_EQ(rvals1, rallvals1(not_zeros_inds));
+    }
 }
 
 TEST(Array_test, select_elements_indices_by_maks)
@@ -891,6 +909,26 @@ TEST(Array_test, select_elements_indices_by_maks)
     EXPECT_EQ(rarr2, computoc::find(iarr, imask2));
 
     EXPECT_EQ(computoc::Array<std::int64_t>{}, computoc::find(computoc::Array<std::int64_t>{}, imask0));
+
+    // Get subarray, find values indices by predicate,
+    // and use this indices in different array.
+    {
+        computoc::Array sarr{ iarr({{1, 2}, {0}, {0, 1}}) };
+        computoc::Array not_zeros_inds{ computoc::find(sarr, computoc::Array{{2, 1, 2}, {
+            0, 1,
+            0, 1}}) };
+
+        computoc::Array<std::int64_t> rinds1{ {2}, {3, 5} };
+        EXPECT_EQ(rinds1, not_zeros_inds);
+
+        computoc::Array<std::int64_t> rvals1{ {2}, {13, 15} };
+
+        computoc::Array rallvals1{ {3, 1, 2}, {
+            10, 11,
+            12, 13,
+            14, 15 } };
+        EXPECT_EQ(rvals1, rallvals1(not_zeros_inds));
+    }
 }
 
 TEST(Array_test, transpose)
