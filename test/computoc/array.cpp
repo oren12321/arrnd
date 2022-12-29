@@ -632,7 +632,7 @@ TEST(Array_test, element_wise_transformation)
         2.5, 3.0 };
     computoc::Array oarr{ {3, dims}, odata };
 
-    EXPECT_EQ(oarr, computoc::transform(iarr, [](int n) {return n * 0.5; }));
+    EXPECT_TRUE(computoc::all_equal(oarr, computoc::transform(iarr, [](int n) {return n * 0.5; })));
 }
 
 TEST(Array_test, element_wise_transform_operation)
@@ -655,7 +655,7 @@ TEST(Array_test, element_wise_transform_operation)
 
     computoc::Array oarr1{ {3, dims}, 0.5 };
 
-    EXPECT_EQ(oarr1, computoc::transform(iarr1, iarr2, [](int a, double b) { return b / a; }));
+    EXPECT_TRUE(computoc::all_equal(oarr1, computoc::transform(iarr1, iarr2, [](int a, double b) { return b / a; })));
 
     const int odata2[] = {
         0, 1,
@@ -663,7 +663,7 @@ TEST(Array_test, element_wise_transform_operation)
         4, 5 };
     computoc::Array oarr2{ {3, dims}, odata2 };
 
-    EXPECT_EQ(oarr2, computoc::transform(iarr1, 1, [](int a, int b) { return a - b; }));
+    EXPECT_TRUE(computoc::all_equal(oarr2, computoc::transform(iarr1, 1, [](int a, int b) { return a - b; })));
 
     const int odata3[] = {
         0, -1,
@@ -671,7 +671,7 @@ TEST(Array_test, element_wise_transform_operation)
         -4, -5 };
     computoc::Array oarr3{ {3, dims}, odata3 };
 
-    EXPECT_EQ(oarr3, computoc::transform(1, iarr1, [](int a, int b) { return a - b; }));
+    EXPECT_TRUE(computoc::all_equal(oarr3, computoc::transform(1, iarr1, [](int a, int b) { return a - b; })));
 }
 
 TEST(Array_test, reduce_elements)
@@ -693,7 +693,7 @@ TEST(Array_test, reduce_elements)
         11.0
     };
     computoc::Array rarr2{ {2, dims2}, rdata2 };
-    EXPECT_EQ(rarr2, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2));
+    EXPECT_TRUE(computoc::all_equal(rarr2, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2)));
 
     std::int64_t dims1[]{ 3, 2 };
     const double rdata1[]{
@@ -701,18 +701,18 @@ TEST(Array_test, reduce_elements)
         3.0, 4.0,
         5.0, 6.0 };
     computoc::Array rarr1{ {2, dims1}, rdata1 };
-    EXPECT_EQ(rarr1, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1));
+    EXPECT_TRUE(computoc::all_equal(rarr1, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1)));
 
     std::int64_t dims0[]{ 1, 2 };
     const double rdata0[]{
         9.0, 12.0 };
     computoc::Array rarr0{ {2, dims0}, rdata0 };
-    EXPECT_EQ(rarr0, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 0));
+    EXPECT_TRUE(computoc::all_equal(rarr0, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 0)));
 
     computoc::Array iarr1d{ {6}, idata };
     const double data1d[]{ 21.0 };
     computoc::Array rarr1d{ {1}, data1d };
-    EXPECT_EQ(rarr1d, computoc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0));
+    EXPECT_TRUE(computoc::all_equal(rarr1d, computoc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0)));
 
     EXPECT_THROW(computoc::reduce(iarr, [](int, double) { return 0; }, 3), std::invalid_argument);
 
@@ -722,7 +722,7 @@ TEST(Array_test, reduce_elements)
             return previous + value;
         };
 
-        EXPECT_EQ(rarr1d, computoc::reduce(computoc::reduce(computoc::reduce(iarr, sum, 2), sum, 1), sum, 0));
+        EXPECT_TRUE(computoc::all_equal(rarr1d, computoc::reduce(computoc::reduce(computoc::reduce(iarr, sum, 2), sum, 1), sum, 0)));
     }
 }
 
@@ -738,7 +738,7 @@ TEST(Array_test, all)
     const bool rdata[] = { true, false };
     computoc::Array<bool> rarr{ {2}, rdata };
 
-    EXPECT_EQ(rarr, computoc::all(arr, 0));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::all(arr, 0)));
 }
 
 TEST(Array_test, any)
@@ -753,7 +753,7 @@ TEST(Array_test, any)
     const bool rdata[] = { true, false };
     computoc::Array<bool> rarr{ {2}, rdata };
 
-    EXPECT_EQ(rarr, computoc::any(arr, 0));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::any(arr, 0)));
 }
 
 TEST(Array_test, filter_elements_by_condition)
@@ -768,18 +768,18 @@ TEST(Array_test, filter_elements_by_condition)
 
     const int rdata0[]{ 1, 2, 3, 0, 5, 6 };
     computoc::Array rarr0{ {6}, rdata0 };
-    EXPECT_EQ(rarr0, computoc::filter(iarr, [](int) {return 1; }));
+    EXPECT_TRUE(computoc::all_equal(rarr0, computoc::filter(iarr, [](int) {return 1; })));
 
     const int rdata1[]{ 1, 2, 3, 5, 6 };
     computoc::Array rarr1{ {5}, rdata1 };
-    EXPECT_EQ(rarr1, computoc::filter(iarr, [](int a) { return a; }));
+    EXPECT_TRUE(computoc::all_equal(rarr1, computoc::filter(iarr, [](int a) { return a; })));
 
     const double rdata2[]{ 2.0, 0.0, 6.0 };
     computoc::Array rarr2{ {3}, rdata2 };
-    EXPECT_EQ(rarr2, computoc::filter(iarr, [](int a) { return a % 2 == 0; }));
+    EXPECT_TRUE(computoc::all_equal(rarr2, computoc::filter(iarr, [](int a) { return a % 2 == 0; })));
 
-    EXPECT_EQ(computoc::Array<int>{}, computoc::filter(iarr, [](int a) { return a > 6; }));
-    EXPECT_EQ(computoc::Array<int>{}, computoc::filter(computoc::Array<int>{}, [](int) {return 1; }));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<int>{}, computoc::filter(iarr, [](int a) { return a > 6; })));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<int>{}, computoc::filter(computoc::Array<int>{}, [](int) {return 1; })));
 }
 
 TEST(Array_test, filter_elements_by_maks)
@@ -801,14 +801,14 @@ TEST(Array_test, filter_elements_by_maks)
     computoc::Array imask0{ {3, dims}, imask_data0 };
     const int rdata0[]{ 1, 4, 6 };
     computoc::Array rarr0{ {3}, rdata0 };
-    EXPECT_EQ(rarr0, computoc::filter(iarr, imask0));
+    EXPECT_TRUE(computoc::all_equal(rarr0, computoc::filter(iarr, imask0)));
 
     const int imask_data1[]{
         0, 0,
         0, 0,
         0, 0 };
     computoc::Array imask1{ {3, dims}, imask_data1 };
-    EXPECT_EQ(computoc::Array<int>{}, computoc::filter(iarr, imask1));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<int>{}, computoc::filter(iarr, imask1)));
 
     const int imask_data2[]{
         1, 1,
@@ -817,9 +817,9 @@ TEST(Array_test, filter_elements_by_maks)
     computoc::Array imask2{ {3, dims}, imask_data2 };
     const int rdata2[]{ 1, 2, 3, 4, 5, 6 };
     computoc::Array rarr2{ {6}, rdata2 };
-    EXPECT_EQ(rarr2, computoc::filter(iarr, imask2));
+    EXPECT_TRUE(computoc::all_equal(rarr2, computoc::filter(iarr, imask2)));
 
-    EXPECT_EQ(computoc::Array<int>{}, computoc::filter(computoc::Array<int>{}, imask0));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<int>{}, computoc::filter(computoc::Array<int>{}, imask0)));
 }
 
 TEST(Array_test, select_elements_indices_by_condition)
@@ -834,23 +834,23 @@ TEST(Array_test, select_elements_indices_by_condition)
 
     const std::int64_t rdata0[]{ 0, 1, 2, 3, 4, 5 };
     computoc::Array rarr0{ {6}, rdata0 };
-    EXPECT_EQ(rarr0, computoc::find(iarr, [](int) {return 1; }));
+    EXPECT_TRUE(computoc::all_equal(rarr0, computoc::find(iarr, [](int) {return 1; })));
 
     const std::int64_t rdata1[]{ 0, 1, 2, 4, 5 };
     computoc::Array rarr1{ {5}, rdata1 };
-    EXPECT_EQ(rarr1, computoc::find(iarr, [](int a) { return a; }));
+    EXPECT_TRUE(computoc::all_equal(rarr1, computoc::find(iarr, [](int a) { return a; })));
 
     const std::int64_t rdata2[]{ 1, 3, 5 };
     computoc::Array rarr2{ {3}, rdata2 };
-    EXPECT_EQ(rarr2, computoc::find(iarr, [](int a) { return a % 2 == 0; }));
+    EXPECT_TRUE(computoc::all_equal(rarr2, computoc::find(iarr, [](int a) { return a % 2 == 0; })));
 
-    EXPECT_EQ(computoc::Array<std::int64_t>{}, computoc::find(iarr, [](int a) { return a > 6; }));
-    EXPECT_EQ(computoc::Array<std::int64_t>{}, computoc::find(computoc::Array<int>{}, [](int) {return 1; }));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<std::int64_t>{}, computoc::find(iarr, [](int a) { return a > 6; })));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<std::int64_t>{}, computoc::find(computoc::Array<int>{}, [](int) {return 1; })));
 
     // subarray
     const std::int64_t rdatas[]{ 2 };
     computoc::Array rarrs{ {1}, rdatas };
-    EXPECT_EQ(rarrs, computoc::find(iarr({ {1, 1} }), [](int a) { return a; }));
+    EXPECT_TRUE(computoc::all_equal(rarrs, computoc::find(iarr({ {1, 1} }), [](int a) { return a; })));
 
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
@@ -859,7 +859,7 @@ TEST(Array_test, select_elements_indices_by_condition)
         computoc::Array not_zeros_inds{ computoc::find(sarr, [](int a) {return a != 0; }) };
 
         computoc::Array<std::int64_t> rinds1{ {3}, {2, 4, 5} };
-        EXPECT_EQ(rinds1, not_zeros_inds);
+        EXPECT_TRUE(computoc::all_equal(rinds1, not_zeros_inds));
 
         computoc::Array<std::int64_t> rvals1{ {3}, {12, 14, 15} };
 
@@ -867,7 +867,7 @@ TEST(Array_test, select_elements_indices_by_condition)
             10, 11,
             12, 13,
             14, 15 } };
-        EXPECT_EQ(rvals1, rallvals1(not_zeros_inds));
+        EXPECT_TRUE(computoc::all_equal(rvals1, rallvals1(not_zeros_inds)));
     }
 }
 
@@ -890,14 +890,14 @@ TEST(Array_test, select_elements_indices_by_maks)
     computoc::Array imask0{ {3, dims}, imask_data0 };
     const std::int64_t rdata0[]{ 0, 3, 5 };
     computoc::Array rarr0{ {3}, rdata0 };
-    EXPECT_EQ(rarr0, computoc::find(iarr, imask0));
+    EXPECT_TRUE(computoc::all_equal(rarr0, computoc::find(iarr, imask0)));
 
     const int imask_data1[]{
         0, 0,
         0, 0,
         0, 0 };
     computoc::Array imask1{ {3, dims}, imask_data1 };
-    EXPECT_EQ(computoc::Array<std::int64_t>{}, computoc::find(iarr, imask1));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<std::int64_t>{}, computoc::find(iarr, imask1)));
 
     const int imask_data2[]{
         1, 1,
@@ -906,9 +906,9 @@ TEST(Array_test, select_elements_indices_by_maks)
     computoc::Array imask2{ {3, dims}, imask_data2 };
     const std::int64_t rdata2[]{ 0, 1, 2, 3, 4, 5 };
     computoc::Array rarr2{ {6}, rdata2 };
-    EXPECT_EQ(rarr2, computoc::find(iarr, imask2));
+    EXPECT_TRUE(computoc::all_equal(rarr2, computoc::find(iarr, imask2)));
 
-    EXPECT_EQ(computoc::Array<std::int64_t>{}, computoc::find(computoc::Array<std::int64_t>{}, imask0));
+    EXPECT_TRUE(computoc::all_equal(computoc::Array<std::int64_t>{}, computoc::find(computoc::Array<std::int64_t>{}, imask0)));
 
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
@@ -919,7 +919,7 @@ TEST(Array_test, select_elements_indices_by_maks)
             0, 1}}) };
 
         computoc::Array<std::int64_t> rinds1{ {2}, {3, 5} };
-        EXPECT_EQ(rinds1, not_zeros_inds);
+        EXPECT_TRUE(computoc::all_equal(rinds1, not_zeros_inds));
 
         computoc::Array<std::int64_t> rvals1{ {2}, {13, 15} };
 
@@ -927,7 +927,7 @@ TEST(Array_test, select_elements_indices_by_maks)
             10, 11,
             12, 13,
             14, 15 } };
-        EXPECT_EQ(rvals1, rallvals1(not_zeros_inds));
+        EXPECT_TRUE(computoc::all_equal(rvals1, rallvals1(not_zeros_inds)));
     }
 }
 
@@ -1012,7 +1012,7 @@ TEST(Array_test, transpose)
         47.0, 48.0 };
     computoc::Array rarr{ {4, rdims}, rdata };
 
-    EXPECT_EQ(rarr, computoc::transpose(iarr, { 2, 0, 1, 3 }));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::transpose(iarr, { 2, 0, 1, 3 })));
 
     EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 3, 2 }), std::invalid_argument);
     EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 4 }), std::out_of_range);
@@ -1040,8 +1040,8 @@ TEST(Array_test, equal)
         true, false };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
     
-    EXPECT_EQ(rarr, computoc::equal(arr1, arr2));
-    EXPECT_THROW(computoc::equal(arr1, Integer_array{ {1} }), std::invalid_argument);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 == arr2));
+    EXPECT_THROW(arr1 == Integer_array{ {1} }, std::invalid_argument);
 }
 
 TEST(Array_test, not_equal)
@@ -1066,8 +1066,8 @@ TEST(Array_test, not_equal)
         false, true };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, computoc::not_equal(arr1, arr2));
-    EXPECT_THROW(computoc::not_equal(arr1, Integer_array{ {1} }), std::invalid_argument);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 != arr2));
+    EXPECT_THROW(arr1 != Integer_array{ {1} }, std::invalid_argument);
 }
 
 TEST(Array_test, greater)
@@ -1092,9 +1092,9 @@ TEST(Array_test, greater)
         false, false };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, arr1 > arr2);
-    EXPECT_EQ(rarr, arr1 > 6);
-    EXPECT_EQ(rarr, 0 > arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 > arr2));
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 > 6));
+    EXPECT_TRUE(computoc::all_equal(rarr, 0 > arr1));
     EXPECT_THROW(arr1 > Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1120,8 +1120,8 @@ TEST(Array_test, greater_equal)
         true, false };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, arr1 >= arr2);
-    EXPECT_EQ(rarr, arr1 >= 1);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 >= arr2));
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 >= 1));
 
     const bool rdata2[] = {
         true, true,
@@ -1129,7 +1129,7 @@ TEST(Array_test, greater_equal)
         true, false };
     computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, 5 >= arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, 5 >= arr2));
 
     EXPECT_THROW(arr1 >= Integer_array{ {1} }, std::invalid_argument);
 }
@@ -1156,8 +1156,8 @@ TEST(Array_test, less)
         false, true };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, arr1 < arr2);
-    EXPECT_EQ(rarr, arr1 < 1);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 < arr2));
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 < 1));
 
     const bool rdata2[] = {
         false, true,
@@ -1165,7 +1165,7 @@ TEST(Array_test, less)
         true, true };
     computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, 1 < arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, 1 < arr2));
 
     EXPECT_THROW(arr1 < Integer_array{ {1} }, std::invalid_argument);
 }
@@ -1192,9 +1192,9 @@ TEST(Array_test, less_equal)
         true, true };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, arr1 <= arr2);
-    EXPECT_EQ(rarr, arr1 <= 5);
-    EXPECT_EQ(rarr, 0 <= arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 <= arr2));
+    EXPECT_TRUE(computoc::all_equal(rarr, arr1 <= 5));
+    EXPECT_TRUE(computoc::all_equal(rarr, 0 <= arr1));
     EXPECT_THROW(arr1 <= Integer_array{ {1} }, std::invalid_argument);
 }
 
@@ -1220,9 +1220,9 @@ TEST(Array_test, close)
         true, false };
     computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, computoc::close(arr1, arr2, 2));
-    EXPECT_EQ(rarr, computoc::close(arr1, 3, 2));
-    EXPECT_EQ(rarr, computoc::close(3, arr1, 2));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::close(arr1, arr2, 2)));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::close(arr1, 3, 2)));
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::close(3, arr1, 2)));
     EXPECT_THROW(computoc::close(arr1, Integer_array{ {1} }), std::invalid_argument);
 }
 
@@ -1248,9 +1248,9 @@ TEST(Array_test, plus)
         10, 6 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 + arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 + arr2));
     arr1 += arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 + Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 += Integer_array{ {1} }, std::invalid_argument);
@@ -1261,10 +1261,10 @@ TEST(Array_test, plus)
         15, 16 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 + 10);
-    EXPECT_EQ(rarr2, 10 + arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 + 10));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 10 + arr2));
     arr2 += 10;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, minus)
@@ -1289,9 +1289,9 @@ TEST(Array_test, minus)
         0, -6 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 - arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 - arr2));
     arr1 -= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 - Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 -= Integer_array{ {1} }, std::invalid_argument);
@@ -1302,7 +1302,7 @@ TEST(Array_test, minus)
         4, 5 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 - 1);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 - 1));
 
     const int rdata3[] = {
         0, -1,
@@ -1310,9 +1310,9 @@ TEST(Array_test, minus)
         -4, -5 };
     Integer_array rarr3{ {3, 1, 2}, rdata3 };
 
-    EXPECT_EQ(rarr3, 1 - arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr3, 1 - arr2));
     arr2 -= 1;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, multiply)
@@ -1337,9 +1337,9 @@ TEST(Array_test, multiply)
         25, 0 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 * arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 * arr2));
     arr1 *= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 * Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 *= Integer_array{ {1} }, std::invalid_argument);
@@ -1350,10 +1350,10 @@ TEST(Array_test, multiply)
         50, 60 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 * 10);
-    EXPECT_EQ(rarr2, 10 * arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 * 10));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 10 * arr2));
     arr2 *= 10;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, divide)
@@ -1378,9 +1378,9 @@ TEST(Array_test, divide)
         1, 0 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 / arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 / arr2));
     arr1 /= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 / Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 /= Integer_array{ {1} }, std::invalid_argument);
@@ -1391,7 +1391,7 @@ TEST(Array_test, divide)
         2, 3 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 / 2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 / 2));
 
     const int rdata3[] = {
         2, 1,
@@ -1399,9 +1399,9 @@ TEST(Array_test, divide)
         0, 0 };
     Integer_array rarr3{ {3, 1, 2}, rdata3 };
 
-    EXPECT_EQ(rarr3, 2 / arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr3, 2 / arr2));
     arr2 /= 2;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, modulu)
@@ -1426,9 +1426,9 @@ TEST(Array_test, modulu)
         0, 0 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 % arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 % arr2));
     arr1 %= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 % Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 %= Integer_array{ {1} }, std::invalid_argument);
@@ -1439,7 +1439,7 @@ TEST(Array_test, modulu)
         1, 0 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 % 2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 % 2));
 
     const int rdata3[] = {
         0, 0,
@@ -1447,9 +1447,9 @@ TEST(Array_test, modulu)
         2, 2 };
     Integer_array rarr3{ {3, 1, 2}, rdata3 };
 
-    EXPECT_EQ(rarr3, 2 % arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr3, 2 % arr2));
     arr2 %= 2;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, xor)
@@ -1474,9 +1474,9 @@ TEST(Array_test, xor)
         0b000, 0b101 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 ^ arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 ^ arr2));
     arr1 ^= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 ^ Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 ^= Integer_array{ {1} }, std::invalid_argument);
@@ -1487,10 +1487,10 @@ TEST(Array_test, xor)
         0b011, 0b111 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 ^ 0b111);
-    EXPECT_EQ(rarr2, 0b111 ^ arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 ^ 0b111));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 0b111 ^ arr2));
     arr2 ^= 0b111;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, and)
@@ -1515,9 +1515,9 @@ TEST(Array_test, and)
         0b100, 0b000 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 & arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 & arr2));
     arr1 &= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 & Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 &= Integer_array{ {1} }, std::invalid_argument);
@@ -1528,10 +1528,10 @@ TEST(Array_test, and)
         0b100, 0b000 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 & 0b111);
-    EXPECT_EQ(rarr2, 0b111 & arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 & 0b111));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 0b111 & arr2));
     arr2 &= 0b111;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, or)
@@ -1556,9 +1556,9 @@ TEST(Array_test, or)
         0b100, 0b101 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 | arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 | arr2));
     arr1 |= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 | Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 |= Integer_array{ {1} }, std::invalid_argument);
@@ -1569,10 +1569,10 @@ TEST(Array_test, or)
         0b111, 0b111 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 | 0b111);
-    EXPECT_EQ(rarr2, 0b111 | arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 | 0b111));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 0b111 | arr2));
     arr2 |= 0b111;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, shift_left)
@@ -1597,9 +1597,9 @@ TEST(Array_test, shift_left)
         64, 160 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 << arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 << arr2));
     arr1 <<= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 << Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 <<= Integer_array{ {1} }, std::invalid_argument);
@@ -1610,7 +1610,7 @@ TEST(Array_test, shift_left)
         16, 20 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 << 2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 << 2));
 
     const int rdata3[] = {
         2, 4,
@@ -1618,9 +1618,9 @@ TEST(Array_test, shift_left)
         32, 64 };
     Integer_array rarr3{ {3, 1, 2}, rdata3 };
 
-    EXPECT_EQ(rarr3, 2 << arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr3, 2 << arr2));
     arr2 <<= 2;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, shift_right)
@@ -1645,9 +1645,9 @@ TEST(Array_test, shift_right)
         0, 0 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 >> arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 >> arr2));
     arr1 >>= arr2;
-    EXPECT_EQ(rarr1, arr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_THROW(arr1 >> Integer_array{ {1} }, std::invalid_argument);
     EXPECT_THROW(arr1 >>= Integer_array{ {1} }, std::invalid_argument);
@@ -1658,7 +1658,7 @@ TEST(Array_test, shift_right)
         1, 1 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 >> 2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 >> 2));
 
     const int rdata3[] = {
         2, 1,
@@ -1666,9 +1666,9 @@ TEST(Array_test, shift_right)
         0, 0 };
     Integer_array rarr3{ {3, 1, 2}, rdata3 };
 
-    EXPECT_EQ(rarr3, 2 >> arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr3, 2 >> arr2));
     arr2 >>= 2;
-    EXPECT_EQ(rarr2, arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2));
 }
 
 TEST(Array_test, bitwise_not)
@@ -1687,8 +1687,8 @@ TEST(Array_test, bitwise_not)
         -5, -6 };
     Integer_array rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, ~arr);
-    EXPECT_EQ(Integer_array{}, ~Integer_array{});
+    EXPECT_TRUE(computoc::all_equal(rarr, ~arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, ~Integer_array{}));
 }
 
 TEST(Array_test, logic_not)
@@ -1707,8 +1707,8 @@ TEST(Array_test, logic_not)
         0, 0 };
     Integer_array rarr{ {3, 1, 2}, rdata };
 
-    EXPECT_EQ(rarr, !arr);
-    EXPECT_EQ(Integer_array{}, !Integer_array{});
+    EXPECT_TRUE(computoc::all_equal(rarr, !arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, !Integer_array{}));
 }
 
 TEST(Array_test, logic_and)
@@ -1733,7 +1733,7 @@ TEST(Array_test, logic_and)
         1, 0 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 && arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 && arr2));
 
     EXPECT_THROW(arr1 && Integer_array{ {1} }, std::invalid_argument);
 
@@ -1743,8 +1743,8 @@ TEST(Array_test, logic_and)
         1, 0 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 && 1);
-    EXPECT_EQ(rarr2, 1 && arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 && 1));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 1 && arr2));
 }
 
 TEST(Array_test, logic_or)
@@ -1769,7 +1769,7 @@ TEST(Array_test, logic_or)
         1, 1 };
     Integer_array rarr1{ {3, 1, 2}, rdata1 };
 
-    EXPECT_EQ(rarr1, arr1 || arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr1, arr1 || arr2));
 
     EXPECT_THROW(arr1 || Integer_array{ {1} }, std::invalid_argument);
 
@@ -1779,8 +1779,8 @@ TEST(Array_test, logic_or)
         1, 1 };
     Integer_array rarr2{ {3, 1, 2}, rdata2 };
 
-    EXPECT_EQ(rarr2, arr2 || 1);
-    EXPECT_EQ(rarr2, 1 || arr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr2 || 1));
+    EXPECT_TRUE(computoc::all_equal(rarr2, 1 || arr2));
 }
 
 TEST(Array_test, increment)
@@ -1807,11 +1807,11 @@ TEST(Array_test, increment)
 
     Integer_array old{ arr++ };
 
-    EXPECT_EQ(rarr1, old);
-    EXPECT_EQ(rarr2, arr);
-    EXPECT_EQ(Integer_array{}, ++Integer_array{});
-    EXPECT_EQ(arr, ++(Integer_array{ { 3, 1, 2 }, data }));
-    EXPECT_EQ((Integer_array{ { 3, 1, 2 }, data }), (Integer_array{ { 3, 1, 2 }, data })++);
+    EXPECT_TRUE(computoc::all_equal(rarr1, old));
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, ++Integer_array{}));
+    EXPECT_TRUE(computoc::all_equal(arr, ++(Integer_array{ { 3, 1, 2 }, data })));
+    EXPECT_TRUE(computoc::all_equal((Integer_array{ { 3, 1, 2 }, data }), (Integer_array{ { 3, 1, 2 }, data })++));
 }
 
 TEST(Array_test, decrement)
@@ -1838,11 +1838,11 @@ TEST(Array_test, decrement)
 
     Integer_array old{ arr-- };
 
-    EXPECT_EQ(rarr1, old);
-    EXPECT_EQ(rarr2, arr);
-    EXPECT_EQ(Integer_array{}, --Integer_array{});
-    EXPECT_EQ(arr, --(Integer_array{ { 3, 1, 2 }, data }));
-    EXPECT_EQ((Integer_array{ { 3, 1, 2 }, data }), (Integer_array{ { 3, 1, 2 }, data })--);
+    EXPECT_TRUE(computoc::all_equal(rarr1, old));
+    EXPECT_TRUE(computoc::all_equal(rarr2, arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, --Integer_array{}));
+    EXPECT_TRUE(computoc::all_equal(arr, --(Integer_array{ { 3, 1, 2 }, data })));
+    EXPECT_TRUE(computoc::all_equal((Integer_array{ { 3, 1, 2 }, data }), (Integer_array{ { 3, 1, 2 }, data })--));
 }
 
 TEST(Array_test, can_be_matched_with_another_array_or_value)
@@ -1907,7 +1907,7 @@ TEST(Array_test, can_be_matched_with_another_array_or_value)
         Integer_array rarr{ {4, rdims}, rdata };
 
         Integer_array sarr{ arr({{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}) };
-        EXPECT_EQ(rarr, sarr);
+        EXPECT_TRUE(computoc::all_equal(rarr, sarr));
         EXPECT_TRUE(computoc::all_match(rarr, sarr, [](int a, int b) { return a == b; }));
     }
 
@@ -1920,11 +1920,11 @@ TEST(Array_test, can_be_matched_with_another_array_or_value)
         std::int64_t dims1d[]{ 3, 1, 2 };
         computoc::Array<double> arr1d{ {3, dims1d}, data1d };
 
-        EXPECT_EQ(arr1, arr1d);
+        EXPECT_TRUE(computoc::all_equal(arr1, arr1d));
         EXPECT_TRUE(computoc::all_match(arr1, arr1d, [](int a, int b) { return a == b; }));
 
         arr1d({ 0, 0, 0 }) = 1.001;
-        EXPECT_NE(arr1, arr1d);
+        EXPECT_FALSE(computoc::all_equal(arr1, arr1d));
         EXPECT_TRUE(computoc::all_match(arr1, arr1d, [](int a, int b) { return a == b; }));
     }
     
@@ -2145,20 +2145,20 @@ TEST(Array_test, can_return_slice)
     {
         std::initializer_list<computoc::Interval<std::int64_t>> ranges{};
         Integer_array rarr{ arr(ranges) };
-        EXPECT_EQ(arr, rarr);
+        EXPECT_TRUE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(arr.data(), rarr.data());
     }
 
     // illegal ranges
     {
-        EXPECT_EQ(Integer_array{}, arr({ {0, 0, 0} }));
-        EXPECT_EQ(Integer_array{}, arr({ {2, 1, 1} }));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, arr({ {0, 0, 0} })));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, arr({ {2, 1, 1} })));
     }
 
     // empty array
     {
-        EXPECT_EQ(Integer_array{}, Integer_array{}(std::initializer_list<computoc::Interval<std::int64_t>>{}));
-        EXPECT_EQ(Integer_array{}, Integer_array{}({ {0,1}, {0,4,2} }));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, Integer_array{}(std::initializer_list<computoc::Interval<std::int64_t>>{})));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, Integer_array{}({ {0,1}, {0,4,2} })));
     }
 
     // ranges in dims
@@ -2170,7 +2170,7 @@ TEST(Array_test, can_return_slice)
         const std::int64_t tdims1[] = { 2, 1, 1 };
         Integer_array tarr1{ {3, tdims1}, tdata1 };
         Integer_array sarr1{ arr({{0, 2,2}, {0}, {0}}) };
-        EXPECT_EQ(tarr1, sarr1);
+        EXPECT_TRUE(computoc::all_equal(tarr1, sarr1));
         EXPECT_EQ(arr.data(), sarr1.data());
 
         // nranges < ndims
@@ -2179,17 +2179,17 @@ TEST(Array_test, can_return_slice)
         const std::int64_t tdims2[] = { 1, 1, 2 };
         Integer_array tarr2{ {3, tdims2}, tdata2 };
         Integer_array sarr2{ arr({{1, 2, 2}}) };
-        EXPECT_EQ(tarr2, sarr2);
+        EXPECT_TRUE(computoc::all_equal(tarr2, sarr2));
         EXPECT_EQ(arr.data(), sarr2.data());
 
         // nranges > ndims - ignore extra ranges
         Integer_array sarr3{ arr({{0, 2, 2}, {0}, {0}, {100, 100, 5}}) };
-        EXPECT_EQ(sarr1, sarr3);
+        EXPECT_TRUE(computoc::all_equal(sarr1, sarr3));
         EXPECT_EQ(arr.data(), sarr3.data());
 
         // out of range and negative indices
         Integer_array sarr4{ arr({{-1, 3, -2}, {1}, {-2}}) };
-        EXPECT_EQ(sarr1, sarr4);
+        EXPECT_TRUE(computoc::all_equal(sarr1, sarr4));
         EXPECT_EQ(arr.data(), sarr4.data());
     }
 }
@@ -2202,7 +2202,7 @@ TEST(Array_test, can_be_assigned_with_value)
     {
         Integer_array arr{};
         arr = 100;
-        EXPECT_EQ(Integer_array{}, arr);
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, arr));
     }
 
     // normal array
@@ -2221,7 +2221,7 @@ TEST(Array_test, can_be_assigned_with_value)
         Integer_array tarr{ {3, dims}, tdata };
 
         arr = 100;
-        EXPECT_EQ(tarr, arr);
+        EXPECT_TRUE(computoc::all_equal(tarr, arr));
     }
 
     // subarray
@@ -2242,7 +2242,7 @@ TEST(Array_test, can_be_assigned_with_value)
         arr({ {1,2}, {0}, {1} }) = 100;
         // assignment of different type
         arr({ {0,0}, {0}, {1} }) = 50.5;
-        EXPECT_EQ(tarr, arr);
+        EXPECT_TRUE(computoc::all_equal(tarr, arr));
     }
 }
 
@@ -2264,7 +2264,7 @@ TEST(Array_test, copy_by_reference)
         3, 4,
         0, 6 };
     Integer_array rarr1{ {3, dims}, rdata1 };
-    EXPECT_EQ(rarr1, carr1);
+    EXPECT_TRUE(computoc::all_equal(rarr1, carr1));
 
     Integer_array carr2{};
     carr2 = carr1;
@@ -2274,10 +2274,10 @@ TEST(Array_test, copy_by_reference)
         3, 4,
         0, 6 };
     Integer_array rarr2{ {3, dims}, rdata2 };
-    EXPECT_EQ(rarr2, carr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, carr2));
 
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = carr1;
-    EXPECT_EQ(rarr2, carr2);
+    EXPECT_TRUE(computoc::all_equal(rarr2, carr2));
 
     // slice copying by assignment (rvalue)
     {
@@ -2287,10 +2287,10 @@ TEST(Array_test, copy_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         Integer_array starr3{ tarr3({ {0, 5, 2} }) };
         rarr3({ {0, 5, 2} }) = starr3;
-        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_TRUE(computoc::all_equal(tarr3, rarr3));
     }
 
     // slice copying by assignment (lvalue)
@@ -2301,11 +2301,11 @@ TEST(Array_test, copy_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         Integer_array starr3{ tarr3({ {0, 5, 2} }) };
         Integer_array srarr3{ rarr3({ {0, 5, 2} }) };
         rarr3 = starr3;
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
     }
 
     // different template arguments
@@ -2324,11 +2324,11 @@ TEST(Array_test, copy_by_reference)
         computoc::Array<double> darr{ {3, dims}, ddata };
 
         Integer_array cdarr1{ darr };
-        EXPECT_EQ(iarr, cdarr1);
+        EXPECT_TRUE(computoc::all_equal(iarr, cdarr1));
 
         Integer_array cdarr2{};
         cdarr2 = darr;
-        EXPECT_EQ(iarr, cdarr2);
+        EXPECT_TRUE(computoc::all_equal(iarr, cdarr2));
     }
 
     // slice copying by assignment (rvalue) - different template arguments
@@ -2339,10 +2339,10 @@ TEST(Array_test, copy_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         computoc::Array<double> starr3{ tarr3({ {0, 5, 2} }) };
         rarr3({ {0, 5, 2} }) = starr3;
-        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_TRUE(computoc::all_equal(tarr3, rarr3));
     }
 
     // slice copying by assignment (rvalue) - different template arguments and different dimensions
@@ -2353,10 +2353,10 @@ TEST(Array_test, copy_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         computoc::Array<double> starr3{ tarr3({ {0, 5, 2} }) };
         rarr3({ {0, 3, 2} }) = starr3;
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
     }
 
     // slice copying by assignment (lvalue) - different template arguments
@@ -2367,11 +2367,11 @@ TEST(Array_test, copy_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         computoc::Array<double> starr3{ tarr3({ {0, 5, 2} }) };
         Integer_array srarr3{ rarr3({ {0, 5, 2} }) };
         rarr3 = starr3;
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
     }
 }
 
@@ -2388,18 +2388,18 @@ TEST(Array_test, move_by_reference)
 
     Integer_array arr{ {3, dims}, data };
     Integer_array carr1{ std::move(arr) };
-    EXPECT_EQ(sarr, carr1);
+    EXPECT_TRUE(computoc::all_equal(sarr, carr1));
     EXPECT_TRUE(empty(arr));
 
     Integer_array carr2{};
     carr2 = std::move(carr1);
-    EXPECT_EQ(sarr, carr2);
+    EXPECT_TRUE(computoc::all_equal(sarr, carr2));
     EXPECT_TRUE(empty(carr1));
 
     Integer_array sarr2{ {3, dims}, data };
     carr2({ {0, 1}, {0, 0}, {0, 1} }) = std::move(sarr2);
     EXPECT_TRUE(empty(sarr2));
-    EXPECT_EQ(sarr, carr2);
+    EXPECT_TRUE(computoc::all_equal(sarr, carr2));
 
     // slice moving by assignment
     {
@@ -2409,9 +2409,9 @@ TEST(Array_test, move_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         rarr3({ {0, 5, 2} }) = std::move(tarr3({ {0, 5, 2} }));
-        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_TRUE(computoc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
 
@@ -2423,10 +2423,10 @@ TEST(Array_test, move_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         Integer_array srarr3{ rarr3({ {0, 5, 2} }) };
         srarr3 = std::move(tarr3({ {0, 5, 2} }));
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
 
@@ -2446,12 +2446,12 @@ TEST(Array_test, move_by_reference)
         computoc::Array<double> darr{ {3, dims}, ddata };
 
         Integer_array cdarr1{ std::move(darr) };
-        EXPECT_EQ(iarr, cdarr1);
+        EXPECT_TRUE(computoc::all_equal(iarr, cdarr1));
         EXPECT_TRUE(empty(darr));
 
         computoc::Array<double> cdarr2{};
         cdarr2 = std::move(cdarr1);
-        EXPECT_EQ((Integer_array{ {3, dims}, idata }), cdarr2);
+        EXPECT_TRUE(computoc::all_equal((Integer_array{ {3, dims}, idata }), cdarr2));
         EXPECT_TRUE(empty(cdarr1));
     }
 
@@ -2463,9 +2463,9 @@ TEST(Array_test, move_by_reference)
         const double rdata3[] = { 0, 2, 0, 4, 0, 6 };
         computoc::Array<double> rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         rarr3({ {0, 5, 2} }) = std::move(tarr3({ {0, 5, 2} }));
-        EXPECT_EQ(tarr3, rarr3);
+        EXPECT_TRUE(computoc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
 
@@ -2477,9 +2477,9 @@ TEST(Array_test, move_by_reference)
         const double rdata3[] = { 0, 2, 0, 4, 0, 6 };
         computoc::Array<double> rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         rarr3({ {0, 3, 2} }) = std::move(tarr3({ {0, 5, 2} }));
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
 
@@ -2491,10 +2491,10 @@ TEST(Array_test, move_by_reference)
         const int rdata3[] = { 0, 2, 0, 4, 0, 6 };
         Integer_array rarr3{ {6}, rdata3 };
 
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         computoc::Array<double> srarr3{ rarr3({ {0, 5, 2} }) };
         srarr3 = std::move(tarr3({ {0, 5, 2} }));
-        EXPECT_NE(tarr3, rarr3);
+        EXPECT_FALSE(computoc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
 }
@@ -2505,7 +2505,7 @@ TEST(Array_test, clone)
 
     Integer_array empty_arr{};
     Integer_array cempty_arr{ computoc::clone(empty_arr) };
-    EXPECT_EQ(empty_arr, cempty_arr);
+    EXPECT_TRUE(computoc::all_equal(empty_arr, cempty_arr));
 
     const int data[] = {
         1, 2,
@@ -2515,14 +2515,14 @@ TEST(Array_test, clone)
     Integer_array sarr{ {3, dims}, data };
 
     Integer_array carr{ computoc::clone(sarr) };
-    EXPECT_EQ(carr, sarr);
+    EXPECT_TRUE(computoc::all_equal(carr, sarr));
     carr({ 0, 0, 0 }) = 0;
-    EXPECT_NE(carr, sarr);
+    EXPECT_FALSE(computoc::all_equal(carr, sarr));
 
     Integer_array csubarr{ computoc::clone(sarr({{1, 1}, {0, 0}, {0, 0}})) };
-    EXPECT_EQ(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr);
+    EXPECT_TRUE(computoc::all_equal(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr));
     csubarr({ 0, 0, 0 }) = 5;
-    EXPECT_NE(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr);
+    EXPECT_FALSE(computoc::all_equal(sarr({ {1, 1}, {0, 0}, {0, 0} }), csubarr));
 }
 
 TEST(Array_test, copy)
@@ -2533,7 +2533,7 @@ TEST(Array_test, copy)
         Integer_array empty_arr{};
         Integer_array cempty_arr{};
         computoc::copy(Integer_array{}, cempty_arr);
-        EXPECT_EQ(empty_arr, cempty_arr);
+        EXPECT_TRUE(computoc::all_equal(empty_arr, cempty_arr));
 
         const int data1[] = {
             1, 2,
@@ -2546,9 +2546,9 @@ TEST(Array_test, copy)
             6, 8,
             10, 12 };
         Integer_array arr2{ {3, 1, 2}, data2 };
-        EXPECT_NE(arr1, arr2);
+        EXPECT_FALSE(computoc::all_equal(arr1, arr2));
         computoc::copy(arr2, arr1);
-        EXPECT_EQ(arr1, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr1, arr2));
 
         const int data3[] = {
             10, 12,
@@ -2556,17 +2556,17 @@ TEST(Array_test, copy)
             10, 12 };
         Integer_array arr3{ {3, 1, 2}, data3 };
         computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
-        EXPECT_EQ(arr3, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr3, arr2));
 
         computoc::copy(arr2, arr2({ {0, 0}, {0, 0}, {0, 1} }));
-        EXPECT_EQ(arr3, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr3, arr2));
     }
 
     { // forward cases - copy from created array to other array
         Integer_array empty_arr{};
         Integer_array cempty_arr{};
         computoc::copy(cempty_arr, empty_arr);
-        EXPECT_EQ(empty_arr, cempty_arr);
+        EXPECT_TRUE(computoc::all_equal(empty_arr, cempty_arr));
 
         const int data1[] = {
             1, 2,
@@ -2579,9 +2579,9 @@ TEST(Array_test, copy)
             6, 8,
             10, 12 };
         Integer_array arr2{ {3, 1, 2}, data2 };
-        EXPECT_NE(arr1, arr2);
+        EXPECT_FALSE(computoc::all_equal(arr1, arr2));
         computoc::copy(arr2, arr1);
-        EXPECT_EQ(arr1, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr1, arr2));
 
         const int data3[] = {
             10, 12,
@@ -2589,13 +2589,13 @@ TEST(Array_test, copy)
             10, 12 };
         Integer_array arr3{ {3, 1, 2}, data3 };
         computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} }));
-        EXPECT_EQ(arr3, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr3, arr2));
 
         computoc::copy(arr2({ {2, 2}, {0, 0}, {0, 1} }), arr2({ {0, 1}, {0, 0}, {0, 1} }));
-        EXPECT_EQ(arr3, arr2);
+        EXPECT_TRUE(computoc::all_equal(arr3, arr2));
 
         computoc::copy(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
-        EXPECT_EQ(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
+        EXPECT_TRUE(computoc::all_equal(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2));
     }
 
     // copy to different type ND array
@@ -2611,9 +2611,9 @@ TEST(Array_test, copy)
             6.1, 8.1,
             10.1, 12.1 };
         computoc::Array<double> arr2d{ {3, 1, 2}, data2d };
-        EXPECT_NE(arr1, arr2d);
+        EXPECT_FALSE(computoc::all_equal(arr1, arr2d));
         computoc::copy(arr2d, arr1);
-        EXPECT_NE(arr1, arr2d);
+        EXPECT_FALSE(computoc::all_equal(arr1, arr2d));
     }
 
     // copy to different dimensions and same count
@@ -2624,9 +2624,9 @@ TEST(Array_test, copy)
         Integer_array tarr{ {3, 1, 2}, data };
 
         Integer_array rarr{ {3, 1, 2}, 0 };
-        EXPECT_NE(tarr, rarr);
+        EXPECT_FALSE(computoc::all_equal(tarr, rarr));
         computoc::copy(arr, rarr);
-        EXPECT_EQ(tarr, rarr);
+        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
     }
 }
 
@@ -2646,7 +2646,7 @@ TEST(Array_test, reshape)
     }
 
     {
-        EXPECT_EQ(Integer_array{}, computoc::reshape(Integer_array{}, {}));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::reshape(Integer_array{}, {})));
     }
 
     {
@@ -2655,13 +2655,13 @@ TEST(Array_test, reshape)
         Integer_array tarr{ {1, tdims}, tdata };
 
         Integer_array rarr{ computoc::reshape(arr, { 6 }) };
-        EXPECT_EQ(tarr, rarr);
+        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
         EXPECT_EQ(arr.data(), rarr.data());
     }
 
     {
         Integer_array rarr{ computoc::reshape(arr, { 3, 1, 2 }) };
-        EXPECT_EQ(arr, rarr);
+        EXPECT_TRUE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(arr.data(), rarr.data());
     }
 
@@ -2671,7 +2671,7 @@ TEST(Array_test, reshape)
         Integer_array tarr{ {2, tdims}, tdata };
 
         Integer_array rarr{ computoc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
-        EXPECT_EQ(tarr, rarr);
+        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
         EXPECT_NE(arr.data(), rarr.data());
     }
 }
@@ -2685,12 +2685,12 @@ TEST(Array_test, resize)
     Integer_array arr{ {1, dims}, data };
 
     {
-        EXPECT_EQ(Integer_array{}, computoc::resize(arr, {}));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::resize(arr, {})));
     }
 
     {
         Integer_array rarr{ computoc::resize(Integer_array{}, {6}) };
-        EXPECT_NE(arr, rarr);
+        EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().s(), rarr.header().dims().s());
         EXPECT_EQ(6, rarr.header().dims().p()[0]);
         EXPECT_NE(arr.data(), rarr.data());
@@ -2698,7 +2698,7 @@ TEST(Array_test, resize)
 
     {
         Integer_array rarr{ computoc::resize(arr, {6}) };
-        EXPECT_EQ(arr, rarr);
+        EXPECT_TRUE(computoc::all_equal(arr, rarr));
         EXPECT_NE(arr.data(), rarr.data());
     }
 
@@ -2708,7 +2708,7 @@ TEST(Array_test, resize)
         Integer_array tarr{ {1, tdims}, tdata };
 
         Integer_array rarr{ computoc::resize(arr, {2}) };
-        EXPECT_EQ(tarr, rarr);
+        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
         EXPECT_NE(tarr.data(), rarr.data());
     }
 
@@ -2721,14 +2721,14 @@ TEST(Array_test, resize)
         Integer_array tarr{ {3, tdims}, tdata };
 
         Integer_array rarr{ computoc::resize(arr, {3, 1, 2}) };
-        EXPECT_EQ(tarr, rarr);
+        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
         EXPECT_NE(tarr.data(), rarr.data());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {10}) };
-        EXPECT_NE(arr, rarr);
-        EXPECT_EQ(arr, rarr({ {0, 5} }));
+        EXPECT_FALSE(computoc::all_equal(arr, rarr));
+        EXPECT_TRUE(computoc::all_equal(arr, rarr({ {0, 5} })));
         EXPECT_NE(arr.data(), rarr.data());
     }
 }
@@ -2751,10 +2751,10 @@ TEST(Array_test, append)
 
         const int rdata1[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
         Integer_array rarr{ {11}, rdata1 };
-        EXPECT_EQ(rarr, computoc::append(arr1, arr2));
+        EXPECT_TRUE(computoc::all_equal(rarr, computoc::append(arr1, arr2)));
 
-        EXPECT_EQ(arr1, computoc::append(arr1, Integer_array{}));
-        EXPECT_EQ(arr2, computoc::append(Integer_array{}, arr2));
+        EXPECT_TRUE(computoc::all_equal(arr1, computoc::append(arr1, Integer_array{})));
+        EXPECT_TRUE(computoc::all_equal(arr2, computoc::append(Integer_array{}, arr2)));
     }
 
     // Axis specified
@@ -2788,7 +2788,7 @@ TEST(Array_test, append)
             19, 20, 21,
             22, 23, 24 };
         Integer_array rarr1{ { 4, 2, 3 }, rdata1 };
-        EXPECT_EQ(rarr1, computoc::append(arr1, arr2, 0));
+        EXPECT_TRUE(computoc::all_equal(rarr1, computoc::append(arr1, arr2, 0)));
 
         const int rdata2[] = {
             1,  2,  3,
@@ -2801,7 +2801,7 @@ TEST(Array_test, append)
             19, 20, 21,
             22, 23, 24 };
         Integer_array rarr2{ { 2, 4, 3 }, rdata2 };
-        EXPECT_EQ(rarr2, computoc::append(arr1, arr2, 1));
+        EXPECT_TRUE(computoc::all_equal(rarr2, computoc::append(arr1, arr2, 1)));
 
         const int rdata3[] = {
             1,  2,  3, 13, 14, 15,
@@ -2811,10 +2811,10 @@ TEST(Array_test, append)
             10, 11, 12, 22, 23, 24 };
             
         Integer_array rarr3{ { 2, 2, 6 }, rdata3 };
-        EXPECT_EQ(rarr3, computoc::append(arr1, arr2, 2));
+        EXPECT_TRUE(computoc::all_equal(rarr3, computoc::append(arr1, arr2, 2)));
 
-        EXPECT_EQ(arr1, computoc::append(arr1, Integer_array{}, 0));
-        EXPECT_EQ(arr2, computoc::append(Integer_array{}, arr2, 0));
+        EXPECT_TRUE(computoc::all_equal(arr1, computoc::append(arr1, Integer_array{}, 0)));
+        EXPECT_TRUE(computoc::all_equal(arr2, computoc::append(Integer_array{}, arr2, 0)));
 
         EXPECT_THROW(computoc::append(arr1, arr2, 3), std::out_of_range);
         const int invalid_data1[] = { 1 };
@@ -2842,11 +2842,11 @@ TEST(Array_test, insert)
 
         const int rdata1[] = { 1, 2, 3, 7, 8, 9, 10, 11, 4, 5, 6 };
         Integer_array rarr{ {11}, rdata1 };
-        EXPECT_EQ(rarr, computoc::insert(arr1, arr2, 3));
+        EXPECT_TRUE(computoc::all_equal(rarr, computoc::insert(arr1, arr2, 3)));
         EXPECT_THROW(computoc::insert(arr1, arr2, 7), std::out_of_range);
 
-        EXPECT_EQ(arr1, computoc::insert(arr1, Integer_array{}, 0));
-        EXPECT_EQ(arr2, computoc::insert(Integer_array{}, arr2, 0));
+        EXPECT_TRUE(computoc::all_equal(arr1, computoc::insert(arr1, Integer_array{}, 0)));
+        EXPECT_TRUE(computoc::all_equal(arr2, computoc::insert(Integer_array{}, arr2, 0)));
     }
 
     // Axis specified
@@ -2880,7 +2880,7 @@ TEST(Array_test, insert)
             7,  8,  9,
             10, 11, 12 };
         Integer_array rarr1{ { 4, 2, 3 }, rdata1 };
-        EXPECT_EQ(rarr1, computoc::insert(arr1, arr2, 1, 0));
+        EXPECT_TRUE(computoc::all_equal(rarr1, computoc::insert(arr1, arr2, 1, 0)));
         EXPECT_THROW(computoc::insert(arr1, arr2, 3, 0), std::out_of_range);
 
         const int rdata2[] = {
@@ -2895,7 +2895,7 @@ TEST(Array_test, insert)
             22, 23, 24,
             10, 11, 12 };
         Integer_array rarr2{ { 2, 4, 3 }, rdata2 };
-        EXPECT_EQ(rarr2, computoc::insert(arr1, arr2, 1, 1));
+        EXPECT_TRUE(computoc::all_equal(rarr2, computoc::insert(arr1, arr2, 1, 1)));
         EXPECT_THROW(computoc::insert(arr1, arr2, 3, 1), std::out_of_range);
 
         const int rdata3[] = {
@@ -2905,11 +2905,11 @@ TEST(Array_test, insert)
             7, 19, 20, 21, 8,  9,
             10, 22, 23, 24, 11, 12 };
         Integer_array rarr3{ { 2, 2, 6 }, rdata3 };
-        EXPECT_EQ(rarr3, computoc::insert(arr1, arr2, 1, 2));
+        EXPECT_TRUE(computoc::all_equal(rarr3, computoc::insert(arr1, arr2, 1, 2)));
         EXPECT_THROW(computoc::insert(arr1, arr2, 4, 1), std::out_of_range);
         
-        EXPECT_EQ(arr1, computoc::insert(arr1, Integer_array{}, 1, 0));
-        EXPECT_EQ(arr2, computoc::insert(Integer_array{}, arr2, 1, 0));
+        EXPECT_TRUE(computoc::all_equal(arr1, computoc::insert(arr1, Integer_array{}, 1, 0)));
+        EXPECT_TRUE(computoc::all_equal(arr2, computoc::insert(Integer_array{}, arr2, 1, 0)));
 
         EXPECT_THROW(computoc::insert(arr1, arr2, 1, 3), std::out_of_range);
         const int invalid_data1[] = { 1 };
@@ -2933,10 +2933,10 @@ TEST(Array_test, remove)
 
         const int rdata1[] = { 1, 2, 3, 6 };
         Integer_array rarr{ {4}, rdata1 };
-        EXPECT_EQ(rarr, computoc::remove(arr1, 3, 2));
+        EXPECT_TRUE(computoc::all_equal(rarr, computoc::remove(arr1, 3, 2)));
         EXPECT_THROW(computoc::remove(arr1, 3, 4), std::out_of_range);
 
-        EXPECT_EQ(Integer_array{}, computoc::remove(Integer_array{}, 3, 2));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::remove(Integer_array{}, 3, 2)));
     }
 
     // Axis specified
@@ -2953,7 +2953,7 @@ TEST(Array_test, remove)
             7,  8,  9,
             10, 11, 12 };
         Integer_array rarr1{ { 1, 2, 3 }, rdata1 };
-        EXPECT_EQ(rarr1, computoc::remove(arr1, 0, 1, 0));
+        EXPECT_TRUE(computoc::all_equal(rarr1, computoc::remove(arr1, 0, 1, 0)));
         EXPECT_THROW(computoc::remove(arr1, 0, 3, 0), std::out_of_range);
 
         const int rdata2[] = {
@@ -2961,7 +2961,7 @@ TEST(Array_test, remove)
 
             7, 8, 9 };
         Integer_array rarr2{ { 2, 1, 3 }, rdata2 };
-        EXPECT_EQ(rarr2, computoc::remove(arr1, 1, 1, 1));
+        EXPECT_TRUE(computoc::all_equal(rarr2, computoc::remove(arr1, 1, 1, 1)));
         EXPECT_THROW(computoc::remove(arr1, 1, 2, 1), std::out_of_range);
 
         const int rdata3[] = {
@@ -2971,7 +2971,7 @@ TEST(Array_test, remove)
             9,
             12 };
         Integer_array rarr3{ { 2, 2, 1 }, rdata3 };
-        EXPECT_EQ(rarr3, computoc::remove(arr1, 0, 2, 2));
+        EXPECT_TRUE(computoc::all_equal(rarr3, computoc::remove(arr1, 0, 2, 2)));
         EXPECT_THROW(computoc::remove(arr1, 2, 2, 2), std::out_of_range);
 
         EXPECT_THROW(computoc::remove(arr1, 0, 1, 3), std::out_of_range);
@@ -3025,11 +3025,11 @@ TEST(Array_test, complex_array)
     const std::int64_t sdims1[]{ 1, 1, 1, 2, 1 };
     Integer_array sarr1{ {5, sdims1}, reinterpret_cast<const int*>(sdata1) };
 
-    EXPECT_EQ(sarr1, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }));
+    EXPECT_TRUE(computoc::all_equal(sarr1, arr({ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} })));
 
     const int sdata2[1][1][1][1][1]{ { {{{53}}} } };
     const std::int64_t sdims2[]{ 1, 1, 1, 1, 1 };
     Integer_array sarr2{ {5, sdims2}, reinterpret_cast<const int*>(sdata2) };
 
-    EXPECT_EQ(sarr2, sarr1({ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} }));
+    EXPECT_TRUE(computoc::all_equal(sarr2, sarr1({ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} })));
 }
