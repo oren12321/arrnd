@@ -28,7 +28,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
     computoc::Array<int>::Subscripts_iterator counter{ {ndims, dims} };
 
-    // prefix increment
+    // prefix increment/decrement
     {
         std::int64_t nsubs_counter{ 0 };
         while (counter && nsubs_counter < nsubs) {
@@ -44,6 +44,22 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
         }
         EXPECT_EQ(nsubs, nsubs_counter);
         EXPECT_FALSE(counter);
+
+        --counter;
+
+        while (counter && nsubs_counter >= 0) {
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[--nsubs_counter] };
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+
+            --counter;
+        }
+        EXPECT_EQ(0, nsubs_counter);
+        EXPECT_FALSE(counter);
     }
 
     counter.reset();
@@ -54,7 +70,45 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
     EXPECT_EQ(0, subs[2]);
     EXPECT_EQ(0, subs[3]);
 
-    // postfix increment
+    // prefix counter more than 1 size increment/decrement
+    {
+        std::int64_t nsubs_counter{ 0 };
+        while (counter && nsubs_counter < nsubs) {
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
+            nsubs_counter += 2;
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+
+            counter += 2;
+        }
+        EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
+
+        --counter;
+
+        while (counter && nsubs_counter >= 0) {
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter - 1] };
+            nsubs_counter -= 2;
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+
+            counter -= 2;
+        }
+        EXPECT_EQ(0, nsubs_counter);
+        EXPECT_FALSE(counter);
+    }
+
+    counter.reset();
+
+    // postfix increment/decrement
     {
         std::int64_t nsubs_counter{ 0 };
         for (; counter; counter++) {
@@ -68,8 +122,23 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
             ++nsubs_counter;
         }
-
         EXPECT_EQ(nsubs, nsubs_counter);
+        EXPECT_FALSE(counter);
+
+        counter--;
+
+        for (; counter; counter--) {
+            const std::int64_t* subs{ counter.subs().p() };
+            const std::int64_t* rsubs{ rsubs_list[nsubs_counter - 1] };
+
+            EXPECT_EQ(rsubs[0], subs[0]);
+            EXPECT_EQ(rsubs[1], subs[1]);
+            EXPECT_EQ(rsubs[2], subs[2]);
+            EXPECT_EQ(rsubs[3], subs[3]);
+
+            --nsubs_counter;
+        }
+        EXPECT_EQ(0, nsubs_counter);
         EXPECT_FALSE(counter);
     }
 
@@ -97,7 +166,6 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
             ++nsubs_counter;
         }
-
         EXPECT_EQ(nsubs1, nsubs_counter);
         EXPECT_FALSE(counter);
     }
@@ -193,6 +261,22 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 ++nsubs_counter;
             }
             EXPECT_EQ(nsubs, nsubs_counter);
+            EXPECT_FALSE(counter);
+
+            counter--;
+
+            for (; counter; counter--) {
+                const std::int64_t* subs{ counter.subs().p() };
+                const std::int64_t* rsubs{ rsubs_list0[nsubs_counter - 1] };
+
+                EXPECT_EQ(rsubs[0], subs[0]);
+                EXPECT_EQ(rsubs[1], subs[1]);
+                EXPECT_EQ(rsubs[2], subs[2]);
+                EXPECT_EQ(rsubs[3], subs[3]);
+
+                --nsubs_counter;
+            }
+            EXPECT_EQ(0, nsubs_counter);
             EXPECT_FALSE(counter);
         }
 
@@ -383,6 +467,22 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                     ++nsubs_counter;
                 }
                 EXPECT_EQ(48, nsubs_counter);
+                EXPECT_FALSE(counter);
+
+                counter--;
+
+                for (; counter; counter--) {
+                    const std::int64_t* subs{ counter.subs().p() };
+                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter - 1] };
+
+                    EXPECT_EQ(rsubs[0], subs[0]);
+                    EXPECT_EQ(rsubs[1], subs[1]);
+                    EXPECT_EQ(rsubs[2], subs[2]);
+                    EXPECT_EQ(rsubs[3], subs[3]);
+
+                    --nsubs_counter;
+                }
+                EXPECT_EQ(44, nsubs_counter);
                 EXPECT_FALSE(counter);
             }
         }

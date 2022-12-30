@@ -711,7 +711,7 @@ namespace computoc {
                             ++subs_.p()[order_.p()[i - 1]];
                         }
                         if ((should_process_sub = (subs_.p()[order_.p()[i - 1]] == to_[order_.p()[i - 1]])) && order_.p()[i - 1] != order_.p()[0]) {
-                            subs_.p()[order_.p()[i - 1]] = from_ ? from_[i-1] : 0;
+                            subs_.p()[order_.p()[i - 1]] = from_ ? from_[order_.p()[i - 1]] : 0;
                         }
                     }
 
@@ -747,14 +747,91 @@ namespace computoc {
                 return temp;
             }
 
+            Array_subscripts_iterator operator+=(std::int64_t value) noexcept
+            {
+                for (std::int64_t i = 0; i < value; ++i) {
+                    ++(*this);
+                }
+                return *this;
+            }
+
+            Array_subscripts_iterator operator+(std::int64_t value) noexcept
+            {
+                Array_subscripts_iterator temp{ *this };
+                temp += value;
+                return temp;
+            }
+
+            Array_subscripts_iterator& operator--() noexcept
+            {
+                if (!order_.empty())
+                {
+                    bool should_process_sub{ true };
+
+                    for (int64_t i = order_.s(); i >= 1 && should_process_sub; --i) {
+                        if (subs_.p()[order_.p()[i - 1]] >= (from_ ? from_[order_.p()[i - 1]] - 1 : -1)) {
+                            --subs_.p()[order_.p()[i - 1]];
+                        }
+                        if ((should_process_sub = (subs_.p()[order_.p()[i - 1]] == (from_ ? from_[order_.p()[i - 1]] - 1 : -1))) && order_.p()[i - 1] != order_.p()[0]) {
+                            subs_.p()[order_.p()[i - 1]] = to_[order_.p()[i - 1]] - 1;
+                        }
+                    }
+
+                    return *this;
+                }
+
+
+                bool should_process_sub{ true };
+                const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
+
+                if (subs_.p()[axis_] > (from_ ? from_[axis_] - 1 : -1)) {
+                    --subs_.p()[axis_];
+                }
+                if ((should_process_sub = (subs_.p()[axis_] == (from_ ? from_[axis_] - 1 : -1))) && axis_ != stop_axis) {
+                    subs_.p()[axis_] = to_[axis_] - 1;
+                }
+
+                for (std::int64_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
+                    if (axis_ != i - 1 && subs_.p()[i - 1] >= (from_ ? from_[i - 1] - 1 : -1)) {
+                        --subs_.p()[i - 1];
+                    }
+                    if (axis_ != i - 1 && (should_process_sub = (subs_.p()[i - 1] == (from_ ? from_[i - 1] - 1 : -1))) && i != stop_axis + 1) {
+                        subs_.p()[i - 1] = to_[i - 1] - 1;
+                    }
+                }
+                return *this;
+            }
+
+            Array_subscripts_iterator operator--(int) noexcept
+            {
+                Array_subscripts_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_subscripts_iterator operator-=(std::int64_t value) noexcept
+            {
+                for (std::int64_t i = 0; i < value; ++i) {
+                    --(*this);
+                }
+                return *this;
+            }
+
+            Array_subscripts_iterator operator-(std::int64_t value) noexcept
+            {
+                Array_subscripts_iterator temp{ *this };
+                temp -= value;
+                return temp;
+            }
+
             operator bool() const noexcept
             {
                 if (!order_.empty()) {
-                    return subs_.p()[order_.p()[0]] != to_[order_.p()[0]];
+                    return (subs_.p()[order_.p()[0]] < to_[order_.p()[0]]) && (subs_.p()[order_.p()[0]] >= (from_ ? from_[order_.p()[0]] : 0));
                 }
 
                 const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
-                return subs_.p()[stop_axis] != to_[stop_axis];
+                return (subs_.p()[stop_axis] < to_[stop_axis]) && (subs_.p()[stop_axis] >= (from_ ? from_[stop_axis] : 0));
             }
 
             const Params<std::int64_t>& subs() const noexcept
