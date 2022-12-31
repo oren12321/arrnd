@@ -756,14 +756,14 @@ namespace computoc {
                 }
                 else {
                     bool should_process_sub{ true };
-                    const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
+                    const std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
 
-                    should_process_sub = increment_subscript(axis_, stop_axis);
+                    should_process_sub = increment_subscript(axis_, major_axis);
                     for (std::int64_t i = subs_.s() - 1; i > axis_ && should_process_sub; --i) {
-                        should_process_sub = increment_subscript(i, stop_axis);
+                        should_process_sub = increment_subscript(i, major_axis);
                     }
                     for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = increment_subscript(i, stop_axis);
+                        should_process_sub = increment_subscript(i, major_axis);
                     }
                 }
 
@@ -802,14 +802,14 @@ namespace computoc {
                 }
                 else {
                     bool should_process_sub{ true };
-                    const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
+                    const std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
 
-                    should_process_sub = decrement_subscript(axis_, stop_axis);
+                    should_process_sub = decrement_subscript(axis_, major_axis);
                     for (std::int64_t i = subs_.s() - 1; i > axis_ && should_process_sub; --i) {
-                        should_process_sub = decrement_subscript(i, stop_axis);
+                        should_process_sub = decrement_subscript(i, major_axis);
                     }
                     for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = decrement_subscript(i, stop_axis);
+                        should_process_sub = decrement_subscript(i, major_axis);
                     }
                 }
 
@@ -844,11 +844,11 @@ namespace computoc {
                     return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
                 }
 
-                const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
-                return (subs_[stop_axis] < maximum_excluded_[stop_axis]) && (subs_[stop_axis] > minimum_excluded_[stop_axis]);
+                const std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
+                return (subs_[major_axis] < maximum_excluded_[major_axis]) && (subs_[major_axis] > minimum_excluded_[major_axis]);
             }
 
-            [[nodiscard]] const Params<std::int64_t>& subs() const noexcept
+            [[nodiscard]] const Params<std::int64_t>& operator*() const noexcept
             {
                 return subs_;
             }
@@ -990,7 +990,7 @@ namespace computoc {
                 }
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, Params<std::int64_t>(hdr_.dims()) };
                 while (ndstor) {
-                    (*this)(ndstor.subs()) = value;
+                    (*this)(*ndstor) = value;
                     ++ndstor;
                 }
                 return *this;
@@ -1127,7 +1127,7 @@ namespace computoc {
 
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, indices.header().dims() };
                 while (ndstor) {
-                    res(ndstor.subs()) = buffsp_->data().p()[indices(ndstor.subs())];
+                    res(*ndstor) = buffsp_->data().p()[indices(*ndstor)];
                     ++ndstor;
                 }
 
@@ -1152,7 +1152,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
 
             while (ndstor) {
-                res(ndstor.subs()) = func(arr(ndstor.subs()));
+                res(*ndstor) = func(arr(*ndstor));
                 ++ndstor;
             }
 
@@ -1169,11 +1169,11 @@ namespace computoc {
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
 
-            decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(ndstor.subs())) };
+            decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*ndstor)) };
             ++ndstor;
 
             while (ndstor) {
-                res = func(arr(ndstor.subs()), res);
+                res = func(arr(*ndstor), res);
                 ++ndstor;
             }
 
@@ -1200,12 +1200,12 @@ namespace computoc {
             const std::int64_t reduction_iteration_cycle{ arr.header().dims().p()[axis] };
 
             while (arr_ndstor && res_ndstor) {
-                decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(arr_ndstor.subs())) };
+                decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*arr_ndstor)) };
                 ++arr_ndstor;
                 for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_ndstor) {
-                    res_element = func(arr(arr_ndstor.subs()), res_element);
+                    res_element = func(arr(*arr_ndstor), res_element);
                 }
-                res(res_ndstor.subs()) = res_element;
+                res(*res_ndstor) = res_element;
                 ++res_ndstor;
             }
 
@@ -1247,7 +1247,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
 
             while (ndstor) {
-                res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs(ndstor.subs()));
+                res(*ndstor) = func(lhs(*ndstor), rhs(*ndstor));
                 ++ndstor;
             }
 
@@ -1263,7 +1263,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
 
             while (ndstor) {
-                res(ndstor.subs()) = func(lhs(ndstor.subs()), rhs);
+                res(*ndstor) = func(lhs(*ndstor), rhs);
                 ++ndstor;
             }
 
@@ -1279,7 +1279,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, rhs.header().dims() };
 
             while (ndstor) {
-                res(ndstor.subs()) = func(lhs, rhs(ndstor.subs()));
+                res(*ndstor) = func(lhs, rhs(*ndstor));
                 ++ndstor;
             }
 
@@ -1301,8 +1301,8 @@ namespace computoc {
             std::int64_t res_count{ 0 };
 
             while (arr_ndstor && res_ndstor) {
-                if (func(arr(arr_ndstor.subs()))) {
-                    res(res_ndstor.subs()) = arr(arr_ndstor.subs());
+                if (func(arr(*arr_ndstor))) {
+                    res(*res_ndstor) = arr(*arr_ndstor);
                     ++res_count;
                     ++res_ndstor;
                 }
@@ -1339,8 +1339,8 @@ namespace computoc {
             std::int64_t res_count{ 0 };
 
             while (arr_ndstor && mask_ndstor && res_ndstor) {
-                if (mask(mask_ndstor.subs())) {
-                    res(res_ndstor.subs()) = arr(arr_ndstor.subs());
+                if (mask(*mask_ndstor)) {
+                    res(*res_ndstor) = arr(*arr_ndstor);
                     ++res_count;
                     ++res_ndstor;
                 }
@@ -1374,8 +1374,8 @@ namespace computoc {
             std::int64_t res_count{ 0 };
 
             while (arr_ndstor && res_ndstor) {
-                if (func(arr(arr_ndstor.subs()))) {
-                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), arr_ndstor.subs());
+                if (func(arr(*arr_ndstor))) {
+                    res(*res_ndstor) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_ndstor);
                     ++res_count;
                     ++res_ndstor;
                 }
@@ -1412,8 +1412,8 @@ namespace computoc {
             std::int64_t res_count{ 0 };
 
             while (arr_ndstor && mask_ndstor && res_ndstor) {
-                if (mask(mask_ndstor.subs())) {
-                    res(res_ndstor.subs()) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), arr_ndstor.subs());
+                if (mask(*mask_ndstor)) {
+                    res(*res_ndstor) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_ndstor);
                     ++res_count;
                     ++res_ndstor;
                 }
@@ -1446,7 +1446,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
 
             while (arr_ndstor && res_ndstor) {
-                res(res_ndstor.subs()) = arr(arr_ndstor.subs());
+                res(*res_ndstor) = arr(*arr_ndstor);
                 ++arr_ndstor;
                 ++res_ndstor;
             }
@@ -1963,7 +1963,7 @@ namespace computoc {
             }
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
             while (ndstor) {
-                ++arr(ndstor.subs());
+                ++arr(*ndstor);
                 ++ndstor;
             }
             return arr;
@@ -1997,7 +1997,7 @@ namespace computoc {
             }
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
             while (ndstor) {
-                --arr(ndstor.subs());
+                --arr(*ndstor);
                 ++ndstor;
             }
             return arr;
@@ -2042,7 +2042,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
 
             while (ndstor) {
-                if (!func(lhs(ndstor.subs()), rhs(ndstor.subs()))) {
+                if (!func(lhs(*ndstor), rhs(*ndstor))) {
                     return false;
                 }
                 ++ndstor;
@@ -2061,7 +2061,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
 
             while (ndstor) {
-                if (!func(lhs(ndstor.subs()), rhs)) {
+                if (!func(lhs(*ndstor), rhs)) {
                     return false;
                 }
                 ++ndstor;
@@ -2080,7 +2080,7 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, rhs.header().dims() };
 
             while (ndstor) {
-                if (!func(lhs, rhs(ndstor.subs()))) {
+                if (!func(lhs, rhs(*ndstor))) {
                     return false;
                 }
                 ++ndstor;
@@ -2150,7 +2150,7 @@ namespace computoc {
             typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Subscripts_iterator dst_ndstor{ {}, dst.header().dims() };
 
             while (src_ndstor && dst_ndstor) {
-                dst(dst_ndstor.subs()) = src(src_ndstor.subs());
+                dst(*dst_ndstor) = src(*src_ndstor);
                 ++src_ndstor;
                 ++dst_ndstor;
             }
@@ -2177,7 +2177,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
 
             while (ndstor) {
-                clone(ndstor.subs()) = arr(ndstor.subs());
+                clone(*ndstor) = arr(*ndstor);
                 ++ndstor;
             }
             return clone;
@@ -2211,7 +2211,7 @@ namespace computoc {
                 typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
 
                 while (prev_ndstor && new_ndstor) {
-                    res(new_ndstor.subs()) = arr(prev_ndstor.subs());
+                    res(*new_ndstor) = arr(*prev_ndstor);
                     ++prev_ndstor;
                     ++new_ndstor;
                 }
@@ -2255,7 +2255,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
 
             while (prev_ndstor && new_ndstor) {
-                res(new_ndstor.subs()) = arr(prev_ndstor.subs());
+                res(*new_ndstor) = arr(*prev_ndstor);
                 ++prev_ndstor;
                 ++new_ndstor;
             }
@@ -2301,12 +2301,12 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && resndstor.subs().p()[axis] < lhs.header().dims().p()[axis] || resndstor.subs().p()[axis] >= lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
-                    res(resndstor.subs()) = lhs(lhsndstor.subs());
+                if (lhsndstor && (*resndstor).p()[axis] < lhs.header().dims().p()[axis] || (*resndstor).p()[axis] >= lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                    res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && resndstor.subs().p()[axis] >= lhs.header().dims().p()[axis] && resndstor.subs().p()[axis] < lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
-                    res(resndstor.subs()) = rhs(rhsndstor.subs());
+                else if (rhsndstor && (*resndstor).p()[axis] >= lhs.header().dims().p()[axis] && (*resndstor).p()[axis] < lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                    res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
                 ++resndstor;
@@ -2362,12 +2362,12 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && resndstor.subs().p()[axis] < ind || resndstor.subs().p()[axis] >= ind + rhs.header().dims().p()[axis]) {
-                    res(resndstor.subs()) = lhs(lhsndstor.subs());
+                if (lhsndstor && (*resndstor).p()[axis] < ind || (*resndstor).p()[axis] >= ind + rhs.header().dims().p()[axis]) {
+                    res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && resndstor.subs().p()[axis] >= ind && resndstor.subs().p()[axis] < ind + rhs.header().dims().p()[axis]) {
-                    res(resndstor.subs()) = rhs(rhsndstor.subs());
+                else if (rhsndstor && (*resndstor).p()[axis] >= ind && (*resndstor).p()[axis] < ind + rhs.header().dims().p()[axis]) {
+                    res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
                 ++resndstor;
@@ -2421,8 +2421,8 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (arrndstor) {
-                if (resndstor && arrndstor.subs().p()[axis] < ind || arrndstor.subs().p()[axis] >= ind + count) {
-                    res(resndstor.subs()) = arr(arrndstor.subs());
+                if (resndstor && (*arrndstor).p()[axis] < ind || (*arrndstor).p()[axis] >= ind + count) {
+                    res(*resndstor) = arr(*arrndstor);
                     ++resndstor;
                 }
                 ++arrndstor;
