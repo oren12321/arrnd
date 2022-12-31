@@ -572,7 +572,7 @@ namespace computoc {
                     else if(!start.empty()) {
                         copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
-                            minimum_excluded_.p()[i] -= 1;
+                            minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
@@ -622,7 +622,7 @@ namespace computoc {
                     else if (!start.empty()) {
                         copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
-                            minimum_excluded_.p()[i] -= 1;
+                            minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
@@ -641,7 +641,7 @@ namespace computoc {
                         order_ = { order.s(), buff_.data().p() + 4 * nsubs_ };
                         copy(order, order_, order.s());
                         for (std::int64_t i = 0; i < order.s(); ++i) {
-                            order_.p()[i] = modulo(order_.p()[i], nsubs_);
+                            order_[i] = modulo(order_[i], nsubs_);
                         }
                     }
                 }
@@ -748,41 +748,25 @@ namespace computoc {
 
             Array_subscripts_iterator& operator++() noexcept
             {
-                if (!order_.empty())
-                {
+                if (!order_.empty()) {
                     bool should_process_sub{ true };
-
-                    for (int64_t i = order_.s(); i >= 1 && should_process_sub; --i) {
-                        if (subs_.p()[order_.p()[i - 1]] < maximum_excluded_.p()[order_.p()[i - 1]]) {
-                            ++subs_.p()[order_.p()[i - 1]];
-                        }
-                        if ((should_process_sub = (subs_.p()[order_.p()[i - 1]] == maximum_excluded_.p()[order_.p()[i - 1]])) && order_.p()[i - 1] != order_.p()[0]) {
-                            subs_.p()[order_.p()[i - 1]] = minimum_excluded_.p()[order_.p()[i - 1]] + 1;
-                        }
-                    }
-
-                    return *this;
-                }
-
-
-                bool should_process_sub{ true };
-                const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
-
-                if (subs_.p()[axis_] < maximum_excluded_.p()[axis_]) {
-                    ++subs_.p()[axis_];
-                }
-                if ((should_process_sub = (subs_.p()[axis_] == maximum_excluded_.p()[axis_])) && axis_ != stop_axis) {
-                    subs_.p()[axis_] = minimum_excluded_.p()[axis_] + 1;
-                }
-
-                for (std::int64_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
-                    if (axis_ != i - 1 && subs_.p()[i - 1] < maximum_excluded_.p()[i - 1]) {
-                        ++subs_.p()[i - 1];
-                    }
-                    if (axis_ != i - 1 && (should_process_sub = (subs_.p()[i - 1] == maximum_excluded_.p()[i - 1])) && i != stop_axis + 1) {
-                        subs_.p()[i - 1] = minimum_excluded_.p()[i-1] + 1;
+                    for (int64_t i = order_.s() - 1; i >= 0 && should_process_sub; --i) {
+                        should_process_sub = increment_subscript(order_[i], order_[0]);
                     }
                 }
+                else {
+                    bool should_process_sub{ true };
+                    const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
+
+                    should_process_sub = increment_subscript(axis_, stop_axis);
+                    for (std::int64_t i = subs_.s() - 1; i > axis_ && should_process_sub; --i) {
+                        should_process_sub = increment_subscript(i, stop_axis);
+                    }
+                    for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
+                        should_process_sub = increment_subscript(i, stop_axis);
+                    }
+                }
+
                 return *this;
             }
 
@@ -801,7 +785,7 @@ namespace computoc {
                 return *this;
             }
 
-            Array_subscripts_iterator operator+(std::int64_t value) noexcept
+            [[nodiscard]] Array_subscripts_iterator operator+(std::int64_t value) const noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 temp += value;
@@ -810,41 +794,25 @@ namespace computoc {
 
             Array_subscripts_iterator& operator--() noexcept
             {
-                if (!order_.empty())
-                {
+                if (!order_.empty()) {
                     bool should_process_sub{ true };
-
-                    for (int64_t i = order_.s(); i >= 1 && should_process_sub; --i) {
-                        if (subs_.p()[order_.p()[i - 1]] >= minimum_excluded_.p()[order_.p()[i - 1]]) {
-                            --subs_.p()[order_.p()[i - 1]];
-                        }
-                        if ((should_process_sub = (subs_.p()[order_.p()[i - 1]] == minimum_excluded_.p()[order_.p()[i - 1]])) && order_.p()[i - 1] != order_.p()[0]) {
-                            subs_.p()[order_.p()[i - 1]] = maximum_excluded_.p()[order_.p()[i - 1]] - 1;
-                        }
-                    }
-
-                    return *this;
-                }
-
-
-                bool should_process_sub{ true };
-                const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
-
-                if (subs_.p()[axis_] > minimum_excluded_.p()[axis_]) {
-                    --subs_.p()[axis_];
-                }
-                if ((should_process_sub = (subs_.p()[axis_] == minimum_excluded_.p()[axis_])) && axis_ != stop_axis) {
-                    subs_.p()[axis_] = maximum_excluded_.p()[axis_] - 1;
-                }
-
-                for (std::int64_t i = subs_.s(); i >= 1 && should_process_sub; --i) {
-                    if (axis_ != i - 1 && subs_.p()[i - 1] >= minimum_excluded_.p()[i - 1]) {
-                        --subs_.p()[i - 1];
-                    }
-                    if (axis_ != i - 1 && (should_process_sub = (subs_.p()[i - 1] == minimum_excluded_.p()[i - 1])) && i != stop_axis + 1) {
-                        subs_.p()[i - 1] = maximum_excluded_.p()[i - 1] - 1;
+                    for (int64_t i = order_.s() - 1; i >= 0 && should_process_sub; --i) {
+                        should_process_sub = decrement_subscript(order_[i], order_[0]);
                     }
                 }
+                else {
+                    bool should_process_sub{ true };
+                    const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1) };
+
+                    should_process_sub = decrement_subscript(axis_, stop_axis);
+                    for (std::int64_t i = subs_.s() - 1; i > axis_ && should_process_sub; --i) {
+                        should_process_sub = decrement_subscript(i, stop_axis);
+                    }
+                    for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
+                        should_process_sub = decrement_subscript(i, stop_axis);
+                    }
+                }
+
                 return *this;
             }
 
@@ -863,29 +831,49 @@ namespace computoc {
                 return *this;
             }
 
-            Array_subscripts_iterator operator-(std::int64_t value) noexcept
+            [[nodiscard]] Array_subscripts_iterator operator-(std::int64_t value) const noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 temp -= value;
                 return temp;
             }
 
-            operator bool() const noexcept
+            [[nodiscard]] operator bool() const noexcept
             {
                 if (!order_.empty()) {
-                    return (subs_.p()[order_.p()[0]] < maximum_excluded_.p()[order_.p()[0]]) && (subs_.p()[order_.p()[0]] > minimum_excluded_.p()[order_.p()[0]]);
+                    return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
                 }
 
                 const std::int64_t stop_axis{ axis_ > 0 ? std::int64_t{0} : (subs_.s() > 1 ? std::int64_t{1} : std::int64_t{0}) };
-                return (subs_.p()[stop_axis] < maximum_excluded_.p()[stop_axis]) && (subs_.p()[stop_axis] > minimum_excluded_.p()[stop_axis]);
+                return (subs_[stop_axis] < maximum_excluded_[stop_axis]) && (subs_[stop_axis] > minimum_excluded_[stop_axis]);
             }
 
-            const Params<std::int64_t>& subs() const noexcept
+            [[nodiscard]] const Params<std::int64_t>& subs() const noexcept
             {
                 return subs_;
             }
 
         private:
+            [[nodiscard]] bool increment_subscript(std::int64_t i, std::int64_t major_axis) noexcept
+            {
+                bool should_continute_process_subscripts{ true };
+                subs_[i] += (subs_[i] < maximum_excluded_[i]);
+                if ((should_continute_process_subscripts = (subs_[i] == maximum_excluded_[i])) && i != major_axis) {
+                    subs_[i] = minimum_excluded_[i] + 1;
+                }
+                return should_continute_process_subscripts;
+            }
+
+            [[nodiscard]] bool decrement_subscript(std::int64_t i, std::int64_t major_axis) noexcept
+            {
+                bool should_continute_process_subscripts{ true };
+                subs_[i] -= (subs_[i] > minimum_excluded_[i]);
+                if ((should_continute_process_subscripts = (subs_[i] == minimum_excluded_[i])) && i != major_axis) {
+                    subs_[i] = maximum_excluded_[i] - 1;
+                }
+                return should_continute_process_subscripts;
+            }
+
             Internal_buffer buff_{};
 
             std::int64_t nsubs_{ 0 };
