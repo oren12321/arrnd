@@ -640,6 +640,9 @@ namespace computoc {
                     if (!order.empty()) {
                         order_ = { order.s(), buff_.data().p() + 4 * nsubs_ };
                         copy(order, order_, order.s());
+                        for (std::int64_t i = 0; i < order.s(); ++i) {
+                            order_.p()[i] = modulo(order_.p()[i], nsubs_);
+                        }
                     }
                 }
             }
