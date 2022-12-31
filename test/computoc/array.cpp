@@ -26,7 +26,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
         {1, 0, 2, 0},
         {1, 0, 2, 1} };
 
-    computoc::Array<int>::Subscripts_iterator counter{ {ndims, dims} };
+    computoc::Array<int>::Subscripts_iterator counter{ {}, {ndims, dims} };
 
     // prefix increment/decrement
     {
@@ -243,7 +243,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 2, 0},
                 {0, 0, 2, 1},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({ ndims, dims }, 0);
+            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 0);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -291,7 +291,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 1, 1},
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({ ndims, dims }, 1);
+            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 1);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -323,7 +323,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 0, 1},
                 {1, 0, 1, 1},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({ ndims, dims }, 2);
+            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 2);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -355,7 +355,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
                 {1, 0, 1, 1},
                 {1, 0, 2, 0},
                 {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({ ndims, dims }, 3);
+            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 3);
             std::int64_t nsubs_counter{ 0 };
             for (; counter; counter++) {
                 const std::int64_t* subs{ counter.subs().p() };
@@ -429,7 +429,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
             // full count
             {
-                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, {0, nullptr});
+                computoc::Array<int>::Subscripts_iterator counter({}, { ordered_ndims, ordered_dims }, { ordered_ndims, order });
                 std::int64_t nsubs_counter{ 0 };
                 for (; counter; counter++) {
                     const std::int64_t* subs{ counter.subs().p() };
@@ -449,7 +449,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
             // partial count
             {
                 const std::int64_t from[]{ 3, 0, 2, 0 };
-                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order });
                 std::int64_t nsubs_counter{ 44 };
                 for (; counter; counter++) {
                     const std::int64_t* subs{ counter.subs().p() };
