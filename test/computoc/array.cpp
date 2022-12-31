@@ -212,8 +212,6 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
     // 1d subs with index
     {
-        EXPECT_THROW(computoc::Array<int>::Subscripts_iterator({ 5 }, 1), std::invalid_argument);
-
         const std::int64_t nsubs{ 6 };
         const std::int64_t subs[]{ 0, 1, 2, 3, 4, 5 };
         std::initializer_list<std::int64_t> from{ 1 };
@@ -230,8 +228,6 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
     // 4d subs with different axis
     {
-        EXPECT_THROW(computoc::Array<int>::Subscripts_iterator({ ndims, dims }, 5), std::invalid_argument);
-
         // axis 0
         {
             const std::int64_t rsubs_list0[][4]{
@@ -433,7 +429,7 @@ TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
 
             // full count
             {
-                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, { 0, nullptr });
+                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, ordered_dims }, { ordered_ndims, order }, {0, nullptr});
                 std::int64_t nsubs_counter{ 0 };
                 for (; counter; counter++) {
                     const std::int64_t* subs{ counter.subs().p() };
