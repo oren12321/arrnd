@@ -99,7 +99,8 @@ namespace computoc {
         /**
         * @note If dimensions contain zero or negative dimension value than the number of elements will be 0.
         */
-        inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept {
+        inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
+        {
             if (dims.empty()) {
                 return 0;
             }
@@ -148,6 +149,33 @@ namespace computoc {
             }
         }
 
+        /**
+        * @param[out] strides An already allocated memory for computed strides.
+        * @return Number of computed strides
+        */
+        inline std::int64_t compute_strides(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> strides) noexcept
+        {
+            std::int64_t nstrides{ previous_strides.s() > strides.s() ? strides.s() : previous_strides.s() };
+            if (nstrides <= 0) {
+                return 0;
+            }
+
+            // compute strides with interval step
+            for (std::int64_t i = 0; i < intervals.s(); ++i) {
+                strides[i] = previous_strides[i] * forward(intervals[i]).step;
+            }
+
+            // compute strides from previous dimensions
+            if (intervals.s() < previous_dims.s() && nstrides >= previous_dims.s()) {
+                strides[previous_dims.s() - 1] = 1;
+                for (std::int64_t i = previous_dims.s() - 2; i >= intervals.s(); --i) {
+                    strides[i] = strides[i + 1] * previous_dims[i + 1];
+                }
+            }
+
+            return nstrides;
+        }
+
         inline void ranges2strides(const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges, Params<std::int64_t> strides) noexcept
         {
             if (previous_strides.empty() || ranges.empty() || strides.empty()) {
@@ -185,6 +213,52 @@ namespace computoc {
             for (std::int64_t i = middle; i < previous_dims.s(); ++i) {
                 dims.p()[i] = previous_dims.p()[i];
             }
+        }
+
+        /**
+        * @param[out] dims An already allocated memory for computed dimensions.
+        * @return Number of computed dimensions
+        * @note Previous dimensions are used in case of small number of intervals.
+        */
+        inline std::int64_t compute_dims(const Params<std::int64_t>& previous_dims, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> dims) noexcept
+        {
+            std::int64_t ndims{ previous_dims.s() > dims.s() ? dims.s() : previous_dims.s() };
+            if (ndims <= 0) {
+                return 0;
+            }
+
+            std::int64_t num_computed_dims{ ndims > intervals.s() ? intervals.s() : ndims };
+
+            for (std::int64_t i = 0; i < num_computed_dims; ++i) {
+                Interval<std::int64_t> interval{ forward(modulo(intervals[i], previous_dims[i])) };
+                if (interval.start > interval.stop || interval.step <= 0) {
+                    return 0;
+                }
+                dims[i] = static_cast<std::int64_t>(std::ceil((interval.stop - interval.start + 1.0) / interval.step));
+            }
+
+            for (std::int64_t i = num_computed_dims; i < ndims; ++i) {
+                dims[i] = previous_dims[i];
+            }
+
+            return ndims;
+        }
+
+        [[nodiscard]] inline std::int64_t compute_offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals) noexcept
+        {
+            std::int64_t offset{ previous_offset };
+
+            if (previous_dims.empty() || previous_strides.empty() || intervals.empty()) {
+                return offset;
+            }
+
+            std::int64_t num_computations{ previous_dims.s() > previous_strides.s() ? previous_strides.s() : previous_dims.s() };
+            num_computations = (num_computations > intervals.s() ? intervals.s() : num_computations);
+
+            for (std::int64_t i = 0; i < num_computations; ++i) {
+                offset += previous_strides[i] * forward(modulo(intervals[i], previous_dims[i])).start;
+            }
+            return offset;
         }
 
         inline std::int64_t ranges2offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges) noexcept
@@ -338,37 +412,31 @@ namespace computoc {
                 compute_strides(dims, strides_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& derived_ranges)
+            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& intervals)
                 : is_partial_(true)
             {
-                if (previous_dims.empty()) {
+                if (numel(previous_dims) <= 0) {
                     return;
                 }
 
-                if (!valid_ranges(previous_dims, derived_ranges)) {
+                Internal_buffer buff(previous_dims.s() * 2);
+                COMPUTOC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+
+                Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
+                if (compute_dims(previous_dims, intervals, dims) <= 0) {
                     return;
                 }
 
-                std::int64_t new_ndims = previous_dims.s();
+                buff_ = std::move(buff);
+                
+                dims_ = { previous_dims.s(), buff_.data().p() };
 
-                buff_ = Internal_buffer(new_ndims * 2);
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
+                count_ = numel(dims_);
 
-                dims_ = { new_ndims, buff_.data().p() };
-                ranges2dims(previous_dims, derived_ranges, dims_);
+                strides_ = { previous_dims.s(), buff_.data().p() + previous_dims.s() };
+                compute_strides(previous_dims, previous_strides, intervals, strides_);
 
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::runtime_error, "all dimensions should be > 0");
-
-                strides_ = { new_ndims, buff_.data().p() + new_ndims };
-                ranges2strides(previous_strides, derived_ranges, strides_);
-                if (previous_dims.s() > derived_ranges.s()) {
-                    Params<std::int64_t> remained_dims{ previous_dims.s() - derived_ranges.s(), previous_dims.p() + derived_ranges.s() };
-                    Params<std::int64_t> remained_strides{ previous_dims.s() - derived_ranges.s(), strides_.p() + derived_ranges.s() };
-                    dims2strides(remained_dims, remained_strides);
-                }
-
-                offset_ = ranges2offset(previous_dims, previous_offset, previous_strides, derived_ranges);
+                offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, std::int64_t omitted_axis)
