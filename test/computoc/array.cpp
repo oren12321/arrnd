@@ -6,482 +6,114 @@
 #include <computoc/array.h>
 
 
-TEST(ND_subscriptor, subscripts_generation_by_dimensions_of_an_array)
+TEST(Array_subscripts_iterator, simple_forward_backward_iterations)
 {
-    const std::int64_t ndims{ 4 };
-    const std::int64_t dims[]{ 2, 1, 3, 2 };
+    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
+    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
 
-    const std::int64_t nsubs{ 12 };
-    const std::int64_t rsubs_list[][4]{
-        {0, 0, 0, 0},
-        {0, 0, 0, 1},
-        {0, 0, 1, 0},
-        {0, 0, 1, 1},
-        {0, 0, 2, 0},
-        {0, 0, 2, 1},
-        {1, 0, 0, 0},
-        {1, 0, 0, 1},
-        {1, 0, 1, 0},
-        {1, 0, 1, 1},
-        {1, 0, 2, 0},
-        {1, 0, 2, 1} };
+    const std::int64_t expected_subs_list[][3]{
+        {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
+        {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} };
+    const std::int64_t expected_generated_subs{ 8 };
 
-    computoc::Array<int>::Subscripts_iterator counter{ {}, {ndims, dims} };
+    std::int64_t generated_subs_counter{ 0 };
+    computoc::Array_subscripts_iterator iter(from, to);
 
-    // prefix increment/decrement
-    {
-        std::int64_t nsubs_counter{ 0 };
-        while (counter && nsubs_counter < nsubs) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter++] };
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
-
-            ++counter;
-        }
-        EXPECT_EQ(nsubs, nsubs_counter);
-        EXPECT_FALSE(counter);
-
-        --counter;
-
-        while (counter && nsubs_counter >= 0) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[--nsubs_counter] };
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
-
-            --counter;
-        }
-        EXPECT_EQ(0, nsubs_counter);
-        EXPECT_FALSE(counter);
+    while (iter) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[generated_subs_counter++] }), *(iter++));
     }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-    counter.reset();
-    const std::int64_t* subs{ (*counter).p() };
-
-    EXPECT_EQ(0, subs[0]);
-    EXPECT_EQ(0, subs[1]);
-    EXPECT_EQ(0, subs[2]);
-    EXPECT_EQ(0, subs[3]);
-
-    // prefix counter more than 1 size increment/decrement
-    {
-        std::int64_t nsubs_counter{ 0 };
-        while (counter && nsubs_counter < nsubs) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
-            nsubs_counter += 2;
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
-
-            counter += 2;
-        }
-        EXPECT_EQ(nsubs, nsubs_counter);
-        EXPECT_FALSE(counter);
-
-        --counter;
-
-        while (counter && nsubs_counter >= 0) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter - 1] };
-            nsubs_counter -= 2;
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
-
-            counter -= 2;
-        }
-        EXPECT_EQ(0, nsubs_counter);
-        EXPECT_FALSE(counter);
+    while (--iter) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[--generated_subs_counter] }), *iter);
     }
+    EXPECT_EQ(0, generated_subs_counter);
+}
 
-    counter.reset();
+TEST(Array_subscripts_iterator, forward_backward_iterations_with_steps_bigger_than_one)
+{
+    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
+    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
 
-    // postfix increment/decrement
-    {
-        std::int64_t nsubs_counter{ 0 };
-        for (; counter; counter++) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
+    const std::int64_t expected_subs_list[][3]{
+        {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
+        {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} };
+    const std::int64_t expected_generated_subs{ 4 };
 
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
+    std::int64_t generated_subs_counter{ 0 };
+    computoc::Array_subscripts_iterator iter(from, to);
 
-            ++nsubs_counter;
-        }
-        EXPECT_EQ(nsubs, nsubs_counter);
-        EXPECT_FALSE(counter);
-
-        counter--;
-
-        for (; counter; counter--) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter - 1] };
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
-
-            --nsubs_counter;
-        }
-        EXPECT_EQ(0, nsubs_counter);
-        EXPECT_FALSE(counter);
+    while (iter) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[(generated_subs_counter++) * 2] }), *iter);
+        iter = iter + 2;
     }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-    // with negative initial subscript value
-    {
-        const std::int64_t nsubs1{ 6 };
-        const std::int64_t rsubs_list1[][3]{
-            {-1, 0, -2},
-            {-1, 0, -1},
-            {0, 0, -2},
-            {0, 0, -1},
-            {1, 0, -2},
-            {1, 0, -1} };
-
-        std::initializer_list<std::int64_t> from{ -1, 0, -2 };
-        std::initializer_list<std::int64_t> to{ 2, 0, 0 };
-        std::int64_t nsubs_counter{ 0 };
-        for (computoc::Array<int>::Subscripts_iterator counter{ from, to }; counter; ++counter) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list1[nsubs_counter] };
-
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-
-            ++nsubs_counter;
-        }
-        EXPECT_EQ(nsubs1, nsubs_counter);
-        EXPECT_FALSE(counter);
+    while (iter -= 2) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[(--generated_subs_counter) * 2] }), *iter);
     }
+    EXPECT_EQ(0, generated_subs_counter);
+}
 
-    // with initial subscripts value
-    {
-        std::initializer_list<std::int64_t> from{ 1, 0, 0, 0 };
-        std::initializer_list<std::int64_t> to{ 2, 1, 3, 2 };
-        std::int64_t nsubs_counter{ 6 };
-        for (computoc::Array<int>::Subscripts_iterator counter{ from, to }; counter; ++counter) {
-            const std::int64_t* subs{ (*counter).p() };
-            const std::int64_t* rsubs{ rsubs_list[nsubs_counter] };
+TEST(Array_subscripts_iterator, forward_backward_iterations_by_axis_order)
+{
+    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
+    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
+    
+    const std::initializer_list<std::int64_t> order{ 2, 0, 1 };
 
-            EXPECT_EQ(rsubs[0], subs[0]);
-            EXPECT_EQ(rsubs[1], subs[1]);
-            EXPECT_EQ(rsubs[2], subs[2]);
-            EXPECT_EQ(rsubs[3], subs[3]);
+    const std::int64_t expected_subs_list[][3]{
+        {1, 0, -1}, {2, 0, -1},
+        {1, 0, 0}, {2, 0, 0},
+        {1, 0, 1}, {2, 0, 1},
+        {1, 0, 2}, {2, 0, 2} };
+    const std::int64_t expected_generated_subs{ 8 };
 
-            ++nsubs_counter;
-        }
+    std::int64_t generated_subs_counter{ 0 };
+    computoc::Array_subscripts_iterator iter(from, to, order);
 
-        EXPECT_EQ(nsubs, nsubs_counter);
-        EXPECT_FALSE(counter);
-
-        // test counter reset with initial subscripts
-        {
-            computoc::Array<int>::Subscripts_iterator counter{ from, to };
-            EXPECT_EQ(1, (*counter).p()[0]);
-            EXPECT_EQ(0, (*counter).p()[1]);
-            EXPECT_EQ(0, (*counter).p()[2]);
-            EXPECT_EQ(0, (*counter).p()[3]);
-            ++counter;
-            EXPECT_EQ(1, (*counter).p()[0]);
-            EXPECT_EQ(0, (*counter).p()[1]);
-            EXPECT_EQ(0, (*counter).p()[2]);
-            EXPECT_EQ(1, (*counter).p()[3]);
-            counter.reset();
-            EXPECT_EQ(1, (*counter).p()[0]);
-            EXPECT_EQ(0, (*counter).p()[1]);
-            EXPECT_EQ(0, (*counter).p()[2]);
-            EXPECT_EQ(0, (*counter).p()[3]);
-        }
+    while (iter) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[generated_subs_counter++] }), *(iter++));
     }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-    // 1d subs with index
-    {
-        const std::int64_t nsubs{ 6 };
-        const std::int64_t subs[]{ 0, 1, 2, 3, 4, 5 };
-        std::initializer_list<std::int64_t> from{ 1 };
-        std::initializer_list<std::int64_t> to{ 6 };
-        computoc::Array<int>::Subscripts_iterator counter(from, to, 0);
-        std::int64_t nsubs_counter{ 1 };
-        for (; counter; ++counter) {
-            EXPECT_EQ(subs[nsubs_counter], (*counter).p()[0]);
-            ++nsubs_counter;
-        }
-        EXPECT_EQ(nsubs, nsubs_counter);
-        EXPECT_FALSE(counter);
+    while (--iter) {
+        EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[--generated_subs_counter] }), *iter);
     }
+    EXPECT_EQ(0, generated_subs_counter);
+}
 
-    // 4d subs with different axis
-    {
-        // axis 0
-        {
-            const std::int64_t rsubs_list0[][4]{
-                {0, 0, 0, 0},
-                {1, 0, 0, 0},
-                {0, 0, 0, 1},
-                {1, 0, 0, 1},
-                {0, 0, 1, 0},
-                {1, 0, 1, 0},
-                {0, 0, 1, 1},
-                {1, 0, 1, 1},
-                {0, 0, 2, 0},
-                {1, 0, 2, 0},
-                {0, 0, 2, 1},
-                {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 0);
-            std::int64_t nsubs_counter{ 0 };
-            for (; counter; counter++) {
-                const std::int64_t* subs{ (*counter).p() };
-                const std::int64_t* rsubs{ rsubs_list0[nsubs_counter] };
+TEST(Array_subscripts_iterator, forward_backward_iterations_by_specific_major_axis)
+{
+    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
+    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
 
-                EXPECT_EQ(rsubs[0], subs[0]);
-                EXPECT_EQ(rsubs[1], subs[1]);
-                EXPECT_EQ(rsubs[2], subs[2]);
-                EXPECT_EQ(rsubs[3], subs[3]);
+    const std::int64_t expected_subs_list[][8][3]{
+        { {1, 0, -1}, {2, 0, -1},
+          {1, 0, 0}, {2, 0, 0},
+          {1, 0, 1}, {2, 0, 1},
+          {1, 0, 2}, {2, 0, 2} },
 
-                ++nsubs_counter;
-            }
-            EXPECT_EQ(nsubs, nsubs_counter);
-            EXPECT_FALSE(counter);
+        { {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
+          {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} },
 
-            counter--;
+        { {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
+          {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} } };
+    const std::int64_t expected_generated_subs{ 8 };
 
-            for (; counter; counter--) {
-                const std::int64_t* subs{ (*counter).p() };
-                const std::int64_t* rsubs{ rsubs_list0[nsubs_counter - 1] };
+    for (std::int64_t axis = 2; axis >= 0; --axis) {
+        std::int64_t generated_subs_counter{ 0 };
+        computoc::Array_subscripts_iterator iter(from, to, axis);
 
-                EXPECT_EQ(rsubs[0], subs[0]);
-                EXPECT_EQ(rsubs[1], subs[1]);
-                EXPECT_EQ(rsubs[2], subs[2]);
-                EXPECT_EQ(rsubs[3], subs[3]);
-
-                --nsubs_counter;
-            }
-            EXPECT_EQ(0, nsubs_counter);
-            EXPECT_FALSE(counter);
+        while (iter) {
+            EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[axis][generated_subs_counter++] }), *(iter++));
         }
+        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-        // axis 1
-        {
-            const std::int64_t rsubs_list1[][4]{
-                {0, 0, 0, 0},
-                {0, 0, 0, 1},
-                {0, 0, 1, 0},
-                {0, 0, 1, 1},
-                {0, 0, 2, 0},
-                {0, 0, 2, 1},
-                {1, 0, 0, 0},
-                {1, 0, 0, 1},
-                {1, 0, 1, 0},
-                {1, 0, 1, 1},
-                {1, 0, 2, 0},
-                {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 1);
-            std::int64_t nsubs_counter{ 0 };
-            for (; counter; counter++) {
-                const std::int64_t* subs{ (*counter).p() };
-                const std::int64_t* rsubs{ rsubs_list1[nsubs_counter] };
-
-                EXPECT_EQ(rsubs[0], subs[0]);
-                EXPECT_EQ(rsubs[1], subs[1]);
-                EXPECT_EQ(rsubs[2], subs[2]);
-                EXPECT_EQ(rsubs[3], subs[3]);
-
-                ++nsubs_counter;
-            }
-            EXPECT_EQ(nsubs, nsubs_counter);
-            EXPECT_FALSE(counter);
+        while (--iter) {
+            EXPECT_EQ((computoc::Params<std::int64_t>{ 3, expected_subs_list[axis][--generated_subs_counter] }), *iter);
         }
-
-        // axis 2
-        {
-            const std::int64_t rsubs_list2[][4]{
-                {0, 0, 0, 0},
-                {0, 0, 1, 0},
-                {0, 0, 2, 0},
-                {0, 0, 0, 1},
-                {0, 0, 1, 1},
-                {0, 0, 2, 1},
-                {1, 0, 0, 0},
-                {1, 0, 1, 0},
-                {1, 0, 2, 0},
-                {1, 0, 0, 1},
-                {1, 0, 1, 1},
-                {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 2);
-            std::int64_t nsubs_counter{ 0 };
-            for (; counter; counter++) {
-                const std::int64_t* subs{ (*counter).p() };
-                const std::int64_t* rsubs{ rsubs_list2[nsubs_counter] };
-
-                EXPECT_EQ(rsubs[0], subs[0]);
-                EXPECT_EQ(rsubs[1], subs[1]);
-                EXPECT_EQ(rsubs[2], subs[2]);
-                EXPECT_EQ(rsubs[3], subs[3]);
-
-                ++nsubs_counter;
-            }
-            EXPECT_EQ(nsubs, nsubs_counter);
-            EXPECT_FALSE(counter);
-        }
-
-        // axis 3
-        {
-            const std::int64_t rsubs_list3[][4]{
-                {0, 0, 0, 0},
-                {0, 0, 0, 1},
-                {0, 0, 1, 0},
-                {0, 0, 1, 1},
-                {0, 0, 2, 0},
-                {0, 0, 2, 1},
-                {1, 0, 0, 0},
-                {1, 0, 0, 1},
-                {1, 0, 1, 0},
-                {1, 0, 1, 1},
-                {1, 0, 2, 0},
-                {1, 0, 2, 1} };
-            computoc::Array<int>::Subscripts_iterator counter({}, { ndims, dims }, 3);
-            std::int64_t nsubs_counter{ 0 };
-            for (; counter; counter++) {
-                const std::int64_t* subs{ (*counter).p() };
-                const std::int64_t* rsubs{ rsubs_list3[nsubs_counter] };
-
-                EXPECT_EQ(rsubs[0], subs[0]);
-                EXPECT_EQ(rsubs[1], subs[1]);
-                EXPECT_EQ(rsubs[2], subs[2]);
-                EXPECT_EQ(rsubs[3], subs[3]);
-
-                ++nsubs_counter;
-            }
-            EXPECT_EQ(nsubs, nsubs_counter);
-            EXPECT_FALSE(counter);
-        }
-
-        // specific order
-        {
-            const std::int64_t ordered_subs_list[][4]{
-                {0, 0, 0, 0},
-                {0, 0, 0, 1},
-                {0, 1, 0, 0},
-                {0, 1, 0, 1},
-                {1, 0, 0, 0},
-                {1, 0, 0, 1},
-                {1, 1, 0, 0},
-                {1, 1, 0, 1},
-                {2, 0, 0, 0},
-                {2, 0, 0, 1},
-                {2, 1, 0, 0},
-                {2, 1, 0, 1},
-                {3, 0, 0, 0},
-                {3, 0, 0, 1},
-                {3, 1, 0, 0},
-                {3, 1, 0, 1},
-                {0, 0, 1, 0},
-                {0, 0, 1, 1},
-                {0, 1, 1, 0},
-                {0, 1, 1, 1},
-                {1, 0, 1, 0},
-                {1, 0, 1, 1},
-                {1, 1, 1, 0},
-                {1, 1, 1, 1},
-                {2, 0, 1, 0},
-                {2, 0, 1, 1},
-                {2, 1, 1, 0},
-                {2, 1, 1, 1},
-                {3, 0, 1, 0},
-                {3, 0, 1, 1},
-                {3, 1, 1, 0},
-                {3, 1, 1, 1},
-                {0, 0, 2, 0},
-                {0, 0, 2, 1},
-                {0, 1, 2, 0},
-                {0, 1, 2, 1},
-                {1, 0, 2, 0},
-                {1, 0, 2, 1},
-                {1, 1, 2, 0},
-                {1, 1, 2, 1},
-                {2, 0, 2, 0},
-                {2, 0, 2, 1},
-                {2, 1, 2, 0},
-                {2, 1, 2, 1},
-                {3, 0, 2, 0},
-                {3, 0, 2, 1},
-                {3, 1, 2, 0},
-                {3, 1, 2, 1} };
-            const std::int64_t ordered_ndims{ 4 };
-            const std::int64_t ordered_dims[]{ 4, 2, 3, 2 };
-            const std::int64_t order[]{ 2, 0, 1, 3 };
-
-            // full count
-            {
-                computoc::Array<int>::Subscripts_iterator counter({}, { ordered_ndims, ordered_dims }, { ordered_ndims, order });
-                std::int64_t nsubs_counter{ 0 };
-                for (; counter; counter++) {
-                    const std::int64_t* subs{ (*counter).p() };
-                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter] };
-
-                    EXPECT_EQ(rsubs[0], subs[0]);
-                    EXPECT_EQ(rsubs[1], subs[1]);
-                    EXPECT_EQ(rsubs[2], subs[2]);
-                    EXPECT_EQ(rsubs[3], subs[3]);
-
-                    ++nsubs_counter;
-                }
-                EXPECT_EQ(48, nsubs_counter);
-                EXPECT_FALSE(counter);
-            }
-
-            // partial count
-            {
-                const std::int64_t from[]{ 3, 0, 2, 0 };
-                computoc::Array<int>::Subscripts_iterator counter({ ordered_ndims, from }, { ordered_ndims, ordered_dims }, { ordered_ndims, order });
-                std::int64_t nsubs_counter{ 44 };
-                for (; counter; counter++) {
-                    const std::int64_t* subs{ (*counter).p() };
-                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter] };
-
-                    EXPECT_EQ(rsubs[0], subs[0]);
-                    EXPECT_EQ(rsubs[1], subs[1]);
-                    EXPECT_EQ(rsubs[2], subs[2]);
-                    EXPECT_EQ(rsubs[3], subs[3]);
-
-                    ++nsubs_counter;
-                }
-                EXPECT_EQ(48, nsubs_counter);
-                EXPECT_FALSE(counter);
-
-                counter--;
-
-                for (; counter; counter--) {
-                    const std::int64_t* subs{ (*counter).p() };
-                    const std::int64_t* rsubs{ ordered_subs_list[nsubs_counter - 1] };
-
-                    EXPECT_EQ(rsubs[0], subs[0]);
-                    EXPECT_EQ(rsubs[1], subs[1]);
-                    EXPECT_EQ(rsubs[2], subs[2]);
-                    EXPECT_EQ(rsubs[3], subs[3]);
-
-                    --nsubs_counter;
-                }
-                EXPECT_EQ(44, nsubs_counter);
-                EXPECT_FALSE(counter);
-            }
-        }
+        EXPECT_EQ(0, generated_subs_counter);
     }
 }
 
