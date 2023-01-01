@@ -135,18 +135,18 @@ TEST(Array_test, can_be_initialized_with_valid_size_and_data)
     EXPECT_NO_THROW((Integer_array{ {3, 1, 1}, { 0.0, 0.0, 0.0 } }));
     EXPECT_NO_THROW((Integer_array{ {3, 1, 1}, { 0.0, 0.0, 0.0 } }));
 
-    EXPECT_THROW((Integer_array{ {0, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1}, data }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1}, data }));
 
-    EXPECT_THROW((Integer_array{ {1, 0, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 1, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 0, 1}, data }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 1, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0, 1}, data }));
 
-    EXPECT_THROW((Integer_array{ {0, 0, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1, 0}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 0, 1}, data }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1, 1}, data }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1, 0}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0, 1}, data }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1, 1}, data }));
 }
 
 TEST(Array_test, can_be_initialized_with_valid_size_and_value)
@@ -167,18 +167,18 @@ TEST(Array_test, can_be_initialized_with_valid_size_and_value)
     EXPECT_NO_THROW((Integer_array{ {3, 1, 1}, dvalue }));
     EXPECT_NO_THROW((Integer_array{ {3, 1, 1}, dvalue }));
 
-    EXPECT_THROW((Integer_array{ {0, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1}, value }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1}, value }));
 
-    EXPECT_THROW((Integer_array{ {1, 0, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 1, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {1, 0, 1}, value }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 1, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {1, 0, 1}, value }));
 
-    EXPECT_THROW((Integer_array{ {0, 0, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1, 0}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 0, 1}, value }), std::invalid_argument);
-    EXPECT_THROW((Integer_array{ {0, 1, 1}, value }), std::invalid_argument);
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1, 0}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 0, 1}, value }));
+    EXPECT_TRUE(computoc::empty(Integer_array{ {0, 1, 1}, value }));
 }
 
 TEST(Array_test, can_return_its_header_and_data)

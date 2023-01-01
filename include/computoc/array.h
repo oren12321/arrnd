@@ -96,6 +96,42 @@ namespace computoc {
         * are_legal - f(R) = Rt(1)>0 and Rt(2)>0 and ... and Rt(N)>0
         */
 
+        /**
+        * @note If dimensions contain zero or negative dimension value than the number of elements will be 0.
+        */
+        inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept {
+            if (dims.empty()) {
+                return 0;
+            }
+
+            std::int64_t res{ 1 };
+            for (std::int64_t i = 0; i < dims.s(); ++i) {
+                if (dims[i] <= 0) {
+                    return 0;
+                }
+                res *= dims[i];
+            }
+            return res;
+        }
+
+        /**
+        * @param[out] strides An already allocated memory for computed strides.
+        * @return Number of computed strides
+        */
+        inline std::int64_t compute_strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
+        {
+            std::int64_t num_strides{ dims.s() > strides.s() ? strides.s() : dims.s() };
+            if (num_strides <= 0) {
+                return 0;
+            }
+
+            strides[num_strides - 1] = 1;
+            for (std::int64_t i = num_strides - 2; i >= 0; --i) {
+                strides[i] = strides[i + 1] * dims[i + 1];
+            }
+            return num_strides;
+        }
+
         inline void dims2strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
         {
             if (dims.empty() || strides.empty()) {
@@ -287,25 +323,19 @@ namespace computoc {
             Array_header() = default;
 
             Array_header(const Params<std::int64_t>& dims)
-                : buff_(dims.s() * 2)
             {
-                if (dims.empty()) {
+                if ((count_ = numel(dims)) <= 0) {
                     return;
                 }
 
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
+                buff_ = Internal_buffer(dims.s() * 2);
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { dims.s(), buff_.data().p() };
-                for (std::int64_t i = 0; i < dims_.s(); ++i) {
-                    dims_.p()[i] = dims.p()[i];
-                }
+                copy(dims, dims_);
 
                 strides_ = { dims.s(), buff_.data().p() + dims.s() };
-
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
-
-                dims2strides(dims_, strides_);
+                compute_strides(dims, strides_);
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& derived_ranges)
@@ -529,6 +559,11 @@ namespace computoc {
                 return is_partial_;
             }
 
+            bool empty() const noexcept
+            {
+                return !buff_.usable() && count_ <= 0;
+            }
+
         private:
             Params<std::int64_t> dims_{};
             Params<std::int64_t> strides_{};
@@ -550,7 +585,7 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     buff_ = Internal_buffer(nsubs_ * 4);
-                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -604,7 +639,7 @@ namespace computoc {
                         buff_ = Internal_buffer(nsubs_ * 4);
                         axis_ = nsubs_ - 1;
                     }
-                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "subscriptor buffer allocation failed");
+                    COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
@@ -2299,7 +2334,7 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
         {
-            return !arr.data() || (arr.header().count() == 0);
+            return !arr.data() && arr.header().empty();
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
