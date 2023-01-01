@@ -441,37 +441,33 @@ namespace computoc {
 
             Array_header(const Params<std::int64_t>& previous_dims, std::int64_t omitted_axis)
             {
-                if (previous_dims.empty()) {
+                if (numel(previous_dims) <= 0) {
                     return;
                 }
 
-                COMPUTOC_THROW_IF_FALSE(omitted_axis < previous_dims.s(), std::invalid_argument, "axis is invalid for number of dimensions");
+                std::int64_t axis{ modulo(omitted_axis, previous_dims.s()) };
+                std::int64_t ndims{ previous_dims.s() > 1 ? previous_dims.s() - 1 : 1 };
 
-                std::int64_t new_ndims{previous_dims.s() > 1 ? previous_dims.s() - 1 : 1};
+                buff_ = Internal_buffer(ndims * 2);
+                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
-                buff_ = Internal_buffer(new_ndims * 2);
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                dims_ = { new_ndims, buff_.data().p() };
+                dims_ = { ndims, buff_.data().p() };
                 if (previous_dims.s() > 1) {
-                    std::int64_t res_dim_index{ 0 };
-                    for (std::int64_t i = 0; i < omitted_axis; ++i, res_dim_index += 1) {
-                        dims_.p()[res_dim_index] = previous_dims.p()[i];
+                    for (std::int64_t i = 0; i < axis; ++i) {
+                        dims_[i] = previous_dims[i];
                     }
-                    for (std::int64_t i = omitted_axis + 1; i < previous_dims.s(); ++i, res_dim_index += 1) {
-                        dims_.p()[res_dim_index] = previous_dims.p()[i];
+                    for (std::int64_t i = axis + 1; i < previous_dims.s(); ++i) {
+                        dims_[i - 1] = previous_dims[i];
                     }
                 }
                 else {
                     dims_.p()[0] = 1;
                 }
 
-                strides_ = { new_ndims, buff_.data().p() + new_ndims };
+                strides_ = { ndims, buff_.data().p() + ndims };
+                compute_strides(dims_, strides_);
 
                 count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
-
-                dims2strides(dims_, strides_);
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& new_order)
