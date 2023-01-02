@@ -2064,17 +2064,16 @@ namespace computoc {
         template <typename T1, typename T2, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline bool all_match(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Func func)
         {
+            if (empty(lhs) && empty(rhs)) {
+                return true;
+            }
+
+            if (empty(lhs) || empty(rhs)) {
+                return false;
+            }
+
             if (lhs.header().dims() != rhs.header().dims()) {
                 return false;
-            }
-
-            if (lhs.header().count() != rhs.header().count()) {
-                return false;
-            }
-
-            // empty arrays - equal dimensions and zero count for both input arrays
-            if (lhs.header().count() == 0) {
-                return true;
             }
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
@@ -2314,7 +2313,7 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
         {
-            return !arr.data() && arr.header().empty();
+            return (!arr.data() || arr.header().is_partial()) && arr.header().empty();
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
