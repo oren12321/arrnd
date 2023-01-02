@@ -1219,16 +1219,18 @@ namespace computoc {
                 return Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::invalid_argument, "axis is invalid for number of dimensions");
+            typename Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header{ arr.header().dims(), axis };
+            if (new_header.empty()) {
+                return Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
 
-            Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ {arr.header().count() / arr.header().dims().p()[axis]} };
-
-            res.header() = typename Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>::Header{ arr.header().dims(), axis };
+            Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ {new_header.count()} };
+            res.header() = std::move(new_header);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims(), axis };
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
 
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims().p()[axis] };
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims().p()[modulo(axis, arr.header().dims().s())] };
 
             while (arr_ndstor && res_ndstor) {
                 decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*arr_ndstor)) };
@@ -2255,8 +2257,13 @@ namespace computoc {
                 return res;
             }
 
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(new_dims);
+            if (new_header.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr };
-            res.header() = typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(new_dims);
+            res.header() = std::move(new_header);
 
             return res;
         }
@@ -2322,26 +2329,32 @@ namespace computoc {
             }
 
             COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
-            COMPUTOC_THROW_IF_FALSE(axis < lhs.header().dims().s(), std::out_of_range, "axis out of dimensions range");
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+
             for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
-                if (i != axis) {
+                if (i != fixed_axis) {
                     COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
                 }
             }
 
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims().p()[fixed_axis], fixed_axis);
+            if (new_header.empty()) {
+                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims().p()[axis], axis);
+            res.header() = std::move(new_header);
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
             typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && (*resndstor).p()[axis] < lhs.header().dims().p()[axis] || (*resndstor).p()[axis] >= lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                if (lhsndstor && (*resndstor).p()[fixed_axis] < lhs.header().dims().p()[fixed_axis] || (*resndstor).p()[fixed_axis] >= lhs.header().dims().p()[fixed_axis] + rhs.header().dims().p()[fixed_axis]) {
                     res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && (*resndstor).p()[axis] >= lhs.header().dims().p()[axis] && (*resndstor).p()[axis] < lhs.header().dims().p()[axis] + rhs.header().dims().p()[axis]) {
+                else if (rhsndstor && (*resndstor).p()[fixed_axis] >= lhs.header().dims().p()[fixed_axis] && (*resndstor).p()[fixed_axis] < lhs.header().dims().p()[fixed_axis] + rhs.header().dims().p()[fixed_axis]) {
                     res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
@@ -2382,27 +2395,33 @@ namespace computoc {
             }
 
             COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
-            COMPUTOC_THROW_IF_FALSE(axis < lhs.header().dims().s(), std::out_of_range, "axis out of dimensions range");
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+
             for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
-                if (i != axis) {
+                if (i != fixed_axis) {
                     COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
                 }
             }
-            COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().dims().p()[axis], std::out_of_range, "index not in array dimension range");
+            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims().p()[fixed_axis]) };
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims().p()[fixed_axis], fixed_axis);
+            if (new_header.empty()) {
+                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
 
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims().p()[axis], axis);
+            res.header() = std::move(new_header);
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
             typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && (*resndstor).p()[axis] < ind || (*resndstor).p()[axis] >= ind + rhs.header().dims().p()[axis]) {
+                if (lhsndstor && (*resndstor).p()[fixed_axis] < fixed_ind || (*resndstor).p()[fixed_axis] >= fixed_ind + rhs.header().dims().p()[fixed_axis]) {
                     res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && (*resndstor).p()[axis] >= ind && (*resndstor).p()[axis] < ind + rhs.header().dims().p()[axis]) {
+                else if (rhsndstor && (*resndstor).p()[fixed_axis] >= fixed_ind && (*resndstor).p()[fixed_axis] < fixed_ind + rhs.header().dims().p()[fixed_axis]) {
                     res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
@@ -2447,17 +2466,25 @@ namespace computoc {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            COMPUTOC_THROW_IF_FALSE(axis < arr.header().dims().s(), std::out_of_range, "axis out of dimensions range");
-            COMPUTOC_THROW_IF_FALSE(ind + count <= arr.header().dims().p()[axis], std::out_of_range, "index plus count not in array dimension range");
+            std::int64_t fixed_axis{ modulo(axis, arr.header().dims().s()) };
+            std::int64_t fixed_ind{ modulo(ind, arr.header().dims().p()[fixed_axis]) };
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims().p()[axis]) * count  };
-            res.header() = typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(arr.header().dims(), -count, axis);
+            // if count is more than number of elements, set it to number of elements
+            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims().p()[fixed_axis] ? count : (arr.header().dims().p()[fixed_axis] - fixed_ind) };
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), -fixed_count, fixed_axis);
+            if (new_header.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims().p()[fixed_axis]) * fixed_count  };
+            res.header() = std::move(new_header);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arrndstor({}, arr.header().dims());
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (arrndstor) {
-                if (resndstor && (*arrndstor).p()[axis] < ind || (*arrndstor).p()[axis] >= ind + count) {
+                if (resndstor && (*arrndstor).p()[fixed_axis] < fixed_ind || (*arrndstor).p()[fixed_axis] >= fixed_ind + fixed_count) {
                     res(*resndstor) = arr(*arrndstor);
                     ++resndstor;
                 }
