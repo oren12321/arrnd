@@ -502,29 +502,6 @@ namespace computoc {
                 count_ = numel(dims_);
             }
 
-            Array_header(const Params<std::int64_t>& dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
-                : buff_(dims.s() * 2)
-            {
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                dims_ = { dims.s(), buff_.data().p() };
-                for (std::int64_t i = 0; i < dims_.s(); ++i) {
-                    if (axis == i) {
-                        dims_.p()[i] = dims.p()[i] + appended_dims.p()[i];
-                    }
-                    else {
-                        dims_.p()[i] = dims.p()[i];
-                    }
-                }
-
-                strides_ = { dims.s(), buff_.data().p() + dims.s() };
-
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
-
-                dims2strides(dims_, strides_);
-            }
-
             Array_header(const Params<std::int64_t>& dims, std::int64_t count, std::int64_t axis)
                 : buff_(dims.s() * 2)
             {
@@ -2434,7 +2411,7 @@ namespace computoc {
             }
 
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
+            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims().p()[axis], axis);
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
             typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
@@ -2495,7 +2472,7 @@ namespace computoc {
             COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().dims().p()[axis], std::out_of_range, "index not in array dimension range");
 
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims(), axis);
+            res.header() = typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header(lhs.header().dims(), rhs.header().dims().p()[axis], axis);
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
             typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
