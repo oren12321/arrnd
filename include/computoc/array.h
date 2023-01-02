@@ -1957,6 +1957,114 @@ namespace computoc {
             return transform(arr, [](const T& a) { return !a; });
         }
 
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto abs(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return abs(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto acos(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return acos(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto acosh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return acosh(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto asin(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return asin(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto asinh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return asinh(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto atan(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return atan(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto atanh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return atanh(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto cos(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return cos(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto cosh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return cosh(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto exp(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return exp(a); });
+        }
+        
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto log(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return log(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto log10(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return log10(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto pow(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return pow(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto sin(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return sin(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto sinh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return sinh(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto sqrt(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return sqrt(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto tan(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return tan(a); });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto tanh(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return tanh(a); });
+        }
+
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline auto operator&&(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
@@ -2535,6 +2643,25 @@ namespace computoc {
     using details::append;
     using details::insert;
     using details::remove;
+
+    using details::abs;
+    using details::acos;
+    using details::acosh;
+    using details::asin;
+    using details::asinh;
+    using details::atan;
+    using details::atanh;
+    using details::cos;
+    using details::cosh;
+    using details::exp;
+    using details::log;
+    using details::log10;
+    using details::pow;
+    using details::sin;
+    using details::sinh;
+    using details::sqrt;
+    using details::tan;
+    using details::tanh;
 }
 
 #endif // COMPUTOC_TYPES_NDARRAY_H
