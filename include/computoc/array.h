@@ -467,31 +467,39 @@ namespace computoc {
                 strides_ = { ndims, buff_.data().p() + ndims };
                 compute_strides(dims_, strides_);
 
-                count_ = dims2count(dims_);
+                count_ = numel(dims_);
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& new_order)
-                : buff_(previous_dims.s() * 2)
             {
-                if (previous_dims.empty()) {
+                if (numel(previous_dims) <= 0) {
                     return;
                 }
 
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
-                COMPUTOC_THROW_IF_FALSE(previous_dims.s() == new_order.s(), std::invalid_argument, "new_order and dimensions sizes are different");
-
-                dims_ = { previous_dims.s(), buff_.data().p() };
-                for (std::int64_t i = 0; i < dims_.s(); ++i) {
-                    COMPUTOC_THROW_IF_FALSE(new_order.p()[i] < dims_.s(), std::out_of_range, "new_order index not in dimensions range");
-                    dims_.p()[i] = previous_dims.p()[new_order.p()[i]];
+                if (new_order.empty()) {
+                    return;
                 }
 
+                Internal_buffer buff(previous_dims.s() * 2);
+                COMPUTOC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+
+                Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
+                for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
+                    dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
+                }
+
+                if (numel(previous_dims) != numel(dims)) {
+                    return;
+                }
+
+                buff_ = std::move(buff);
+
+                dims_ = { previous_dims.s(), buff_.data().p() };
+
                 strides_ = { previous_dims.s(), buff_.data().p() + previous_dims.s() };
+                compute_strides(dims_, strides_);
 
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
-
-                dims2strides(dims_, strides_);
+                count_ = numel(dims_);
             }
 
             Array_header(const Params<std::int64_t>& dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
@@ -696,8 +704,8 @@ namespace computoc {
                 nsubs_ = start.s() > bounds_size ? start.s() : bounds_size;
 
                 if (nsubs_ > 0) {
-                    if (!order.empty()) {
-                        buff_ = Internal_buffer(nsubs_ * 4 + order.s());
+                    if (order.s() >= nsubs_) {
+                        buff_ = Internal_buffer(nsubs_ * 5);
                     }
                     else {
                         buff_ = Internal_buffer(nsubs_ * 4);
@@ -738,10 +746,10 @@ namespace computoc {
                         copy(maximum_excluded, maximum_excluded_, nsubs_);
                     }
 
-                    if (!order.empty()) {
-                        order_ = { order.s(), buff_.data().p() + 4 * nsubs_ };
-                        copy(order, order_, order.s());
-                        for (std::int64_t i = 0; i < order.s(); ++i) {
+                    if (order.s() >= nsubs_) {
+                        order_ = { nsubs_, buff_.data().p() + 4 * nsubs_ };
+                        copy(order, order_, nsubs_);
+                        for (std::int64_t i = 0; i < nsubs_; ++i) {
                             order_[i] = modulo(order_[i], nsubs_);
                         }
                     }
@@ -1566,8 +1574,13 @@ namespace computoc {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header{ arr.header().dims(), order };
+            if (new_header.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
-            res.header() = typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header{ arr.header().dims(), order };
+            res.header() = std::move(new_header);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims(), order };
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };

@@ -742,8 +742,8 @@ TEST(Array_test, transpose)
 
     EXPECT_TRUE(computoc::all_equal(rarr, computoc::transpose(iarr, { 2, 0, 1, 3 })));
 
-    EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 3, 2 }), std::invalid_argument);
-    EXPECT_THROW(computoc::transpose(iarr, { 2, 0, 1, 4 }), std::out_of_range);
+    EXPECT_TRUE(computoc::all_equal(rarr, computoc::transpose(iarr, { 2, 0, 1, 3, 2 })));
+    EXPECT_TRUE(computoc::empty(computoc::transpose(iarr, { 2, 0, 1, 4 })));
 }
 
 TEST(Array_test, equal)
