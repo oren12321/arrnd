@@ -133,25 +133,10 @@ namespace computoc {
             return num_strides;
         }
 
-        inline void dims2strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
-        {
-            if (dims.empty() || strides.empty()) {
-                return;
-            }
-
-            if (dims.s() != strides.s()) {
-                return;
-            }
-
-            strides.p()[dims.s() - 1] = 1;
-            for (std::int64_t i = dims.s() - 1; i >= 1; --i) {
-                strides.p()[i - 1] = strides.p()[i] * dims.p()[i];
-            }
-        }
-
         /**
         * @param[out] strides An already allocated memory for computed strides.
         * @return Number of computed strides
+        * @note When number of interval is smaller than number of strides, the other strides computed from previous dimensions.
         */
         inline std::int64_t compute_strides(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> strides) noexcept
         {
@@ -174,45 +159,6 @@ namespace computoc {
             }
 
             return nstrides;
-        }
-
-        inline void ranges2strides(const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges, Params<std::int64_t> strides) noexcept
-        {
-            if (previous_strides.empty() || ranges.empty() || strides.empty()) {
-                return;
-            }
-
-            if (previous_strides.s() != strides.s()) {
-                return;
-            }
-
-            std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
-
-            for (std::int64_t i = 0; i < last; ++i) {
-                strides.p()[i] = previous_strides.p()[i] * forward(ranges.p()[i]).step;
-            }
-        }
-
-        inline void ranges2dims(const Params<std::int64_t>& previous_dims, const Params<Interval<std::int64_t>>& ranges, Params<std::int64_t> dims) noexcept
-        {
-            if (previous_dims.empty() || dims.empty()) {
-                return;
-            }
-
-            if (previous_dims.s() != dims.s()) {
-                return;
-            }
-
-            std::int64_t middle{ previous_dims.s() >= ranges.s() ? ranges.s() : previous_dims.s() };
-
-            for (std::int64_t i = 0; i < middle; ++i) {
-                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
-                dims.p()[i] = static_cast<std::int64_t>(std::ceil((r.stop - r.start + 1.0) / r.step));
-            }
-
-            for (std::int64_t i = middle; i < previous_dims.s(); ++i) {
-                dims.p()[i] = previous_dims.p()[i];
-            }
         }
 
         /**
@@ -261,23 +207,9 @@ namespace computoc {
             return offset;
         }
 
-        inline std::int64_t ranges2offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& ranges) noexcept
-        {
-            std::int64_t offset{ previous_offset };
-
-            if (previous_strides.empty() || ranges.empty()) {
-                return offset;
-            }
-
-            std::int64_t last{ ranges.s() < previous_strides.s() ? ranges.s() : previous_strides.s() };
-
-            for (std::int64_t i = 0; i < last; ++i) {
-                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], previous_dims.p()[i])) };
-                offset += previous_strides.p()[i] * r.start;
-            }
-            return offset;
-        }
-
+        /**
+        * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
+        */
         inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
         {
             std::int64_t ind{ offset };
@@ -286,41 +218,19 @@ namespace computoc {
                 return ind;
             }
 
-            std::int64_t zero_nsubs{ strides.s() - subs.s() };
-            if (zero_nsubs < 0) { // ignore extra subscripts
-                zero_nsubs = 0;
+            std::int64_t num_used_subs{ strides.s() > dims.s() ? dims.s() : strides.s() };
+            num_used_subs = (num_used_subs > subs.s() ? subs.s() : num_used_subs);
+
+            std::int64_t num_ignored_subs{strides.s() - num_used_subs};
+            if (num_ignored_subs < 0) { // ignore extra subscripts
+                num_ignored_subs = 0;
             }
-            for (std::int64_t i = zero_nsubs; i < strides.s(); ++i) {
-                ind += strides.p()[i] * modulo(subs.p()[i - zero_nsubs], dims.p()[i]);
+
+            for (std::int64_t i = num_ignored_subs; i < strides.s(); ++i) {
+                ind += strides.p()[i] * modulo(subs.p()[i - num_ignored_subs], dims.p()[i]);
             }
+
             return ind;
-        }
-
-        inline std::int64_t dims2count(const Params<std::int64_t>& dims) noexcept
-        {
-            if (dims.empty()) {
-                return 0;
-            }
-
-            std::int64_t count{ 1 };
-            for (std::int64_t i = 0; i < dims.s(); ++i) {
-                count *= dims.p()[i];
-            }
-            return count;
-        }
-
-        inline bool valid_ranges(const Params<std::int64_t>& dims, const Params<Interval<std::int64_t>>& ranges) noexcept
-        {
-            bool result{ true };
-            std::int64_t last{ ranges.s() < dims.s() ? ranges.s() : dims.s() };
-
-            for (std::int64_t i = 0; i < last && result; ++i) {
-                Interval<std::int64_t> r{ forward(modulo(ranges.p()[i], dims.p()[i])) };
-
-                result &= (r.start <= r.stop && r.step > 0);
-            }
-
-            return result;
         }
 
         /*
@@ -2324,7 +2234,7 @@ namespace computoc {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            COMPUTOC_THROW_IF_FALSE(arr.header().count() == dims2count(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
+            COMPUTOC_THROW_IF_FALSE(arr.header().count() == numel(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
 
             if (arr.header().dims() == new_dims) {
                 return arr;
