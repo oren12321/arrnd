@@ -1958,6 +1958,18 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator+(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return +a; });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline auto operator-(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            return transform(arr, [](const T& a) { return -a; });
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline auto abs(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
         {
             return transform(arr, [](const T& a) { return abs(a); });

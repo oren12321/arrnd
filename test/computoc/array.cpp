@@ -1439,6 +1439,40 @@ TEST(Array_test, logic_not)
     EXPECT_TRUE(computoc::all_equal(Integer_array{}, !Integer_array{}));
 }
 
+TEST(Array_test, positive)
+{
+    using Integer_array = computoc::Array<int>;
+
+    const int data[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_array arr{ { 3, 1, 2 }, data };
+
+    EXPECT_TRUE(computoc::all_equal(arr, +arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, +Integer_array{}));
+}
+
+TEST(Array_test, negation)
+{
+    using Integer_array = computoc::Array<int>;
+
+    const int data[] = {
+        0, 1,
+        2, 3,
+        4, 5 };
+    Integer_array arr{ { 3, 1, 2 }, data };
+
+    const int rdata[] = {
+        0, -1,
+        -2, -3,
+        -4, -5 };
+    Integer_array rarr{ {3, 1, 2}, rdata };
+
+    EXPECT_TRUE(computoc::all_equal(rarr, -arr));
+    EXPECT_TRUE(computoc::all_equal(Integer_array{}, -Integer_array{}));
+}
+
 TEST(Array_test, logic_and)
 {
     using Integer_array = computoc::Array<int>;
