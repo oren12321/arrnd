@@ -502,27 +502,36 @@ namespace computoc {
                 count_ = numel(dims_);
             }
 
-            Array_header(const Params<std::int64_t>& dims, std::int64_t count, std::int64_t axis)
-                : buff_(dims.s() * 2)
+            Array_header(const Params<std::int64_t>& previous_dims, std::int64_t count, std::int64_t axis)
             {
-                COMPUTOC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "failed to allocate header buffer");
-
-                dims_ = { dims.s(), buff_.data().p() };
-                for (std::int64_t i = 0; i < dims_.s(); ++i) {
-                    if (axis == i) {
-                        dims_.p()[i] = dims.p()[i] + count;
-                    }
-                    else {
-                        dims_.p()[i] = dims.p()[i];
-                    }
+                if (numel(previous_dims) <= 0) {
+                    return;
                 }
 
-                strides_ = { dims.s(), buff_.data().p() + dims.s() };
+                Internal_buffer buff(previous_dims.s() * 2);
+                COMPUTOC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
 
-                count_ = dims2count(dims_);
-                COMPUTOC_THROW_IF_FALSE(count_ > 0, std::invalid_argument, "all dimensions should be > 0");
+                Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
+                std::int64_t fixed_axis{ modulo(axis, previous_dims.s()) };
+                for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
+                    if (axis == i) {
+                        dims[i] = previous_dims[i] + count;
+                    }
+                    else {
+                        dims[i] = previous_dims[i];
+                    }
+                }
+                
+                if ((count_ = numel(dims)) <= 0) {
+                    return;
+                }
 
-                dims2strides(dims_, strides_);
+                buff_ = std::move(buff);
+
+                dims_ = { previous_dims.s(), buff_.data().p() };
+
+                strides_ = { previous_dims.s(), buff_.data().p() + previous_dims.s() };
+                compute_strides(dims_, strides_);
             }
 
             Array_header(Array_header&& other) noexcept
