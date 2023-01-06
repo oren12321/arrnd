@@ -99,7 +99,7 @@ namespace computoc {
         /**
         * @note If dimensions contain zero or negative dimension value than the number of elements will be 0.
         */
-        inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
+        [[nodiscard]] inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
         {
             if (dims.empty()) {
                 return 0;
@@ -210,7 +210,7 @@ namespace computoc {
         /**
         * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
         */
-        inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
+        [[nodiscard]] inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
         {
             std::int64_t ind{ offset };
 
@@ -502,34 +502,34 @@ namespace computoc {
 
             virtual ~Array_header() = default;
 
-            std::int64_t count() const noexcept
+            [[nodiscard]] std::int64_t count() const noexcept
             {
                 return count_;
             }
 
-            const Params<std::int64_t> dims() const noexcept
+            [[nodiscard]] const Params<std::int64_t>& dims() const noexcept
             {
                 return dims_;
             }
 
-            const Params<std::int64_t> strides() const noexcept
+            [[nodiscard]] const Params<std::int64_t>& strides() const noexcept
             {
                 return strides_;
             }
 
-            std::int64_t offset() const noexcept
+            [[nodiscard]] std::int64_t offset() const noexcept
             {
                 return offset_;
             }
 
-            bool is_partial() const noexcept
+            [[nodiscard]] bool is_partial() const noexcept
             {
                 return is_partial_;
             }
 
-            bool empty() const noexcept
+            [[nodiscard]] bool empty() const noexcept
             {
-                return !buff_.usable() && count_ <= 0;
+                return !buff_.usable();
             }
 
         private:
@@ -685,7 +685,7 @@ namespace computoc {
                     order_ = { other.order_.s(), buff_.data().p() + 4 * nsubs_ };
                 }
             }
-            Array_subscripts_iterator& operator=(const Array_subscripts_iterator<Internal_buffer>& other) noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator=(const Array_subscripts_iterator<Internal_buffer>& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -725,7 +725,7 @@ namespace computoc {
                 other.maximum_excluded_.clear();
                 other.major_axis_ = 0;
             }
-            Array_subscripts_iterator& operator=(Array_subscripts_iterator&& other) noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator=(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
             {
                 if (&other == this) {
                     return *this;
@@ -761,7 +761,7 @@ namespace computoc {
                 copy(start_, subs_, nsubs_);
             }
 
-            Array_subscripts_iterator& operator++() noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
             {
                 if (!order_.empty()) {
                     bool should_process_sub{ true };
@@ -784,14 +784,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_subscripts_iterator operator++(int) noexcept
+            Array_subscripts_iterator<Internal_buffer> operator++(int) noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_subscripts_iterator operator+=(std::int64_t value) noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator+=(std::int64_t value) noexcept
             {
                 for (std::int64_t i = 0; i < value; ++i) {
                     ++(*this);
@@ -799,14 +799,14 @@ namespace computoc {
                 return *this;
             }
 
-            [[nodiscard]] Array_subscripts_iterator operator+(std::int64_t value) const noexcept
+            [[nodiscard]] Array_subscripts_iterator<Internal_buffer> operator+(std::int64_t value) const noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 temp += value;
                 return temp;
             }
 
-            Array_subscripts_iterator& operator--() noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator--() noexcept
             {
                 if (!order_.empty()) {
                     bool should_process_sub{ true };
@@ -829,14 +829,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_subscripts_iterator operator--(int) noexcept
+            Array_subscripts_iterator<Internal_buffer> operator--(int) noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_subscripts_iterator operator-=(std::int64_t value) noexcept
+            Array_subscripts_iterator<Internal_buffer>& operator-=(std::int64_t value) noexcept
             {
                 for (std::int64_t i = 0; i < value; ++i) {
                     --(*this);
@@ -844,7 +844,7 @@ namespace computoc {
                 return *this;
             }
 
-            [[nodiscard]] Array_subscripts_iterator operator-(std::int64_t value) const noexcept
+            [[nodiscard]] Array_subscripts_iterator<Internal_buffer> operator-(std::int64_t value) const noexcept
             {
                 Array_subscripts_iterator temp{ *this };
                 temp -= value;
