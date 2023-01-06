@@ -227,7 +227,7 @@ namespace computoc {
             }
 
             for (std::int64_t i = num_ignored_subs; i < strides.s(); ++i) {
-                ind += strides.p()[i] * modulo(subs.p()[i - num_ignored_subs], dims.p()[i]);
+                ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
             }
 
             return ind;
@@ -371,7 +371,7 @@ namespace computoc {
                     }
                 }
                 else {
-                    dims_.p()[0] = 1;
+                    dims_[0] = 1;
                 }
 
                 strides_ = { ndims, buff_.data().p() + ndims };
@@ -1050,7 +1050,7 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
                 for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data().p()[i] = data[i];
+                    buffsp_->data()[i] = data[i];
                 }
             }
             template <typename U>
@@ -1074,7 +1074,7 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
                 for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data().p()[i] = value;
+                    buffsp_->data()[i] = value;
                 }
             }
             Array(std::initializer_list<std::int64_t> dims, const T& value)
@@ -1086,7 +1086,7 @@ namespace computoc {
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
                 for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data().p()[i] = value;
+                    buffsp_->data()[i] = value;
                 }
             }
             template <typename U>
@@ -1112,7 +1112,7 @@ namespace computoc {
 
             const T& operator()(const Params<std::int64_t>& subs) const noexcept
             {
-                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
@@ -1121,7 +1121,7 @@ namespace computoc {
 
             T& operator()(const Params<std::int64_t>& subs) noexcept
             {
-                return buffsp_->data().p()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             T& operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
@@ -1158,7 +1158,7 @@ namespace computoc {
 
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, indices.header().dims() };
                 while (ndstor) {
-                    res(*ndstor) = buffsp_->data().p()[indices(*ndstor)];
+                    res(*ndstor) = buffsp_->data()[indices(*ndstor)];
                     ++ndstor;
                 }
 
@@ -1230,7 +1230,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims(), axis };
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
 
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims().p()[modulo(axis, arr.header().dims().s())] };
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, arr.header().dims().s())] };
 
             while (arr_ndstor && res_ndstor) {
                 decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*arr_ndstor)) };
@@ -2452,11 +2452,11 @@ namespace computoc {
 
             for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
                 if (i != fixed_axis) {
-                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
                 }
             }
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims().p()[fixed_axis], fixed_axis);
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
             if (new_header.empty()) {
                 return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
@@ -2469,11 +2469,11 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && (*resndstor).p()[fixed_axis] < lhs.header().dims().p()[fixed_axis] || (*resndstor).p()[fixed_axis] >= lhs.header().dims().p()[fixed_axis] + rhs.header().dims().p()[fixed_axis]) {
+                if (lhsndstor && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
                     res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && (*resndstor).p()[fixed_axis] >= lhs.header().dims().p()[fixed_axis] && (*resndstor).p()[fixed_axis] < lhs.header().dims().p()[fixed_axis] + rhs.header().dims().p()[fixed_axis]) {
+                else if (rhsndstor && (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
                     res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
@@ -2518,12 +2518,12 @@ namespace computoc {
 
             for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
                 if (i != fixed_axis) {
-                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims().p()[i] == rhs.header().dims().p()[i], std::invalid_argument, "different dimension value");
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
                 }
             }
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims().p()[fixed_axis]) };
+            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims().p()[fixed_axis], fixed_axis);
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
             if (new_header.empty()) {
                 return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
@@ -2536,11 +2536,11 @@ namespace computoc {
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (resndstor) {
-                if (lhsndstor && (*resndstor).p()[fixed_axis] < fixed_ind || (*resndstor).p()[fixed_axis] >= fixed_ind + rhs.header().dims().p()[fixed_axis]) {
+                if (lhsndstor && (*resndstor)[fixed_axis] < fixed_ind || (*resndstor)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
                     res(*resndstor) = lhs(*lhsndstor);
                     ++lhsndstor;
                 }
-                else if (rhsndstor && (*resndstor).p()[fixed_axis] >= fixed_ind && (*resndstor).p()[fixed_axis] < fixed_ind + rhs.header().dims().p()[fixed_axis]) {
+                else if (rhsndstor && (*resndstor)[fixed_axis] >= fixed_ind && (*resndstor)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
                     res(*resndstor) = rhs(*rhsndstor);
                     ++rhsndstor;
                 }
@@ -2586,24 +2586,24 @@ namespace computoc {
             }
 
             std::int64_t fixed_axis{ modulo(axis, arr.header().dims().s()) };
-            std::int64_t fixed_ind{ modulo(ind, arr.header().dims().p()[fixed_axis]) };
+            std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
 
             // if count is more than number of elements, set it to number of elements
-            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims().p()[fixed_axis] ? count : (arr.header().dims().p()[fixed_axis] - fixed_ind) };
+            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), -fixed_count, fixed_axis);
             if (new_header.empty()) {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims().p()[fixed_axis]) * fixed_count  };
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count  };
             res.header() = std::move(new_header);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arrndstor({}, arr.header().dims());
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
 
             while (arrndstor) {
-                if (resndstor && (*arrndstor).p()[fixed_axis] < fixed_ind || (*arrndstor).p()[fixed_axis] >= fixed_ind + fixed_count) {
+                if (resndstor && (*arrndstor)[fixed_axis] < fixed_ind || (*arrndstor)[fixed_axis] >= fixed_ind + fixed_count) {
                     res(*resndstor) = arr(*arrndstor);
                     ++resndstor;
                 }
