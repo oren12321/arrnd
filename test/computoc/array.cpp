@@ -2357,7 +2357,7 @@ TEST(Array_test, copy)
         EXPECT_TRUE(computoc::all_equal(arr3, arr2));
 
         computoc::copy(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2);
-        EXPECT_TRUE(computoc::all_equal(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2));
+        EXPECT_TRUE(computoc::all_equal(arr3({ {0, 0}, {0, 0}, {0, 1} }), arr2({ {0, 0}, {0, 0}, {0, 1} })));
     }
 
     // copy to different type ND array
@@ -2388,7 +2388,7 @@ TEST(Array_test, copy)
         Integer_array rarr{ {3, 1, 2}, 0 };
         EXPECT_FALSE(computoc::all_equal(tarr, rarr));
         computoc::copy(arr, rarr);
-        EXPECT_TRUE(computoc::all_equal(tarr, rarr));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{ {3, 1, 2}, 0 }, rarr));
     }
 }
 

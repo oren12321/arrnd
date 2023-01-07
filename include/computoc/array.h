@@ -233,6 +233,23 @@ namespace computoc {
             return ind;
         }
 
+        [[nodiscard]] inline bool is_contained_in(const Params<std::int64_t> sub_dims, const Params<std::int64_t>& dims) noexcept
+        {
+            if (sub_dims.s() > dims.s()) {
+                return false;
+            }
+
+            std::int64_t num_zero_dims{ dims.s() - sub_dims.s() };
+
+            for (std::int64_t i = num_zero_dims; i < dims.s(); ++i) {
+                if (sub_dims[i - num_zero_dims] > dims[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         /*
         Example:
         ========
@@ -936,6 +953,7 @@ namespace computoc {
             Array(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>&& other) = default;
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array(Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>&& other)
+                : Array(other.header().dims())
             {
                 copy(other, *this);
 
@@ -961,6 +979,7 @@ namespace computoc {
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& operator=(Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>&& other)&
             {
+                *this = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>(other.header().dims());
                 copy(other, *this);
                 Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o> dummy{ std::move(other) };
                 return *this;
@@ -978,6 +997,7 @@ namespace computoc {
             Array(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& other) = default;
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array(const Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>& other)
+                : Array(other.header().dims())
             {
                 copy(other, *this);
             }
@@ -1001,6 +1021,7 @@ namespace computoc {
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& operator=(const Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>& other)&
             {
+                *this = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>(other.header().dims());
                 copy(other, *this);
                 return *this;
             }
@@ -1153,6 +1174,336 @@ namespace computoc {
             Header hdr_{};
             memoc::Shared_ptr<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator> buffsp_{ nullptr };
         };
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline void copy(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& src, Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& dst)
+        {
+            if (empty(src) || empty(dst)) {
+                return;
+            }
+
+            if (is_contained_in(src.header().dims(), dst.header().dims())) {
+                for (typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator src_iter{ {}, src.header().dims() }; src_iter; ++src_iter) {
+                    dst(*src_iter) = src(*src_iter);
+                }
+            }
+        }
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline void copy(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& src, Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>&& dst)
+        {
+            copy(src, dst);
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        {
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone{};
+
+            if (empty(arr)) {
+                return clone;
+            }
+
+            clone = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{ arr.header().dims() };
+
+            for (typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() }; iter; ++iter) {
+                clone(*iter) = arr(*iter);
+            }
+
+            return clone;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> reshape(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
+        {
+            /*
+            * Reshaping algorithm:
+            * - empty array -> empty array
+            * - different number of elements -> throw an exception
+            * - equal dimensions -> ref to input array
+            * - subarray -> new array with new size and copied elements from input array (reshape on subarray isn't always defined)
+            * - not subarray -> reference to input array with modified header
+            */
+            if (empty(arr)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            COMPUTOC_THROW_IF_FALSE(arr.header().count() == numel(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
+
+            if (arr.header().dims() == new_dims) {
+                return arr;
+            }
+
+            if (arr.header().is_subarray()) {
+                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
+
+                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator prev_ndstor({}, arr.header().dims());
+                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
+
+                while (prev_ndstor && new_ndstor) {
+                    res(*new_ndstor) = arr(*prev_ndstor);
+                    ++prev_ndstor;
+                    ++new_ndstor;
+                }
+
+                return res;
+            }
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(new_dims);
+            if (new_header.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr };
+            res.header() = std::move(new_header);
+
+            return res;
+        }
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> reshape(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::initializer_list<std::int64_t> new_dims)
+        {
+            return reshape(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> resize(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
+        {
+            /*
+            * Resizing algorithm:
+            * - return new array of the new size containing the original array data or part of it.
+            */
+            if (new_dims.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            if (empty(arr)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>(new_dims);
+            }
+
+            if (arr.header().dims() == new_dims) {
+                return clone(arr);
+            }
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator prev_ndstor({}, arr.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
+
+            while (prev_ndstor && new_ndstor) {
+                res(*new_ndstor) = arr(*prev_ndstor);
+                ++prev_ndstor;
+                ++new_ndstor;
+            }
+
+            return res;
+        }
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> resize(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::initializer_list<std::int64_t> new_dims)
+        {
+            return resize(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
+        {
+            return (!arr.data() || arr.header().is_subarray()) && arr.header().empty();
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t axis)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+
+            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
+                if (i != fixed_axis) {
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
+                }
+            }
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
+            if (new_header.empty()) {
+                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
+            res.header() = std::move(new_header);
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
+
+            while (resndstor) {
+                if (lhsndstor && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
+                    res(*resndstor) = lhs(*lhsndstor);
+                    ++lhsndstor;
+                }
+                else if (rhsndstor && (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
+                    res(*resndstor) = rhs(*rhsndstor);
+                    ++rhsndstor;
+                }
+                ++resndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ resize(lhs, {lhs.header().count() + rhs.header().count()}) };
+            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
+            for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
+                res({ i }) = rhs({ i - lhs.header().count() });
+            }
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind, std::int64_t axis)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+
+            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
+                if (i != fixed_axis) {
+                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
+                }
+            }
+            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
+            if (new_header.empty()) {
+                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
+            res.header() = std::move(new_header);
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
+
+            while (resndstor) {
+                if (lhsndstor && (*resndstor)[fixed_axis] < fixed_ind || (*resndstor)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
+                    res(*resndstor) = lhs(*lhsndstor);
+                    ++lhsndstor;
+                }
+                else if (rhsndstor && (*resndstor)[fixed_axis] >= fixed_ind && (*resndstor)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
+                    res(*resndstor) = rhs(*rhsndstor);
+                    ++rhsndstor;
+                }
+                ++resndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().count(), std::out_of_range, "index not in array dimension range");
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {lhs.header().count() + rhs.header().count()} };
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs{ reshape(lhs, {lhs.header().count()}) };
+            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
+            for (std::int64_t i = 0; i < ind; ++i) {
+                res({ i }) = rlhs({ i });
+            }
+            for (std::int64_t i = 0; i < rhs.header().count(); ++i) {
+                res({ ind + i }) = rrhs({ i });
+            }
+            for (std::int64_t i = 0; i < lhs.header().count() - ind; ++i) {
+                res({ ind + rhs.header().count() + i }) = rlhs({ ind + i });
+            }
+            return res;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
+        {
+            if (empty(arr)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            std::int64_t fixed_axis{ modulo(axis, arr.header().dims().s()) };
+            std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
+
+            // if count is more than number of elements, set it to number of elements
+            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), -fixed_count, fixed_axis);
+            if (new_header.empty()) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count };
+            res.header() = std::move(new_header);
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arrndstor({}, arr.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
+
+            while (arrndstor) {
+                if (resndstor && (*arrndstor)[fixed_axis] < fixed_ind || (*arrndstor)[fixed_axis] >= fixed_ind + fixed_count) {
+                    res(*resndstor) = arr(*arrndstor);
+                    ++resndstor;
+                }
+                ++arrndstor;
+            }
+
+            return res;
+        }
+
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count)
+        {
+            if (empty(arr)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            COMPUTOC_THROW_IF_FALSE(ind + count < arr.header().count(), std::out_of_range, "index plus count are not in array dimension range");
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {arr.header().count() - count} };
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> rarr{ reshape(arr, {arr.header().count()}) };
+            for (std::int64_t i = 0; i < ind; ++i) {
+                res({ i }) = rarr({ i });
+            }
+            for (std::int64_t i = ind + count; i < arr.header().count(); ++i) {
+                res({ ind + i - count + 1 }) = rarr({ i });
+            }
+            return res;
+        }
 
         template <typename T, typename Func, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>    
         inline auto transform(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Func func)
@@ -2264,357 +2615,6 @@ namespace computoc {
         inline bool all_close(const T1& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
-        }
-
-        template <
-            typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
-            typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>
-        inline void copy(const Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>& src, Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>& dst)
-        {
-            /*
-            * Algorithm:
-            * - empty array     -> empty array
-            * - not equal count -> create new buffer
-            * - copy elements
-            */
-
-            if (empty(src)) {
-                dst = Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>{};
-                return;
-            }
-
-            if (src.header().count() != dst.header().count()) {
-                dst = Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>(src.header().dims());
-            }
-
-            typename Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>::Subscripts_iterator src_ndstor{ {}, src.header().dims() };
-            typename Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>::Subscripts_iterator dst_ndstor{ {}, dst.header().dims() };
-
-            while (src_ndstor && dst_ndstor) {
-                dst(*dst_ndstor) = src(*src_ndstor);
-                ++src_ndstor;
-                ++dst_ndstor;
-            }
-        }
-        template <
-            typename T1, memoc::Buffer Data_buffer1, memoc::Allocator Data_reference_allocator1, memoc::Buffer<std::int64_t> Internals_buffer1,
-            typename T2, memoc::Buffer Data_buffer2, memoc::Allocator Data_reference_allocator2, memoc::Buffer<std::int64_t> Internals_buffer2>
-        inline void copy(const Array<T1, Data_buffer1, Data_reference_allocator1, Internals_buffer1>& src, Array<T2, Data_buffer2, Data_reference_allocator2, Internals_buffer2>&& dst)
-        {
-            copy(src, dst);
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
-        {
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone{};
-
-            if (empty(arr)) {
-                return clone;
-            }
-
-            clone = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{ arr.header().dims() };
-
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
-
-            while (ndstor) {
-                clone(*ndstor) = arr(*ndstor);
-                ++ndstor;
-            }
-            return clone;
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> reshape(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
-        {
-            /*
-            * Reshaping algorithm:
-            * - empty array -> empty array
-            * - different number of elements -> throw an exception
-            * - equal dimensions -> ref to input array
-            * - subarray -> new array with new size and copied elements from input array (reshape on subarray isn't always defined)
-            * - not subarray -> reference to input array with modified header
-            */
-            if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            COMPUTOC_THROW_IF_FALSE(arr.header().count() == numel(new_dims), std::invalid_argument, "different number of elements between original and rehsaped arrays");
-
-            if (arr.header().dims() == new_dims) {
-                return arr;
-            }
-
-            if (arr.header().is_subarray()) {
-                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
-
-                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator prev_ndstor({}, arr.header().dims());
-                typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
-
-                while (prev_ndstor && new_ndstor) {
-                    res(*new_ndstor) = arr(*prev_ndstor);
-                    ++prev_ndstor;
-                    ++new_ndstor;
-                }
-
-                return res;
-            }
-
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(new_dims);
-            if (new_header.empty()) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr };
-            res.header() = std::move(new_header);
-
-            return res;
-        }
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> reshape(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::initializer_list<std::int64_t> new_dims)
-        {
-            return reshape(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> resize(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
-        {
-            /*
-            * Resizing algorithm:
-            * - return new array of the new size containing the original array data or part of it.
-            */
-            if (new_dims.empty()) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>(new_dims);
-            }
-
-            if (arr.header().dims() == new_dims) {
-                return clone(arr);
-            }
-
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
-
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator prev_ndstor({}, arr.header().dims());
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator new_ndstor({}, new_dims);
-
-            while (prev_ndstor && new_ndstor) {
-                res(*new_ndstor) = arr(*prev_ndstor);
-                ++prev_ndstor;
-                ++new_ndstor;
-            }
-
-            return res;
-        }
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> resize(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::initializer_list<std::int64_t> new_dims)
-        {
-            return resize(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
-        {
-            return (!arr.data() || arr.header().is_subarray()) && arr.header().empty();
-        }
-
-        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t axis)
-        {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
-
-            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
-                if (i != fixed_axis) {
-                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
-                }
-            }
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
-            if (new_header.empty()) {
-                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = std::move(new_header);
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
-
-            while (resndstor) {
-                if (lhsndstor && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
-                    res(*resndstor) = lhs(*lhsndstor);
-                    ++lhsndstor;
-                }
-                else if (rhsndstor && (*resndstor)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*resndstor)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
-                    res(*resndstor) = rhs(*rhsndstor);
-                    ++rhsndstor;
-                }
-                ++resndstor;
-            }
-
-            return res;
-        }
-
-        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
-        {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ resize(lhs, {lhs.header().count() + rhs.header().count()}) };
-            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
-            for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
-                res({ i }) = rhs({ i - lhs.header().count() });
-            }
-            return res;
-        }
-
-        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind, std::int64_t axis)
-        {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            COMPUTOC_THROW_IF_FALSE(lhs.header().dims().s() == rhs.header().dims().s(), std::invalid_argument, "different number of dimensions");
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
-
-            for (std::int64_t i = 0; i < lhs.header().dims().s(); ++i) {
-                if (i != fixed_axis) {
-                    COMPUTOC_THROW_IF_FALSE(lhs.header().dims()[i] == rhs.header().dims()[i], std::invalid_argument, "different dimension value");
-                }
-            }
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims()[fixed_axis], fixed_axis);
-            if (new_header.empty()) {
-                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = std::move(new_header);
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhsndstor({}, lhs.header().dims());
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhsndstor({}, rhs.header().dims());
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
-
-            while (resndstor) {
-                if (lhsndstor && (*resndstor)[fixed_axis] < fixed_ind || (*resndstor)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
-                    res(*resndstor) = lhs(*lhsndstor);
-                    ++lhsndstor;
-                }
-                else if (rhsndstor && (*resndstor)[fixed_axis] >= fixed_ind && (*resndstor)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
-                    res(*resndstor) = rhs(*rhsndstor);
-                    ++rhsndstor;
-                }
-                ++resndstor;
-            }
-
-            return res;
-        }
-
-        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind)
-        {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            COMPUTOC_THROW_IF_FALSE(ind <= lhs.header().count(), std::out_of_range, "index not in array dimension range");
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {lhs.header().count() + rhs.header().count()} };
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs{ reshape(lhs, {lhs.header().count()}) };
-            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
-            for (std::int64_t i = 0; i < ind; ++i) {
-                res({ i }) = rlhs({ i });
-            }
-            for (std::int64_t i = 0; i < rhs.header().count(); ++i) {
-                res({ ind + i }) = rrhs({ i });
-            }
-            for (std::int64_t i = 0; i < lhs.header().count() - ind; ++i) {
-                res({ ind + rhs.header().count() + i }) = rlhs({ ind + i });
-            }
-            return res;
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
-        {
-            if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            std::int64_t fixed_axis{ modulo(axis, arr.header().dims().s()) };
-            std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
-
-            // if count is more than number of elements, set it to number of elements
-            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
-
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), -fixed_count, fixed_axis);
-            if (new_header.empty()) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count  };
-            res.header() = std::move(new_header);
-
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arrndstor({}, arr.header().dims());
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator resndstor({}, res.header().dims());
-
-            while (arrndstor) {
-                if (resndstor && (*arrndstor)[fixed_axis] < fixed_ind || (*arrndstor)[fixed_axis] >= fixed_ind + fixed_count) {
-                    res(*resndstor) = arr(*arrndstor);
-                    ++resndstor;
-                }
-                ++arrndstor;
-            }
-
-            return res;
-        }
-
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count)
-        {
-            if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            COMPUTOC_THROW_IF_FALSE(ind + count < arr.header().count(), std::out_of_range, "index plus count are not in array dimension range");
-
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {arr.header().count() - count} };
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> rarr{ reshape(arr, {arr.header().count()}) };
-            for (std::int64_t i = 0; i < ind; ++i) {
-                res({ i }) = rarr({ i });
-            }
-            for (std::int64_t i = ind + count; i < arr.header().count(); ++i) {
-                res({ ind + i - count + 1 }) = rarr({ i });
-            }
-            return res;
         }
     }
 
