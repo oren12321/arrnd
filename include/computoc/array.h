@@ -323,7 +323,7 @@ namespace computoc {
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& intervals)
-                : is_partial_(true)
+                : is_subarray_(true)
             {
                 if (numel(previous_dims) <= 0) {
                     return;
@@ -445,7 +445,7 @@ namespace computoc {
             }
 
             Array_header(Array_header&& other) noexcept
-                : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
+                : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
@@ -453,7 +453,7 @@ namespace computoc {
                 other.dims_.clear();
                 other.strides_.clear();
                 other.count_ = other.offset_ = 0;
-                other.is_partial_ = false;
+                other.is_subarray_ = false;
             }
             Array_header& operator=(Array_header&& other) noexcept
             {
@@ -464,7 +464,7 @@ namespace computoc {
                 buff_ = std::move(other.buff_);
                 count_ = other.count_;
                 offset_ = other.offset_;
-                is_partial_ = other.is_partial_;
+                is_subarray_ = other.is_subarray_;
 
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
@@ -472,13 +472,13 @@ namespace computoc {
                 other.dims_.clear();
                 other.strides_.clear();
                 other.count_ = other.offset_ = 0;
-                other.is_partial_ = false;
+                other.is_subarray_ = false;
 
                 return *this;
             }
 
             Array_header(const Array_header& other) noexcept
-                : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_partial_(other.is_partial_)
+                : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
@@ -492,7 +492,7 @@ namespace computoc {
                 buff_ = other.buff_;
                 count_ = other.count_;
                 offset_ = other.offset_;
-                is_partial_ = other.is_partial_;
+                is_subarray_ = other.is_subarray_;
 
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
@@ -522,9 +522,9 @@ namespace computoc {
                 return offset_;
             }
 
-            [[nodiscard]] bool is_partial() const noexcept
+            [[nodiscard]] bool is_subarray() const noexcept
             {
-                return is_partial_;
+                return is_subarray_;
             }
 
             [[nodiscard]] bool empty() const noexcept
@@ -538,7 +538,7 @@ namespace computoc {
             Internal_buffer buff_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
-            bool is_partial_{ false };
+            bool is_subarray_{ false };
         };
 
 
@@ -948,7 +948,7 @@ namespace computoc {
                     return *this;
                 }
 
-                if (hdr_.is_partial() && hdr_.dims() == other.hdr_.dims()) {
+                if (hdr_.is_subarray() && hdr_.dims() == other.hdr_.dims()) {
                     copy(other, *this);
                     return *this;
                 }
@@ -968,7 +968,7 @@ namespace computoc {
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& operator=(Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>&& other)&&
             {
-                if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
+                if (hdr_.is_subarray() && hdr_.dims() == other.header().dims()) {
                     copy(other, *this);
                 }
                 Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o> dummy{std::move(other)};
@@ -988,7 +988,7 @@ namespace computoc {
                     return *this;
                 }
 
-                if (hdr_.is_partial() && hdr_.dims() == other.hdr_.dims()) {
+                if (hdr_.is_subarray() && hdr_.dims() == other.hdr_.dims()) {
                     copy(other, *this);
                     return *this;
                 }
@@ -1007,7 +1007,7 @@ namespace computoc {
             template< typename T_o, memoc::Buffer Data_buffer_o, memoc::Allocator Data_reference_allocator_o, memoc::Buffer<std::int64_t> Internals_buffer_o>
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& operator=(const Array<T_o, Data_buffer_o, Data_reference_allocator_o, Internals_buffer_o>& other)&&
             {
-                if (hdr_.is_partial() && hdr_.dims() == other.header().dims()) {
+                if (hdr_.is_subarray() && hdr_.dims() == other.header().dims()) {
                     copy(other, *this);
                 }
                 return *this;
@@ -2361,7 +2361,7 @@ namespace computoc {
                 return arr;
             }
 
-            if (arr.header().is_partial()) {
+            if (arr.header().is_subarray()) {
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
 
                 typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator prev_ndstor({}, arr.header().dims());
@@ -2433,7 +2433,7 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
         {
-            return (!arr.data() || arr.header().is_partial()) && arr.header().empty();
+            return (!arr.data() || arr.header().is_subarray()) && arr.header().empty();
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
