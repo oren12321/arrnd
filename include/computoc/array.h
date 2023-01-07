@@ -233,23 +233,6 @@ namespace computoc {
             return ind;
         }
 
-        [[nodiscard]] inline bool is_contained_in(const Params<std::int64_t> sub_dims, const Params<std::int64_t>& dims) noexcept
-        {
-            if (sub_dims.s() > dims.s()) {
-                return false;
-            }
-
-            std::int64_t num_zero_dims{ dims.s() - sub_dims.s() };
-
-            for (std::int64_t i = num_zero_dims; i < dims.s(); ++i) {
-                if (sub_dims[i - num_zero_dims] > dims[i]) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         /*
         Example:
         ========
@@ -1175,6 +1158,9 @@ namespace computoc {
             memoc::Shared_ptr<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator> buffsp_{ nullptr };
         };
 
+        /**
+        * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
+        */
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         inline void copy(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& src, Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& dst)
         {
@@ -1182,10 +1168,8 @@ namespace computoc {
                 return;
             }
 
-            if (is_contained_in(src.header().dims(), dst.header().dims())) {
-                for (typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator src_iter{ {}, src.header().dims() }; src_iter; ++src_iter) {
-                    dst(*src_iter) = src(*src_iter);
-                }
+            for (typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator src_iter{ {}, src.header().dims() }; src_iter; ++src_iter) {
+                dst(*src_iter) = src(*src_iter);
             }
         }
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>

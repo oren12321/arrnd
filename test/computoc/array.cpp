@@ -2388,7 +2388,11 @@ TEST(Array_test, copy)
         Integer_array rarr{ {3, 1, 2}, 0 };
         EXPECT_FALSE(computoc::all_equal(tarr, rarr));
         computoc::copy(arr, rarr);
-        EXPECT_TRUE(computoc::all_equal(Integer_array{ {3, 1, 2}, 0 }, rarr));
+        EXPECT_TRUE(computoc::all_equal(
+            Integer_array{ {3, 1, 2}, {
+                5, 6,
+                0, 0,
+                0, 0 } }, rarr));
     }
 }
 
