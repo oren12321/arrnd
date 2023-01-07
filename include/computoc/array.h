@@ -560,34 +560,34 @@ namespace computoc {
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
                     if (start.empty()) {
-                        set(subs_, std::int64_t{ 0 }, nsubs_);
-                        set(start_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(start_, std::int64_t{ 0 }, nsubs_);
                     }
                     else {
-                        copy(start, subs_, nsubs_);
-                        copy(start, start_, nsubs_);
+                        memoc::copy(start, subs_, nsubs_);
+                        memoc::copy(start, start_, nsubs_);
                     }
 
                     minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                     if (!minimum_excluded.empty()) {
-                        copy(minimum_excluded, minimum_excluded_, nsubs_);
+                        memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
                     }
                     else if(!start.empty()) {
-                        copy(start, minimum_excluded_, nsubs_);
+                        memoc::copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
+                        memoc::set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
                     }
 
                     maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
                     if (maximum_excluded.empty()) {
-                        set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
+                        memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
                     }
                     else {
-                        copy(maximum_excluded, maximum_excluded_, nsubs_);
+                        memoc::copy(maximum_excluded, maximum_excluded_, nsubs_);
                     }
 
                     major_axis_ = find_major_axis();
@@ -612,39 +612,39 @@ namespace computoc {
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
                     if (start.empty()) {
-                        set(subs_, std::int64_t{ 0 }, nsubs_);
-                        set(start_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(start_, std::int64_t{ 0 }, nsubs_);
                     }
                     else {
-                        copy(start, subs_, nsubs_);
-                        copy(start, start_, nsubs_);
+                        memoc::copy(start, subs_, nsubs_);
+                        memoc::copy(start, start_, nsubs_);
                     }
 
                     minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                     if (!minimum_excluded.empty()) {
-                        copy(minimum_excluded, minimum_excluded_, nsubs_);
+                        memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
                     }
                     else if (!start.empty()) {
-                        copy(start, minimum_excluded_, nsubs_);
+                        memoc::copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
+                        memoc::set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
                     }
 
                     maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
                     if (maximum_excluded.empty()) {
-                        set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
+                        memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
                     }
                     else {
-                        copy(maximum_excluded, maximum_excluded_, nsubs_);
+                        memoc::copy(maximum_excluded, maximum_excluded_, nsubs_);
                     }
 
                     if (order.s() >= nsubs_) {
                         order_ = { nsubs_, buff_.data().p() + 4 * nsubs_ };
-                        copy(order, order_, nsubs_);
+                        memoc::copy(order, order_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             order_[i] = modulo(order_[i], nsubs_);
                         }
@@ -758,7 +758,7 @@ namespace computoc {
 
             void reset() noexcept
             {
-                copy(start_, subs_, nsubs_);
+                memoc::copy(start_, subs_, nsubs_);
             }
 
             Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
@@ -1019,11 +1019,11 @@ namespace computoc {
                 if (empty(*this)) {
                     return *this;
                 }
-                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, Params<std::int64_t>(hdr_.dims()) };
-                while (ndstor) {
-                    (*this)(*ndstor) = value;
-                    ++ndstor;
+
+                for (Subscripts_iterator iter({}, hdr_.dims()); iter; ++iter) {
+                    (*this)(*iter) = value;
                 }
+
                 return *this;
             }
 
@@ -1049,9 +1049,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
-                for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data()[i] = data[i];
-                }
+                memoc::copy(Params<U>{ hdr_.count(), data }, buffsp_->data());
             }
             template <typename U>
             Array(const Params<std::int64_t>& dims, std::initializer_list<U> data)
@@ -1073,9 +1071,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const T& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
-                for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data()[i] = value;
-                }
+                memoc::set(buffsp_->data(), value);
             }
             Array(std::initializer_list<std::int64_t> dims, const T& value)
                 : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, value)
@@ -1085,9 +1081,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Typed_buffer<T, Data_buffer>, Data_reference_allocator>(hdr_.count()))
             {
-                for (std::int64_t i = 0; i < buffsp_->data().s(); ++i) {
-                    buffsp_->data()[i] = value;
-                }
+                memoc::set(buffsp_->data(), value);
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, const U& value)
@@ -1095,49 +1089,41 @@ namespace computoc {
             {
             }
 
-            const Header& header() const noexcept
+            [[nodiscard]] const Header& header() const noexcept
             {
                 return hdr_;
             }
 
-            Header& header() noexcept
+            [[nodiscard]] Header& header() noexcept
             {
                 return hdr_;
             }
 
-            T* data() const noexcept
+            [[nodiscard]] T* data() const noexcept
             {
                 return (buffsp_ ? buffsp_->data().p() : nullptr);
             }
 
-            const T& operator()(const Params<std::int64_t>& subs) const noexcept
+            [[nodiscard]] const T& operator()(const Params<std::int64_t>& subs) const noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
+            [[nodiscard]] const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
                 return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
             }
 
-            T& operator()(const Params<std::int64_t>& subs) noexcept
+            [[nodiscard]] T& operator()(const Params<std::int64_t>& subs) noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            T& operator()(std::initializer_list<std::int64_t> subs) noexcept
+            [[nodiscard]] T& operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
                 return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Params<Interval<std::int64_t>>& ranges) const
+            [[nodiscard]] Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Params<Interval<std::int64_t>>& ranges) const
             {
-                /*
-                * Slicing algorithm:
-                * - empty ranges group -> input array
-                * - ranges should be legal
-                * - input empty array -> input array
-                * - ranges should be inside dimensions
-                * - -> slice
-                */
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
@@ -1147,19 +1133,17 @@ namespace computoc {
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)(Params<Interval<std::int64_t>>{std::ssize(ranges), ranges.begin()});
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>& indices) const noexcept
+            [[nodiscard]] Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>& indices) const noexcept
             {
                 Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ indices.header().dims() };
 
-                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, indices.header().dims() };
-                while (ndstor) {
-                    res(*ndstor) = buffsp_->data()[indices(*ndstor)];
-                    ++ndstor;
+                for (Subscripts_iterator iter({}, indices.header().dims()); iter; ++iter) {
+                    res(*iter) = buffsp_->data()[indices(*iter)];
                 }
 
                 return res;
