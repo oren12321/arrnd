@@ -1532,11 +1532,11 @@ namespace computoc {
 
             Array<decltype(func(arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().dims() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() };
 
-            while (ndstor) {
-                res(*ndstor) = func(arr(*ndstor));
-                ++ndstor;
+            while (iter) {
+                res(*iter) = func(arr(*iter));
+                ++iter;
             }
 
             return res;
@@ -1550,14 +1550,14 @@ namespace computoc {
                 return decltype(func(arr.data()[0], arr.data()[0])){};
             }
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() };
 
-            decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*ndstor)) };
-            ++ndstor;
+            decltype(func(arr.data()[0], arr.data()[0])) res{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*iter)) };
+            ++iter;
 
-            while (ndstor) {
-                res = func(arr(*ndstor), res);
-                ++ndstor;
+            while (iter) {
+                res = func(arr(*iter), res);
+                ++iter;
             }
 
             return res;
@@ -1579,19 +1579,19 @@ namespace computoc {
             Array<decltype(func(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ {new_header.count()} };
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims(), axis };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims(), axis };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, arr.header().dims().s())] };
 
-            while (arr_ndstor && res_ndstor) {
-                decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*arr_ndstor)) };
-                ++arr_ndstor;
-                for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_ndstor) {
-                    res_element = func(arr(*arr_ndstor), res_element);
+            while (arr_iter && res_iter) {
+                decltype(func(arr.data()[0], arr.data()[0])) res_element{ static_cast<decltype(func(arr.data()[0], arr.data()[0]))>(arr(*arr_iter)) };
+                ++arr_iter;
+                for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_iter) {
+                    res_element = func(arr(*arr_iter), res_element);
                 }
-                res(*res_ndstor) = res_element;
-                ++res_ndstor;
+                res(*res_iter) = res_element;
+                ++res_iter;
             }
 
             return res;
@@ -1629,11 +1629,11 @@ namespace computoc {
 
             Array<decltype(func(lhs.data()[0], rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, lhs.header().dims() };
 
-            while (ndstor) {
-                res(*ndstor) = func(lhs(*ndstor), rhs(*ndstor));
-                ++ndstor;
+            while (iter) {
+                res(*iter) = func(lhs(*iter), rhs(*iter));
+                ++iter;
             }
 
             return res;
@@ -1645,11 +1645,11 @@ namespace computoc {
         {
             Array<decltype(func(lhs.data()[0], rhs)), Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, lhs.header().dims() };
 
-            while (ndstor) {
-                res(*ndstor) = func(lhs(*ndstor), rhs);
-                ++ndstor;
+            while (iter) {
+                res(*iter) = func(lhs(*iter), rhs);
+                ++iter;
             }
 
             return res;
@@ -1661,11 +1661,11 @@ namespace computoc {
         {
             Array<decltype(func(lhs, rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer> res{ rhs.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, rhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, rhs.header().dims() };
 
-            while (ndstor) {
-                res(*ndstor) = func(lhs, rhs(*ndstor));
-                ++ndstor;
+            while (iter) {
+                res(*iter) = func(lhs, rhs(*iter));
+                ++iter;
             }
 
             return res;
@@ -1680,18 +1680,18 @@ namespace computoc {
 
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims() };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
-            while (arr_ndstor && res_ndstor) {
-                if (func(arr(*arr_ndstor))) {
-                    res(*res_ndstor) = arr(*arr_ndstor);
+            while (arr_iter && res_iter) {
+                if (func(arr(*arr_iter))) {
+                    res(*res_iter) = arr(*arr_iter);
                     ++res_count;
-                    ++res_ndstor;
+                    ++res_iter;
                 }
-                ++arr_ndstor;
+                ++arr_iter;
             }
 
             if (res_count == 0) {
@@ -1716,21 +1716,21 @@ namespace computoc {
 
             Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims() };
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator mask_ndstor{ {}, mask.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims() };
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator mask_iter{ {}, mask.header().dims() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
-            while (arr_ndstor && mask_ndstor && res_ndstor) {
-                if (mask(*mask_ndstor)) {
-                    res(*res_ndstor) = arr(*arr_ndstor);
+            while (arr_iter && mask_iter && res_iter) {
+                if (mask(*mask_iter)) {
+                    res(*res_iter) = arr(*arr_iter);
                     ++res_count;
-                    ++res_ndstor;
+                    ++res_iter;
                 }
-                ++arr_ndstor;
-                ++mask_ndstor;
+                ++arr_iter;
+                ++mask_iter;
             }
 
             if (res_count == 0) {
@@ -1753,18 +1753,18 @@ namespace computoc {
 
             Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims() };
-            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims() };
+            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
-            while (arr_ndstor && res_ndstor) {
-                if (func(arr(*arr_ndstor))) {
-                    res(*res_ndstor) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_ndstor);
+            while (arr_iter && res_iter) {
+                if (func(arr(*arr_iter))) {
+                    res(*res_iter) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_iter);
                     ++res_count;
-                    ++res_ndstor;
+                    ++res_iter;
                 }
-                ++arr_ndstor;
+                ++arr_iter;
             }
 
             if (res_count == 0) {
@@ -1789,21 +1789,21 @@ namespace computoc {
 
             Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims() };
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator mask_ndstor{ {}, mask.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims() };
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator mask_iter{ {}, mask.header().dims() };
 
-            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<std::int64_t, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
             std::int64_t res_count{ 0 };
 
-            while (arr_ndstor && mask_ndstor && res_ndstor) {
-                if (mask(*mask_ndstor)) {
-                    res(*res_ndstor) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_ndstor);
+            while (arr_iter && mask_iter && res_iter) {
+                if (mask(*mask_iter)) {
+                    res(*res_iter) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_iter);
                     ++res_count;
-                    ++res_ndstor;
+                    ++res_iter;
                 }
-                ++arr_ndstor;
-                ++mask_ndstor;
+                ++arr_iter;
+                ++mask_iter;
             }
 
             if (res_count == 0) {
@@ -1832,13 +1832,13 @@ namespace computoc {
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() };
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_ndstor{ {}, arr.header().dims(), order };
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_ndstor{ {}, res.header().dims() };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter{ {}, arr.header().dims(), order };
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter{ {}, res.header().dims() };
 
-            while (arr_ndstor && res_ndstor) {
-                res(*res_ndstor) = arr(*arr_ndstor);
-                ++arr_ndstor;
-                ++res_ndstor;
+            while (arr_iter && res_iter) {
+                res(*res_iter) = arr(*arr_iter);
+                ++arr_iter;
+                ++res_iter;
             }
 
             return res;
@@ -2471,10 +2471,10 @@ namespace computoc {
             if (empty(arr)) {
                 return arr;
             }
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
-            while (ndstor) {
-                ++arr(*ndstor);
-                ++ndstor;
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() };
+            while (iter) {
+                ++arr(*iter);
+                ++iter;
             }
             return arr;
         }
@@ -2505,10 +2505,10 @@ namespace computoc {
             if (empty(arr)) {
                 return arr;
             }
-            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, arr.header().dims() };
-            while (ndstor) {
-                --arr(*ndstor);
-                ++ndstor;
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() };
+            while (iter) {
+                --arr(*iter);
+                ++iter;
             }
             return arr;
         }
@@ -2548,13 +2548,13 @@ namespace computoc {
                 return false;
             }
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, lhs.header().dims() };
 
-            while (ndstor) {
-                if (!func(lhs(*ndstor), rhs(*ndstor))) {
+            while (iter) {
+                if (!func(lhs(*iter), rhs(*iter))) {
                     return false;
                 }
-                ++ndstor;
+                ++iter;
             }
 
             return true;
@@ -2567,13 +2567,13 @@ namespace computoc {
                 return true;
             }
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, lhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, lhs.header().dims() };
 
-            while (ndstor) {
-                if (!func(lhs(*ndstor), rhs)) {
+            while (iter) {
+                if (!func(lhs(*iter), rhs)) {
                     return false;
                 }
-                ++ndstor;
+                ++iter;
             }
 
             return true;
@@ -2586,13 +2586,13 @@ namespace computoc {
                 return true;
             }
 
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator ndstor{ {}, rhs.header().dims() };
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, rhs.header().dims() };
 
-            while (ndstor) {
-                if (!func(lhs, rhs(*ndstor))) {
+            while (iter) {
+                if (!func(lhs, rhs(*iter))) {
                     return false;
                 }
-                ++ndstor;
+                ++iter;
             }
 
             return true;
