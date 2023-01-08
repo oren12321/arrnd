@@ -1209,7 +1209,7 @@ namespace computoc {
                 return;
             }
 
-            for (typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator src_iter{ {}, src.header().dims() }; src_iter; ++src_iter) {
+            for (typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator src_iter({}, src.header().dims()); src_iter; ++src_iter) {
                 dst(*src_iter) = src(*src_iter);
             }
         }
@@ -1222,15 +1222,13 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
         {
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone{};
-
             if (empty(arr)) {
-                return clone;
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>();
             }
 
-            clone = Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{ arr.header().dims() };
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> clone(arr.header().dims());
 
-            for (typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() }; iter; ++iter) {
+            for (typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
                 clone(*iter) = arr(*iter);
             }
 
@@ -1244,19 +1242,19 @@ namespace computoc {
         [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> reshape(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            if (arr.header().count() != numel(new_dims)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>();
             }
 
             if (arr.header().dims() == new_dims) {
                 return arr;
             }
 
+            if (arr.header().count() != numel(new_dims)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
             if (arr.header().is_subarray()) {
-                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
+                Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res(new_dims);
 
                 typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter({}, arr.header().dims());
                 typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, new_dims);
@@ -1272,10 +1270,10 @@ namespace computoc {
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(new_dims);
             if (new_header.empty()) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>();
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr };
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res(arr);
             res.header() = std::move(new_header);
 
             return res;
@@ -1289,10 +1287,6 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> resize(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Params<std::int64_t>& new_dims)
         {
-            if (numel(new_dims) <= 0) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
             if (empty(arr)) {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>(new_dims);
             }
@@ -1301,7 +1295,11 @@ namespace computoc {
                 return clone(arr);
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ new_dims };
+            if (numel(new_dims) <= 0) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res(new_dims);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter({}, arr.header().dims());
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, new_dims);
@@ -1321,46 +1319,6 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t axis)
-        {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims(), fixed_axis);
-            if (new_header.empty()) {
-                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
-            res.header() = std::move(new_header);
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhs_iter({}, lhs.header().dims());
-            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, res.header().dims());
-
-            while (res_iter) {
-                if (lhs_iter && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
-                    res(*res_iter) = lhs(*lhs_iter);
-                    ++lhs_iter;
-                }
-                else if (rhs_iter && (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
-                    res(*res_iter) = rhs(*rhs_iter);
-                    ++rhs_iter;
-                }
-                ++res_iter;
-            }
-
-            return res;
-        }
-
-        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         [[nodiscard]] inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             if (empty(lhs)) {
@@ -1371,9 +1329,9 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ resize(lhs, {lhs.header().count() + rhs.header().count()}) };
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
 
-            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
+            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs(reshape(rhs, { rhs.header().count() }));
 
             for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
                 res({ i }) = rhs({ i - lhs.header().count() });
@@ -1383,7 +1341,7 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind, std::int64_t axis)
+        [[nodiscard]] inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> append(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t axis)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -1393,27 +1351,26 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
-
-            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims(), fixed_axis);
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims(), axis);
             if (new_header.empty()) {
                 return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ lhs.header().count() + rhs.header().count() };
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhs_iter({}, lhs.header().dims());
             typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
             typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, res.header().dims());
 
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+
             while (res_iter) {
-                if (lhs_iter && (*res_iter)[fixed_axis] < fixed_ind || (*res_iter)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
+                if (lhs_iter && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
                     res(*res_iter) = lhs(*lhs_iter);
                     ++lhs_iter;
                 }
-                else if (rhs_iter && (*res_iter)[fixed_axis] >= fixed_ind && (*res_iter)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
+                else if (rhs_iter && (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
                     res(*res_iter) = rhs(*rhs_iter);
                     ++rhs_iter;
                 }
@@ -1434,12 +1391,12 @@ namespace computoc {
                 return clone(lhs);
             }
 
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res({ lhs.header().count() + rhs.header().count() });
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs(reshape(lhs, { lhs.header().count() }));
+            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs(reshape(rhs, { rhs.header().count() }));
+
             std::int64_t fixed_ind{ modulo(ind, lhs.header().count() + 1) };
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {lhs.header().count() + rhs.header().count()} };
-
-            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> rlhs{ reshape(lhs, {lhs.header().count()}) };
-            Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer> rrhs{ reshape(rhs, {rhs.header().count()}) };
 
             for (std::int64_t i = 0; i < fixed_ind; ++i) {
                 res({ i }) = rlhs({ i });
@@ -1449,6 +1406,73 @@ namespace computoc {
             }
             for (std::int64_t i = 0; i < lhs.header().count() - fixed_ind; ++i) {
                 res({ fixed_ind + rhs.header().count() + i }) = rlhs({ fixed_ind + i });
+            }
+
+            return res;
+        }
+
+        template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        [[nodiscard]] inline Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> insert(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, std::int64_t ind, std::int64_t axis)
+        {
+            if (empty(lhs)) {
+                return clone(rhs);
+            }
+
+            if (empty(rhs)) {
+                return clone(lhs);
+            }
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(lhs.header().dims(), rhs.header().dims(), axis);
+            if (new_header.empty()) {
+                return Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
+            Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer> res({ lhs.header().count() + rhs.header().count() });
+            res.header() = std::move(new_header);
+
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator lhs_iter({}, lhs.header().dims());
+            typename Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
+            typename Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, res.header().dims());
+
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().s()) };
+            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
+
+            while (res_iter) {
+                if (lhs_iter && (*res_iter)[fixed_axis] < fixed_ind || (*res_iter)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
+                    res(*res_iter) = lhs(*lhs_iter);
+                    ++lhs_iter;
+                }
+                else if (rhs_iter && (*res_iter)[fixed_axis] >= fixed_ind && (*res_iter)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
+                    res(*res_iter) = rhs(*rhs_iter);
+                    ++rhs_iter;
+                }
+                ++res_iter;
+            }
+
+            return res;
+        }
+
+        /**
+        * @note All elements starting from ind are being removed in case that count value is too big.
+        */
+        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count)
+        {
+            if (empty(arr)) {
+                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+            }
+
+            std::int64_t fixed_ind{ modulo(ind, arr.header().count()) };
+            std::int64_t fixed_count{ fixed_ind + count < arr.header().count() ? count : (arr.header().count() - fixed_ind) };
+
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res({ arr.header().count() - fixed_count });
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> rarr(reshape(arr, { arr.header().count() }));
+
+            for (std::int64_t i = 0; i < fixed_ind; ++i) {
+                res({ i }) = rarr({ i });
+            }
+            for (std::int64_t i = fixed_ind + fixed_count; i < arr.header().count(); ++i) {
+                res({ fixed_ind + i - fixed_count + 1 }) = rarr({ i });
             }
 
             return res;
@@ -1473,7 +1497,7 @@ namespace computoc {
                 return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
             }
 
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count };
+            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
             res.header() = std::move(new_header);
 
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter({}, arr.header().dims());
@@ -1485,32 +1509,6 @@ namespace computoc {
                     ++res_iter;
                 }
                 ++arr_iter;
-            }
-
-            return res;
-        }
-
-        /**
-        * @note All elements starting from ind are being removed in case that count value is too big.
-        */
-        template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> remove(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, std::int64_t ind, std::int64_t count)
-        {
-            if (empty(arr)) {
-                return Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>{};
-            }
-
-            std::int64_t fixed_ind{ modulo(ind, arr.header().count()) };
-            std::int64_t fixed_count{ fixed_ind + count < arr.header().count() ? count : (arr.header().count() - fixed_ind) };
-
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> res{ {arr.header().count() - fixed_count} };
-            Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> rarr{ reshape(arr, {arr.header().count()}) };
-
-            for (std::int64_t i = 0; i < fixed_ind; ++i) {
-                res({ i }) = rarr({ i });
-            }
-            for (std::int64_t i = fixed_ind + fixed_count; i < arr.header().count(); ++i) {
-                res({ fixed_ind + i - fixed_count + 1 }) = rarr({ i });
             }
 
             return res;
