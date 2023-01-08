@@ -2408,7 +2408,7 @@ TEST(Array_test, reshape)
     Integer_array arr{ {3, dims}, data };
 
     {
-        EXPECT_THROW(computoc::reshape(arr, {}), std::invalid_argument);
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::reshape(arr, {})));
     }
 
     {
@@ -2585,8 +2585,12 @@ TEST(Array_test, append)
         EXPECT_TRUE(computoc::all_equal(rarr1, computoc::append(arr1, arr2, 3)));
         const int invalid_data1[] = { 1 };
         Integer_array invalid_arr1{ {1}, invalid_data1 };
-        EXPECT_THROW(computoc::append(invalid_arr1, arr2, 0), std::invalid_argument);
-        EXPECT_THROW(computoc::append(arr1, rarr2, 0), std::invalid_argument);
+        Integer_array rinvalid_arr1{};
+
+        EXPECT_TRUE(computoc::all_equal(rinvalid_arr1, computoc::append(invalid_arr1, arr2, 3)));
+        EXPECT_TRUE(computoc::all_equal(rinvalid_arr1, computoc::append(arr2, invalid_arr1, 3)));
+
+        EXPECT_TRUE(computoc::all_equal(rinvalid_arr1, computoc::append(arr1, rarr2, 0)));
     }
 }
 
@@ -2607,9 +2611,16 @@ TEST(Array_test, insert)
         Double_array arr2{ {5}, data2 };
 
         const int rdata1[] = { 1, 2, 3, 7, 8, 9, 10, 11, 4, 5, 6 };
-        Integer_array rarr{ {11}, rdata1 };
-        EXPECT_TRUE(computoc::all_equal(rarr, computoc::insert(arr1, arr2, 3)));
-        EXPECT_THROW(computoc::insert(arr1, arr2, 7), std::out_of_range);
+        Integer_array rarr1{ {11}, rdata1 };
+        EXPECT_TRUE(computoc::all_equal(rarr1, computoc::insert(arr1, arr2, 3)));
+
+        const int rdata2[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+        Integer_array rarr2{ {11}, rdata2 };
+        EXPECT_TRUE(computoc::all_equal(rarr2, computoc::insert(arr1, arr2, 6)));
+
+        const int rdata3[] = { 7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6 };
+        Integer_array rarr3{ {11}, rdata3 };
+        EXPECT_TRUE(computoc::all_equal(rarr3, computoc::insert(arr1, arr2, 7)));
 
         EXPECT_TRUE(computoc::all_equal(arr1, computoc::insert(arr1, Integer_array{}, 0)));
         EXPECT_TRUE(computoc::all_equal(arr2, computoc::insert(Integer_array{}, arr2, 0)));
@@ -2680,8 +2691,8 @@ TEST(Array_test, insert)
         EXPECT_TRUE(computoc::all_equal(rarr1, computoc::insert(arr1, arr2, 1, 3)));
         const int invalid_data1[] = { 1 };
         Integer_array invalid_arr1{ {1}, invalid_data1 };
-        EXPECT_THROW(computoc::insert(invalid_arr1, arr2, 1, 0), std::invalid_argument);
-        EXPECT_THROW(computoc::insert(arr1, rarr2, 1, 0), std::invalid_argument);;
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::insert(invalid_arr1, arr2, 1, 0)));
+        EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::insert(arr1, rarr2, 1, 0)));;
     }
 }
 
@@ -2698,9 +2709,12 @@ TEST(Array_test, remove)
         Integer_array arr1{ { 3, 1, 2 }, data1 };
 
         const int rdata1[] = { 1, 2, 3, 6 };
-        Integer_array rarr{ {4}, rdata1 };
-        EXPECT_TRUE(computoc::all_equal(rarr, computoc::remove(arr1, 3, 2)));
-        EXPECT_THROW(computoc::remove(arr1, 3, 4), std::out_of_range);
+        Integer_array rarr1{ {4}, rdata1 };
+        EXPECT_TRUE(computoc::all_equal(rarr1, computoc::remove(arr1, 3, 2)));
+
+        const int rdata2[] = { 1, 2, 3 };
+        Integer_array rarr2{ {3}, rdata2 };
+        EXPECT_TRUE(computoc::all_equal(rarr2, computoc::remove(arr1, 3, 4)));
 
         EXPECT_TRUE(computoc::all_equal(Integer_array{}, computoc::remove(Integer_array{}, 3, 2)));
     }
