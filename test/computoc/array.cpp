@@ -194,7 +194,7 @@ TEST(Array_test, can_return_its_header_and_data)
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
-    EXPECT_FALSE(earr.data());
+    EXPECT_TRUE(earr.data().empty());
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
@@ -206,7 +206,7 @@ TEST(Array_test, can_return_its_header_and_data)
     EXPECT_EQ(2, hdr.strides().p()[0]); EXPECT_EQ(2, hdr.strides().p()[1]); EXPECT_EQ(1, hdr.strides().p()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
-    EXPECT_TRUE(arr.data());
+    EXPECT_FALSE(arr.data().empty());
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
@@ -2459,13 +2459,13 @@ TEST(Array_test, resize)
         EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().s(), rarr.header().dims().s());
         EXPECT_EQ(6, rarr.header().dims().p()[0]);
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.data().p(), rarr.data().p());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {6}) };
         EXPECT_TRUE(computoc::all_equal(arr, rarr));
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.data().p(), rarr.data().p());
     }
 
     {
@@ -2475,7 +2475,7 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.data(), rarr.data());
+        EXPECT_NE(tarr.data().p(), rarr.data().p());
     }
 
     {
@@ -2488,14 +2488,14 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {3, 1, 2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.data(), rarr.data());
+        EXPECT_NE(tarr.data().p(), rarr.data().p());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {10}) };
         EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_TRUE(computoc::all_equal(arr, rarr({ {0, 5} })));
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.data().p(), rarr.data().p());
     }
 }
 
