@@ -1562,6 +1562,22 @@ namespace computoc {
             return res;
         }
 
+        template <typename T, typename T_o, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const T_o& init_value, Binary_op op)
+            -> decltype(op(init_value, arr.data()[0]))
+        {
+            if (empty(arr)) {
+                return init_value;
+            }
+
+            T_o res{ init_value };
+            for (typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator iter{ {}, arr.header().dims() }; iter; ++iter) {
+                res = op(res, arr(*iter));
+            }
+
+            return res;
+        }
+
         template <typename T, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
         [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Binary_op op, std::int64_t axis)
             -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
@@ -1574,7 +1590,7 @@ namespace computoc {
 
             typename Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), axis);
             if (new_header.empty()) {
-                return Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>{};
+                return Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>();
             }
 
             Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer> res({ new_header.count() });
@@ -1593,6 +1609,47 @@ namespace computoc {
                 }
                 res(*res_iter) = res_element;
                 ++res_iter;
+            }
+
+            return res;
+        }
+
+        template <typename T, typename T_o, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>& init_values, Binary_op op, std::int64_t axis)
+            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
+        {
+            if (empty(arr)) {
+                return Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
+            const std::int64_t fixed_axis{ modulo(axis, arr.header().dims().s()) };
+
+            if (init_values.header().dims().s() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
+                return Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
+            typename Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>::Header new_header(arr.header().dims(), axis);
+            if (new_header.empty()) {
+                return Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>();
+            }
+
+            Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer> res({ new_header.count() });
+            res.header() = std::move(new_header);
+
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator arr_iter({}, arr.header().dims(), axis);
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, res.header().dims());
+            typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator init_iter({}, init_values.header().dims());
+
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
+
+            while (arr_iter && res_iter && init_iter) {
+                T_o res_element{ init_values(*init_iter) };
+                for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++arr_iter) {
+                    res_element = op(res_element, arr(*arr_iter));
+                }
+                res(*res_iter) = std::move(res_element);
+                ++res_iter;
+                ++init_iter;
             }
 
             return res;

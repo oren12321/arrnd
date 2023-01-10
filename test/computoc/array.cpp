@@ -444,6 +444,25 @@ TEST(Array_test, reduce_elements)
 
     EXPECT_TRUE(computoc::all_equal(rarr0, computoc::reduce(iarr, [](int value, double previous) {return previous + value; }, 3)));
 
+    // reduction with initial value(s)
+    {
+        computoc::Array arr{ {2, 2}, {1, 2, 5, 6} };
+
+        std::string chain = computoc::reduce(
+            arr,
+            std::string{},
+            [](const std::string& s, int n) { return s + "-" + std::to_string(n); });
+        EXPECT_EQ("-1-2-5-6", chain);
+
+        computoc::Array<std::string> byaxis = computoc::reduce(
+            arr({ {0,1}, {1} }),
+            computoc::Array{ {2}, {std::to_string(arr({0,0})), std::to_string(arr({1,0}))} },
+            [](const std::string& s, int n) { return s + "-" + std::to_string(n); },
+            1);
+        EXPECT_TRUE(computoc::all_equal(computoc::Array{ {2},
+            {std::string{"1-2"}, std::string{"5-6"}} }, byaxis));
+    }
+
     // complex array reduction
     {
         auto sum = [](int value, double previous) {
