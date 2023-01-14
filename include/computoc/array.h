@@ -892,7 +892,7 @@ namespace computoc {
                 return temp;
             }
 
-            explicit [[nodiscard]] operator bool() const noexcept
+            [[nodiscard]] explicit operator bool() const noexcept
             {
                 if (!order_.empty()) {
                     return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
