@@ -313,7 +313,7 @@ namespace computoc {
                 }
 
                 buff_ = Internal_buffer(dims.s() * 2);
-                ERROC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { dims.s(), buff_.data().p() };
                 copy(dims, dims_);
@@ -330,7 +330,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
@@ -359,7 +359,7 @@ namespace computoc {
                 std::int64_t ndims{ previous_dims.s() > 1 ? previous_dims.s() - 1 : 1 };
 
                 buff_ = Internal_buffer(ndims * 2);
-                ERROC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { ndims, buff_.data().p() };
                 if (previous_dims.s() > 1) {
@@ -391,7 +391,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
@@ -419,7 +419,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 std::int64_t fixed_axis{ modulo(axis, previous_dims.s()) };
@@ -466,7 +466,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_THROW_IF_FALSE(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
@@ -594,7 +594,7 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     buff_ = Internal_buffer(nsubs_ * 4);
-                    ERROC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                    ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -648,7 +648,7 @@ namespace computoc {
                         buff_ = Internal_buffer(nsubs_ * 4);
                         axis_ = nsubs_ - 1;
                     }
-                    ERROC_THROW_IF_FALSE(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                    ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
 
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
