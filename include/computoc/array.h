@@ -1521,7 +1521,7 @@ namespace computoc {
         }
 
         template <typename T, typename Unary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>    
-        [[nodiscard]] inline auto transform(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Unary_op op)
+        [[nodiscard]] inline auto transform(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Unary_op&& op)
             -> Array<decltype(op(arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             using T_o = decltype(op(arr.data()[0]));
@@ -1540,7 +1540,7 @@ namespace computoc {
         }
 
         template <typename T, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Binary_op op)
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Binary_op&& op)
             -> decltype(op(arr.data()[0], arr.data()[0]))
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
@@ -1563,7 +1563,7 @@ namespace computoc {
         }
 
         template <typename T, typename T_o, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const T_o& init_value, Binary_op op)
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const T_o& init_value, Binary_op&& op)
             -> decltype(op(init_value, arr.data()[0]))
         {
             if (empty(arr)) {
@@ -1579,7 +1579,7 @@ namespace computoc {
         }
 
         template <typename T, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Binary_op op, std::int64_t axis)
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, Binary_op&& op, std::int64_t axis)
             -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
@@ -1615,7 +1615,7 @@ namespace computoc {
         }
 
         template <typename T, typename T_o, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>& init_values, Binary_op op, std::int64_t axis)
+        [[nodiscard]] inline auto reduce(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, const Array<T_o, Data_buffer, Data_reference_allocator, Internals_buffer>& init_values, Binary_op&& op, std::int64_t axis)
             -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             if (empty(arr)) {
@@ -1680,7 +1680,7 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Binary_op op)
+        [[nodiscard]] inline auto transform(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Binary_op&& op)
             -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
@@ -1699,7 +1699,7 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs, Binary_op op)
+        [[nodiscard]] inline auto transform(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs, Binary_op&& op)
             -> Array<decltype(op(lhs.data()[0], rhs)), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             using T_o = decltype(op(lhs.data()[0], rhs));
@@ -1714,7 +1714,7 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, typename Binary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer<std::int64_t> Internals_buffer>
-        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Binary_op op)
+        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs, Binary_op&& op)
             -> Array<decltype(op(lhs, rhs.data()[0])), Data_buffer, Data_reference_allocator, Internals_buffer>
         {
             using T_o = decltype(op(lhs, rhs.data()[0]));
