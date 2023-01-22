@@ -101,7 +101,7 @@ namespace computoc {
         */
         [[nodiscard]] inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
         {
-            if (dims.empty()) {
+            if (empty(dims)) {
                 return 0;
             }
 
@@ -194,7 +194,7 @@ namespace computoc {
         {
             std::int64_t offset{ previous_offset };
 
-            if (previous_dims.empty() || previous_strides.empty() || intervals.empty()) {
+            if (empty(previous_dims) || empty(previous_strides) || empty(intervals)) {
                 return offset;
             }
 
@@ -214,7 +214,7 @@ namespace computoc {
         {
             std::int64_t ind{ offset };
 
-            if (strides.empty() || dims.empty() || subs.empty()) {
+            if (empty(strides) || empty(dims) || empty(subs)) {
                 return ind;
             }
 
@@ -314,7 +314,7 @@ namespace computoc {
                 }
 
                 buff_ = Internal_buffer(dims.s() * 2);
-                ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { dims.s(), buff_.data().p() };
                 copy(dims, dims_);
@@ -331,7 +331,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
@@ -360,7 +360,7 @@ namespace computoc {
                 std::int64_t ndims{ previous_dims.s() > 1 ? previous_dims.s() - 1 : 1 };
 
                 buff_ = Internal_buffer(ndims * 2);
-                ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { ndims, buff_.data().p() };
                 if (previous_dims.s() > 1) {
@@ -387,12 +387,12 @@ namespace computoc {
                     return;
                 }
 
-                if (new_order.empty()) {
+                if (memoc::empty(new_order)) {
                     return;
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
@@ -420,7 +420,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 std::int64_t fixed_axis{ modulo(axis, previous_dims.s()) };
@@ -467,7 +467,7 @@ namespace computoc {
                 }
 
                 Internal_buffer buff(previous_dims.s() * 2);
-                ERROC_EXPECT(buff.usable(), std::runtime_error, "buffer allocation failed");
+                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.s(), buff.data().p() };
                 for (std::int64_t i = 0; i < previous_dims.s(); ++i) {
@@ -571,7 +571,7 @@ namespace computoc {
 
             [[nodiscard]] bool empty() const noexcept
             {
-                return !buff_.usable();
+                return memoc::empty(buff_);
             }
 
         private:
@@ -596,13 +596,13 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     buff_ = Internal_buffer(nsubs_ * 4);
-                    ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                    ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
-                    if (start.empty()) {
+                    if (empty(start)) {
                         memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
                         memoc::set(start_, std::int64_t{ 0 }, nsubs_);
                     }
@@ -612,10 +612,10 @@ namespace computoc {
                     }
 
                     minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
-                    if (!minimum_excluded.empty()) {
+                    if (!empty(minimum_excluded)) {
                         memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
                     }
-                    else if(!start.empty()) {
+                    else if(!empty(start)) {
                         memoc::copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
@@ -626,7 +626,7 @@ namespace computoc {
                     }
 
                     maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                    if (maximum_excluded.empty()) {
+                    if (empty(maximum_excluded)) {
                         memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
                     }
                     else {
@@ -650,11 +650,11 @@ namespace computoc {
                         buff_ = Internal_buffer(nsubs_ * 4);
                         axis_ = nsubs_ - 1;
                     }
-                    ERROC_EXPECT(buff_.usable(), std::runtime_error, "buffer allocation failed");
+                    ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                     subs_ = { nsubs_, buff_.data().p() };
                     start_ = { nsubs_, buff_.data().p() + nsubs_ };
-                    if (start.empty()) {
+                    if (empty(start)) {
                         memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
                         memoc::set(start_, std::int64_t{ 0 }, nsubs_);
                     }
@@ -664,10 +664,10 @@ namespace computoc {
                     }
 
                     minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
-                    if (!minimum_excluded.empty()) {
+                    if (!empty(minimum_excluded)) {
                         memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
                     }
-                    else if (!start.empty()) {
+                    else if (!empty(start)) {
                         memoc::copy(start, minimum_excluded_, nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
@@ -678,7 +678,7 @@ namespace computoc {
                     }
 
                     maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                    if (maximum_excluded.empty()) {
+                    if (empty(maximum_excluded)) {
                         memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
                     }
                     else {
@@ -724,7 +724,7 @@ namespace computoc {
                 start_ = { nsubs_, buff_.data().p() + nsubs_ };
                 minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                 maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                if (!other.order_.empty()) {
+                if (!empty(other.order_)) {
                     order_ = { other.order_.s(), buff_.data().p() + 4 * nsubs_ };
                 }
             }
@@ -741,7 +741,7 @@ namespace computoc {
                 start_ = { nsubs_, buff_.data().p() + nsubs_ };
                 minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                 maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                if (!other.order_.empty()) {
+                if (!empty(other.order_)) {
                     order_ = { other.order_.s(), buff_.data().p() + 4 * nsubs_ };
                 }
                 major_axis_ = other.major_axis_;
@@ -756,7 +756,7 @@ namespace computoc {
                 start_ = { nsubs_, buff_.data().p() + nsubs_ };
                 minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                 maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                if (!other.order_.empty()) {
+                if (!empty(other.order_)) {
                     order_ = { other.order_.s(), buff_.data().p() + 4 * nsubs_ };
                 }
 
@@ -781,7 +781,7 @@ namespace computoc {
                 start_ = { nsubs_, buff_.data().p() + nsubs_ };
                 minimum_excluded_ = { nsubs_, buff_.data().p() + 2 * nsubs_ };
                 maximum_excluded_ = { nsubs_, buff_.data().p() + 3 * nsubs_ };
-                if (!other.order_.empty()) {
+                if (!empty(other.order_)) {
                     order_ = { other.order_.s(), buff_.data().p() + 4 * nsubs_ };
                 }
                 major_axis_ = other.major_axis_;
@@ -806,7 +806,7 @@ namespace computoc {
 
             Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
             {
-                if (!order_.empty()) {
+                if (!empty(order_)) {
                     bool should_process_sub{ true };
                     for (int64_t i = order_.s() - 1; i >= 0 && should_process_sub; --i) {
                         should_process_sub = increment_subscript(order_[i], order_[0]);
@@ -851,7 +851,7 @@ namespace computoc {
 
             Array_subscripts_iterator<Internal_buffer>& operator--() noexcept
             {
-                if (!order_.empty()) {
+                if (!empty(order_)) {
                     bool should_process_sub{ true };
                     for (int64_t i = order_.s() - 1; i >= 0 && should_process_sub; --i) {
                         should_process_sub = decrement_subscript(order_[i], order_[0]);
@@ -896,7 +896,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                if (!order_.empty()) {
+                if (!empty(order_)) {
                     return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
                 }
 
@@ -1172,7 +1172,7 @@ namespace computoc {
 
             [[nodiscard]] Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> operator()(const Params<Interval<std::int64_t>>& ranges) const
             {
-                if (ranges.empty() || empty(*this)) {
+                if (empty(ranges) || empty(*this)) {
                     return (*this);
                 }
 
@@ -1520,7 +1520,7 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
         [[nodiscard]] inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
         {
-            return (arr.data().empty() || arr.header().is_subarray()) && arr.header().empty();
+            return (memoc::empty(arr.data()) || arr.header().is_subarray()) && arr.header().empty();
         }
 
         template <typename T, typename Unary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>    

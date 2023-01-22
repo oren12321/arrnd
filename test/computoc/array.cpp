@@ -190,11 +190,11 @@ TEST(Array_test, can_return_its_header_and_data)
 
     EXPECT_EQ(0, ehdr.dims().s());
     EXPECT_EQ(0, ehdr.count());
-    EXPECT_TRUE(ehdr.dims().empty());
-    EXPECT_TRUE(ehdr.strides().empty());
+    EXPECT_TRUE(computoc::empty(ehdr.dims()));
+    EXPECT_TRUE(computoc::empty(ehdr.strides()));
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
-    EXPECT_TRUE(earr.data().empty());
+    EXPECT_TRUE(computoc::empty(earr.data()));
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
@@ -206,7 +206,7 @@ TEST(Array_test, can_return_its_header_and_data)
     EXPECT_EQ(2, hdr.strides().p()[0]); EXPECT_EQ(2, hdr.strides().p()[1]); EXPECT_EQ(1, hdr.strides().p()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
-    EXPECT_FALSE(arr.data().empty());
+    EXPECT_FALSE(computoc::empty(arr.data()));
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
