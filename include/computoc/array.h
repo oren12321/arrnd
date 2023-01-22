@@ -299,7 +299,7 @@ namespace computoc {
 
         using Array_default_internals_buffer = memoc::Typed_buffer<std::int64_t, memoc::Fallback_buffer<
             memoc::Stack_buffer<3 * (MEMOC_SSIZEOF(std::int64_t) + MEMOC_SSIZEOF(std::int64_t))>,
-            memoc::Allocated_buffer<memoc::Malloc_allocator, true>>>;
+            memoc::Allocated_buffer<memoc::Malloc_allocator>>>;
 
         template <memoc::Buffer Internal_buffer = Array_default_internals_buffer>
             requires std::is_same_v<std::int64_t, typename decltype(Internal_buffer().data())::Type>
@@ -966,7 +966,7 @@ namespace computoc {
 
         using Array_default_data_buffer = memoc::Fallback_buffer<
             memoc::Stack_buffer<9 * MEMOC_SSIZEOF(std::int64_t)>,
-            memoc::Allocated_buffer<memoc::Malloc_allocator, true>>;
+            memoc::Allocated_buffer<memoc::Malloc_allocator>>;
 
         template <typename T, memoc::Buffer Data_buffer = Array_default_data_buffer, memoc::Allocator Data_reference_allocator = Array_default_data_reference_allocator, memoc::Buffer Internals_buffer = Array_default_internals_buffer>
             requires std::is_same_v<std::int64_t, typename decltype(Internals_buffer().data())::Type>
