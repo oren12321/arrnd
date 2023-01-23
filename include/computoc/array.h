@@ -1147,9 +1147,14 @@ namespace computoc {
                 return hdr_;
             }
 
-            [[nodiscard]] memoc::Block<T> data() const noexcept
+            [[nodiscard]] memoc::Block<T> block() const noexcept
             {
                 return (buffsp_ ? memoc::block(*buffsp_) : memoc::Block<T>(0, nullptr));
+            }
+
+            [[nodiscard]] T* data() const noexcept
+            {
+                return block().data();
             }
 
             [[nodiscard]] const T& operator()(const Params<std::int64_t>& subs) const noexcept
@@ -1520,7 +1525,7 @@ namespace computoc {
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
         [[nodiscard]] inline bool empty(const Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr) noexcept
         {
-            return (memoc::empty(arr.data()) || arr.header().is_subarray()) && arr.header().empty();
+            return (memoc::empty(arr.block()) || arr.header().is_subarray()) && arr.header().empty();
         }
 
         template <typename T, typename Unary_op, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>    
