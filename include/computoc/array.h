@@ -492,8 +492,8 @@ namespace computoc {
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
 
-                other.dims_.clear();
-                other.strides_.clear();
+                other.dims_ = {};
+                other.strides_ = {};
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
             }
@@ -511,8 +511,8 @@ namespace computoc {
                 dims_ = { other.dims_.s(), buff_.data().p() };
                 strides_ = { other.strides_.s(), buff_.data().p() + other.dims_.s() };
 
-                other.dims_.clear();
-                other.strides_.clear();
+                other.dims_ = {};
+                other.strides_ = {};
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
 
@@ -762,10 +762,10 @@ namespace computoc {
 
                 other.nsubs_ = 0;
                 other.axis_ = 0;
-                other.subs_.clear();
-                other.start_.clear();
-                other.minimum_excluded_.clear();
-                other.maximum_excluded_.clear();
+                other.subs_ = {};
+                other.start_ = {};
+                other.minimum_excluded_ = {};
+                other.maximum_excluded_ = {};
                 other.major_axis_ = 0;
             }
             Array_subscripts_iterator<Internal_buffer>& operator=(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
@@ -788,10 +788,10 @@ namespace computoc {
 
                 other.nsubs_ = 0;
                 other.axis_ = 0;
-                other.subs_.clear();
-                other.start_.clear();
-                other.minimum_excluded_.clear();
-                other.maximum_excluded_.clear();
+                other.subs_ = {};
+                other.start_ = {};
+                other.minimum_excluded_ = {};
+                other.maximum_excluded_ = {};
                 other.major_axis_ = 0;
 
                 return *this;
