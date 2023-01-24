@@ -2064,14 +2064,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator+=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator+=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator+=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator+=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
             return lhs;
@@ -2096,14 +2096,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator-=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator-=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator-=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator-=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
             return lhs;
@@ -2128,14 +2128,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator*=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator*=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator*=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator*=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
             return lhs;
@@ -2160,21 +2160,21 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator/=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator/=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator/=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator/=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto operator%(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto operator%(const Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
@@ -2192,14 +2192,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator%=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator%=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator%=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator%=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
             return lhs;
@@ -2224,14 +2224,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator^=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator^=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator^=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator^=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
             return lhs;
@@ -2256,14 +2256,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator&=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator&=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator&=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator&=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
             return lhs;
@@ -2288,14 +2288,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator|=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator|=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator|=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator|=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
             return lhs;
@@ -2321,14 +2321,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator<<=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator<<=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator<<=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator<<=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
             return lhs;
@@ -2353,14 +2353,14 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator>>=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
+        inline auto& operator>>=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const Array<T2, Data_buffer, Data_reference_allocator, Internals_buffer>& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
             return lhs;
         }
 
         template <typename T1, typename T2, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator>>=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
+        inline auto& operator>>=(Array<T1, Data_buffer, Data_reference_allocator, Internals_buffer>& lhs, const T2& rhs)
         {
             lhs = transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
             return lhs;
@@ -2535,7 +2535,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator++(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        inline auto& operator++(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
         {
             if (empty(arr)) {
                 return arr;
@@ -2554,7 +2554,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto operator++(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
+        inline auto operator++(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
         {
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> old = clone(arr);
             operator++(arr);
@@ -2568,7 +2568,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto& operator--(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
+        inline auto& operator--(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr)
         {
             if (empty(arr)) {
                 return arr;
@@ -2587,7 +2587,7 @@ namespace computoc {
         }
 
         template <typename T, memoc::Buffer Data_buffer, memoc::Allocator Data_reference_allocator, memoc::Buffer Internals_buffer>
-        [[nodiscard]] inline auto operator--(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
+        inline auto operator--(Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>& arr, int)
         {
             Array<T, Data_buffer, Data_reference_allocator, Internals_buffer> old = clone(arr);
             operator--(arr);
