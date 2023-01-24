@@ -1374,11 +1374,11 @@ namespace computoc {
             std::int64_t fixed_axis{ modulo(axis, size(lhs.header().dims())) };
 
             while (res_iter) {
-                if (lhs_iter && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
+                if (lhs_iter && ((*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
                     res(*res_iter) = lhs(*lhs_iter);
                     ++lhs_iter;
                 }
-                else if (rhs_iter && (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis]) {
+                else if (rhs_iter && ((*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
                     res(*res_iter) = rhs(*rhs_iter);
                     ++rhs_iter;
                 }
@@ -1446,11 +1446,11 @@ namespace computoc {
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
 
             while (res_iter) {
-                if (lhs_iter && (*res_iter)[fixed_axis] < fixed_ind || (*res_iter)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis]) {
+                if (lhs_iter && ((*res_iter)[fixed_axis] < fixed_ind || (*res_iter)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis])) {
                     res(*res_iter) = lhs(*lhs_iter);
                     ++lhs_iter;
                 }
-                else if (rhs_iter && (*res_iter)[fixed_axis] >= fixed_ind && (*res_iter)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis]) {
+                else if (rhs_iter && ((*res_iter)[fixed_axis] >= fixed_ind && (*res_iter)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis])) {
                     res(*res_iter) = rhs(*rhs_iter);
                     ++rhs_iter;
                 }
@@ -1512,7 +1512,7 @@ namespace computoc {
             typename Array<T, Data_buffer, Data_reference_allocator, Internals_buffer>::Subscripts_iterator res_iter({}, res.header().dims());
 
             while (arr_iter) {
-                if (res_iter && (*arr_iter)[fixed_axis] < fixed_ind || (*arr_iter)[fixed_axis] >= fixed_ind + fixed_count) {
+                if (res_iter && ((*arr_iter)[fixed_axis] < fixed_ind || (*arr_iter)[fixed_axis] >= fixed_ind + fixed_count)) {
                     res(*res_iter) = arr(*arr_iter);
                     ++res_iter;
                 }
