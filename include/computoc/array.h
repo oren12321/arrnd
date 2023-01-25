@@ -146,7 +146,7 @@ namespace computoc {
             }
 
             // compute strides with interval step
-            for (std::int64_t i = 0; i < size(intervals); ++i) {
+            for (std::int64_t i = 0; i < nstrides; ++i) {
                 strides[i] = previous_strides[i] * forward(intervals[i]).step;
             }
 
@@ -313,8 +313,8 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = Internal_buffer(size(dims) * 2);
-                ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                buff_ = memoc::create<Internal_buffer>(size(dims) * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { size(dims), memoc::data(buff_) };
                 copy(dims, dims_);
@@ -330,8 +330,8 @@ namespace computoc {
                     return;
                 }
 
-                Internal_buffer buff(size(previous_dims) * 2);
-                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                Internal_buffer buff = memoc::create<Internal_buffer>(size(previous_dims) * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
@@ -359,8 +359,8 @@ namespace computoc {
                 std::int64_t axis{ modulo(omitted_axis, size(previous_dims)) };
                 std::int64_t ndims{ size(previous_dims) > 1 ? size(previous_dims) - 1 : 1 };
 
-                buff_ = Internal_buffer(ndims * 2);
-                ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                buff_ = memoc::create<Internal_buffer>(ndims * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { ndims, memoc::data(buff_) };
                 if (size(previous_dims) > 1) {
@@ -391,8 +391,8 @@ namespace computoc {
                     return;
                 }
 
-                Internal_buffer buff(size(previous_dims) * 2);
-                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                Internal_buffer buff = memoc::create<Internal_buffer>(size(previous_dims) * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
                 for (std::int64_t i = 0; i < size(previous_dims); ++i) {
@@ -419,8 +419,8 @@ namespace computoc {
                     return;
                 }
 
-                Internal_buffer buff(size(previous_dims) * 2);
-                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                Internal_buffer buff = memoc::create<Internal_buffer>(size(previous_dims) * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
                 std::int64_t fixed_axis{ modulo(axis, size(previous_dims)) };
@@ -466,8 +466,8 @@ namespace computoc {
                     return;
                 }
 
-                Internal_buffer buff(size(previous_dims) * 2);
-                ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                Internal_buffer buff = memoc::create<Internal_buffer>(size(previous_dims) * 2).value();
+                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
                 for (std::int64_t i = 0; i < size(previous_dims); ++i) {
@@ -595,8 +595,8 @@ namespace computoc {
                 nsubs_ = size(start) > bounds_size ? size(start) : bounds_size;
 
                 if (nsubs_ > 0) {
-                    buff_ = Internal_buffer(nsubs_ * 4);
-                    ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                    buff_ = memoc::create<Internal_buffer>(nsubs_ * 4).value();
+                    //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -644,13 +644,13 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     if (size(order) >= nsubs_) {
-                        buff_ = Internal_buffer(nsubs_ * 5);
+                        buff_ = memoc::create<Internal_buffer>(nsubs_ * 5).value();
                     }
                     else {
-                        buff_ = Internal_buffer(nsubs_ * 4);
+                        buff_ = memoc::create<Internal_buffer>(nsubs_ * 4).value();
                         axis_ = nsubs_ - 1;
                     }
-                    ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                    //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
                     subs_ = { nsubs_, memoc::data(buff_) };
                     start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
