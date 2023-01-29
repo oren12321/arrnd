@@ -1000,7 +1000,7 @@ TEST(Array_test, plus)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 + Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 += Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 += Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         11, 12,
@@ -1041,7 +1041,7 @@ TEST(Array_test, minus)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 - Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 -= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 -= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0, 1,
@@ -1089,7 +1089,7 @@ TEST(Array_test, multiply)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 * Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 *= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 *= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         10, 20,
@@ -1130,7 +1130,7 @@ TEST(Array_test, divide)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 / Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 /= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 /= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0, 1,
@@ -1178,7 +1178,7 @@ TEST(Array_test, modulu)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 % Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 %= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 %= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         1, 0,
@@ -1226,7 +1226,7 @@ TEST(Array_test, xor)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 ^ Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 ^= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 ^= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0b111, 0b110,
@@ -1267,7 +1267,7 @@ TEST(Array_test, and)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 & Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 &= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 &= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0b000, 0b001,
@@ -1308,7 +1308,7 @@ TEST(Array_test, or)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 | Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 |= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 |= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0b111, 0b111,
@@ -1349,7 +1349,7 @@ TEST(Array_test, shift_left)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 << Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 <<= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 <<= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0, 4,
@@ -1397,7 +1397,7 @@ TEST(Array_test, shift_right)
     EXPECT_TRUE(computoc::all_equal(rarr1, arr1));
 
     EXPECT_TRUE(computoc::empty(arr1 >> Integer_array{ {1} }));
-    EXPECT_TRUE(computoc::empty(arr1 >>= Integer_array{ {1} }));
+    EXPECT_TRUE(computoc::all_equal(arr1 >>= Integer_array{ {1} }, arr1));
 
     const int rdata2[] = {
         0, 0,
@@ -2839,3 +2839,23 @@ TEST(Array_test, complex_array)
 
     EXPECT_TRUE(computoc::all_equal(sarr2, sarr1({ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} })));
 }
+
+
+
+//#include <thread>
+//#include <iostream>
+//#include <chrono>
+//
+//TEST(Parallel_test, add)
+//{
+//    using namespace computoc;
+//    using namespace std;
+//    using namespace std::chrono;
+//
+//    auto start = high_resolution_clock::now();
+//    for (int i = 0; i < 25; ++i) {
+//        for (Array_subscripts_iterator iter({}, { 1920, 1080 }); iter; ++iter) {}
+//    }
+//    auto stop = high_resolution_clock::now();
+//    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
+//}
