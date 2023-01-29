@@ -591,8 +591,8 @@ namespace computoc {
         public:
             Array_subscripts_iterator(const Params<std::int64_t>& start, const Params<std::int64_t>& minimum_excluded, const Params<std::int64_t>& maximum_excluded, std::int64_t axis)
             {
-                std::int64_t bounds_size{ size(minimum_excluded) > size(maximum_excluded) ? size(minimum_excluded) : size(maximum_excluded) };
-                nsubs_ = size(start) > bounds_size ? size(start) : bounds_size;
+                std::int64_t bounds_size{ minimum_excluded.size() > maximum_excluded.size() ? minimum_excluded.size() : maximum_excluded.size() };
+                nsubs_ = start.size() > bounds_size ? start.size() : bounds_size;
 
                 if (nsubs_ > 0) {
                     buff_ = memoc::create<Internal_buffer>(nsubs_ * 4).value();
@@ -600,37 +600,38 @@ namespace computoc {
 
                     axis_ = modulo(axis, nsubs_);
 
-                    subs_ = { nsubs_, memoc::data(buff_) };
-                    start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                    if (empty(start)) {
-                        memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
-                        memoc::set(start_, std::int64_t{ 0 }, nsubs_);
+                    bsubs_ = { nsubs_, buff_.data() };
+                    subs_ = bsubs_.data();
+                    start_ = subs_ + nsubs_;
+                    if (start.empty()) {
+                        memoc::set(bsubs_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(Params<std::int64_t>(nsubs_, start_), std::int64_t{ 0 }, nsubs_);
                     }
                     else {
-                        memoc::copy(start, subs_, nsubs_);
-                        memoc::copy(start, start_, nsubs_);
+                        memoc::copy(start, bsubs_, nsubs_);
+                        memoc::copy(start, Params<std::int64_t>(nsubs_, start_), nsubs_);
                     }
 
-                    minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                    if (!empty(minimum_excluded)) {
-                        memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
+                    minimum_excluded_ = start_ + nsubs_;
+                    if (!minimum_excluded.empty()) {
+                        memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                     }
                     else if(!empty(start)) {
-                        memoc::copy(start, minimum_excluded_, nsubs_);
+                        memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        memoc::set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
+                        memoc::set(Params<std::int64_t>(nsubs_, minimum_excluded_), std::int64_t{ -1 }, nsubs_);
                     }
 
-                    maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                    if (empty(maximum_excluded)) {
-                        memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
+                    maximum_excluded_ = minimum_excluded_ + nsubs_;
+                    if (maximum_excluded.empty()) {
+                        memoc::set(Params<std::int64_t>(nsubs_, maximum_excluded_), std::int64_t{ 1 }, nsubs_);
                     }
                     else {
-                        memoc::copy(maximum_excluded, maximum_excluded_, nsubs_);
+                        memoc::copy(maximum_excluded, Params<std::int64_t>(nsubs_, maximum_excluded_), nsubs_);
                     }
 
                     major_axis_ = find_major_axis();
@@ -639,8 +640,8 @@ namespace computoc {
 
             Array_subscripts_iterator(const Params<std::int64_t>& start, const Params<std::int64_t>& minimum_excluded, const Params<std::int64_t>& maximum_excluded, const Params<std::int64_t>& order)
             {
-                std::int64_t bounds_size{ size(minimum_excluded) > size(maximum_excluded) ? size(minimum_excluded) : size(maximum_excluded) };
-                nsubs_ = size(start) > bounds_size ? size(start) : bounds_size;
+                std::int64_t bounds_size{ minimum_excluded.size() > maximum_excluded.size() ? minimum_excluded.size() : maximum_excluded.size() };
+                nsubs_ = start.size() > bounds_size ? start.size() : bounds_size;
 
                 if (nsubs_ > 0) {
                     if (size(order) >= nsubs_) {
@@ -652,42 +653,43 @@ namespace computoc {
                     }
                     //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
 
-                    subs_ = { nsubs_, memoc::data(buff_) };
-                    start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                    if (empty(start)) {
-                        memoc::set(subs_, std::int64_t{ 0 }, nsubs_);
-                        memoc::set(start_, std::int64_t{ 0 }, nsubs_);
+                    bsubs_ = { nsubs_, buff_.data() };
+                    subs_ = bsubs_.data();
+                    start_ = subs_ + nsubs_;
+                    if (start.empty()) {
+                        memoc::set(bsubs_, std::int64_t{ 0 }, nsubs_);
+                        memoc::set(Params<std::int64_t>(nsubs_, start_), std::int64_t{ 0 }, nsubs_);
                     }
                     else {
-                        memoc::copy(start, subs_, nsubs_);
-                        memoc::copy(start, start_, nsubs_);
+                        memoc::copy(start, bsubs_, nsubs_);
+                        memoc::copy(start, Params<std::int64_t>(nsubs_, start_), nsubs_);
                     }
 
-                    minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                    if (!empty(minimum_excluded)) {
-                        memoc::copy(minimum_excluded, minimum_excluded_, nsubs_);
+                    minimum_excluded_ = start_ + nsubs_;
+                    if (!minimum_excluded.empty()) {
+                        memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                     }
                     else if (!empty(start)) {
-                        memoc::copy(start, minimum_excluded_, nsubs_);
+                        memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        memoc::set(minimum_excluded_, std::int64_t{ -1 }, nsubs_);
+                        memoc::set(Params<std::int64_t>(nsubs_, minimum_excluded_), std::int64_t{ -1 }, nsubs_);
                     }
 
-                    maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                    if (empty(maximum_excluded)) {
-                        memoc::set(maximum_excluded_, std::int64_t{ 1 }, nsubs_);
+                    maximum_excluded_ = minimum_excluded_ + nsubs_;
+                    if (maximum_excluded.empty()) {
+                        memoc::set(Params<std::int64_t>(nsubs_, maximum_excluded_), std::int64_t{ 1 }, nsubs_);
                     }
                     else {
-                        memoc::copy(maximum_excluded, maximum_excluded_, nsubs_);
+                        memoc::copy(maximum_excluded, Params<std::int64_t>(nsubs_, maximum_excluded_), nsubs_);
                     }
 
-                    if (size(order) >= nsubs_) {
-                        order_ = { nsubs_, memoc::data(buff_) + 4 * nsubs_ };
-                        memoc::copy(order, order_, nsubs_);
+                    if (order.size() >= nsubs_) {
+                        order_ = maximum_excluded_ + nsubs_;
+                        memoc::copy(order, Params<std::int64_t>(nsubs_, order_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             order_[i] = modulo(order_[i], nsubs_);
                         }
@@ -720,12 +722,13 @@ namespace computoc {
             Array_subscripts_iterator(const Array_subscripts_iterator<Internal_buffer>& other) noexcept
                 : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_)
             {
-                subs_ = { nsubs_, memoc::data(buff_) };
-                start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                if (!empty(other.order_)) {
-                    order_ = { size(other.order_), memoc::data(buff_) + 4 * nsubs_ };
+                bsubs_ = { nsubs_, memoc::data(buff_) };
+                subs_ = bsubs_.data();
+                start_ = subs_ + nsubs_;
+                minimum_excluded_ = start_ + nsubs_;
+                maximum_excluded_ = minimum_excluded_ + nsubs_;
+                if (other.order_) {
+                    order_ = maximum_excluded_ + nsubs_;
                 }
             }
             Array_subscripts_iterator<Internal_buffer>& operator=(const Array_subscripts_iterator<Internal_buffer>& other) noexcept
@@ -737,12 +740,13 @@ namespace computoc {
                 buff_ = other.buff_;
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                subs_ = { nsubs_, memoc::data(buff_) };
-                start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                if (!empty(other.order_)) {
-                    order_ = { size(other.order_), memoc::data(buff_) + 4 * nsubs_ };
+                bsubs_ = { nsubs_, memoc::data(buff_) };
+                subs_ = bsubs_.data();
+                start_ = subs_ + nsubs_;
+                minimum_excluded_ = start_ + nsubs_;
+                maximum_excluded_ = minimum_excluded_ + nsubs_;
+                if (other.order_) {
+                    order_ = maximum_excluded_ + nsubs_;
                 }
                 major_axis_ = other.major_axis_;
 
@@ -752,20 +756,23 @@ namespace computoc {
             Array_subscripts_iterator(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
                 : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_)
             {
-                subs_ = { nsubs_, memoc::data(buff_) };
-                start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                if (!empty(other.order_)) {
-                    order_ = { size(other.order_), memoc::data(buff_) + 4 * nsubs_ };
+                bsubs_ = { nsubs_, memoc::data(buff_) };
+                subs_ = bsubs_.data();
+                start_ = subs_ + nsubs_;
+                minimum_excluded_ = start_ + nsubs_;
+                maximum_excluded_ = minimum_excluded_ + nsubs_;
+                if (other.order_) {
+                    order_ = maximum_excluded_ + nsubs_;
                 }
 
                 other.nsubs_ = 0;
                 other.axis_ = 0;
-                other.subs_ = {};
-                other.start_ = {};
-                other.minimum_excluded_ = {};
-                other.maximum_excluded_ = {};
+                other.bsubs_ = {};
+                other.subs_ = nullptr;
+                other.start_ = nullptr;
+                other.minimum_excluded_ = nullptr;
+                other.maximum_excluded_ = nullptr;
+                other.order_ = nullptr;
                 other.major_axis_ = 0;
             }
             Array_subscripts_iterator<Internal_buffer>& operator=(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
@@ -777,21 +784,24 @@ namespace computoc {
                 buff_ = std::move(other.buff_);
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                subs_ = { nsubs_, memoc::data(buff_) };
-                start_ = { nsubs_, memoc::data(buff_) + nsubs_ };
-                minimum_excluded_ = { nsubs_, memoc::data(buff_) + 2 * nsubs_ };
-                maximum_excluded_ = { nsubs_, memoc::data(buff_) + 3 * nsubs_ };
-                if (!empty(other.order_)) {
-                    order_ = { size(other.order_), memoc::data(buff_) + 4 * nsubs_ };
+                bsubs_ = { nsubs_, memoc::data(buff_) };
+                subs_ = bsubs_.data();
+                start_ = subs_ + nsubs_;
+                minimum_excluded_ = start_ + nsubs_;
+                maximum_excluded_ = minimum_excluded_ + nsubs_;
+                if (other.order_) {
+                    order_ = maximum_excluded_ + nsubs_;
                 }
                 major_axis_ = other.major_axis_;
 
                 other.nsubs_ = 0;
                 other.axis_ = 0;
-                other.subs_ = {};
-                other.start_ = {};
-                other.minimum_excluded_ = {};
-                other.maximum_excluded_ = {};
+                other.bsubs_ = {};
+                other.subs_ = nullptr;
+                other.start_ = nullptr;
+                other.minimum_excluded_ = nullptr;
+                other.maximum_excluded_ = nullptr;
+                other.order_ = nullptr;
                 other.major_axis_ = 0;
 
                 return *this;
@@ -801,14 +811,14 @@ namespace computoc {
 
             void reset() noexcept
             {
-                memoc::copy(start_, subs_, nsubs_);
+                memoc::copy(Params<std::int64_t>(nsubs_, start_), bsubs_, nsubs_);
             }
 
             Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
             {
-                if (!empty(order_)) {
+                if (order_) {
                     bool should_process_sub{ true };
-                    for (int64_t i = size(order_) - 1; i >= 0 && should_process_sub; --i) {
+                    for (int64_t i = nsubs_ - 1; i >= 0 && should_process_sub; --i) {
                         should_process_sub = increment_subscript(order_[i], order_[0]);
                     }
                 }
@@ -816,7 +826,7 @@ namespace computoc {
                     bool should_process_sub{ true };
 
                     should_process_sub = increment_subscript(axis_, major_axis_);
-                    for (std::int64_t i = size(subs_) - 1; i > axis_ && should_process_sub; --i) {
+                    for (std::int64_t i = nsubs_ - 1; i > axis_ && should_process_sub; --i) {
                         should_process_sub = increment_subscript(i, major_axis_);
                     }
                     for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
@@ -851,9 +861,9 @@ namespace computoc {
 
             Array_subscripts_iterator<Internal_buffer>& operator--() noexcept
             {
-                if (!empty(order_)) {
+                if (order_) {
                     bool should_process_sub{ true };
-                    for (int64_t i = size(order_) - 1; i >= 0 && should_process_sub; --i) {
+                    for (int64_t i = nsubs_ - 1; i >= 0 && should_process_sub; --i) {
                         should_process_sub = decrement_subscript(order_[i], order_[0]);
                     }
                 }
@@ -861,7 +871,7 @@ namespace computoc {
                     bool should_process_sub{ true };
 
                     should_process_sub = decrement_subscript(axis_, major_axis_);
-                    for (std::int64_t i = size(subs_) - 1; i > axis_ && should_process_sub; --i) {
+                    for (std::int64_t i = nsubs_ - 1; i > axis_ && should_process_sub; --i) {
                         should_process_sub = decrement_subscript(i, major_axis_);
                     }
                     for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
@@ -896,7 +906,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                if (!empty(order_)) {
+                if (order_) {
                     return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
                 }
 
@@ -905,7 +915,7 @@ namespace computoc {
 
             [[nodiscard]] const Params<std::int64_t>& operator*() const noexcept
             {
-                return subs_;
+                return bsubs_;
             }
 
         private:
@@ -931,7 +941,7 @@ namespace computoc {
 
             [[nodiscard]] std::int64_t find_major_axis() const noexcept
             {
-                std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (size(subs_) > 1) };
+                std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (nsubs_ > 1) };
                 if (minimum_excluded_[major_axis] == -1 && maximum_excluded_[major_axis] == 0) {
                     bool found{ false };
                     for (std::int64_t i = major_axis + 1; i < nsubs_ && !found; ++i) {
@@ -951,13 +961,14 @@ namespace computoc {
 
             std::int64_t nsubs_{ 0 };
 
-            Params<std::int64_t> subs_{};
-            Params<std::int64_t> start_{};
-            Params<std::int64_t> minimum_excluded_{};
-            Params<std::int64_t> maximum_excluded_{};
+            Params<std::int64_t> bsubs_{};
+            std::int64_t* subs_{ nullptr };
+            std::int64_t* start_{ nullptr };
+            std::int64_t* minimum_excluded_{ nullptr };
+            std::int64_t* maximum_excluded_{ nullptr };
 
             std::int64_t axis_{ 0 };
-            Params<std::int64_t> order_{};
+            std::int64_t* order_{ nullptr };
 
             std::int64_t major_axis_{ 0 };
         };
