@@ -635,6 +635,8 @@ namespace computoc {
                     }
 
                     major_axis_ = find_major_axis();
+                    min_at_major_ = minimum_excluded_[major_axis_];
+                    max_at_major_ = maximum_excluded_[major_axis_];
                 }
             }
 
@@ -687,15 +689,21 @@ namespace computoc {
                         memoc::copy(maximum_excluded, Params<std::int64_t>(nsubs_, maximum_excluded_), nsubs_);
                     }
 
+                    major_axis_ = find_major_axis();
+
                     if (order.size() >= nsubs_) {
                         order_ = maximum_excluded_ + nsubs_;
                         memoc::copy(order, Params<std::int64_t>(nsubs_, order_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             order_[i] = modulo(order_[i], nsubs_);
                         }
+                        min_at_major_ = minimum_excluded_[order[0]];
+                        max_at_major_ = maximum_excluded_[order[0]];
                     }
-
-                    major_axis_ = find_major_axis();
+                    else {
+                        min_at_major_ = minimum_excluded_[major_axis_];
+                        max_at_major_ = maximum_excluded_[major_axis_];
+                    }
                 }
             }
 
@@ -720,7 +728,7 @@ namespace computoc {
             Array_subscripts_iterator() = default;
 
             Array_subscripts_iterator(const Array_subscripts_iterator<Internal_buffer>& other) noexcept
-                : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_)
+                : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
                 bsubs_ = { nsubs_, memoc::data(buff_) };
                 subs_ = bsubs_.data();
@@ -749,12 +757,14 @@ namespace computoc {
                     order_ = maximum_excluded_ + nsubs_;
                 }
                 major_axis_ = other.major_axis_;
+                min_at_major_ = other.min_at_major_;
+                max_at_major_ = other.max_at_major_;
 
                 return *this;
             }
 
             Array_subscripts_iterator(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
-                : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_)
+                : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
                 bsubs_ = { nsubs_, memoc::data(buff_) };
                 subs_ = bsubs_.data();
@@ -774,6 +784,8 @@ namespace computoc {
                 other.maximum_excluded_ = nullptr;
                 other.order_ = nullptr;
                 other.major_axis_ = 0;
+                other.min_at_major_ = 0;
+                other.max_at_major_ = 0;
             }
             Array_subscripts_iterator<Internal_buffer>& operator=(Array_subscripts_iterator<Internal_buffer>&& other) noexcept
             {
@@ -793,6 +805,8 @@ namespace computoc {
                     order_ = maximum_excluded_ + nsubs_;
                 }
                 major_axis_ = other.major_axis_;
+                min_at_major_ = other.min_at_major_;
+                max_at_major_ = other.max_at_major_;
 
                 other.nsubs_ = 0;
                 other.axis_ = 0;
@@ -803,6 +817,8 @@ namespace computoc {
                 other.maximum_excluded_ = nullptr;
                 other.order_ = nullptr;
                 other.major_axis_ = 0;
+                other.min_at_major_ = 0;
+                other.max_at_major_ = 0;
 
                 return *this;
             }
@@ -817,21 +833,36 @@ namespace computoc {
             Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
             {
                 if (order_) {
-                    bool should_process_sub{ true };
-                    for (int64_t i = nsubs_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = increment_subscript(order_[i], order_[0]);
+                    std::int64_t major_ordered{ order_[0] };
+                    for (int64_t i = nsubs_ - 1; i >= 0; --i) {
+                        std::int64_t ordered_i{ order_[i] };
+                        ++subs_[ordered_i];
+                        if (ordered_i == major_ordered || subs_[ordered_i] < maximum_excluded_[ordered_i]) {
+                            return *this;
+                        }
+                        subs_[ordered_i] = minimum_excluded_[ordered_i] + 1;
                     }
+                    return *this;
                 }
-                else {
-                    bool should_process_sub{ true };
 
-                    should_process_sub = increment_subscript(axis_, major_axis_);
-                    for (std::int64_t i = nsubs_ - 1; i > axis_ && should_process_sub; --i) {
-                        should_process_sub = increment_subscript(i, major_axis_);
+                ++subs_[axis_];
+                if (axis_ == major_axis_ || subs_[axis_] < maximum_excluded_[axis_]) {
+                    return *this;
+                }
+                subs_[axis_] = minimum_excluded_[axis_] + 1;
+                for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
+                    ++subs_[i];
+                    if (i == major_axis_ || subs_[i] < maximum_excluded_[i]) {
+                        return *this;
                     }
-                    for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = increment_subscript(i, major_axis_);
+                    subs_[i] = minimum_excluded_[i] + 1;
+                }
+                for (std::int64_t i = axis_ - 1; i >= 0; --i) {
+                    ++subs_[i];
+                    if (i == major_axis_ || subs_[i] < maximum_excluded_[i]) {
+                        return *this;
                     }
+                    subs_[i] = minimum_excluded_[i] + 1;
                 }
 
                 return *this;
@@ -862,21 +893,36 @@ namespace computoc {
             Array_subscripts_iterator<Internal_buffer>& operator--() noexcept
             {
                 if (order_) {
-                    bool should_process_sub{ true };
-                    for (int64_t i = nsubs_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = decrement_subscript(order_[i], order_[0]);
+                    std::int64_t major_ordered{ order_[0] };
+                    for (int64_t i = nsubs_ - 1; i >= 0; --i) {
+                        std::int64_t ordered_i{ order_[i] };
+                        --subs_[ordered_i];
+                        if (ordered_i == major_ordered || subs_[ordered_i] > minimum_excluded_[ordered_i]) {
+                            return *this;
+                        }
+                        subs_[ordered_i] = maximum_excluded_[ordered_i] == 0 ? 0 : maximum_excluded_[ordered_i] - 1;
                     }
+                    return *this;
                 }
-                else {
-                    bool should_process_sub{ true };
 
-                    should_process_sub = decrement_subscript(axis_, major_axis_);
-                    for (std::int64_t i = nsubs_ - 1; i > axis_ && should_process_sub; --i) {
-                        should_process_sub = decrement_subscript(i, major_axis_);
+                --subs_[axis_];
+                if (axis_ == major_axis_ || subs_[axis_] > minimum_excluded_[axis_]) {
+                    return *this;
+                }
+                subs_[axis_] = maximum_excluded_[axis_] == 0 ? 0 : maximum_excluded_[axis_] - 1;
+                for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
+                    --subs_[i];
+                    if (i == major_axis_ || subs_[i] > minimum_excluded_[i]) {
+                        return *this;
                     }
-                    for (std::int64_t i = axis_ - 1; i >= 0 && should_process_sub; --i) {
-                        should_process_sub = decrement_subscript(i, major_axis_);
+                    subs_[i] = maximum_excluded_[i] == 0 ? 0 : maximum_excluded_[i] - 1;
+                }
+                for (std::int64_t i = axis_ - 1; i >= 0; --i) {
+                    --subs_[i];
+                    if (i == major_axis_ || subs_[i] > minimum_excluded_[i]) {
+                        return *this;
                     }
+                    subs_[i] = maximum_excluded_[i] == 0 ? 0 : maximum_excluded_[i] - 1;
                 }
 
                 return *this;
@@ -907,10 +953,10 @@ namespace computoc {
             [[nodiscard]] explicit operator bool() const noexcept
             {
                 if (order_) {
-                    return (subs_[order_[0]] < maximum_excluded_[order_[0]]) && (subs_[order_[0]] > minimum_excluded_[order_[0]]);
+                    return (subs_[order_[0]] < max_at_major_) && (subs_[order_[0]] > min_at_major_);
                 }
 
-                return (subs_[major_axis_] < maximum_excluded_[major_axis_]) && (subs_[major_axis_] > minimum_excluded_[major_axis_]);
+                return (subs_[major_axis_] < max_at_major_) && (subs_[major_axis_] > min_at_major_);
             }
 
             [[nodiscard]] const Params<std::int64_t>& operator*() const noexcept
@@ -919,26 +965,6 @@ namespace computoc {
             }
 
         private:
-            [[nodiscard]] bool increment_subscript(std::int64_t i, std::int64_t major_axis) noexcept
-            {
-                bool should_continute_process_subscripts{ true };
-                subs_[i] += (subs_[i] < maximum_excluded_[i]);
-                if ((should_continute_process_subscripts = (subs_[i] == maximum_excluded_[i])) && i != major_axis) {
-                    subs_[i] = minimum_excluded_[i] + 1 != 0 ? minimum_excluded_[i] + 1 : 0;
-                }
-                return should_continute_process_subscripts;
-            }
-
-            [[nodiscard]] bool decrement_subscript(std::int64_t i, std::int64_t major_axis) noexcept
-            {
-                bool should_continute_process_subscripts{ true };
-                subs_[i] -= (subs_[i] > minimum_excluded_[i]);
-                if ((should_continute_process_subscripts = (subs_[i] == minimum_excluded_[i])) && i != major_axis) {
-                    subs_[i] = maximum_excluded_[i] != 0 ? maximum_excluded_[i] - 1 : 0;
-                }
-                return should_continute_process_subscripts;
-            }
-
             [[nodiscard]] std::int64_t find_major_axis() const noexcept
             {
                 std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (nsubs_ > 1) };
@@ -971,6 +997,8 @@ namespace computoc {
             std::int64_t* order_{ nullptr };
 
             std::int64_t major_axis_{ 0 };
+            std::int64_t min_at_major_{ 0 };
+            std::int64_t max_at_major_{ 0 };
         };
 
         using Array_default_data_reference_allocator = memoc::Malloc_allocator;
