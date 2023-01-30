@@ -832,37 +832,28 @@ namespace computoc {
 
             Array_subscripts_iterator<Internal_buffer>& operator++() noexcept
             {
+#define _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ind, major) \
+    ++subs_[ind]; \
+    if (ind == major || subs_[ind] < maximum_excluded_[ind]) { \
+        return *this; \
+    } \
+    subs_[ind] = minimum_excluded_[ind] + 1;
+
                 if (order_) {
                     std::int64_t major_ordered{ order_[0] };
                     for (int64_t i = nsubs_ - 1; i >= 0; --i) {
                         std::int64_t ordered_i{ order_[i] };
-                        ++subs_[ordered_i];
-                        if (ordered_i == major_ordered || subs_[ordered_i] < maximum_excluded_[ordered_i]) {
-                            return *this;
-                        }
-                        subs_[ordered_i] = minimum_excluded_[ordered_i] + 1;
+                        _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ordered_i, major_ordered);
                     }
                     return *this;
                 }
 
-                ++subs_[axis_];
-                if (axis_ == major_axis_ || subs_[axis_] < maximum_excluded_[axis_]) {
-                    return *this;
-                }
-                subs_[axis_] = minimum_excluded_[axis_] + 1;
+                _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(axis_, major_axis_);
                 for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
-                    ++subs_[i];
-                    if (i == major_axis_ || subs_[i] < maximum_excluded_[i]) {
-                        return *this;
-                    }
-                    subs_[i] = minimum_excluded_[i] + 1;
+                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
                 }
                 for (std::int64_t i = axis_ - 1; i >= 0; --i) {
-                    ++subs_[i];
-                    if (i == major_axis_ || subs_[i] < maximum_excluded_[i]) {
-                        return *this;
-                    }
-                    subs_[i] = minimum_excluded_[i] + 1;
+                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
                 }
 
                 return *this;
@@ -892,37 +883,29 @@ namespace computoc {
 
             Array_subscripts_iterator<Internal_buffer>& operator--() noexcept
             {
+#define _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ind, major) \
+    --subs_[ind]; \
+    if (ind == major || subs_[ind] > minimum_excluded_[ind]) { \
+        return *this; \
+    } \
+    subs_[ind] = maximum_excluded_[ind] == 0 ? 0 : maximum_excluded_[ind] - 1;
+
                 if (order_) {
                     std::int64_t major_ordered{ order_[0] };
                     for (int64_t i = nsubs_ - 1; i >= 0; --i) {
                         std::int64_t ordered_i{ order_[i] };
-                        --subs_[ordered_i];
-                        if (ordered_i == major_ordered || subs_[ordered_i] > minimum_excluded_[ordered_i]) {
-                            return *this;
-                        }
-                        subs_[ordered_i] = maximum_excluded_[ordered_i] == 0 ? 0 : maximum_excluded_[ordered_i] - 1;
+                        _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ordered_i, major_ordered);
                     }
                     return *this;
                 }
 
-                --subs_[axis_];
-                if (axis_ == major_axis_ || subs_[axis_] > minimum_excluded_[axis_]) {
-                    return *this;
-                }
+                _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(axis_, major_axis_);
                 subs_[axis_] = maximum_excluded_[axis_] == 0 ? 0 : maximum_excluded_[axis_] - 1;
                 for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
-                    --subs_[i];
-                    if (i == major_axis_ || subs_[i] > minimum_excluded_[i]) {
-                        return *this;
-                    }
-                    subs_[i] = maximum_excluded_[i] == 0 ? 0 : maximum_excluded_[i] - 1;
+                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
                 }
                 for (std::int64_t i = axis_ - 1; i >= 0; --i) {
-                    --subs_[i];
-                    if (i == major_axis_ || subs_[i] > minimum_excluded_[i]) {
-                        return *this;
-                    }
-                    subs_[i] = maximum_excluded_[i] == 0 ? 0 : maximum_excluded_[i] - 1;
+                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
                 }
 
                 return *this;
