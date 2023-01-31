@@ -2842,20 +2842,20 @@ TEST(Array_test, complex_array)
 
 
 
-//#include <thread>
-//#include <iostream>
-//#include <chrono>
-//
-//TEST(Parallel_test, add)
-//{
-//    using namespace computoc;
-//    using namespace std;
-//    using namespace std::chrono;
-//
-//    auto start = high_resolution_clock::now();
-//    for (int i = 0; i < 25; ++i) {
-//        for (Array_subscripts_iterator iter({}, { 1920, 1080 }); iter; ++iter) {}
-//    }
-//    auto stop = high_resolution_clock::now();
-//    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
-//}
+#include <thread>
+#include <iostream>
+#include <chrono>
+
+TEST(Parallel_test, add)
+{
+    using namespace computoc;
+    using namespace std;
+    using namespace std::chrono;
+
+    auto start = high_resolution_clock::now();
+    for (int i = 0; i < 25; ++i) {
+        for (Array_subscripts_iterator iter({}, { 1920, 1080, 3 }); iter; ++iter) {}
+    }
+    auto stop = high_resolution_clock::now();
+    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
+}
