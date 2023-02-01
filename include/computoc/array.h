@@ -145,8 +145,10 @@ namespace computoc {
                 return 0;
             }
 
+            std::int64_t ncomp_from_intervals{ nstrides > size(intervals) ? size(intervals) : nstrides };
+
             // compute strides with interval step
-            for (std::int64_t i = 0; i < nstrides; ++i) {
+            for (std::int64_t i = 0; i < ncomp_from_intervals; ++i) {
                 strides[i] = previous_strides[i] * forward(intervals[i]).step;
             }
 
