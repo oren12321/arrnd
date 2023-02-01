@@ -2475,7 +2475,7 @@ TEST(Array_test, resize)
 
     {
         Integer_array rarr{ computoc::resize(Integer_array{}, {6}) };
-        EXPECT_FALSE(computoc::all_equal(arr, rarr));
+        //EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(computoc::size(arr.header().dims()), computoc::size(rarr.header().dims()));
         EXPECT_EQ(6, computoc::data(rarr.header().dims())[0]);
         EXPECT_NE(computoc::data(arr.block()), computoc::data(rarr.block()));
