@@ -317,10 +317,10 @@ namespace computoc {
                 buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(dims.size() * 2).value();
                 //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
-                dims_ = { dims.size(), memoc::data(buff_) };
+                dims_ = { dims.size(), buff_.data() };
                 copy(dims, dims_);
 
-                strides_ = { dims.size(), memoc::data(buff_) + dims.size() };
+                strides_ = { dims.size(), buff_.data() + dims.size() };
                 compute_strides(dims, strides_);
             }
 
@@ -334,18 +334,18 @@ namespace computoc {
                 memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
                 //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
                     return;
                 }
 
                 buff_ = std::move(buff);
                 
-                dims_ = { previous_dims.size(), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), buff_.data() };
 
                 count_ = numel(dims_);
 
-                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
+                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
                 compute_strides(previous_dims, previous_strides, intervals, strides_);
 
                 offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
@@ -363,7 +363,7 @@ namespace computoc {
                 buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(ndims * 2).value();
                 //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
-                dims_ = { ndims, memoc::data(buff_) };
+                dims_ = { ndims, buff_.data() };
                 if (previous_dims.size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
                         dims_[i] = previous_dims[i];
@@ -376,7 +376,7 @@ namespace computoc {
                     dims_[0] = 1;
                 }
 
-                strides_ = { ndims, memoc::data(buff_) + ndims };
+                strides_ = { ndims, buff_.data() + ndims };
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -395,7 +395,7 @@ namespace computoc {
                 memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
                 //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
                 }
@@ -406,9 +406,9 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), buff_.data() };
 
-                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
+                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -423,7 +423,7 @@ namespace computoc {
                 memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
                 //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + count;
@@ -435,9 +435,9 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), buff_.data() };
 
-                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
+                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
                 compute_strides(dims_, strides_);
             }
 
@@ -470,7 +470,7 @@ namespace computoc {
                 memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
                 //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + appended_dims[fixed_axis];
                 }
@@ -481,17 +481,17 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), buff_.data() };
 
-                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
+                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
                 compute_strides(dims_, strides_);
             }
 
             Array_header(Array_header&& other) noexcept
                 : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { other.dims_.size(), memoc::data(buff_) };
-                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
+                dims_ = { other.dims_.size(), buff_.data() };
+                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -509,8 +509,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { other.dims_.size(), memoc::data(buff_) };
-                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
+                dims_ = { other.dims_.size(), buff_.data() };
+                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -523,8 +523,8 @@ namespace computoc {
             Array_header(const Array_header& other) noexcept
                 : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { other.dims_.size(), memoc::data(buff_) };
-                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
+                dims_ = { other.dims_.size(), buff_.data() };
+                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
             }
             Array_header& operator=(const Array_header& other) noexcept
             {
@@ -537,8 +537,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { other.dims_.size(), memoc::data(buff_) };
-                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
+                dims_ = { other.dims_.size(), buff_.data() };
+                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
 
                 return *this;
             }
@@ -730,7 +730,7 @@ namespace computoc {
             Array_subscripts_iterator(const Array_subscripts_iterator<Internal_allocator>& other) noexcept
                 : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
-                bsubs_ = { nsubs_, memoc::data(buff_) };
+                bsubs_ = { nsubs_, buff_.data() };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -748,7 +748,7 @@ namespace computoc {
                 buff_ = other.buff_;
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                bsubs_ = { nsubs_, memoc::data(buff_) };
+                bsubs_ = { nsubs_, buff_.data() };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -766,7 +766,7 @@ namespace computoc {
             Array_subscripts_iterator(Array_subscripts_iterator<Internal_allocator>&& other) noexcept
                 : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
-                bsubs_ = { nsubs_, memoc::data(buff_) };
+                bsubs_ = { nsubs_, buff_.data() };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -796,7 +796,7 @@ namespace computoc {
                 buff_ = std::move(other.buff_);
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                bsubs_ = { nsubs_, memoc::data(buff_) };
+                bsubs_ = { nsubs_, buff_.data() };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -1118,7 +1118,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Buffer<T, Data_reference_allocator>, Data_reference_allocator>(hdr_.count()))
             {
-                memoc::copy(Params<U>{ hdr_.count(), data }, memoc::block(*buffsp_));
+                memoc::copy(Params<U>{ hdr_.count(), data }, buffsp_->block());
             }
             template <typename U>
             Array(const Params<std::int64_t>& dims, std::initializer_list<U> data)
@@ -1140,7 +1140,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const T& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Buffer<T, Data_reference_allocator>, Data_reference_allocator>(hdr_.count()))
             {
-                memoc::set(memoc::block(*buffsp_), value);
+                memoc::set(buffsp_->block(), value);
             }
             Array(std::initializer_list<std::int64_t> dims, const T& value)
                 : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, value)
@@ -1150,7 +1150,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U& value)
                 : hdr_(dims), buffsp_(memoc::make_shared<memoc::Buffer<T, Data_reference_allocator>, Data_reference_allocator>(hdr_.count()))
             {
-                memoc::set(memoc::block(*buffsp_), value);
+                memoc::set(buffsp_->block(), value);
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, const U& value)
@@ -1170,7 +1170,7 @@ namespace computoc {
 
             [[nodiscard]] memoc::Block<T> block() const noexcept
             {
-                return (buffsp_ ? memoc::block(*buffsp_) : memoc::Block<T>(0, nullptr));
+                return (buffsp_ ? buffsp_->block() : memoc::Block<T>(0, nullptr));
             }
 
             [[nodiscard]] T* data() const noexcept
@@ -1180,7 +1180,7 @@ namespace computoc {
 
             [[nodiscard]] const T& operator()(const Params<std::int64_t>& subs) const noexcept
             {
-                return memoc::data(*buffsp_)[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
@@ -1189,7 +1189,7 @@ namespace computoc {
 
             [[nodiscard]] T& operator()(const Params<std::int64_t>& subs) noexcept
             {
-                return memoc::data(*buffsp_)[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] T& operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
@@ -1217,7 +1217,7 @@ namespace computoc {
                 Array<T, Data_allocator, Data_reference_allocator, Internals_allocator> res(indices.header().dims());
 
                 for (Subscripts_iterator iter({}, indices.header().dims()); iter; ++iter) {
-                    res(*iter) = memoc::data(*buffsp_)[indices(*iter)];
+                    res(*iter) = buffsp_->data()[indices(*iter)];
                 }
 
                 return res;
