@@ -101,12 +101,12 @@ namespace computoc {
         */
         [[nodiscard]] inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
         {
-            if (empty(dims)) {
+            if (dims.empty()) {
                 return 0;
             }
 
             std::int64_t res{ 1 };
-            for (std::int64_t i = 0; i < size(dims); ++i) {
+            for (std::int64_t i = 0; i < dims.size(); ++i) {
                 if (dims[i] <= 0) {
                     return 0;
                 }
@@ -121,7 +121,7 @@ namespace computoc {
         */
         inline std::int64_t compute_strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
         {
-            std::int64_t num_strides{ size(dims) > size(strides) ? size(strides) : size(dims) };
+            std::int64_t num_strides{ dims.size() > strides.size() ? strides.size() : dims.size() };
             if (num_strides <= 0) {
                 return 0;
             }
@@ -140,12 +140,12 @@ namespace computoc {
         */
         inline std::int64_t compute_strides(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> strides) noexcept
         {
-            std::int64_t nstrides{ size(previous_strides) > size(strides) ? size(strides) : size(previous_strides) };
+            std::int64_t nstrides{ previous_strides.size() > strides.size() ? strides.size() : previous_strides.size() };
             if (nstrides <= 0) {
                 return 0;
             }
 
-            std::int64_t ncomp_from_intervals{ nstrides > size(intervals) ? size(intervals) : nstrides };
+            std::int64_t ncomp_from_intervals{ nstrides > intervals.size() ? intervals.size() : nstrides };
 
             // compute strides with interval step
             for (std::int64_t i = 0; i < ncomp_from_intervals; ++i) {
@@ -153,9 +153,9 @@ namespace computoc {
             }
 
             // compute strides from previous dimensions
-            if (size(intervals) < size(previous_dims) && nstrides >= size(previous_dims)) {
-                strides[size(previous_dims) - 1] = 1;
-                for (std::int64_t i = size(previous_dims) - 2; i >= size(intervals); --i) {
+            if (intervals.size() < previous_dims.size() && nstrides >= previous_dims.size()) {
+                strides[previous_dims.size() - 1] = 1;
+                for (std::int64_t i = previous_dims.size() - 2; i >= intervals.size(); --i) {
                     strides[i] = strides[i + 1] * previous_dims[i + 1];
                 }
             }
@@ -170,12 +170,12 @@ namespace computoc {
         */
         inline std::int64_t compute_dims(const Params<std::int64_t>& previous_dims, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> dims) noexcept
         {
-            std::int64_t ndims{ size(previous_dims) > size(dims) ? size(dims) : size(previous_dims) };
+            std::int64_t ndims{ previous_dims.size() > dims.size() ? dims.size() : previous_dims.size() };
             if (ndims <= 0) {
                 return 0;
             }
 
-            std::int64_t num_computed_dims{ ndims > size(intervals) ? size(intervals) : ndims };
+            std::int64_t num_computed_dims{ ndims > intervals.size() ? intervals.size() : ndims };
 
             for (std::int64_t i = 0; i < num_computed_dims; ++i) {
                 Interval<std::int64_t> interval{ forward(modulo(intervals[i], previous_dims[i])) };
@@ -196,12 +196,12 @@ namespace computoc {
         {
             std::int64_t offset{ previous_offset };
 
-            if (empty(previous_dims) || empty(previous_strides) || empty(intervals)) {
+            if (previous_dims.empty() || previous_strides.empty() || intervals.empty()) {
                 return offset;
             }
 
-            std::int64_t num_computations{ size(previous_dims) > size(previous_strides) ? size(previous_strides) : size(previous_dims) };
-            num_computations = (num_computations > size(intervals) ? size(intervals) : num_computations);
+            std::int64_t num_computations{ previous_dims.size() > previous_strides.size() ? previous_strides.size() : previous_dims.size() };
+            num_computations = (num_computations > intervals.size() ? intervals.size() : num_computations);
 
             for (std::int64_t i = 0; i < num_computations; ++i) {
                 offset += previous_strides[i] * forward(modulo(intervals[i], previous_dims[i])).start;
@@ -216,19 +216,19 @@ namespace computoc {
         {
             std::int64_t ind{ offset };
 
-            if (empty(strides) || empty(dims) || empty(subs)) {
+            if (strides.empty() || dims.empty() || subs.empty()) {
                 return ind;
             }
 
-            std::int64_t num_used_subs{ size(strides) > size(dims) ? size(dims) : size(strides) };
-            num_used_subs = (num_used_subs > size(subs) ? size(subs) : num_used_subs);
+            std::int64_t num_used_subs{ strides.size() > dims.size() ? dims.size() : strides.size() };
+            num_used_subs = (num_used_subs > subs.size() ? subs.size() : num_used_subs);
 
-            std::int64_t num_ignored_subs{size(strides) - num_used_subs};
+            std::int64_t num_ignored_subs{strides.size() - num_used_subs};
             if (num_ignored_subs < 0) { // ignore extra subscripts
                 num_ignored_subs = 0;
             }
 
-            for (std::int64_t i = num_ignored_subs; i < size(strides); ++i) {
+            for (std::int64_t i = num_ignored_subs; i < strides.size(); ++i) {
                 ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
             }
 
@@ -314,13 +314,13 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(size(dims) * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(dims.size() * 2).value();
+                //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
-                dims_ = { size(dims), memoc::data(buff_) };
+                dims_ = { dims.size(), memoc::data(buff_) };
                 copy(dims, dims_);
 
-                strides_ = { size(dims), memoc::data(buff_) + size(dims) };
+                strides_ = { dims.size(), memoc::data(buff_) + dims.size() };
                 compute_strides(dims, strides_);
             }
 
@@ -331,21 +331,21 @@ namespace computoc {
                     return;
                 }
 
-                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(size(previous_dims) * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
+                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
+                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
                     return;
                 }
 
                 buff_ = std::move(buff);
                 
-                dims_ = { size(previous_dims), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), memoc::data(buff_) };
 
                 count_ = numel(dims_);
 
-                strides_ = { size(previous_dims), memoc::data(buff_) + size(previous_dims) };
+                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
                 compute_strides(previous_dims, previous_strides, intervals, strides_);
 
                 offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
@@ -357,18 +357,18 @@ namespace computoc {
                     return;
                 }
 
-                std::int64_t axis{ modulo(omitted_axis, size(previous_dims)) };
-                std::int64_t ndims{ size(previous_dims) > 1 ? size(previous_dims) - 1 : 1 };
+                std::int64_t axis{ modulo(omitted_axis, previous_dims.size()) };
+                std::int64_t ndims{ previous_dims.size() > 1 ? previous_dims.size() - 1 : 1 };
 
                 buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(ndims * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { ndims, memoc::data(buff_) };
-                if (size(previous_dims) > 1) {
+                if (previous_dims.size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
                         dims_[i] = previous_dims[i];
                     }
-                    for (std::int64_t i = axis + 1; i < size(previous_dims); ++i) {
+                    for (std::int64_t i = axis + 1; i < previous_dims.size(); ++i) {
                         dims_[i - 1] = previous_dims[i];
                     }
                 }
@@ -388,15 +388,15 @@ namespace computoc {
                     return;
                 }
 
-                if (memoc::empty(new_order)) {
+                if (new_order.empty()) {
                     return;
                 }
 
-                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(size(previous_dims) * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
+                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
-                for (std::int64_t i = 0; i < size(previous_dims); ++i) {
+                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
                 }
 
@@ -406,9 +406,9 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { size(previous_dims), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), memoc::data(buff_) };
 
-                strides_ = { size(previous_dims), memoc::data(buff_) + size(previous_dims) };
+                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -420,12 +420,12 @@ namespace computoc {
                     return;
                 }
 
-                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(size(previous_dims) * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
+                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
-                std::int64_t fixed_axis{ modulo(axis, size(previous_dims)) };
-                for (std::int64_t i = 0; i < size(previous_dims); ++i) {
+                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
+                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + count;
                 }
                 
@@ -435,15 +435,15 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { size(previous_dims), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), memoc::data(buff_) };
 
-                strides_ = { size(previous_dims), memoc::data(buff_) + size(previous_dims) };
+                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
                 compute_strides(dims_, strides_);
             }
 
             Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
             {
-                if (size(previous_dims) != size(appended_dims)) {
+                if (previous_dims.size() != appended_dims.size()) {
                     return;
                 }
 
@@ -455,10 +455,10 @@ namespace computoc {
                     return;
                 }
 
-                std::int64_t fixed_axis{ modulo(axis, size(previous_dims)) };
+                std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
 
                 bool are_dims_valid_for_append{ true };
-                for (std::int64_t i = 0; i < size(previous_dims); ++i) {
+                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     if (i != fixed_axis && previous_dims[i] != appended_dims[i]) {
                         are_dims_valid_for_append = false;
                     }
@@ -467,11 +467,11 @@ namespace computoc {
                     return;
                 }
 
-                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(size(previous_dims) * 2).value();
-                //ERROC_EXPECT(!memoc::empty(buff), std::runtime_error, "buffer allocation failed");
+                memoc::Buffer<std::int64_t, Internal_allocator> buff = memoc::create_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2).value();
+                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
-                Params<std::int64_t> dims{ size(previous_dims), memoc::data(buff) };
-                for (std::int64_t i = 0; i < size(previous_dims); ++i) {
+                Params<std::int64_t> dims{ previous_dims.size(), memoc::data(buff) };
+                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + appended_dims[fixed_axis];
                 }
 
@@ -481,17 +481,17 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { size(previous_dims), memoc::data(buff_) };
+                dims_ = { previous_dims.size(), memoc::data(buff_) };
 
-                strides_ = { size(previous_dims), memoc::data(buff_) + size(previous_dims) };
+                strides_ = { previous_dims.size(), memoc::data(buff_) + previous_dims.size() };
                 compute_strides(dims_, strides_);
             }
 
             Array_header(Array_header&& other) noexcept
                 : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { size(other.dims_), memoc::data(buff_) };
-                strides_ = { size(other.strides_), memoc::data(buff_) + size(other.dims_) };
+                dims_ = { other.dims_.size(), memoc::data(buff_) };
+                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -509,8 +509,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { size(other.dims_), memoc::data(buff_) };
-                strides_ = { size(other.strides_), memoc::data(buff_) + size(other.dims_) };
+                dims_ = { other.dims_.size(), memoc::data(buff_) };
+                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -523,8 +523,8 @@ namespace computoc {
             Array_header(const Array_header& other) noexcept
                 : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { size(other.dims_), memoc::data(buff_) };
-                strides_ = { size(other.strides_), memoc::data(buff_) + size(other.dims_) };
+                dims_ = { other.dims_.size(), memoc::data(buff_) };
+                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
             }
             Array_header& operator=(const Array_header& other) noexcept
             {
@@ -537,8 +537,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { size(other.dims_), memoc::data(buff_) };
-                strides_ = { size(other.strides_), memoc::data(buff_) + size(other.dims_) };
+                dims_ = { other.dims_.size(), memoc::data(buff_) };
+                strides_ = { other.strides_.size(), memoc::data(buff_) + other.dims_.size() };
 
                 return *this;
             }
@@ -572,7 +572,7 @@ namespace computoc {
 
             [[nodiscard]] bool empty() const noexcept
             {
-                return memoc::empty(buff_);
+                return buff_.empty();
             }
 
         private:
@@ -596,7 +596,7 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(nsubs_ * 4).value();
-                    //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                    //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -616,7 +616,7 @@ namespace computoc {
                     if (!minimum_excluded.empty()) {
                         memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                     }
-                    else if(!empty(start)) {
+                    else if(!start.empty()) {
                         memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
@@ -646,14 +646,14 @@ namespace computoc {
                 nsubs_ = start.size() > bounds_size ? start.size() : bounds_size;
 
                 if (nsubs_ > 0) {
-                    if (size(order) >= nsubs_) {
+                    if (order.size() >= nsubs_) {
                         buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(nsubs_ * 5).value();
                     }
                     else {
                         buff_ = memoc::create_buffer<std::int64_t, Internal_allocator>(nsubs_ * 4).value();
                         axis_ = nsubs_ - 1;
                     }
-                    //ERROC_EXPECT(!memoc::empty(buff_), std::runtime_error, "buffer allocation failed");
+                    //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                     bsubs_ = { nsubs_, buff_.data() };
                     subs_ = bsubs_.data();
@@ -671,7 +671,7 @@ namespace computoc {
                     if (!minimum_excluded.empty()) {
                         memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                     }
-                    else if (!empty(start)) {
+                    else if (!start.empty()) {
                         memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
@@ -1198,7 +1198,7 @@ namespace computoc {
 
             [[nodiscard]] Array<T, Data_allocator, Data_reference_allocator, Internals_allocator> operator()(const Params<Interval<std::int64_t>>& ranges) const
             {
-                if (empty(ranges) || empty(*this)) {
+                if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
 
@@ -1416,7 +1416,7 @@ namespace computoc {
             typename Array<T2, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
             typename Array<T1, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            std::int64_t fixed_axis{ modulo(axis, size(lhs.header().dims())) };
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().size()) };
 
             while (res_iter) {
                 if (lhs_iter && ((*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
@@ -1487,7 +1487,7 @@ namespace computoc {
             typename Array<T2, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
             typename Array<T1, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            std::int64_t fixed_axis{ modulo(axis, size(lhs.header().dims())) };
+            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().size()) };
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
 
             while (res_iter) {
@@ -1541,7 +1541,7 @@ namespace computoc {
                 return Array<T, Data_allocator, Data_reference_allocator, Internals_allocator>();
             }
 
-            std::int64_t fixed_axis{ modulo(axis, size(arr.header().dims())) };
+            std::int64_t fixed_axis{ modulo(axis, arr.header().dims().size()) };
             std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
             std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
@@ -1570,7 +1570,7 @@ namespace computoc {
         template <typename T, memoc::Allocator Data_allocator, memoc::Allocator Data_reference_allocator, memoc::Allocator Internals_allocator>
         [[nodiscard]] inline bool empty(const Array<T, Data_allocator, Data_reference_allocator, Internals_allocator>& arr) noexcept
         {
-            return (memoc::empty(arr.block()) || arr.header().is_subarray()) && arr.header().empty();
+            return (arr.block().empty() || arr.header().is_subarray()) && arr.header().empty();
         }
 
         template <typename T, typename Unary_op, memoc::Allocator Data_allocator, memoc::Allocator Data_reference_allocator, memoc::Allocator Internals_allocator>    
@@ -1652,7 +1652,7 @@ namespace computoc {
             typename Array<T, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims(), axis);
             typename Array<T, Data_allocator, Data_reference_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, size(arr.header().dims()))] };
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, arr.header().dims().size())] };
 
             while (arr_iter && res_iter) {
                 T_o res_element{ static_cast<T_o>(arr(*arr_iter)) };
@@ -1675,9 +1675,9 @@ namespace computoc {
                 return Array<T_o, Data_allocator, Data_reference_allocator, Internals_allocator>();
             }
 
-            const std::int64_t fixed_axis{ modulo(axis, size(arr.header().dims())) };
+            const std::int64_t fixed_axis{ modulo(axis, arr.header().dims().size()) };
 
-            if (size(init_values.header().dims()) != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
+            if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
                 return Array<T_o, Data_allocator, Data_reference_allocator, Internals_allocator>();
             }
 

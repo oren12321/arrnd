@@ -188,25 +188,25 @@ TEST(Array_test, can_return_its_header_and_data)
     Integer_array earr{};
     const Integer_array::Header& ehdr{ earr.header() };
 
-    EXPECT_EQ(0, computoc::size(ehdr.dims()));
+    EXPECT_EQ(0, ehdr.dims().size());
     EXPECT_EQ(0, ehdr.count());
-    EXPECT_TRUE(computoc::empty(ehdr.dims()));
-    EXPECT_TRUE(computoc::empty(ehdr.strides()));
+    EXPECT_TRUE(ehdr.dims().empty());
+    EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
-    EXPECT_TRUE(computoc::empty(earr.block()));
+    EXPECT_TRUE(earr.block().empty());
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
     const Integer_array::Header& hdr{ arr.header() };
 
-    EXPECT_EQ(3, computoc::size(hdr.dims()));
+    EXPECT_EQ(3, hdr.dims().size());
     EXPECT_EQ(6, hdr.count());
-    EXPECT_EQ(3, computoc::data(hdr.dims())[0]); EXPECT_EQ(1, computoc::data(hdr.dims())[1]); EXPECT_EQ(2, computoc::data(hdr.dims())[2]);
-    EXPECT_EQ(2, computoc::data(hdr.strides())[0]); EXPECT_EQ(2, computoc::data(hdr.strides())[1]); EXPECT_EQ(1, computoc::data(hdr.strides())[2]);
+    EXPECT_EQ(3, hdr.dims().data()[0]); EXPECT_EQ(1, hdr.dims().data()[1]); EXPECT_EQ(2, hdr.dims().data()[2]);
+    EXPECT_EQ(2, hdr.strides().data()[0]); EXPECT_EQ(2, hdr.strides().data()[1]); EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
-    EXPECT_FALSE(computoc::empty(arr.block()));
+    EXPECT_FALSE(arr.block().empty());
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
@@ -222,7 +222,7 @@ TEST(Array_test, have_read_write_access_to_its_cells)
         5, 6 };
 
     Integer_array arr1d{ {6}, data };
-    const std::int64_t* dims1d{ computoc::data(arr1d.header().dims()) };
+    const std::int64_t* dims1d{ arr1d.header().dims().data() };
     for (std::int64_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ(arr1d({ i }), data[i]);
     }
@@ -234,7 +234,7 @@ TEST(Array_test, have_read_write_access_to_its_cells)
     }
 
     Integer_array arr2d{ {3, 2}, data };
-    const std::int64_t* dims2d{ computoc::data(arr2d.header().dims()) };
+    const std::int64_t* dims2d{ arr2d.header().dims().data() };
     for (std::int64_t i = 0; i < dims2d[0]; ++i) {
         for (std::int64_t j = 0; j < dims2d[1]; ++j) {
             EXPECT_EQ(arr2d({ i, j }), data[i * dims2d[1] + j]);
@@ -250,7 +250,7 @@ TEST(Array_test, have_read_write_access_to_its_cells)
     }
 
     Integer_array arr3d{ {3, 1, 2}, data };
-    const std::int64_t* dims3d{ computoc::data(arr3d.header().dims()) };
+    const std::int64_t* dims3d{ arr3d.header().dims().data() };
     for (std::int64_t k = 0; k < dims3d[0]; ++k) {
         for (std::int64_t i = 0; i < dims3d[1]; ++i) {
             for (std::int64_t j = 0; j < dims3d[2]; ++j) {
@@ -2476,15 +2476,15 @@ TEST(Array_test, resize)
     {
         Integer_array rarr{ computoc::resize(Integer_array{}, {6}) };
         //EXPECT_FALSE(computoc::all_equal(arr, rarr));
-        EXPECT_EQ(computoc::size(arr.header().dims()), computoc::size(rarr.header().dims()));
-        EXPECT_EQ(6, computoc::data(rarr.header().dims())[0]);
-        EXPECT_NE(computoc::data(arr.block()), computoc::data(rarr.block()));
+        EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
+        EXPECT_EQ(6, rarr.header().dims().data()[0]);
+        EXPECT_NE(arr.block().data(), rarr.block().data());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {6}) };
         EXPECT_TRUE(computoc::all_equal(arr, rarr));
-        EXPECT_NE(computoc::data(arr.block()), computoc::data(rarr.block()));
+        EXPECT_NE(arr.block().data(), rarr.block().data());
     }
 
     {
@@ -2494,7 +2494,7 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(computoc::data(tarr.block()), computoc::data(rarr.block()));
+        EXPECT_NE(tarr.block().data(), rarr.block().data());
     }
 
     {
@@ -2507,14 +2507,14 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {3, 1, 2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(computoc::data(tarr.block()), computoc::data(rarr.block()));
+        EXPECT_NE(tarr.block().data(), rarr.block().data());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {10}) };
         EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_TRUE(computoc::all_equal(arr, rarr({ {0, 5} })));
-        EXPECT_NE(computoc::data(arr.block()), computoc::data(rarr.block()));
+        EXPECT_NE(arr.block().data(), rarr.block().data());
     }
 }
 
@@ -2842,20 +2842,20 @@ TEST(Array_test, complex_array)
 
 
 
-#include <thread>
-#include <iostream>
-#include <chrono>
-
-TEST(Parallel_test, add)
-{
-    using namespace computoc;
-    using namespace std;
-    using namespace std::chrono;
-
-    auto start = high_resolution_clock::now();
-    for (int i = 0; i < 25; ++i) {
-        for (Array_subscripts_iterator iter({}, { 1920, 1080, 3 }); iter; ++iter) {}
-    }
-    auto stop = high_resolution_clock::now();
-    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
-}
+//#include <thread>
+//#include <iostream>
+//#include <chrono>
+//
+//TEST(Parallel_test, add)
+//{
+//    using namespace computoc;
+//    using namespace std;
+//    using namespace std::chrono;
+//
+//    auto start = high_resolution_clock::now();
+//    for (int i = 0; i < 25; ++i) {
+//        for (Array_subscripts_iterator iter({}, { 1920, 1080, 3 }); iter; ++iter) {}
+//    }
+//    auto stop = high_resolution_clock::now();
+//    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
+//}
