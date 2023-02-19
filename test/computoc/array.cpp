@@ -2859,3 +2859,84 @@ TEST(Array_test, complex_array)
 //    auto stop = high_resolution_clock::now();
 //    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
 //}
+
+#include <vector>
+#include <numeric>
+
+class Array_indices_iterator {
+public:
+    Array_indices_iterator(const std::vector<std::int64_t>& dims, const std::vector<std::int64_t>& strides, std::int64_t offset, std::int64_t axis)
+        : offset_(offset), iters_(0),
+        current_index_(0), first_index_in_batch_(0),
+        inside_group_iteration_(0), inside_batch_iteration_(0), first_index_in_group_(0)
+    {
+        group_size_ = dims[axis];
+        step_size_inside_group_ = strides[axis];
+
+        batch_size_ = strides[axis] * dims[axis];
+        batch_max_iters_ = batch_size_ / group_size_;
+        inside_batch_counter_ = 0;
+
+        max_iterations_ = std::accumulate(dims.begin(), dims.end(), std::int64_t{ 1 }, [](std::int64_t a, std::int64_t b) { return a * b; });
+    }
+
+    [[nodiscard]] constexpr std::int64_t next() noexcept
+    {
+        ++iters_;
+
+        const std::int64_t next_index = offset_ + current_index_;
+
+        if (inside_batch_counter_ == 0) {
+            first_index_in_batch_ = current_index_;
+        }
+
+        ++inside_group_iteration_;
+        ++inside_batch_counter_;
+        if (inside_group_iteration_ >= group_size_) {
+            inside_group_iteration_ = 0;
+
+            ++inside_batch_iteration_;
+            if (inside_batch_iteration_ >= batch_max_iters_) {
+                current_index_ = first_index_in_batch_ + batch_size_;
+                inside_batch_iteration_ = 0;
+                inside_batch_counter_ = 0;
+
+                //inside_group_iteration_ = 0;
+                return next_index;
+            }
+            current_index_ = first_index_in_batch_ + inside_batch_iteration_;
+            return next_index;
+        }
+
+
+
+
+        current_index_ += step_size_inside_group_;
+
+        return next_index;
+    }
+
+    [[nodiscard]] constexpr bool has_next() const noexcept
+    {
+        return iters_ < max_iterations_;
+    }
+
+private:
+    const std::int64_t offset_;
+
+    std::int64_t current_index_;
+
+    std::int64_t group_size_;
+    std::int64_t step_size_inside_group_;
+    std::int64_t first_index_in_group_;
+    std::int64_t inside_group_iteration_;
+
+    std::int64_t batch_size_;
+    std::int64_t first_index_in_batch_;
+    std::int64_t inside_batch_iteration_;
+    std::int64_t batch_max_iters_;
+    std::int64_t inside_batch_counter_;
+
+    std::int64_t max_iterations_;
+    std::int64_t iters_;
+};
