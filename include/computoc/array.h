@@ -7,13 +7,10 @@
 #include <stdexcept>
 #include <span>
 #include <limits>
+#include <algorithm>
 
-#include <erroc/errors.h>
 #include <computoc/utils.h>
 #include <computoc/math.h>
-#include <memoc/allocators.h>
-#include <memoc/buffers.h>
-#include <memoc/pointers.h>
 #include <memoc/blocks.h>
 
 namespace computoc {
@@ -21,6 +18,7 @@ namespace computoc {
 
 
         template <typename T, std::int64_t N = std::numeric_limits<std::uint32_t>::max(), template<typename> typename Allocator = std::allocator>
+        requires (std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
         class ndvector_internal_buffer final {
         public:
             using size_type = std::int64_t;
@@ -514,7 +512,7 @@ namespace computoc {
                 //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { dims.size(), buff_.data() };
-                copy(dims, dims_);
+                std::copy(dims.data(), dims.data() + dims.size(), dims_.data());
 
                 strides_ = { dims.size(), buff_.data() + dims.size() };
                 compute_strides(dims, strides_);
@@ -1906,7 +1904,7 @@ namespace computoc {
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> all(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> all(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) && static_cast<bool>(b); }, axis);
         }
@@ -1918,7 +1916,7 @@ namespace computoc {
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> any(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> any(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) || static_cast<bool>(b); }, axis);
         }
@@ -2156,127 +2154,127 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array</*bool*/char, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
