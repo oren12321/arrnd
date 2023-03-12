@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <stdexcept>
 #include <span>
+#include <limits>
 
 #include <erroc/errors.h>
 #include <computoc/utils.h>
@@ -30,7 +31,7 @@ namespace computoc {
 
             using capacity_func_type = std::function<size_type(size_type)>;
 
-            constexpr ndvector_internal_buffer(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return 1.5 * s; }) requires (N == std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N == std::numeric_limits<std::uint32_t>::max())
                 : size_(size), capacity_(size), capacity_func_(capacity_func)
             {
                 data_ptr_ = alloc_.allocate(size);
@@ -42,7 +43,7 @@ namespace computoc {
                 }
             }
 
-            constexpr ndvector_internal_buffer(const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return 1.5 * s; }) requires (N != std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N != std::numeric_limits<std::uint32_t>::max())
                 : size_(N), capacity_(N), capacity_func_(capacity_func)
             {
                 std::for_each(data_ptr_, data_ptr_ + size, [](auto& p) { std::construct_at<T>(&p); });
@@ -799,34 +800,34 @@ namespace computoc {
                     subs_ = bsubs_.data();
                     start_ = subs_ + nsubs_;
                     if (start.empty()) {
-                        memoc::set(bsubs_, std::int64_t{ 0 }, nsubs_);
-                        memoc::set(Params<std::int64_t>(nsubs_, start_), std::int64_t{ 0 }, nsubs_);
+                        std::fill(subs_, subs_ + nsubs_, 0);
+                        std::fill(start_, start_ + nsubs_, 0);
                     }
                     else {
-                        memoc::copy(start, bsubs_, nsubs_);
-                        memoc::copy(start, Params<std::int64_t>(nsubs_, start_), nsubs_);
+                        std::copy(start.data(), start.data() + nsubs_, subs_);
+                        std::copy(start.data(), start.data() + nsubs_, start_);
                     }
 
                     minimum_excluded_ = start_ + nsubs_;
                     if (!minimum_excluded.empty()) {
-                        memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
+                        std::copy(minimum_excluded.data(), minimum_excluded.data() + nsubs_, minimum_excluded_);
                     }
                     else if(!start.empty()) {
-                        memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
+                        std::copy(start.data(), start.data() + nsubs_, minimum_excluded_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        memoc::set(Params<std::int64_t>(nsubs_, minimum_excluded_), std::int64_t{ -1 }, nsubs_);
+                        std::fill(minimum_excluded_, minimum_excluded_ + nsubs_, -1);
                     }
 
                     maximum_excluded_ = minimum_excluded_ + nsubs_;
                     if (maximum_excluded.empty()) {
-                        memoc::set(Params<std::int64_t>(nsubs_, maximum_excluded_), std::int64_t{ 1 }, nsubs_);
+                        std::fill(maximum_excluded_, maximum_excluded_ + nsubs_, 1);
                     }
                     else {
-                        memoc::copy(maximum_excluded, Params<std::int64_t>(nsubs_, maximum_excluded_), nsubs_);
+                        std::copy(maximum_excluded.data(), maximum_excluded.data() + nsubs_, maximum_excluded_);
                     }
 
                     major_axis_ = find_major_axis();
@@ -854,41 +855,41 @@ namespace computoc {
                     subs_ = bsubs_.data();
                     start_ = subs_ + nsubs_;
                     if (start.empty()) {
-                        memoc::set(bsubs_, std::int64_t{ 0 }, nsubs_);
-                        memoc::set(Params<std::int64_t>(nsubs_, start_), std::int64_t{ 0 }, nsubs_);
+                        std::fill(subs_, subs_ + nsubs_, 0);
+                        std::fill(start_, start_ + nsubs_, 0);
                     }
                     else {
-                        memoc::copy(start, bsubs_, nsubs_);
-                        memoc::copy(start, Params<std::int64_t>(nsubs_, start_), nsubs_);
+                        std::copy(start.data(), start.data() + nsubs_, subs_);
+                        std::copy(start.data(), start.data() + nsubs_, start_);
                     }
 
                     minimum_excluded_ = start_ + nsubs_;
                     if (!minimum_excluded.empty()) {
-                        memoc::copy(minimum_excluded, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
+                        std::copy(minimum_excluded.data(), minimum_excluded.data() + nsubs_, minimum_excluded_);
                     }
                     else if (!start.empty()) {
-                        memoc::copy(start, Params<std::int64_t>(nsubs_, minimum_excluded_), nsubs_);
+                        std::copy(start.data(), start.data() + nsubs_, minimum_excluded_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             minimum_excluded_[i] -= 1;
                         }
                     }
                     else {
-                        memoc::set(Params<std::int64_t>(nsubs_, minimum_excluded_), std::int64_t{ -1 }, nsubs_);
+                        std::fill(minimum_excluded_, minimum_excluded_ + nsubs_, -1);
                     }
 
                     maximum_excluded_ = minimum_excluded_ + nsubs_;
                     if (maximum_excluded.empty()) {
-                        memoc::set(Params<std::int64_t>(nsubs_, maximum_excluded_), std::int64_t{ 1 }, nsubs_);
+                        std::fill(maximum_excluded_, maximum_excluded_ + nsubs_, 1);
                     }
                     else {
-                        memoc::copy(maximum_excluded, Params<std::int64_t>(nsubs_, maximum_excluded_), nsubs_);
+                        std::copy(maximum_excluded.data(), maximum_excluded.data() + nsubs_, maximum_excluded_);
                     }
 
                     major_axis_ = find_major_axis();
 
                     if (order.size() >= nsubs_) {
                         order_ = maximum_excluded_ + nsubs_;
-                        memoc::copy(order, Params<std::int64_t>(nsubs_, order_), nsubs_);
+                        std::copy(order.data(), order.data() + nsubs_, order_);
                         for (std::int64_t i = 0; i < nsubs_; ++i) {
                             order_[i] = modulo(order_[i], nsubs_);
                         }
@@ -1022,7 +1023,7 @@ namespace computoc {
 
             void reset() noexcept
             {
-                memoc::copy(Params<std::int64_t>(nsubs_, start_), bsubs_, nsubs_);
+                std::copy(start_, start_ + nsubs_, bsubs_.data());
             }
 
             Array_subscripts_iterator<Internal_allocator>& operator++() noexcept
@@ -1179,10 +1180,6 @@ namespace computoc {
             std::int64_t max_at_major_{ 0 };
         };
 
-        using Array_default_data_allocator = memoc::Fallback_allocator<
-            memoc::Stack_allocator<>,
-            memoc::Malloc_allocator>;
-
         template <typename T, template<typename> typename Data_allocator = std::allocator, template<typename> typename Internals_allocator = std::allocator>
         class Array {
         public:
@@ -1311,7 +1308,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
-                memoc::copy(Params<U>{ hdr_.count(), data }, Params<T>{buffsp_->size(), buffsp_->data()});
+                std::copy(data, data + hdr_.count(), buffsp_->data());
             }
             template <typename U>
             Array(const Params<std::int64_t>& dims, std::initializer_list<U> data)
@@ -1333,7 +1330,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const T& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
-                memoc::set(Params<T>(buffsp_->size(), buffsp_->data()), value);
+                std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             Array(std::initializer_list<std::int64_t> dims, const T& value)
                 : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, value)
@@ -1343,7 +1340,7 @@ namespace computoc {
             Array(const Params<std::int64_t>& dims, const U& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
-                memoc::set(Params<T>{buffsp_->size(), buffsp_->data()}, value);
+                std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, const U& value)
