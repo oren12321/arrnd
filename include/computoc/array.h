@@ -11,13 +11,13 @@
 
 #include <computoc/utils.h>
 #include <computoc/math.h>
-#include <memoc/blocks.h>
 
 namespace computoc {
     namespace details {
 
+        inline constexpr std::uint32_t dynamic_vector = std::numeric_limits<std::uint32_t>::max();
 
-        template <typename T, std::int64_t N = std::numeric_limits<std::uint32_t>::max(), template<typename> typename Allocator = std::allocator>
+        template <typename T, std::int64_t N = dynamic_vector, template<typename> typename Allocator = std::allocator>
         requires (std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
         class ndvector_internal_buffer final {
         public:
@@ -29,7 +29,7 @@ namespace computoc {
 
             using capacity_func_type = std::function<size_type(size_type)>;
 
-            constexpr ndvector_internal_buffer(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N == std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N == dynamic_vector)
                 : size_(size), capacity_(size), capacity_func_(capacity_func)
             {
                 data_ptr_ = alloc_.allocate(size);
@@ -41,7 +41,7 @@ namespace computoc {
                 }
             }
 
-            constexpr ndvector_internal_buffer(const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N != std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N != dynamic_vector)
                 : size_(N), capacity_(N), capacity_func_(capacity_func)
             {
                 std::for_each(data_ptr_, data_ptr_ + size, [](auto& p) { std::construct_at<T>(&p); });
@@ -51,7 +51,7 @@ namespace computoc {
                 }
             }
 
-            constexpr ndvector_internal_buffer(const ndvector_internal_buffer& other) requires (N == std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(const ndvector_internal_buffer& other) requires (N == dynamic_vector)
                 : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
             {
                 data_ptr_ = alloc_.allocate(size_);
@@ -59,14 +59,14 @@ namespace computoc {
                 std::copy(other.data_ptr_, other.data_ptr_ + size_, data_ptr_);
             }
 
-            constexpr ndvector_internal_buffer(const ndvector_internal_buffer& other) requires (N != std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(const ndvector_internal_buffer& other) requires (N != dynamic_vector)
                 : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
             {
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
                 std::copy(other.data_ptr_, other.data_ptr_ + size_, data_ptr_);
             }
 
-            constexpr ndvector_internal_buffer operator=(const ndvector_internal_buffer& other) requires (N == std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer operator=(const ndvector_internal_buffer& other) requires (N == dynamic_vector)
             {
                 if (this == &other) {
                     return *this;
@@ -87,7 +87,7 @@ namespace computoc {
                 return *this;
             }
 
-                constexpr ndvector_internal_buffer operator=(const ndvector_internal_buffer& other) requires (N != std::numeric_limits<std::uint32_t>::max())
+                constexpr ndvector_internal_buffer operator=(const ndvector_internal_buffer& other) requires (N != dynamic_vector)
             {
                 if (this == &other) {
                     return *this;
@@ -106,7 +106,7 @@ namespace computoc {
                 return *this;
             }
 
-                constexpr ndvector_internal_buffer(ndvector_internal_buffer&& other) noexcept requires (N == std::numeric_limits<std::uint32_t>::max())
+                constexpr ndvector_internal_buffer(ndvector_internal_buffer&& other) noexcept requires (N == dynamic_vector)
                 : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_), capacity_func_(std::move(other.capacity_func_))
             {
                 data_ptr_ = other.data_ptr_;
@@ -114,14 +114,14 @@ namespace computoc {
                 other.data_ptr_ = nullptr;
             }
 
-            constexpr ndvector_internal_buffer(ndvector_internal_buffer&& other) noexcept requires (N != std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer(ndvector_internal_buffer&& other) noexcept requires (N != dynamic_vector)
                 : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_), capacity_func_(std::move(other.capacity_func_))
             {
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
                 std::move(other.data_ptr_, other.data_ptr_ + size_, data_ptr_);
             }
 
-            constexpr ndvector_internal_buffer operator=(ndvector_internal_buffer&& other) noexcept requires (N == std::numeric_limits<std::uint32_t>::max())
+            constexpr ndvector_internal_buffer operator=(ndvector_internal_buffer&& other) noexcept requires (N == dynamic_vector)
             {
                 if (this == &other) {
                     return *this;
@@ -142,7 +142,7 @@ namespace computoc {
                 return *this;
             }
 
-                constexpr ndvector_internal_buffer operator=(ndvector_internal_buffer&& other) noexcept requires (N != std::numeric_limits<std::uint32_t>::max())
+                constexpr ndvector_internal_buffer operator=(ndvector_internal_buffer&& other) noexcept requires (N != dynamic_vector)
             {
                 if (this == &other) {
                     return *this;
@@ -161,13 +161,13 @@ namespace computoc {
                 return *this;
             }
 
-                constexpr ~ndvector_internal_buffer() noexcept requires (N == std::numeric_limits<std::uint32_t>::max())
+                constexpr ~ndvector_internal_buffer() noexcept requires (N == dynamic_vector)
             {
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
                 alloc_.deallocate(data_ptr_, size_);
             }
 
-                constexpr ~ndvector_internal_buffer() noexcept requires (N != std::numeric_limits<std::uint32_t>::max())
+                constexpr ~ndvector_internal_buffer() noexcept requires (N != dynamic_vector)
             {
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
             }
@@ -198,7 +198,7 @@ namespace computoc {
             }
 
         private:
-            using data_ptr_type = std::conditional_t<N == std::numeric_limits<std::uint32_t>::max(), T*, T[N]>;
+            using data_ptr_type = std::conditional_t<N == dynamic_vector, T*, T[N]>;
 
             data_ptr_type data_ptr_;
 
@@ -211,7 +211,7 @@ namespace computoc {
         };
 
         template <typename T, template<typename> typename Allocator = std::allocator>
-        using ndvector_dynamic_buffer = ndvector_internal_buffer<T, std::numeric_limits<std::uint32_t>::max(), Allocator>;
+        using ndvector_dynamic_buffer = ndvector_internal_buffer<T, dynamic_vector, Allocator>;
 
 
 
@@ -509,7 +509,6 @@ namespace computoc {
                 }
 
                 buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(dims.size() * 2);
-                //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { dims.size(), buff_.data() };
                 std::copy(dims.data(), dims.data() + dims.size(), dims_.data());
@@ -526,7 +525,6 @@ namespace computoc {
                 }
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
-                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
@@ -555,7 +553,6 @@ namespace computoc {
                 std::int64_t ndims{ previous_dims.size() > 1 ? previous_dims.size() - 1 : 1 };
 
                 buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(ndims * 2);
-                //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                 dims_ = { ndims, buff_.data() };
                 if (previous_dims.size() > 1) {
@@ -587,7 +584,6 @@ namespace computoc {
                 }
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
-                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
@@ -615,7 +611,6 @@ namespace computoc {
                 }
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
-                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
@@ -662,7 +657,6 @@ namespace computoc {
                 }
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
-                //ERROC_EXPECT(!buff.empty(), std::runtime_error, "buffer allocation failed");
 
                 Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
@@ -790,7 +784,6 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(nsubs_ * 4);
-                    //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -847,7 +840,7 @@ namespace computoc {
                         buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(nsubs_ * 4);
                         axis_ = nsubs_ - 1;
                     }
-                    //ERROC_EXPECT(!buff_.empty(), std::runtime_error, "buffer allocation failed");
+
 
                     bsubs_ = { nsubs_, buff_.data() };
                     subs_ = bsubs_.data();
@@ -1358,8 +1351,6 @@ namespace computoc {
 
             [[nodiscard]] std::span<T> block() const noexcept
             {
-                //return (buffsp_ ? buffsp_->block() : memoc::Block<T>(0, nullptr));
-                //return buffsp_ ? memoc::Block<T>(buffsp_->size(), buffsp_->data()) : memoc::Block<T>(0, nullptr);
                 return buffsp_ ? std::span(buffsp_->data(), buffsp_->size()) : std::span<T>();
             }
 
