@@ -1356,10 +1356,11 @@ namespace computoc {
                 return hdr_;
             }
 
-            [[nodiscard]] memoc::Block<T> block() const noexcept
+            [[nodiscard]] std::span<T> block() const noexcept
             {
                 //return (buffsp_ ? buffsp_->block() : memoc::Block<T>(0, nullptr));
-                return buffsp_ ? memoc::Block<T>(buffsp_->size(), buffsp_->data()) : memoc::Block<T>(0, nullptr);
+                //return buffsp_ ? memoc::Block<T>(buffsp_->size(), buffsp_->data()) : memoc::Block<T>(0, nullptr);
+                return buffsp_ ? std::span(buffsp_->data(), buffsp_->size()) : std::span<T>();
             }
 
             [[nodiscard]] T* data() const noexcept
