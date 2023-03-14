@@ -213,7 +213,10 @@ namespace computoc {
         template <typename T, template<typename> typename Allocator = std::allocator>
         using ndvector_dynamic_buffer = ndvector_internal_buffer<T, dynamic_vector, Allocator>;
 
-
+        template <typename T, typename U>
+        [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
+            return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+        }
 
         /*
         * N-dimensional array definitions:
@@ -297,14 +300,14 @@ namespace computoc {
         /**
         * @note If dimensions contain zero or negative dimension value than the number of elements will be 0.
         */
-        [[nodiscard]] inline std::int64_t numel(const Params<std::int64_t>& dims) noexcept
+        [[nodiscard]] inline std::int64_t numel(std::span<const std::int64_t> dims) noexcept
         {
             if (dims.empty()) {
                 return 0;
             }
 
             std::int64_t res{ 1 };
-            for (std::int64_t i = 0; i < dims.size(); ++i) {
+            for (std::int64_t i = 0; i < std::ssize(dims); ++i) {
                 if (dims[i] <= 0) {
                     return 0;
                 }
@@ -317,9 +320,9 @@ namespace computoc {
         * @param[out] strides An already allocated memory for computed strides.
         * @return Number of computed strides
         */
-        inline std::int64_t compute_strides(const Params<std::int64_t>& dims, Params<std::int64_t> strides) noexcept
+        inline std::int64_t compute_strides(std::span<const std::int64_t> dims, std::span<std::int64_t> strides) noexcept
         {
-            std::int64_t num_strides{ dims.size() > strides.size() ? strides.size() : dims.size() };
+            std::int64_t num_strides{ std::ssize(dims) > std::ssize(strides) ? std::ssize(strides) : std::ssize(dims) };
             if (num_strides <= 0) {
                 return 0;
             }
@@ -336,14 +339,14 @@ namespace computoc {
         * @return Number of computed strides
         * @note When number of interval is smaller than number of strides, the other strides computed from previous dimensions.
         */
-        inline std::int64_t compute_strides(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> strides) noexcept
+        inline std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const Interval<std::int64_t>> intervals, std::span<std::int64_t> strides) noexcept
         {
-            std::int64_t nstrides{ previous_strides.size() > strides.size() ? strides.size() : previous_strides.size() };
+            std::int64_t nstrides{ std::ssize(previous_strides) > std::ssize(strides) ? std::ssize(strides) : std::ssize(previous_strides) };
             if (nstrides <= 0) {
                 return 0;
             }
 
-            std::int64_t ncomp_from_intervals{ nstrides > intervals.size() ? intervals.size() : nstrides };
+            std::int64_t ncomp_from_intervals{ nstrides > std::ssize(intervals) ? std::ssize(intervals) : nstrides };
 
             // compute strides with interval step
             for (std::int64_t i = 0; i < ncomp_from_intervals; ++i) {
@@ -353,7 +356,7 @@ namespace computoc {
             // compute strides from previous dimensions
             if (intervals.size() < previous_dims.size() && nstrides >= previous_dims.size()) {
                 strides[previous_dims.size() - 1] = 1;
-                for (std::int64_t i = previous_dims.size() - 2; i >= intervals.size(); --i) {
+                for (std::int64_t i = std::ssize(previous_dims) - 2; i >= std::ssize(intervals); --i) {
                     strides[i] = strides[i + 1] * previous_dims[i + 1];
                 }
             }
@@ -366,14 +369,14 @@ namespace computoc {
         * @return Number of computed dimensions
         * @note Previous dimensions are used in case of small number of intervals.
         */
-        inline std::int64_t compute_dims(const Params<std::int64_t>& previous_dims, const Params<Interval<std::int64_t>>& intervals, Params<std::int64_t> dims) noexcept
+        inline std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const Interval<std::int64_t>> intervals, std::span<std::int64_t> dims) noexcept
         {
-            std::int64_t ndims{ previous_dims.size() > dims.size() ? dims.size() : previous_dims.size() };
+            std::int64_t ndims{ std::ssize(previous_dims) > std::ssize(dims) ? std::ssize(dims) : std::ssize(previous_dims) };
             if (ndims <= 0) {
                 return 0;
             }
 
-            std::int64_t num_computed_dims{ ndims > intervals.size() ? intervals.size() : ndims };
+            std::int64_t num_computed_dims{ ndims > std::ssize(intervals) ? std::ssize(intervals) : ndims };
 
             for (std::int64_t i = 0; i < num_computed_dims; ++i) {
                 Interval<std::int64_t> interval{ forward(modulo(intervals[i], previous_dims[i])) };
@@ -390,7 +393,7 @@ namespace computoc {
             return ndims;
         }
 
-        [[nodiscard]] inline std::int64_t compute_offset(const Params<std::int64_t>& previous_dims, std::int64_t previous_offset, const Params<std::int64_t>& previous_strides, const Params<Interval<std::int64_t>>& intervals) noexcept
+        [[nodiscard]] inline std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const Interval<std::int64_t>> intervals) noexcept
         {
             std::int64_t offset{ previous_offset };
 
@@ -398,8 +401,8 @@ namespace computoc {
                 return offset;
             }
 
-            std::int64_t num_computations{ previous_dims.size() > previous_strides.size() ? previous_strides.size() : previous_dims.size() };
-            num_computations = (num_computations > intervals.size() ? intervals.size() : num_computations);
+            std::int64_t num_computations{ std::ssize(previous_dims) > std::ssize(previous_strides) ? std::ssize(previous_strides) : std::ssize(previous_dims) };
+            num_computations = (num_computations > std::ssize(intervals) ? std::ssize(intervals) : num_computations);
 
             for (std::int64_t i = 0; i < num_computations; ++i) {
                 offset += previous_strides[i] * forward(modulo(intervals[i], previous_dims[i])).start;
@@ -410,7 +413,7 @@ namespace computoc {
         /**
         * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
         */
-        [[nodiscard]] inline std::int64_t subs2ind(std::int64_t offset, const Params<std::int64_t>& strides, const Params<std::int64_t>& dims, const Params<std::int64_t>& subs) noexcept
+        [[nodiscard]] inline std::int64_t subs2ind(std::int64_t offset, std::span<const std::int64_t> strides, std::span<const std::int64_t> dims, std::span<std::int64_t> subs) noexcept
         {
             std::int64_t ind{ offset };
 
@@ -418,15 +421,15 @@ namespace computoc {
                 return ind;
             }
 
-            std::int64_t num_used_subs{ strides.size() > dims.size() ? dims.size() : strides.size() };
-            num_used_subs = (num_used_subs > subs.size() ? subs.size() : num_used_subs);
+            std::int64_t num_used_subs{ std::ssize(strides) > std::ssize(dims) ? std::ssize(dims) : std::ssize(strides) };
+            num_used_subs = (num_used_subs > std::ssize(subs) ? std::ssize(subs) : num_used_subs);
 
-            std::int64_t num_ignored_subs{strides.size() - num_used_subs};
+            std::int64_t num_ignored_subs{ std::ssize(strides) - num_used_subs};
             if (num_ignored_subs < 0) { // ignore extra subscripts
                 num_ignored_subs = 0;
             }
 
-            for (std::int64_t i = num_ignored_subs; i < strides.size(); ++i) {
+            for (std::int64_t i = num_ignored_subs; i < std::ssize(strides); ++i) {
                 ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
             }
 
@@ -502,7 +505,7 @@ namespace computoc {
         public:
             Array_header() = default;
 
-            Array_header(const Params<std::int64_t>& dims)
+            Array_header(std::span<const std::int64_t> dims)
             {
                 if ((count_ = numel(dims)) <= 0) {
                     return;
@@ -510,14 +513,14 @@ namespace computoc {
 
                 buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(dims.size() * 2);
 
-                dims_ = { dims.size(), buff_.data() };
+                dims_ = { buff_.data(), dims.size() };
                 std::copy(dims.data(), dims.data() + dims.size(), dims_.data());
 
-                strides_ = { dims.size(), buff_.data() + dims.size() };
+                strides_ = { buff_.data() + dims.size(), dims.size() };
                 compute_strides(dims, strides_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& previous_strides, std::int64_t previous_offset, const Params<Interval<std::int64_t>>& intervals)
+            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::int64_t previous_offset, std::span<const Interval<std::int64_t>> intervals)
                 : is_subarray_(true)
             {
                 if (numel(previous_dims) <= 0) {
@@ -526,35 +529,35 @@ namespace computoc {
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
-                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
+                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
                     return;
                 }
 
                 buff_ = std::move(buff);
                 
-                dims_ = { previous_dims.size(), buff_.data() };
+                dims_ = { buff_.data(), previous_dims.size() };
 
                 count_ = numel(dims_);
 
-                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
+                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size() };
                 compute_strides(previous_dims, previous_strides, intervals, strides_);
 
                 offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, std::int64_t omitted_axis)
+            Array_header(std::span<const std::int64_t> previous_dims, std::int64_t omitted_axis)
             {
                 if (numel(previous_dims) <= 0) {
                     return;
                 }
 
-                std::int64_t axis{ modulo(omitted_axis, previous_dims.size()) };
-                std::int64_t ndims{ previous_dims.size() > 1 ? previous_dims.size() - 1 : 1 };
+                std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_dims)) };
+                std::int64_t ndims{ std::ssize(previous_dims) > 1 ? std::ssize(previous_dims) - 1 : 1 };
 
                 buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(ndims * 2);
 
-                dims_ = { ndims, buff_.data() };
+                dims_ = { buff_.data(), static_cast<std::size_t>(ndims) };
                 if (previous_dims.size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
                         dims_[i] = previous_dims[i];
@@ -567,13 +570,13 @@ namespace computoc {
                     dims_[0] = 1;
                 }
 
-                strides_ = { ndims, buff_.data() + ndims };
+                strides_ = { buff_.data() + ndims, static_cast<std::size_t>(ndims) };
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& new_order)
+            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> new_order)
             {
                 if (numel(previous_dims) <= 0) {
                     return;
@@ -585,8 +588,8 @@ namespace computoc {
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
-                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
-                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
+                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
+                for (std::int64_t i = 0; i < std::ssize(previous_dims); ++i) {
                     dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
                 }
 
@@ -596,15 +599,15 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), buff_.data() };
+                dims_ = { buff_.data(), previous_dims.size() };
 
-                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
+                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size() };
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, std::int64_t count, std::int64_t axis)
+            Array_header(std::span<const std::int64_t> previous_dims, std::int64_t count, std::int64_t axis)
             {
                 if (numel(previous_dims) <= 0) {
                     return;
@@ -612,8 +615,8 @@ namespace computoc {
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
-                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
-                std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
+                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + count;
                 }
@@ -624,13 +627,13 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), buff_.data() };
+                dims_ = { buff_.data(), previous_dims.size() };
 
-                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
+                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size(),  };
                 compute_strides(dims_, strides_);
             }
 
-            Array_header(const Params<std::int64_t>& previous_dims, const Params<std::int64_t>& appended_dims, std::int64_t axis)
+            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> appended_dims, std::int64_t axis)
             {
                 if (previous_dims.size() != appended_dims.size()) {
                     return;
@@ -644,7 +647,7 @@ namespace computoc {
                     return;
                 }
 
-                std::int64_t fixed_axis{ modulo(axis, previous_dims.size()) };
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
 
                 bool are_dims_valid_for_append{ true };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
@@ -658,7 +661,7 @@ namespace computoc {
 
                 ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
-                Params<std::int64_t> dims{ previous_dims.size(), buff.data() };
+                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + appended_dims[fixed_axis];
                 }
@@ -669,17 +672,17 @@ namespace computoc {
 
                 buff_ = std::move(buff);
 
-                dims_ = { previous_dims.size(), buff_.data() };
+                dims_ = { buff_.data(), previous_dims.size() };
 
-                strides_ = { previous_dims.size(), buff_.data() + previous_dims.size() };
+                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size(),  };
                 compute_strides(dims_, strides_);
             }
 
             Array_header(Array_header&& other) noexcept
                 : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { other.dims_.size(), buff_.data() };
-                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
+                dims_ = { buff_.data(), other.dims_.size() };
+                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -697,8 +700,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { other.dims_.size(), buff_.data() };
-                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
+                dims_ = { buff_.data(), other.dims_.size() };
+                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
 
                 other.dims_ = {};
                 other.strides_ = {};
@@ -711,8 +714,8 @@ namespace computoc {
             Array_header(const Array_header& other) noexcept
                 : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { other.dims_.size(), buff_.data() };
-                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
+                dims_ = { buff_.data(), other.dims_.size() };
+                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
             }
             Array_header& operator=(const Array_header& other) noexcept
             {
@@ -725,8 +728,8 @@ namespace computoc {
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { other.dims_.size(), buff_.data() };
-                strides_ = { other.strides_.size(), buff_.data() + other.dims_.size() };
+                dims_ = { buff_.data(), other.dims_.size() };
+                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
 
                 return *this;
             }
@@ -738,12 +741,12 @@ namespace computoc {
                 return count_;
             }
 
-            [[nodiscard]] const Params<std::int64_t>& dims() const noexcept
+            [[nodiscard]] const std::span<std::int64_t>& dims() const noexcept
             {
                 return dims_;
             }
 
-            [[nodiscard]] const Params<std::int64_t>& strides() const noexcept
+            [[nodiscard]] const std::span<std::int64_t>& strides() const noexcept
             {
                 return strides_;
             }
@@ -764,8 +767,8 @@ namespace computoc {
             }
 
         private:
-            Params<std::int64_t> dims_{};
-            Params<std::int64_t> strides_{};
+            std::span<std::int64_t> dims_{};
+            std::span<std::int64_t> strides_{};
             ndvector_dynamic_buffer<std::int64_t, Internal_allocator> buff_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
@@ -777,17 +780,17 @@ namespace computoc {
         class Array_subscripts_iterator
         {
         public:
-            Array_subscripts_iterator(const Params<std::int64_t>& start, const Params<std::int64_t>& minimum_excluded, const Params<std::int64_t>& maximum_excluded, std::int64_t axis)
+            Array_subscripts_iterator(std::span<const std::int64_t> start, std::span<const std::int64_t> minimum_excluded, std::span<const std::int64_t> maximum_excluded, std::int64_t axis)
             {
-                std::int64_t bounds_size{ minimum_excluded.size() > maximum_excluded.size() ? minimum_excluded.size() : maximum_excluded.size() };
-                nsubs_ = start.size() > bounds_size ? start.size() : bounds_size;
+                std::int64_t bounds_size{ std::ssize(minimum_excluded) > std::ssize(maximum_excluded) ? std::ssize(minimum_excluded) : std::ssize(maximum_excluded) };
+                nsubs_ = std::ssize(start) > bounds_size ? std::ssize(start) : bounds_size;
 
                 if (nsubs_ > 0) {
                     buff_ = ndvector_dynamic_buffer<std::int64_t, Internal_allocator>(nsubs_ * 4);
 
                     axis_ = modulo(axis, nsubs_);
 
-                    bsubs_ = { nsubs_, buff_.data() };
+                    bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                     subs_ = bsubs_.data();
                     start_ = subs_ + nsubs_;
                     if (start.empty()) {
@@ -827,10 +830,10 @@ namespace computoc {
                 }
             }
 
-            Array_subscripts_iterator(const Params<std::int64_t>& start, const Params<std::int64_t>& minimum_excluded, const Params<std::int64_t>& maximum_excluded, const Params<std::int64_t>& order)
+            Array_subscripts_iterator(std::span<const std::int64_t> start, std::span<const std::int64_t> minimum_excluded, std::span<const std::int64_t> maximum_excluded, std::span<const std::int64_t> order)
             {
-                std::int64_t bounds_size{ minimum_excluded.size() > maximum_excluded.size() ? minimum_excluded.size() : maximum_excluded.size() };
-                nsubs_ = start.size() > bounds_size ? start.size() : bounds_size;
+                std::int64_t bounds_size{ std::ssize(minimum_excluded) > std::ssize(maximum_excluded) ? std::ssize(minimum_excluded) : std::ssize(maximum_excluded) };
+                nsubs_ = std::ssize(start) > bounds_size ? std::ssize(start) : bounds_size;
 
                 if (nsubs_ > 0) {
                     if (order.size() >= nsubs_) {
@@ -842,7 +845,7 @@ namespace computoc {
                     }
 
 
-                    bsubs_ = { nsubs_, buff_.data() };
+                    bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                     subs_ = bsubs_.data();
                     start_ = subs_ + nsubs_;
                     if (start.empty()) {
@@ -894,21 +897,21 @@ namespace computoc {
                 }
             }
 
-            Array_subscripts_iterator(const Params<std::int64_t>& from, const Params<std::int64_t>& to, std::int64_t axis)
-                : Array_subscripts_iterator(from, {}, to, axis)
+            Array_subscripts_iterator(std::span<const std::int64_t> from, std::span<const std::int64_t> to, std::int64_t axis)
+                : Array_subscripts_iterator(from, {},to, axis)
             {
             }
             Array_subscripts_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::int64_t axis)
-                : Array_subscripts_iterator(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), axis)
+                : Array_subscripts_iterator(std::span<const std::int64_t>(from.begin(), from.size()), std::span<const std::int64_t>(to.begin(), to.size()), axis)
             {
             }
 
-            Array_subscripts_iterator(const Params<std::int64_t>& from, const Params<std::int64_t>& to, const Params<std::int64_t>& order = {})
+            Array_subscripts_iterator(const std::span<const std::int64_t> from, std::span<const std::int64_t> to, std::span<const std::int64_t> order = std::span<const std::int64_t>())
                 : Array_subscripts_iterator(from, {}, to, order)
             {
             }
             Array_subscripts_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order = {})
-                : Array_subscripts_iterator(Params<std::int64_t>(std::ssize(from), from.begin()), Params<std::int64_t>(std::ssize(to), to.begin()), Params<std::int64_t>(std::ssize(order), order.begin()))
+                : Array_subscripts_iterator(std::span<const std::int64_t>(from.begin(), from.size()), std::span<const std::int64_t>(to.begin(), to.size()), std::span<const std::int64_t>(order.begin(), order.size()))
             {
             }
 
@@ -917,7 +920,7 @@ namespace computoc {
             Array_subscripts_iterator(const Array_subscripts_iterator<Internal_allocator>& other) noexcept
                 : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
-                bsubs_ = { nsubs_, buff_.data() };
+                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -935,7 +938,7 @@ namespace computoc {
                 buff_ = other.buff_;
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                bsubs_ = { nsubs_, buff_.data() };
+                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -953,7 +956,7 @@ namespace computoc {
             Array_subscripts_iterator(Array_subscripts_iterator<Internal_allocator>&& other) noexcept
                 : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
             {
-                bsubs_ = { nsubs_, buff_.data() };
+                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -983,7 +986,7 @@ namespace computoc {
                 buff_ = std::move(other.buff_);
                 nsubs_ = other.nsubs_;
                 axis_ = other.axis_;
-                bsubs_ = { nsubs_, buff_.data() };
+                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
                 subs_ = bsubs_.data();
                 start_ = subs_ + nsubs_;
                 minimum_excluded_ = start_ + nsubs_;
@@ -1129,7 +1132,7 @@ namespace computoc {
                 return (subs_[major_axis_] < max_at_major_) && (subs_[major_axis_] > min_at_major_);
             }
 
-            [[nodiscard]] const Params<std::int64_t>& operator*() const noexcept
+            [[nodiscard]] const std::span<std::int64_t>& operator*() const noexcept
             {
                 return bsubs_;
             }
@@ -1157,7 +1160,7 @@ namespace computoc {
 
             std::int64_t nsubs_{ 0 };
 
-            Params<std::int64_t> bsubs_{};
+            std::span<std::int64_t> bsubs_{};
             std::int64_t* subs_{ nullptr };
             std::int64_t* start_{ nullptr };
             std::int64_t* minimum_excluded_{ nullptr };
@@ -1182,7 +1185,7 @@ namespace computoc {
             Array(Array<T, Data_allocator, Internals_allocator>&& other) = default;
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)
-                : Array(other.header().dims())
+                : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
 
@@ -1195,7 +1198,7 @@ namespace computoc {
                     return *this;
                 }
 
-                if (hdr_.is_subarray() && hdr_.dims() == other.hdr_.dims()) {
+                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.hdr_.dims().begin(), other.hdr_.dims().end())) {
                     copy(other, *this);
                     return *this;
                 }
@@ -1208,7 +1211,7 @@ namespace computoc {
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)&
             {
-                *this = Array<T, Data_allocator, Internals_allocator>(other.header().dims());
+                *this = Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 Array<T_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
                 return *this;
@@ -1216,7 +1219,7 @@ namespace computoc {
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)&&
             {
-                if (hdr_.is_subarray() && hdr_.dims() == other.header().dims()) {
+                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     copy(other, *this);
                 }
                 Array<T_o, Data_allocator_o, Internals_allocator_o> dummy{std::move(other)};
@@ -1226,7 +1229,7 @@ namespace computoc {
             Array(const Array<T, Data_allocator, Internals_allocator>& other) = default;
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)
-                : Array(other.header().dims())
+                : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
             }
@@ -1236,8 +1239,8 @@ namespace computoc {
                 if (&other == this) {
                     return *this;
                 }
-
-                if (hdr_.is_subarray() && hdr_.dims() == other.hdr_.dims()) {
+                
+                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.hdr_.dims().begin(), other.hdr_.dims().end())) {
                     copy(other, *this);
                     return *this;
                 }
@@ -1250,14 +1253,14 @@ namespace computoc {
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)&
             {
-                *this = Array<T, Data_allocator, Internals_allocator>(other.header().dims());
+                *this = Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
             template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)&&
             {
-                if (hdr_.is_subarray() && hdr_.dims() == other.header().dims()) {
+                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     copy(other, *this);
                 }
                 return *this;
@@ -1279,63 +1282,63 @@ namespace computoc {
 
             virtual ~Array() = default;
 
-            Array(const Params<std::int64_t>& dims, const T* data = nullptr)
+            Array(std::span<const std::int64_t> dims, const T* data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator<ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count(), data))
             {
             }
-            Array(const Params<std::int64_t>& dims, std::initializer_list<T> data)
+            Array(std::span<const std::int64_t> dims, std::initializer_list<T> data)
                 : Array(dims, data.begin())
             {
             }
             Array(std::initializer_list<std::int64_t> dims, const T* data = nullptr)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data)
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
             Array(std::initializer_list<std::int64_t> dims, std::initializer_list<T> data)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data.begin())
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
             template <typename U>
-            Array(const Params<std::int64_t>& dims, const U* data = nullptr)
+            Array(std::span<const std::int64_t> dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
             template <typename U>
-            Array(const Params<std::int64_t>& dims, std::initializer_list<U> data)
+            Array(std::span<const std::int64_t> dims, std::initializer_list<U> data)
                 : Array(dims, data.begin())
             {
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data)
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, data.begin())
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
 
 
-            Array(const Params<std::int64_t>& dims, const T& value)
+            Array(std::span<const std::int64_t> dims, const T& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             Array(std::initializer_list<std::int64_t> dims, const T& value)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, value)
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
             template <typename U>
-            Array(const Params<std::int64_t>& dims, const U& value)
+            Array(std::span<const std::int64_t> dims, const U& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<ndvector_dynamic_buffer<T, Data_allocator>>(Internals_allocator < ndvector_dynamic_buffer<T, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             template <typename U>
             Array(std::initializer_list<std::int64_t> dims, const U& value)
-                : Array(Params<std::int64_t>{std::ssize(dims), dims.begin()}, value)
+                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
 
@@ -1359,25 +1362,25 @@ namespace computoc {
                 return block().data();
             }
 
-            [[nodiscard]] const T& operator()(const Params<std::int64_t>& subs) const noexcept
+            [[nodiscard]] const T& operator()(std::span<std::int64_t> subs) const noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
-                return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
+                return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] T& operator()(const Params<std::int64_t>& subs) noexcept
+            [[nodiscard]] T& operator()(std::span<std::int64_t> subs) noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] T& operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
-                return (*this)(Params<std::int64_t>{ std::ssize(subs), subs.begin() });
+                return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(const Params<Interval<std::int64_t>>& ranges) const
+            [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
@@ -1390,12 +1393,12 @@ namespace computoc {
             }
             [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
-                return (*this)(Params<Interval<std::int64_t>>{std::ssize(ranges), ranges.begin()});
+                return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
             [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(const Array<std::int64_t, Data_allocator, Internals_allocator>& indices) const noexcept
             {
-                Array<T, Data_allocator, Internals_allocator> res(indices.header().dims());
+                Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
                 for (Subscripts_iterator iter({}, indices.header().dims()); iter; ++iter) {
                     res(*iter) = buffsp_->data()[indices(*iter)];
@@ -1407,7 +1410,7 @@ namespace computoc {
             template <typename T_o, typename Binary_op>
             [[nodiscard]] Array<T, Data_allocator, Internals_allocator>& transform(const Array<T_o, Data_allocator, Internals_allocator>& other, Binary_op&& op)
             {
-                if (header().dims() != other.header().dims()) {
+                if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     return *this;
                 }
 
@@ -1460,7 +1463,7 @@ namespace computoc {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> clone(arr.header().dims());
+            Array<T, Data_allocator, Internals_allocator> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
             for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
                 clone(*iter) = arr(*iter);
@@ -1473,7 +1476,7 @@ namespace computoc {
         * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
         */
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> reshape(const Array<T, Data_allocator, Internals_allocator>& arr, const Params<std::int64_t>& new_dims)
+        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> reshape(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
                 return Array<T, Data_allocator, Internals_allocator>();
@@ -1488,7 +1491,7 @@ namespace computoc {
             }
 
             if (arr.header().is_subarray()) {
-                Array<T, Data_allocator, Internals_allocator> res(new_dims);
+                Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
                 typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
                 typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, new_dims);
@@ -1515,14 +1518,14 @@ namespace computoc {
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> reshape(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return reshape(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
+            return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> resize(const Array<T, Data_allocator, Internals_allocator>& arr, const Params<std::int64_t>& new_dims)
+        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> resize(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>(new_dims);
+                return Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
             }
 
             if (arr.header().dims() == new_dims) {
@@ -1533,7 +1536,7 @@ namespace computoc {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res(new_dims);
+            Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
             typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
             typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, new_dims);
@@ -1549,7 +1552,7 @@ namespace computoc {
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> resize(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return resize(arr, Params<std::int64_t>(std::ssize(new_dims), new_dims.begin()));
+            return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
@@ -1597,7 +1600,7 @@ namespace computoc {
             typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
             typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().size()) };
+            std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
             while (res_iter) {
                 if (lhs_iter && ((*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
@@ -1668,7 +1671,7 @@ namespace computoc {
             typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
             typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            std::int64_t fixed_axis{ modulo(axis, lhs.header().dims().size()) };
+            std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
 
             while (res_iter) {
@@ -1722,7 +1725,7 @@ namespace computoc {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
 
-            std::int64_t fixed_axis{ modulo(axis, arr.header().dims().size()) };
+            std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
             std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
             std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
@@ -1764,7 +1767,7 @@ namespace computoc {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res(arr.header().dims());
+            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
             for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
                 res(*iter) = op(arr(*iter));
@@ -1833,7 +1836,7 @@ namespace computoc {
             typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims(), axis);
             typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
 
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, arr.header().dims().size())] };
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, std::ssize(arr.header().dims()))] };
 
             while (arr_iter && res_iter) {
                 T_o res_element{ static_cast<T_o>(arr(*arr_iter)) };
@@ -1856,7 +1859,7 @@ namespace computoc {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
 
-            const std::int64_t fixed_axis{ modulo(axis, arr.header().dims().size()) };
+            const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
             if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
@@ -1918,12 +1921,12 @@ namespace computoc {
             -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
-
-            if (lhs.header().dims() != rhs.header().dims()) {
+            
+            if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res(lhs.header().dims());
+            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
             for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
                 res(*iter) = op(lhs(*iter), rhs(*iter));
@@ -1938,7 +1941,7 @@ namespace computoc {
         {
             using T_o = decltype(op(lhs.data()[0], rhs));
 
-            Array<T_o, Data_allocator, Internals_allocator> res(lhs.header().dims());
+            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
             for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
                 res(*iter) = op(lhs(*iter), rhs);
@@ -1953,7 +1956,7 @@ namespace computoc {
         {
             using T_o = decltype(op(lhs, rhs.data()[0]));
 
-            Array<T_o, Data_allocator, Internals_allocator> res(rhs.header().dims());
+            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
             for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, rhs.header().dims()); iter; ++iter) {
                 res(*iter) = op(lhs, rhs(*iter));
@@ -2003,7 +2006,7 @@ namespace computoc {
                 return Array<T1, Data_allocator, Internals_allocator>();
             }
 
-            if (arr.header().dims() != mask.header().dims()) {
+            if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
                 return Array<T1, Data_allocator, Internals_allocator>();
             }
 
@@ -2078,7 +2081,7 @@ namespace computoc {
                 return Array<std::int64_t, Data_allocator, Internals_allocator>();
             }
 
-            if (arr.header().dims() != mask.header().dims()) {
+            if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
                 return Array<std::int64_t, Data_allocator, Internals_allocator>();
             }
 
@@ -2113,7 +2116,7 @@ namespace computoc {
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> transpose(const Array<T, Data_allocator, Internals_allocator>& arr, const Params<std::int64_t>& order)
+        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> transpose(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> order)
         {
             if (empty(arr)) {
                 return Array<T, Data_allocator, Internals_allocator>();
@@ -2142,7 +2145,7 @@ namespace computoc {
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> transpose(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> order)
         {
-            return transpose(arr, Params<std::int64_t>(std::ssize(order), order.begin()));
+            return transpose(arr, std::span<const std::int64_t>(order.begin(), order.size() ));
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
@@ -2817,7 +2820,7 @@ namespace computoc {
                 return false;
             }
 
-            if (lhs.header().dims() != rhs.header().dims()) {
+            if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
                 return false;
             }
 
