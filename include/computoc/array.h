@@ -41,13 +41,13 @@ namespace computoc {
                 }
             }
 
-            constexpr ndvector_internal_buffer(const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N != dynamic_vector)
-                : size_(N), capacity_(N), capacity_func_(capacity_func)
+            constexpr ndvector_internal_buffer(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); }) requires (N != dynamic_vector)
+                : size_(size), capacity_(N), capacity_func_(capacity_func)
             {
-                std::for_each(data_ptr_, data_ptr_ + size, [](auto& p) { std::construct_at<T>(&p); });
+                std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
 
                 if (data) {
-                    std::copy(data, data + N, data_ptr_);
+                    std::copy(data, data + size, data_ptr_);
                 }
             }
 
@@ -112,6 +112,7 @@ namespace computoc {
                 data_ptr_ = other.data_ptr_;
 
                 other.data_ptr_ = nullptr;
+                other.size_ = 0;
             }
 
             constexpr ndvector_internal_buffer(ndvector_internal_buffer&& other) noexcept requires (N != dynamic_vector)
@@ -119,6 +120,8 @@ namespace computoc {
             {
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
                 std::move(other.data_ptr_, other.data_ptr_ + size_, data_ptr_);
+
+                other.size_ = 0;
             }
 
             constexpr ndvector_internal_buffer operator=(ndvector_internal_buffer&& other) noexcept requires (N == dynamic_vector)
@@ -138,6 +141,7 @@ namespace computoc {
                 data_ptr_ = other.data_ptr_;
 
                 other.data_ptr_ = nullptr;
+                other.size_ = 0;
 
                 return *this;
             }
@@ -157,6 +161,8 @@ namespace computoc {
 
                 std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
                 std::move(other.data_ptr_, other.data_ptr_ + size_, data_ptr_);
+
+                other.size_ = 0;
 
                 return *this;
             }
@@ -182,9 +188,14 @@ namespace computoc {
                 return size_;
             }
 
-            [[nodiscard]] constexpr pointer data() const noexcept
+            [[nodiscard]] constexpr pointer data() const noexcept requires (N == dynamic_vector)
             {
                 return data_ptr_;
+            }
+
+            [[nodiscard]] constexpr pointer data() const noexcept requires (N != dynamic_vector)
+            {
+                return const_cast<pointer>(data_ptr_);
             }
 
             [[nodiscard]] constexpr reference operator[](size_type index) noexcept
