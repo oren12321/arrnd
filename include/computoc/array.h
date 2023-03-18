@@ -83,6 +83,9 @@ namespace computoc {
                         return *this;
                     }
 
+                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    alloc_.deallocate(data_ptr_, capacity_);
+
                     alloc_ = std::move(other.alloc_);
                     size_ = other.size_;
                     capacity_ = other.capacity_;
