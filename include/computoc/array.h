@@ -15,344 +15,18 @@
 namespace computoc {
     namespace details {
 
+        template <typename T>
+        using Replace_with_char_if_bool = std::conditional_t<std::is_same_v<bool, T>, char, T>;
+
+        inline constexpr std::uint32_t dynamic_sequence = std::numeric_limits<std::uint32_t>::max();
+
+        template <typename T, std::int64_t Capacity = dynamic_sequence, template<typename> typename Allocator = std::allocator>
+        requires (!std::is_same_v<bool, T>)
+        using simple_sequence = std::conditional_t<Capacity == dynamic_sequence, std::vector<T, Allocator<T>>, std::array<T, Capacity>>;
 
         template <typename T, template<typename> typename Allocator = std::allocator>
-        requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
-            class simple_dynamic_vector final {
-            public:
-                using value_type = T;
-                using size_type = std::int64_t;
-                using reference = T&;
-                using const_reference = const T&;
-                using pointer = T*;
-                using const_pointer = const T*;
-
-                using capacity_func_type = std::function<size_type(size_type)>;
-
-                constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); })
-                    : size_(size), capacity_(size), capacity_func_(capacity_func)
-                {
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    if (data) {
-                        std::copy(data, data + size_, data_ptr_);
-                    }
-                }
-
-                constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
-                    : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
-                {
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-                }
-
-                constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
-                {
-                    if (this == &other) {
-                        return *this;
-                    }
-
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                    alloc_.deallocate(data_ptr_, capacity_);
-
-                    alloc_ = other.alloc_;
-                    size_ = other.size_;
-                    capacity_ = other.capacity_;
-                    capacity_func_ = other.capacity_func_;
-
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-
-                    return *this;
-                }
-
-                constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
-                    : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_), capacity_func_(std::move(other.capacity_func_))
-                {
-                    data_ptr_ = other.data_ptr_;
-
-                    other.data_ptr_ = nullptr;
-                    other.size_ = 0;
-                }
-
-                constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
-                {
-                    if (this == &other) {
-                        return *this;
-                    }
-
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                    alloc_.deallocate(data_ptr_, capacity_);
-
-                    alloc_ = std::move(other.alloc_);
-                    size_ = other.size_;
-                    capacity_ = other.capacity_;
-                    capacity_func_ = std::move(other.capacity_func_);
-
-                    data_ptr_ = other.data_ptr_;
-
-                    other.data_ptr_ = nullptr;
-                    other.size_ = 0;
-
-                    return *this;
-                }
-
-                constexpr ~simple_dynamic_vector() noexcept
-                {
-                    std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                    alloc_.deallocate(data_ptr_, capacity_);
-                }
-
-                [[nodiscard]] constexpr bool empty() const noexcept
-                {
-                    return size_ == 0 || !data_ptr_;
-                }
-
-                [[nodiscard]] constexpr size_type size() const noexcept
-                {
-                    return size_;
-                }
-
-                [[nodiscard]] constexpr pointer data() const noexcept
-                {
-                    return data_ptr_;
-                }
-
-                [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-                {
-                    return data_ptr_[index];
-                }
-
-                [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-                {
-                    return data_ptr_[index];
-                }
-
-                constexpr void resize(size_type new_size)
-                {
-                    if (new_size < size_) {
-                        std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                        size_ = new_size;
-                    }
-                    //else if (new_size == size_) { /* do nothing */ }
-                    else if (new_size > size_) {
-                        size_type new_capacity = new_size;
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
-
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                        alloc_.deallocate(data_ptr_, capacity_);
-
-                        data_ptr_ = data_ptr;
-                        size_ = new_size;
-                        capacity_ = new_capacity;
-                    }
-                }
-
-                constexpr void reserve(size_type new_capacity)
-                {
-                    if (new_capacity > capacity_) {
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
-                        capacity_ = new_capacity;
-                    }
-                }
-
-                constexpr void expand(size_type count)
-                {
-                    if (size_ + count < capacity_) {
-                        std::for_each(data_ptr_ + size_, data_ptr_ + size_ + count, [](auto& p) { std::construct_at<T>(&p); });
-                        size_ += count;
-                    }
-                    else if (size_ + count >= capacity_) {
-                        size_type new_capacity = capacity_func_(size_ + count);
-                        size_type new_size = size_ + count;
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
-                        std::move(data_ptr, data_ptr + size_, data_ptr_);
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
-                        capacity_ = new_capacity;
-                        size_ = new_size;
-                    }
-                }
-
-                constexpr void shrink(size_type count)
-                {
-                    if (count > size_) {
-                        throw std::length_error("count > size_");
-                    }
-
-                    std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                    size_ -= count;
-                }
-
-                constexpr void shrink_to_fit()
-                {
-                    if (capacity_ > size_) {
-                        pointer data_ptr = alloc_.allocate(size_);
-                        std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
-                        capacity_ = size_;
-                    }
-                }
-
-            private:
-                pointer data_ptr_;
-
-                size_type size_;
-                size_type capacity_;
-
-                Allocator<T> alloc_;
-
-                capacity_func_type capacity_func_;
-        };
-
-
-
-        template <typename T, std::int64_t Capacity>
-        requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
-            class simple_static_vector final {
-            public:
-                using value_type = T;
-                using size_type = std::int64_t;
-                using reference = T&;
-                using const_reference = const T&;
-                using pointer = T*;
-                using const_pointer = const T*;
-
-                constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
-                    : size_(size)
-                {
-                    if (size_ > Capacity) {
-                        throw std::length_error("size_ > Capacity");
-                    }
-                    if (data) {
-                        std::copy(data, data + size_, data_ptr_);
-                    }
-                }
-
-                constexpr simple_static_vector(const simple_static_vector& other)
-                    : size_(other.size_)
-                {
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-                }
-
-                constexpr simple_static_vector operator=(const simple_static_vector& other)
-                {
-                    if (this == &other) {
-                        return *this;
-                    }
-
-                    size_ = other.size_;
-
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-
-                    return *this;
-                }
-
-                constexpr simple_static_vector(simple_static_vector&& other) noexcept
-                    : size_(other.size_)
-                {
-                    std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-
-                    other.size_ = 0;
-                }
-
-                constexpr simple_static_vector operator=(simple_static_vector&& other) noexcept
-                {
-                    if (this == &other) {
-                        return *this;
-                    }
-
-                    size_ = other.size_;
-
-                    std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
-
-                    other.size_ = 0;
-
-                    return *this;
-                }
-
-                [[nodiscard]] constexpr bool empty() const noexcept
-                {
-                    return size_ == 0;
-                }
-
-                [[nodiscard]] constexpr size_type size() const noexcept
-                {
-                    return size_;
-                }
-
-                [[nodiscard]] constexpr pointer data() const noexcept
-                {
-                    return const_cast<pointer>(data_ptr_);
-                }
-
-                [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-                {
-                    return data_ptr_[index];
-                }
-
-                [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-                {
-                    return data_ptr_[index];
-                }
-
-                constexpr void resize(size_type new_size)
-                {
-                    if (new_size > Capacity) {
-                        throw std::length_error("new_size > Capacity");
-                    }
-                    if (new_size < size_) {
-                        std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                        size_ = new_size;
-                    }
-                    //else if (new_size == size_) { /* do nothing */ }
-                    else if (new_size > size_) {
-                        size_ = new_size;
-                    }
-                }
-
-                constexpr void expand(size_type count)
-                {
-                    if (size_ + count > Capacity) {
-                        throw std::length_error("size_ + count > Capacity");
-                    }
-                    size_ += count;
-                }
-
-                constexpr void shrink(size_type count)
-                {
-                    if (count > size_) {
-                        throw std::length_error("count > size_");
-                    }
-
-                    std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
-                    size_ -= count;
-                }
-
-            private:
-                value_type data_ptr_[Capacity];
-
-                size_type size_;
-        };
-
-        inline constexpr std::uint32_t dynamic_vector = std::numeric_limits<std::uint32_t>::max();
-
-        template <typename T, std::int64_t Capacity = dynamic_vector, template<typename> typename Allocator = std::allocator>
-        using simple_vector = std::conditional_t<Capacity == dynamic_vector, simple_dynamic_vector<T, Allocator>, simple_static_vector<T, Capacity>>;
+        requires (!std::is_same_v<bool, T>)
+        using simple_vector = std::vector<T, Allocator<T>>;
 
         template <typename T, typename U>
         [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
@@ -652,7 +326,7 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = simple_dynamic_vector<std::int64_t, Internal_allocator>(dims.size() * 2);
+                buff_ = simple_vector<std::int64_t, Internal_allocator>(dims.size() * 2);
 
                 dims_ = { buff_.data(), dims.size() };
                 std::copy(dims.data(), dims.data() + dims.size(), dims_.data());
@@ -668,7 +342,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_dynamic_vector<std::int64_t, Internal_allocator> buff = simple_dynamic_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
                 std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
@@ -696,7 +370,7 @@ namespace computoc {
                 std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_dims)) };
                 std::int64_t ndims{ std::ssize(previous_dims) > 1 ? std::ssize(previous_dims) - 1 : 1 };
 
-                buff_ = simple_dynamic_vector<std::int64_t, Internal_allocator>(ndims * 2);
+                buff_ = simple_vector<std::int64_t, Internal_allocator>(ndims * 2);
 
                 dims_ = { buff_.data(), static_cast<std::size_t>(ndims) };
                 if (previous_dims.size() > 1) {
@@ -727,7 +401,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_dynamic_vector<std::int64_t, Internal_allocator> buff = simple_dynamic_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
                 std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 for (std::int64_t i = 0; i < std::ssize(previous_dims); ++i) {
@@ -754,7 +428,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_dynamic_vector<std::int64_t, Internal_allocator> buff = simple_dynamic_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
                 std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
@@ -800,7 +474,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_dynamic_vector<std::int64_t, Internal_allocator> buff = simple_dynamic_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
 
                 std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
@@ -910,7 +584,7 @@ namespace computoc {
         private:
             std::span<std::int64_t> dims_{};
             std::span<std::int64_t> strides_{};
-            simple_dynamic_vector<std::int64_t, Internal_allocator> buff_{};
+            simple_vector<std::int64_t, Internal_allocator> buff_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             bool is_subarray_{ false };
@@ -927,7 +601,7 @@ namespace computoc {
                 nsubs_ = std::ssize(start) > bounds_size ? std::ssize(start) : bounds_size;
 
                 if (nsubs_ > 0) {
-                    buff_ = simple_dynamic_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
+                    buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
 
                     axis_ = modulo(axis, nsubs_);
 
@@ -978,10 +652,10 @@ namespace computoc {
 
                 if (nsubs_ > 0) {
                     if (order.size() >= nsubs_) {
-                        buff_ = simple_dynamic_vector<std::int64_t, Internal_allocator>(nsubs_ * 5);
+                        buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 5);
                     }
                     else {
-                        buff_ = simple_dynamic_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
+                        buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
                         axis_ = nsubs_ - 1;
                     }
 
@@ -1297,7 +971,7 @@ namespace computoc {
                 return major_axis;
             }
 
-            simple_dynamic_vector<std::int64_t, Internal_allocator> buff_{};
+            simple_vector<std::int64_t, Internal_allocator> buff_{};
 
             std::int64_t nsubs_{ 0 };
 
@@ -1424,8 +1098,11 @@ namespace computoc {
             virtual ~Array() = default;
 
             Array(std::span<const std::int64_t> dims, const T* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_dynamic_vector<T, Data_allocator>>(Internals_allocator<simple_dynamic_vector<T, Data_allocator>>(), hdr_.count(), data))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator<simple_vector<T, Data_allocator>>(), hdr_.count()))
             {
+                if (data) {
+                    std::copy(data, data + hdr_.count(), buffsp_->data());
+                }
             }
             Array(std::span<const std::int64_t> dims, std::initializer_list<T> data)
                 : Array(dims, data.begin())
@@ -1441,7 +1118,7 @@ namespace computoc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_dynamic_vector<T, Data_allocator>>(Internals_allocator < simple_dynamic_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
@@ -1463,7 +1140,7 @@ namespace computoc {
 
 
             Array(std::span<const std::int64_t> dims, const T& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_dynamic_vector<T, Data_allocator>>(Internals_allocator < simple_dynamic_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -1473,7 +1150,7 @@ namespace computoc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_dynamic_vector<T, Data_allocator>>(Internals_allocator < simple_dynamic_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -1574,7 +1251,7 @@ namespace computoc {
 
         private:
             Header hdr_{};
-            std::shared_ptr<simple_dynamic_vector<T, Data_allocator>> buffsp_{ nullptr };
+            std::shared_ptr<simple_vector<T, Data_allocator>> buffsp_{ nullptr };
         };
 
         /**
@@ -1900,9 +1577,9 @@ namespace computoc {
 
         template <typename T, typename Unary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>    
         [[nodiscard]] inline auto transform(const Array<T, Data_allocator, Internals_allocator>& arr, Unary_op&& op)
-            -> Array<decltype(op(arr.data()[0])), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(arr.data()[0]))>, Data_allocator, Internals_allocator>
         {
-            using T_o = decltype(op(arr.data()[0]));
+            using T_o = Replace_with_char_if_bool<decltype(op(arr.data()[0]))>;
 
             if (empty(arr)) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
@@ -1958,9 +1635,9 @@ namespace computoc {
 
         template <typename T, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(arr.data()[0], arr.data()[0]))>, Data_allocator, Internals_allocator>
         {
-            using T_o = decltype(op(arr.data()[0], arr.data()[0]));
+            using T_o = Replace_with_char_if_bool<decltype(op(arr.data()[0], arr.data()[0]))>;
 
             if (empty(arr)) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
@@ -1994,7 +1671,7 @@ namespace computoc {
 
         template <typename T, typename T_o, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, const Array<T_o, Data_allocator, Internals_allocator>& init_values, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(init_values.data()[0], arr.data()[0]))>, Data_allocator, Internals_allocator>
         {
             if (empty(arr)) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
@@ -2036,32 +1713,32 @@ namespace computoc {
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline bool all(const Array<T, Data_allocator, Internals_allocator>& arr)
         {
-            return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) && static_cast<bool>(b); });
+            return reduce(arr, [](const T& a, const T& b) { return static_cast<char>(a) && static_cast<char>(b); });
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> all(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> all(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
-            return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) && static_cast<bool>(b); }, axis);
+            return reduce(arr, [](const T& a, const T& b) { return static_cast<char>(a) && static_cast<char>(b); }, axis);
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline bool any(const Array<T, Data_allocator, Internals_allocator>& arr)
         {
-            return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) || static_cast<bool>(b); });
+            return reduce(arr, [](const T& a, const T& b) { return static_cast<char>(a) || static_cast<char>(b); });
         }
 
         template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> any(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> any(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
-            return reduce(arr, [](const T& a, const T& b) { return static_cast<bool>(a) || static_cast<bool>(b); }, axis);
+            return reduce(arr, [](const T& a, const T& b) { return static_cast<char>(a) || static_cast<char>(b); }, axis);
         }
 
         template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto transform(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(lhs.data()[0], rhs.data()[0]))>, Data_allocator, Internals_allocator>
         {
-            using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
+            using T_o = Replace_with_char_if_bool<decltype(op(lhs.data()[0], rhs.data()[0]))>;
             
             if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
@@ -2078,9 +1755,9 @@ namespace computoc {
 
         template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto transform(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs)), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(lhs.data()[0], rhs))>, Data_allocator, Internals_allocator>
         {
-            using T_o = decltype(op(lhs.data()[0], rhs));
+            using T_o = Replace_with_char_if_bool<decltype(op(lhs.data()[0], rhs))>;
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
@@ -2093,9 +1770,9 @@ namespace computoc {
 
         template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs, rhs.data()[0])), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(op(lhs, rhs.data()[0]))>, Data_allocator, Internals_allocator>
         {
-            using T_o = decltype(op(lhs, rhs.data()[0]));
+            using T_o = Replace_with_char_if_bool<decltype(op(lhs, rhs.data()[0]))>;
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
@@ -2290,127 +1967,127 @@ namespace computoc {
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        [[nodiscard]] inline Array<char, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
@@ -2669,7 +2346,7 @@ namespace computoc {
 
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
-            -> Array<decltype(lhs << rhs.data()[0]), Data_allocator, Internals_allocator>
+            -> Array<Replace_with_char_if_bool<decltype(lhs << rhs.data()[0])>, Data_allocator, Internals_allocator>
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
