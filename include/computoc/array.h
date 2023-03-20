@@ -20,9 +20,9 @@ namespace computoc {
 
         inline constexpr std::uint32_t dynamic_sequence = std::numeric_limits<std::uint32_t>::max();
 
-        template <typename T, std::int64_t Capacity = dynamic_sequence, template<typename> typename Allocator = std::allocator>
-        requires (!std::is_same_v<bool, T>)
-        using simple_sequence = std::conditional_t<Capacity == dynamic_sequence, std::vector<T, Allocator<T>>, std::array<T, Capacity>>;
+        template <typename T, std::int64_t N = dynamic_sequence, template<typename> typename Allocator = std::allocator>
+        requires (!std::is_same_v<bool, T> && N > 0)
+        using simple_sequence = std::conditional_t<N == dynamic_sequence, std::vector<T, Allocator<T>>, std::array<T, N>>;
 
         template <typename T, template<typename> typename Allocator = std::allocator>
         requires (!std::is_same_v<bool, T>)
@@ -326,12 +326,9 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = simple_vector<std::int64_t, Internal_allocator>(dims.size() * 2);
+                dims_ = simple_vector<std::int64_t, Internal_allocator>(dims.begin(), dims.end());
 
-                dims_ = { buff_.data(), dims.size() };
-                std::copy(dims.data(), dims.data() + dims.size(), dims_.data());
-
-                strides_ = { buff_.data() + dims.size(), dims.size() };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(dims.size());
                 compute_strides(dims, strides_);
             }
 
@@ -342,20 +339,17 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
 
-                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 if (compute_dims(previous_dims, intervals, dims) <= 0) {
                     return;
                 }
 
-                buff_ = std::move(buff);
+                dims_ = std::move(dims);
                 
-                dims_ = { buff_.data(), previous_dims.size() };
-
                 count_ = numel(dims_);
 
-                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size() };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(previous_dims, previous_strides, intervals, strides_);
 
                 offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
@@ -370,9 +364,8 @@ namespace computoc {
                 std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_dims)) };
                 std::int64_t ndims{ std::ssize(previous_dims) > 1 ? std::ssize(previous_dims) - 1 : 1 };
 
-                buff_ = simple_vector<std::int64_t, Internal_allocator>(ndims * 2);
+                dims_ = simple_vector<std::int64_t, Internal_allocator>(ndims);
 
-                dims_ = { buff_.data(), static_cast<std::size_t>(ndims) };
                 if (previous_dims.size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
                         dims_[i] = previous_dims[i];
@@ -385,7 +378,7 @@ namespace computoc {
                     dims_[0] = 1;
                 }
 
-                strides_ = { buff_.data() + ndims, static_cast<std::size_t>(ndims) };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(ndims);
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -401,9 +394,8 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
 
-                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 for (std::int64_t i = 0; i < std::ssize(previous_dims); ++i) {
                     dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
                 }
@@ -412,11 +404,9 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = std::move(buff);
+                dims_ = std::move(dims);
 
-                dims_ = { buff_.data(), previous_dims.size() };
-
-                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size() };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -428,9 +418,8 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
 
-                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + count;
@@ -440,11 +429,9 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = std::move(buff);
+                dims_ = std::move(dims);
 
-                dims_ = { buff_.data(), previous_dims.size() };
-
-                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size(),  };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(dims_, strides_);
             }
 
@@ -474,9 +461,8 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> buff = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size() * 2);
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
 
-                std::span<std::int64_t> dims{ buff.data(), previous_dims.size() };
                 for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + appended_dims[fixed_axis];
                 }
@@ -485,22 +471,15 @@ namespace computoc {
                     return;
                 }
 
-                buff_ = std::move(buff);
+                dims_ = std::move(dims);
 
-                dims_ = { buff_.data(), previous_dims.size() };
-
-                strides_ = { buff_.data() + previous_dims.size(), previous_dims.size(),  };
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(dims_, strides_);
             }
 
             Array_header(Array_header&& other) noexcept
-                : buff_(std::move(other.buff_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+                : dims_(std::move(other.dims_)), strides_(std::move(other.strides_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { buff_.data(), other.dims_.size() };
-                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
-
-                other.dims_ = {};
-                other.strides_ = {};
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
             }
@@ -510,16 +489,12 @@ namespace computoc {
                     return *this;
                 }
 
-                buff_ = std::move(other.buff_);
+                dims_ = std::move(other.dims_);
+                strides_ = std::move(other.strides_);
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
 
-                dims_ = { buff_.data(), other.dims_.size() };
-                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
-
-                other.dims_ = {};
-                other.strides_ = {};
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
 
@@ -527,10 +502,8 @@ namespace computoc {
             }
 
             Array_header(const Array_header& other) noexcept
-                : buff_(other.buff_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+                : dims_(other.dims_), strides_(other.strides_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
             {
-                dims_ = { buff_.data(), other.dims_.size() };
-                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
             }
             Array_header& operator=(const Array_header& other) noexcept
             {
@@ -538,13 +511,11 @@ namespace computoc {
                     return *this;
                 }
 
-                buff_ = other.buff_;
+                dims_ = other.dims_;
+                strides_ = other.strides_;
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
-
-                dims_ = { buff_.data(), other.dims_.size() };
-                strides_ = { buff_.data() + other.dims_.size(), other.strides_.size() };
 
                 return *this;
             }
@@ -556,14 +527,14 @@ namespace computoc {
                 return count_;
             }
 
-            [[nodiscard]] const std::span<std::int64_t>& dims() const noexcept
+            [[nodiscard]] std::span<const std::int64_t> dims() const noexcept
             {
-                return dims_;
+                return std::span<const std::int64_t>(dims_.data(), dims_.size());
             }
 
-            [[nodiscard]] const std::span<std::int64_t>& strides() const noexcept
+            [[nodiscard]] std::span<const std::int64_t> strides() const noexcept
             {
-                return strides_;
+                return std::span<const std::int64_t>(strides_.data(), strides_.size());
             }
 
             [[nodiscard]] std::int64_t offset() const noexcept
@@ -578,13 +549,12 @@ namespace computoc {
 
             [[nodiscard]] bool empty() const noexcept
             {
-                return buff_.empty();
+                return dims_.empty();
             }
 
         private:
-            std::span<std::int64_t> dims_{};
-            std::span<std::int64_t> strides_{};
-            simple_vector<std::int64_t, Internal_allocator> buff_{};
+            simple_vector<std::int64_t, Internal_allocator> dims_{};
+            simple_vector<std::int64_t, Internal_allocator> strides_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             bool is_subarray_{ false };
