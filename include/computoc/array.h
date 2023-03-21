@@ -968,19 +968,17 @@ namespace computoc {
         {
         public:
             Array_indices_generator(const Array_header<Internal_allocator>& hdr)
-                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), stride_accumulators_(hdr.dims().size()), max_iterations_(std::reduce(hdr.dims().begin(), hdr.dims().end(), 1, [](auto reduced, auto value) { return reduced * value; }))
+                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size()), max_iterations_(hdr.count())
             {
-                std::reverse(dims_.begin(), dims_.end());
-                std::reverse(strides_.begin(), strides_.end());
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis)
-                : dims_(reorder_and_reverse(hdr.dims(), axis)), strides_(reorder_and_reverse(hdr.strides(), axis)), stride_accumulators_(hdr.dims().size()), max_iterations_(std::reduce(hdr.dims().begin(), hdr.dims().end(), 1, [](auto reduced, auto value) { return reduced * value; }))
+                : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
             {
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order)
-                : dims_(reorder_and_reverse(hdr.dims(), order)), strides_(reorder_and_reverse(hdr.strides(), order)), stride_accumulators_(hdr.dims().size()), max_iterations_(std::reduce(hdr.dims().begin(), hdr.dims().end(), 1, [](auto reduced, auto value) { return reduced * value; }))
+                : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
             {
             }
 
@@ -994,24 +992,18 @@ namespace computoc {
 
             ~Array_indices_generator() = default;
 
-            void reset() noexcept
-            {
-                current_index_ = 0;
-                std::fill(stride_accumulators_.begin(), stride_accumulators_.end(), 0);
-            }
-
             Array_indices_generator<Internal_allocator>& operator++() noexcept
             {
                 ++num_iterations_;
 
-                for (std::size_t i = 0; i < stride_accumulators_.size(); ++i) {
-                    stride_accumulators_[i] += strides_[i];
+                for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                    ++indices_[i];
                     current_index_ += strides_[i];
-                    if (stride_accumulators_[i] < dims_[i] * strides_[i]) {
+                    if (indices_[i] < dims_[i]) {
                         return *this;
                     }
-                    current_index_ -= stride_accumulators_[i];
-                    stride_accumulators_[i] = 0;
+                    current_index_ -= indices_[i] * strides_[i];
+                    indices_[i] = 0;
                 }
                 return *this;
             }
@@ -1040,6 +1032,18 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
+                --num_iterations_;
+
+                for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                    --indices_[i];
+                    current_index_ -= strides_[i];
+                    if (indices_[i] > -1) {
+                        return *this;
+                    }
+                    indices_[i] = dims_[i] - 1;
+                    current_index_ += (indices_[i] + 1) * strides_[i];
+                }
+                return *this;
             }
 
             Array_indices_generator<Internal_allocator> operator--(int) noexcept
@@ -1066,7 +1070,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                return num_iterations_ < max_iterations_;
+                return num_iterations_ < max_iterations_ && num_iterations_ > -1;
             }
 
             [[nodiscard]] std::int64_t operator*() const noexcept
@@ -1075,36 +1079,35 @@ namespace computoc {
             }
 
         private:
-            static simple_vector<std::int64_t, Internal_allocator> reorder_and_reverse(std::span<const std::int64_t> vec, std::int64_t axis)
+            static simple_vector<std::int64_t, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
             {
                 // create ordered indices according to input axis parameter
                 simple_vector<std::int64_t, Internal_allocator> new_ordered_indices(vec.size());
-                new_ordered_indices[vec.size() - 1] = axis;
-                std::int64_t pos = 0;
+                new_ordered_indices[0] = axis;
+                std::int64_t pos = 1;
                 for (std::int64_t i = 0; i < vec.size(); ++i) {
                     if (i != axis) {
                         new_ordered_indices[pos++] = i;
                     }
                 }
 
-                return reorder_and_reverse(vec, new_ordered_indices);
+                return reorder(vec, new_ordered_indices);
             }
 
-            static simple_vector<std::int64_t, Internal_allocator> reorder_and_reverse(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            static simple_vector<std::int64_t, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
                 simple_vector<std::int64_t, Internal_allocator> res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
                 }
-                std::reverse(res.begin(), res.end());
                 return res;
             }
 
             simple_vector<std::int64_t, Internal_allocator> dims_;
             simple_vector<std::int64_t, Internal_allocator> strides_;
 
-            simple_vector<std::int64_t, Internal_allocator> stride_accumulators_;
+            simple_vector<std::int64_t, Internal_allocator> indices_;
             std::int64_t current_index_ = 0;
 
             std::int64_t max_iterations_ = 0;

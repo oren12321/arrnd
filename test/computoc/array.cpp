@@ -6,7 +6,7 @@
 #include <computoc/array.h>
 
 template <typename T, typename U>
-[[nodiscard]] inline bool operator==(std::span<T> lhs, std::span<U> rhs) {
+[[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
@@ -120,6 +120,138 @@ TEST(Array_subscripts_iterator, forward_backward_iterations_by_specific_major_ax
         EXPECT_EQ(0, generated_subs_counter);
     }
 }
+
+
+TEST(Array_indices_generator, simple_forward_backward_iterations)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0, 1,
+        2, 3,
+        4, 5 };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Array_indices_generator gen(hdr);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        ++gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Array_indices_generator, forward_backward_iterations_with_steps_bigger_than_one)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0, 1,
+        2, 3,
+        4, 5 };
+    const std::int64_t expected_generated_subs{ 3 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Array_indices_generator gen(hdr);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter * 2], *gen);
+        ++generated_subs_counter;
+        gen += 2;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (gen -= 2) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter * 2], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Array_indices_generator, forward_backward_iterations_by_axis_order)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    const std::int64_t order[]{ 2, 0, 1 };
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0, 2, 4,
+        1, 3, 5 };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Array_indices_generator gen(hdr, std::span(order, 3));
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        ++gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[][6]{
+        { 0, 1,
+          2, 3,
+          4, 5 },
+
+        { 0, 1,
+          2, 3,
+          4, 5 },
+
+        { 0, 2, 4,
+          1, 3, 5} };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    for (std::int64_t axis = 0; axis <= 2; ++axis) {
+        std::int64_t generated_subs_counter{ 0 };
+        Array_indices_generator gen(hdr, axis);
+
+        while (gen) {
+            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+            ++generated_subs_counter;
+            ++gen;
+        }
+        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+        while (--gen) {
+            --generated_subs_counter;
+            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+        }
+        EXPECT_EQ(0, generated_subs_counter);
+    }
+}
+
+
 
 TEST(Array_test, can_be_initialized_with_valid_size_and_data)
 {
