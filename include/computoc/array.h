@@ -331,6 +331,10 @@ namespace computoc {
 
                 strides_ = simple_vector<std::int64_t, Internal_allocator>(dims.size());
                 compute_strides(dims, strides_);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::int64_t previous_offset, std::span<const Interval<std::int64_t>> intervals)
@@ -354,6 +358,10 @@ namespace computoc {
                 compute_strides(previous_dims, previous_strides, intervals, strides_);
 
                 offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(std::span<const std::int64_t> previous_dims, std::int64_t omitted_axis)
@@ -383,6 +391,10 @@ namespace computoc {
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> new_order)
@@ -411,6 +423,10 @@ namespace computoc {
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(std::span<const std::int64_t> previous_dims, std::int64_t count, std::int64_t axis)
@@ -434,6 +450,10 @@ namespace computoc {
 
                 strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(dims_, strides_);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> appended_dims, std::int64_t axis)
@@ -476,6 +496,10 @@ namespace computoc {
 
                 strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
                 compute_strides(dims_, strides_);
+
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
             Array_header(Array_header&& other) noexcept
@@ -553,11 +577,17 @@ namespace computoc {
                 return dims_.empty();
             }
 
+            [[nodiscard]] std::int64_t last_index() const noexcept
+            {
+                return last_index_;
+            }
+
         private:
             simple_vector<std::int64_t, Internal_allocator> dims_{};
             simple_vector<std::int64_t, Internal_allocator> strides_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
+            std::int64_t last_index_{ 0 };
             bool is_subarray_{ false };
         };
 
@@ -969,16 +999,19 @@ namespace computoc {
         public:
             Array_indices_generator(const Array_header<Internal_allocator>& hdr)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                , current_index_(hdr.offset())
             {
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                , current_index_(hdr.offset())
             {
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                , current_index_(hdr.offset())
             {
             }
 
@@ -1002,8 +1035,11 @@ namespace computoc {
                     if (indices_[i] < dims_[i]) {
                         return *this;
                     }
-                    current_index_ -= indices_[i] * strides_[i];
-                    indices_[i] = 0;
+                    if (i != 0)
+                    {
+                        current_index_ -= indices_[i] * strides_[i];
+                        indices_[i] = 0;
+                    }
                 }
                 return *this;
             }
@@ -1040,8 +1076,11 @@ namespace computoc {
                     if (indices_[i] > -1) {
                         return *this;
                     }
-                    indices_[i] = dims_[i] - 1;
-                    current_index_ += (indices_[i] + 1) * strides_[i];
+                    if (i != std::ssize(indices_))
+                    {
+                        indices_[i] = dims_[i] - 1;
+                        current_index_ += (indices_[i] + 1) * strides_[i];
+                    }
                 }
                 return *this;
             }
@@ -1076,6 +1115,11 @@ namespace computoc {
             [[nodiscard]] std::int64_t operator*() const noexcept
             {
                 return current_index_;
+            }
+
+            [[nodiscard]] std::int64_t num_iterations() const noexcept
+            {
+                return num_iterations_;
             }
 
         private:
@@ -1115,7 +1159,140 @@ namespace computoc {
         };
 
 
+        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        class Array_iterator final
+        {
+        public:
+            Array_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+                : gen_(gen), data_(data)
+            {
+            }
 
+            Array_iterator(T* data)
+                : data_(data)
+            {
+            }
+
+            Array_iterator() = default;
+
+            Array_iterator(const Array_iterator<T, Internal_allocator>& other) = default;
+            Array_iterator<T, Internal_allocator>& operator=(const Array_iterator<T, Internal_allocator>& other) = default;
+
+            Array_iterator(Array_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_iterator<T, Internal_allocator>& operator=(Array_iterator<T, Internal_allocator>&& other) noexcept = default;
+
+            ~Array_iterator() = default;
+
+            Array_iterator<T, Internal_allocator>& operator++() noexcept
+            {
+                data_ -= *gen_;
+                ++gen_;
+                data_ += *gen_;
+                return *this;
+            }
+
+            Array_iterator<T, Internal_allocator> operator++(int) noexcept
+            {
+                Array_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            Array_iterator<T, Internal_allocator>& operator+=(std::int64_t value) noexcept
+            {
+                for (std::int64_t i = 0; i < value; ++i) {
+                    ++(*this);
+                }
+                return *this;
+            }
+
+            [[nodiscard]] Array_iterator<T, Internal_allocator> operator+(std::int64_t value) const noexcept
+            {
+                Array_iterator temp{ *this };
+                temp += value;
+                return temp;
+            }
+
+            Array_iterator<T, Internal_allocator>& operator--() noexcept
+            {
+                data_ += *gen_;
+                --gen_;
+                data_ -= *gen_;
+                return *this;
+            }
+
+            Array_iterator<T, Internal_allocator> operator--(int) noexcept
+            {
+                Array_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_iterator<T, Internal_allocator>& operator-=(std::int64_t value) noexcept
+            {
+                for (std::int64_t i = 0; i < value; ++i) {
+                    --(*this);
+                }
+                return *this;
+            }
+
+            [[nodiscard]] Array_iterator<T, Internal_allocator> operator-(std::int64_t value) const noexcept
+            {
+                Array_iterator temp{ *this };
+                temp -= value;
+                return temp;
+            }
+
+            [[nodiscard]] T& operator*() noexcept
+            {
+                return *data_;
+            }
+
+            //[[nodiscard]] T& operator[](std::int64_t index)
+            //{
+            //    return data_[*(gen_ + index)];
+            //}
+
+            [[nodiscard]] bool operator==(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ == iter.data_;
+            }
+
+            [[nodiscard]] bool operator<(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ < iter.data_;
+            }
+
+            [[nodiscard]] bool operator<=(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ <= iter.data_;
+            }
+
+            [[nodiscard]] bool operator>(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ > iter.data_;
+            }
+
+            [[nodiscard]] bool operator>=(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ >= iter.data_;
+            }
+
+            [[nodiscard]] std::int64_t operator-(const Array_iterator<T, Internal_allocator>& iter) const
+            {
+                return gen_.num_iterations() - iter.gen_.num_iterations();
+            }
+
+        private:
+            Array_indices_generator<Internal_allocator> gen_;
+            T* data_ = nullptr;
+        };
+
+        template <typename T, template<typename> typename Internal_allocator>
+        Array_iterator<T, Internal_allocator> operator+(std::int64_t value, const Array_iterator<T, Internal_allocator>& iter)
+        {
+            return iter + value;
+        }
 
 
         template <typename T, template<typename> typename Data_allocator = std::allocator, template<typename> typename Internals_allocator = std::allocator>
@@ -1376,6 +1553,16 @@ namespace computoc {
                 }
 
                 return *this;
+            }
+
+            Array_iterator<T, Internals_allocator> begin()
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
+            }
+
+            Array_iterator<T, Internals_allocator> end()
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1);
             }
 
         private:

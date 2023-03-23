@@ -10,6 +10,18 @@ template <typename T, typename U>
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
+
+//TEST(Dummy, Dummy)
+//{
+//    using namespace computoc;
+//
+//    Array<int> arr1{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+//    Array<int> arr2{ {3, 1, 2}, {0, 1, 0, 1, 0, 1} };
+//
+//    auto res = std::inner_product(arr1.begin(), arr1.end(), arr2.begin(), 1);
+//}
+
+
 TEST(Array_subscripts_iterator, simple_forward_backward_iterations)
 {
     const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
@@ -250,7 +262,6 @@ TEST(Array_indices_generator, forward_backward_iterations_by_specific_major_axis
         EXPECT_EQ(0, generated_subs_counter);
     }
 }
-
 
 
 TEST(Array_test, can_be_initialized_with_valid_size_and_data)
