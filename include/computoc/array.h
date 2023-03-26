@@ -997,22 +997,37 @@ namespace computoc {
         class Array_indices_generator final
         {
         public:
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr)
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size()), max_iterations_(hdr.count())
                 , current_index_(hdr.offset())
             {
+                if (backward) {
+                    num_iterations_ = max_iterations_ - 1;
+                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
+                    current_index_ = hdr.last_index();
+                }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis)
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
                 , current_index_(hdr.offset())
             {
+                if (backward) {
+                    num_iterations_ = max_iterations_ - 1;
+                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
+                    current_index_ = hdr.last_index();
+                }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order)
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
                 , current_index_(hdr.offset())
             {
+                if (backward) {
+                    num_iterations_ = max_iterations_ - 1;
+                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
+                    current_index_ = hdr.last_index();
+                }
             }
 
             Array_indices_generator() = default;
@@ -1061,7 +1076,7 @@ namespace computoc {
                     if (indices_[i] > -1) {
                         return *this;
                     }
-                    if (i != std::ssize(indices_))
+                    if (i != 0)
                     {
                         indices_[i] = dims_[i] - 1;
                         current_index_ += (indices_[i] + 1) * strides_[i];
@@ -1133,6 +1148,9 @@ namespace computoc {
         class Array_iterator final
         {
         public:
+            using value_type = T;
+            using difference_type = std::ptrdiff_t;
+
             Array_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
@@ -1155,9 +1173,9 @@ namespace computoc {
 
             Array_iterator<T, Internal_allocator>& operator++() noexcept
             {
-                data_ -= *gen_;
-                ++gen_;
-                data_ += *gen_;
+                auto diff = *gen_;
+                diff = *(++gen_) - diff;
+                data_ += diff;
                 return *this;
             }
 
@@ -1170,9 +1188,9 @@ namespace computoc {
 
             Array_iterator<T, Internal_allocator>& operator--() noexcept
             {
-                data_ += *gen_;
-                --gen_;
-                data_ -= *gen_;
+                auto diff = *gen_;
+                diff -= *(--gen_);
+                data_ -= diff;
                 return *this;
             }
 
@@ -1261,6 +1279,152 @@ namespace computoc {
             }
 
             [[nodiscard]] bool operator==(const Array_const_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ == iter.data_;
+            }
+
+        private:
+            Array_indices_generator<Internal_allocator> gen_;
+            T* data_ = nullptr;
+        };
+
+
+
+        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        class Array_reverse_iterator final
+        {
+        public:
+            using value_type = T;
+            using difference_type = std::ptrdiff_t;
+
+            Array_reverse_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+                : gen_(gen), data_(data)
+            {
+            }
+
+            Array_reverse_iterator(T* data)
+                : data_(data)
+            {
+            }
+
+            Array_reverse_iterator() = default;
+
+            Array_reverse_iterator(const Array_reverse_iterator<T, Internal_allocator>& other) = default;
+            Array_reverse_iterator<T, Internal_allocator>& operator=(const Array_reverse_iterator<T, Internal_allocator>& other) = default;
+
+            Array_reverse_iterator(Array_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_reverse_iterator<T, Internal_allocator>& operator=(Array_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+
+            ~Array_reverse_iterator() = default;
+
+            Array_reverse_iterator<T, Internal_allocator>& operator++() noexcept
+            {
+                auto diff = *gen_;
+                diff -= *(--gen_);
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator> operator++(int) noexcept
+            {
+                Array_reverse_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator>& operator--() noexcept
+            {
+                auto diff = *gen_;
+                diff = *(++gen_) - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator> operator--(int) noexcept
+            {
+                Array_reverse_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            [[nodiscard]] T& operator*() const noexcept
+            {
+                return *data_;
+            }
+
+            [[nodiscard]] bool operator==(const Array_reverse_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ == iter.data_;
+            }
+
+        private:
+            Array_indices_generator<Internal_allocator> gen_;
+            T* data_ = nullptr;
+        };
+
+
+
+
+        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        class Array_const_reverse_iterator final
+        {
+        public:
+            Array_const_reverse_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+                : gen_(gen), data_(data)
+            {
+            }
+
+            Array_const_reverse_iterator(T* data)
+                : data_(data)
+            {
+            }
+
+            Array_const_reverse_iterator() = default;
+
+            Array_const_reverse_iterator(const Array_const_reverse_iterator<T, Internal_allocator>& other) = default;
+            Array_const_reverse_iterator<T, Internal_allocator>& operator=(const Array_const_reverse_iterator<T, Internal_allocator>& other) = default;
+
+            Array_const_reverse_iterator(Array_const_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_const_reverse_iterator<T, Internal_allocator>& operator=(Array_const_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+
+            ~Array_const_reverse_iterator() = default;
+
+            Array_const_reverse_iterator<T, Internal_allocator>& operator++() noexcept
+            {
+                auto diff = *gen_;
+                diff -= *(--gen_);
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator> operator++(int) noexcept
+            {
+                Array_const_reverse_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator>& operator--() noexcept
+            {
+                auto diff = *gen_;
+                diff = *(++gen_) - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator> operator--(int) noexcept
+            {
+                Array_const_reverse_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            [[nodiscard]] const T& operator*() const noexcept
+            {
+                return *data_;
+            }
+
+            [[nodiscard]] bool operator==(const Array_const_reverse_iterator<T, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
             }
@@ -1552,6 +1716,27 @@ namespace computoc {
             Array_const_iterator<T, Internals_allocator> cend() const
             {
                 return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1);
+            }
+
+
+            auto rbegin()
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, true));
+            }
+
+            auto rend()
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1);
+            }
+
+            auto crbegin() const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, true));
+            }
+
+            auto crend() const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1);
             }
 
         private:

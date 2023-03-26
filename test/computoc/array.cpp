@@ -11,6 +11,7 @@ template <typename T, typename U>
 }
 
 
+
 //TEST(Dummy, Dummy)
 //{
 //    using namespace computoc;
@@ -19,6 +20,8 @@ template <typename T, typename U>
 //    Array<int> arr2{ {3, 1, 2}, {0, 1, 0, 1, 0, 1} };
 //
 //    auto res = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
+//
+//    std::transform(arr1.crbegin(), arr1.crend(), arr2.begin(), [](auto c) { return c + 1; });
 //}
 
 
