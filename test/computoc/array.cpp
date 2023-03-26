@@ -16,12 +16,17 @@ template <typename T, typename U>
 //{
 //    using namespace computoc;
 //
-//    const Array<int> arr1{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+//    const Array<int> arr1{ {3, 1, 2}, {
+//        1, 2, 
+//        3, 4, 
+//        5, 6} };
 //    Array<int> arr2{ {3, 1, 2}, {0, 1, 0, 1, 0, 1} };
 //
 //    auto res = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
 //
 //    std::transform(arr1.crbegin(), arr1.crend(), arr2.begin(), [](auto c) { return c + 1; });
+//
+//    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2({ {1, 1, 2}, {0, 0}, {1, 1} }).rbegin(), [](auto a) { return a * 100; });
 //}
 
 

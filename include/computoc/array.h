@@ -503,10 +503,11 @@ namespace computoc {
             }
 
             Array_header(Array_header&& other) noexcept
-                : dims_(std::move(other.dims_)), strides_(std::move(other.strides_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+                : dims_(std::move(other.dims_)), strides_(std::move(other.strides_)), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_), last_index_(other.last_index_)
             {
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
+                other.last_index_ = 0;
             }
             Array_header& operator=(Array_header&& other) noexcept
             {
@@ -519,15 +520,17 @@ namespace computoc {
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
+                last_index_ = other.last_index_;
 
                 other.count_ = other.offset_ = 0;
                 other.is_subarray_ = false;
+                other.last_index_ = 0;
 
                 return *this;
             }
 
             Array_header(const Array_header& other) noexcept
-                : dims_(other.dims_), strides_(other.strides_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_)
+                : dims_(other.dims_), strides_(other.strides_), count_(other.count_), offset_(other.offset_), is_subarray_(other.is_subarray_), last_index_(other.last_index_)
             {
             }
             Array_header& operator=(const Array_header& other) noexcept
@@ -541,6 +544,7 @@ namespace computoc {
                 count_ = other.count_;
                 offset_ = other.offset_;
                 is_subarray_ = other.is_subarray_;
+                last_index_ = other.last_index_;
 
                 return *this;
             }
