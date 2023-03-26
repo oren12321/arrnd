@@ -15,10 +15,10 @@ template <typename T, typename U>
 //{
 //    using namespace computoc;
 //
-//    Array<int> arr1{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+//    const Array<int> arr1{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
 //    Array<int> arr2{ {3, 1, 2}, {0, 1, 0, 1, 0, 1} };
 //
-//    auto res = std::inner_product(arr1.begin(), arr1.end(), arr2.begin(), 1);
+//    auto res = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
 //}
 
 
@@ -160,36 +160,6 @@ TEST(Array_indices_generator, simple_forward_backward_iterations)
     while (--gen) {
         --generated_subs_counter;
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(Array_indices_generator, forward_backward_iterations_with_steps_bigger_than_one)
-{
-    using namespace computoc::details;
-
-    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
-
-    const std::int64_t expected_inds_list[6]{
-        0, 1,
-        2, 3,
-        4, 5 };
-    const std::int64_t expected_generated_subs{ 3 };
-
-    std::int64_t generated_subs_counter{ 0 };
-    Array_indices_generator gen(hdr);
-
-    while (gen) {
-        EXPECT_EQ(expected_inds_list[generated_subs_counter * 2], *gen);
-        ++generated_subs_counter;
-        gen += 2;
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (gen -= 2) {
-        --generated_subs_counter;
-        EXPECT_EQ(expected_inds_list[generated_subs_counter * 2], *gen);
     }
     EXPECT_EQ(0, generated_subs_counter);
 }

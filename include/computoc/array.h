@@ -1051,21 +1051,6 @@ namespace computoc {
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator+=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    ++(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_indices_generator<Internal_allocator> operator+(std::int64_t value) const noexcept
-            {
-                Array_indices_generator temp{ *this };
-                temp += value;
-                return temp;
-            }
-
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
                 --num_iterations_;
@@ -1089,21 +1074,6 @@ namespace computoc {
             {
                 Array_indices_generator temp{ *this };
                 --(*this);
-                return temp;
-            }
-
-            Array_indices_generator<Internal_allocator>& operator-=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    --(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_indices_generator<Internal_allocator> operator-(std::int64_t value) const noexcept
-            {
-                Array_indices_generator temp{ *this };
-                temp -= value;
                 return temp;
             }
 
@@ -1198,21 +1168,6 @@ namespace computoc {
                 return temp;
             }
 
-            Array_iterator<T, Internal_allocator>& operator+=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    ++(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_iterator<T, Internal_allocator> operator+(std::int64_t value) const noexcept
-            {
-                Array_iterator temp{ *this };
-                temp += value;
-                return temp;
-            }
-
             Array_iterator<T, Internal_allocator>& operator--() noexcept
             {
                 data_ += *gen_;
@@ -1228,59 +1183,14 @@ namespace computoc {
                 return temp;
             }
 
-            Array_iterator<T, Internal_allocator>& operator-=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    --(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_iterator<T, Internal_allocator> operator-(std::int64_t value) const noexcept
-            {
-                Array_iterator temp{ *this };
-                temp -= value;
-                return temp;
-            }
-
-            [[nodiscard]] T& operator*() noexcept
+            [[nodiscard]] T& operator*() const noexcept
             {
                 return *data_;
             }
 
-            //[[nodiscard]] T& operator[](std::int64_t index)
-            //{
-            //    return data_[*(gen_ + index)];
-            //}
-
             [[nodiscard]] bool operator==(const Array_iterator<T, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
-            }
-
-            [[nodiscard]] bool operator<(const Array_iterator<T, Internal_allocator>& iter) const
-            {
-                return data_ < iter.data_;
-            }
-
-            [[nodiscard]] bool operator<=(const Array_iterator<T, Internal_allocator>& iter) const
-            {
-                return data_ <= iter.data_;
-            }
-
-            [[nodiscard]] bool operator>(const Array_iterator<T, Internal_allocator>& iter) const
-            {
-                return data_ > iter.data_;
-            }
-
-            [[nodiscard]] bool operator>=(const Array_iterator<T, Internal_allocator>& iter) const
-            {
-                return data_ >= iter.data_;
-            }
-
-            [[nodiscard]] std::int64_t operator-(const Array_iterator<T, Internal_allocator>& iter) const
-            {
-                return gen_.num_iterations() - iter.gen_.num_iterations();
             }
 
         private:
@@ -1288,11 +1198,79 @@ namespace computoc {
             T* data_ = nullptr;
         };
 
-        template <typename T, template<typename> typename Internal_allocator>
-        Array_iterator<T, Internal_allocator> operator+(std::int64_t value, const Array_iterator<T, Internal_allocator>& iter)
+
+
+
+        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        class Array_const_iterator final
         {
-            return iter + value;
-        }
+        public:
+            Array_const_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+                : gen_(gen), data_(data)
+            {
+            }
+
+            Array_const_iterator(T* data)
+                : data_(data)
+            {
+            }
+
+            Array_const_iterator() = default;
+
+            Array_const_iterator(const Array_const_iterator<T, Internal_allocator>& other) = default;
+            Array_const_iterator<T, Internal_allocator>& operator=(const Array_const_iterator<T, Internal_allocator>& other) = default;
+
+            Array_const_iterator(Array_const_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_const_iterator<T, Internal_allocator>& operator=(Array_const_iterator<T, Internal_allocator>&& other) noexcept = default;
+
+            ~Array_const_iterator() = default;
+
+            Array_const_iterator<T, Internal_allocator>& operator++() noexcept
+            {
+                data_ -= *gen_;
+                ++gen_;
+                data_ += *gen_;
+                return *this;
+            }
+
+            Array_const_iterator<T, Internal_allocator> operator++(int) noexcept
+            {
+                Array_const_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            Array_const_iterator<T, Internal_allocator>& operator--() noexcept
+            {
+                data_ += *gen_;
+                --gen_;
+                data_ -= *gen_;
+                return *this;
+            }
+
+            Array_const_iterator<T, Internal_allocator> operator--(int) noexcept
+            {
+                Array_const_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            [[nodiscard]] const T& operator*() const noexcept
+            {
+                return *data_;
+            }
+
+            [[nodiscard]] bool operator==(const Array_const_iterator<T, Internal_allocator>& iter) const
+            {
+                return data_ == iter.data_;
+            }
+
+        private:
+            Array_indices_generator<Internal_allocator> gen_;
+            T* data_ = nullptr;
+        };
+
+
 
 
         template <typename T, template<typename> typename Data_allocator = std::allocator, template<typename> typename Internals_allocator = std::allocator>
@@ -1563,6 +1541,17 @@ namespace computoc {
             Array_iterator<T, Internals_allocator> end()
             {
                 return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1);
+            }
+
+
+            Array_const_iterator<T, Internals_allocator> cbegin() const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
+            }
+
+            Array_const_iterator<T, Internals_allocator> cend() const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1);
             }
 
         private:
