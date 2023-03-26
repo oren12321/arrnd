@@ -467,6 +467,8 @@ TEST(Array_test, have_read_write_access_to_slice)
             }
         }
     }
+
+    //std::transform(sarr.cbegin(), sarr.cend(), sarr.begin(), [](auto a) { return a * 100; });
 }
 
 TEST(Array_test, element_wise_transformation)
