@@ -20,11 +20,16 @@ template <typename T, typename U>
 //        1, 2, 
 //        3, 4, 
 //        5, 6} };
-//    Array<int> arr2{ {3, 1, 2}, {0, 1, 0, 1, 0, 1} };
+//    Array<int> arr2{ {3, 1, 2}, {0, 1, 2, 3, 4, 5} };
 //
 //    auto res = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
 //
 //    std::transform(arr1.crbegin(), arr1.crend(), arr2.begin(), [](auto c) { return c + 1; });
+//
+//    std::transform(arr1.cbegin() + 1, arr1.cend() - 2, arr2.begin() + 2, [](auto a) { return a * 10; });
+//
+//    
+//    std::transform(arr1.crbegin() + 1, arr1.crend() - 2, arr2.rbegin() + 1, [](auto a) { return a * 1000; });
 //
 //    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2({ {1, 1, 2}, {0, 0}, {1, 1} }).rbegin(), [](auto a) { return a * 100; });
 //}
@@ -166,6 +171,36 @@ TEST(Array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
     while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0,
+        2,
+        4 };
+    const std::int64_t expected_generated_subs{ 3 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Array_indices_generator gen(hdr);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        gen += 2;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (gen = gen - 2) {
         --generated_subs_counter;
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
     }

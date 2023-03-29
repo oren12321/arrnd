@@ -1029,6 +1029,35 @@ namespace computoc {
                 return temp;
             }
 
+            Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                num_iterations_ += count;
+
+                while (count--) {
+                    for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                        ++indices_[i];
+                        if (indices_[i] < dims_[i]) {
+                            break;
+                        }
+                        if (i != 0)
+                        {
+                            indices_[i] = 0;
+                        }
+                    }
+                }
+
+                current_index_ = std::inner_product(indices_.begin(), indices_.end(), strides_.begin(), 0);
+
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Internal_allocator> temp{ *this };
+                temp += count;
+                return temp;
+            }
+
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
                 --num_iterations_;
@@ -1052,6 +1081,35 @@ namespace computoc {
             {
                 Array_indices_generator temp{ *this };
                 --(*this);
+                return temp;
+            }
+
+            Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                num_iterations_ -= count;
+
+                while (count--) {
+                    for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                        --indices_[i];
+                        if (indices_[i] > -1) {
+                            break;
+                        }
+                        if (i != 0)
+                        {
+                            indices_[i] = dims_[i] - 1;
+                        }
+                    }
+                }
+
+                current_index_ = std::inner_product(indices_.begin(), indices_.end(), strides_.begin(), 0);
+
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Internal_allocator> temp{ *this };
+                temp -= count;
                 return temp;
             }
 
@@ -1149,6 +1207,22 @@ namespace computoc {
                 return temp;
             }
 
+            Array_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ += count;
+                diff = *gen_ - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
             Array_iterator<T, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
@@ -1161,6 +1235,22 @@ namespace computoc {
             {
                 Array_iterator temp{ *this };
                 --(*this);
+                return temp;
+            }
+
+            Array_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ -= count;
+                diff -= *gen_;
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_iterator temp{ *this };
+                temp -= count;
                 return temp;
             }
 
@@ -1208,9 +1298,9 @@ namespace computoc {
 
             Array_const_iterator<T, Internal_allocator>& operator++() noexcept
             {
-                data_ -= *gen_;
-                ++gen_;
-                data_ += *gen_;
+                auto diff = *gen_;
+                diff = *(++gen_) - diff;
+                data_ += diff;
                 return *this;
             }
 
@@ -1221,11 +1311,27 @@ namespace computoc {
                 return temp;
             }
 
+            Array_const_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ += count;
+                diff = *gen_ - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_const_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_const_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
             Array_const_iterator<T, Internal_allocator>& operator--() noexcept
             {
-                data_ += *gen_;
-                --gen_;
-                data_ -= *gen_;
+                auto diff = *gen_;
+                diff -= *(--gen_);
+                data_ -= diff;
                 return *this;
             }
 
@@ -1233,6 +1339,22 @@ namespace computoc {
             {
                 Array_const_iterator temp{ *this };
                 --(*this);
+                return temp;
+            }
+
+            Array_const_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ -= count;
+                diff -= *gen_;
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_const_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_const_iterator temp{ *this };
+                temp -= count;
                 return temp;
             }
 
@@ -1295,6 +1417,22 @@ namespace computoc {
                 return temp;
             }
 
+            Array_reverse_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ -= count;
+                diff -= *gen_;
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_reverse_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
             Array_reverse_iterator<T, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
@@ -1307,6 +1445,22 @@ namespace computoc {
             {
                 Array_reverse_iterator temp{ *this };
                 ++(*this);
+                return temp;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ += count;
+                diff = *gen_ - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_reverse_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_reverse_iterator temp{ *this };
+                temp -= count;
                 return temp;
             }
 
@@ -1367,6 +1521,22 @@ namespace computoc {
                 return temp;
             }
 
+            Array_const_reverse_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ -= count;
+                diff -= *gen_;
+                data_ -= diff;
+                return *this;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_const_reverse_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
             Array_const_reverse_iterator<T, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
@@ -1379,6 +1549,22 @@ namespace computoc {
             {
                 Array_const_reverse_iterator temp{ *this };
                 ++(*this);
+                return temp;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                auto diff = *gen_;
+                gen_ += count;
+                diff = *gen_ - diff;
+                data_ += diff;
+                return *this;
+            }
+
+            Array_const_reverse_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_const_reverse_iterator temp{ *this };
+                temp -= count;
                 return temp;
             }
 
@@ -1667,7 +1853,7 @@ namespace computoc {
 
             Array_iterator<T, Internals_allocator> end()
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)));
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
             }
 
 
@@ -1678,7 +1864,7 @@ namespace computoc {
 
             Array_const_iterator<T, Internals_allocator> cend() const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)));
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
             }
 
 
@@ -1689,7 +1875,7 @@ namespace computoc {
 
             auto rend()
             {
-                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]));
+                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]), Array_indices_generator<Internals_allocator>(hdr_));
             }
 
             auto crbegin() const
@@ -1699,7 +1885,7 @@ namespace computoc {
 
             auto crend() const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]));
+                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]), Array_indices_generator<Internals_allocator>(hdr_));
             }
 
         private:
