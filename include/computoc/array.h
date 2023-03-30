@@ -961,33 +961,30 @@ namespace computoc {
         {
         public:
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
-                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset())
             {
                 if (backward) {
-                    num_iterations_ = max_iterations_ - 1;
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
-                : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset())
             {
                 if (backward) {
-                    num_iterations_ = max_iterations_ - 1;
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
-                : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size()), max_iterations_(hdr.count())
+                : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset())
             {
                 if (backward) {
-                    num_iterations_ = max_iterations_ - 1;
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
@@ -1005,8 +1002,6 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator++() noexcept
             {
-                ++num_iterations_;
-
                 for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                     ++indices_[i];
                     current_index_ += strides_[i];
@@ -1031,8 +1026,6 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                num_iterations_ += count;
-
                 while (count--) {
                     for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                         ++indices_[i];
@@ -1060,8 +1053,6 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
-                --num_iterations_;
-
                 for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                     --indices_[i];
                     current_index_ -= strides_[i];
@@ -1086,8 +1077,6 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                num_iterations_ -= count;
-
                 while (count--) {
                     for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                         --indices_[i];
@@ -1115,17 +1104,12 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                return num_iterations_ < max_iterations_ && num_iterations_ > -1;
+                return indices_[0] < dims_[0] && indices_[0] > -1;
             }
 
             [[nodiscard]] std::int64_t operator*() const noexcept
             {
                 return current_index_;
-            }
-
-            [[nodiscard]] std::int64_t num_iterations() const noexcept
-            {
-                return num_iterations_;
             }
 
         private:
@@ -1159,9 +1143,6 @@ namespace computoc {
 
             simple_vector<std::int64_t, Internal_allocator> indices_;
             std::int64_t current_index_ = 0;
-
-            std::int64_t max_iterations_ = 0;
-            std::int64_t num_iterations_ = 0;
         };
 
 
