@@ -962,7 +962,7 @@ namespace computoc {
         public:
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
-                , current_index_(hdr.offset())
+                , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -972,7 +972,7 @@ namespace computoc {
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset())
+                , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -982,7 +982,7 @@ namespace computoc {
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset())
+                , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -1002,6 +1002,14 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator++() noexcept
             {
+                if (current_index_ < 0) {
+                    current_index_ = 0;
+                    return *this;
+                }
+                if (current_index_ == last_index_) {
+                    current_index_ = last_index_ + 1;
+                    return *this;
+                }
                 for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                     ++indices_[i];
                     current_index_ += strides_[i];
@@ -1026,21 +1034,9 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                while (count--) {
-                    for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
-                        ++indices_[i];
-                        if (indices_[i] < dims_[i]) {
-                            break;
-                        }
-                        if (i != 0)
-                        {
-                            indices_[i] = 0;
-                        }
-                    }
+                for (std::int64_t i = 0; i < count; ++i) {
+                    ++(*this);
                 }
-
-                current_index_ = std::inner_product(indices_.begin(), indices_.end(), strides_.begin(), 0);
-
                 return *this;
             }
 
@@ -1053,6 +1049,14 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
+                if (current_index_ == 0) {
+                    current_index_ = -1;
+                    return *this;
+                }
+                if (current_index_ == last_index_ + 1) {
+                    current_index_ = last_index_;
+                    return *this;
+                }
                 for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
                     --indices_[i];
                     current_index_ -= strides_[i];
@@ -1077,21 +1081,9 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                while (count--) {
-                    for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
-                        --indices_[i];
-                        if (indices_[i] > -1) {
-                            break;
-                        }
-                        if (i != 0)
-                        {
-                            indices_[i] = dims_[i] - 1;
-                        }
-                    }
+                for (std::int64_t i = 0; i < count; ++i) {
+                    --(*this);
                 }
-
-                current_index_ = std::inner_product(indices_.begin(), indices_.end(), strides_.begin(), 0);
-
                 return *this;
             }
 
@@ -1104,7 +1096,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                return indices_[0] < dims_[0] && indices_[0] > -1;
+                return current_index_ <= last_index_ && current_index_ >= 0;//indices_[0] < dims_[0] && indices_[0] > -1;
             }
 
             [[nodiscard]] std::int64_t operator*() const noexcept
@@ -1143,6 +1135,8 @@ namespace computoc {
 
             simple_vector<std::int64_t, Internal_allocator> indices_;
             std::int64_t current_index_ = 0;
+
+            std::int64_t last_index_ = 0;
         };
 
 
@@ -1827,23 +1821,23 @@ namespace computoc {
                 return *this;
             }
 
-            Array_iterator<T, Internals_allocator> begin()
+            auto begin()
             {
                 return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
             }
 
-            Array_iterator<T, Internals_allocator> end()
+            auto end()
             {
                 return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
             }
 
 
-            Array_const_iterator<T, Internals_allocator> cbegin() const
+            auto cbegin() const
             {
                 return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
             }
 
-            Array_const_iterator<T, Internals_allocator> cend() const
+            auto cend() const
             {
                 return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
             }
@@ -1868,6 +1862,137 @@ namespace computoc {
             {
                 return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]), Array_indices_generator<Internals_allocator>(hdr_));
             }
+
+
+            auto begin(std::int64_t axis)
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+            }
+
+            auto end(std::int64_t axis)
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, axis, true)), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+            }
+
+
+            auto cbegin(std::int64_t axis) const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+            }
+
+            auto cend(std::int64_t axis) const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+            }
+
+
+            auto rbegin(std::int64_t axis)
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+            }
+
+            auto rend(std::int64_t axis)
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
+            }
+
+            auto crbegin(std::int64_t axis) const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+            }
+
+            auto crend(std::int64_t axis) const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
+            }
+
+
+            auto begin(std::span<const std::int64_t> order)
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, order));
+            }
+
+            auto end(std::span<const std::int64_t> order)
+            {
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, order, true)), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+            }
+
+
+            auto cbegin(std::span<const std::int64_t> order) const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, order));
+            }
+
+            auto cend(std::span<const std::int64_t> order) const
+            {
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, order, true));
+            }
+
+
+            auto rbegin(std::span<const std::int64_t> order)
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+            }
+
+            auto rend(std::span<const std::int64_t> order)
+            {
+                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, order))]), Array_indices_generator<Internals_allocator>(hdr_, order));
+            }
+
+            auto crbegin(std::span<const std::int64_t> order) const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+            }
+
+            auto crend(std::span<const std::int64_t> order) const
+            {
+                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, order))]), Array_indices_generator<Internals_allocator>(hdr_, order));
+            }
+
+
+
+            auto begin(std::initializer_list<std::int64_t> order)
+            {
+                return begin(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+            auto end(std::initializer_list<std::int64_t> order)
+            {
+                return end(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+
+            auto cbegin(std::initializer_list<std::int64_t> order) const
+            {
+                return cbegin(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+            auto cend(std::initializer_list<std::int64_t> order) const
+            {
+                return cend(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+
+            auto rbegin(std::initializer_list<std::int64_t> order)
+            {
+                return rbegin(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+            auto rend(std::initializer_list<std::int64_t> order)
+            {
+                return rend(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+            auto crbegin(std::initializer_list<std::int64_t> order) const
+            {
+                return crbegin(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+            auto crend(std::initializer_list<std::int64_t> order) const
+            {
+                return crend(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
 
         private:
             Header hdr_{};

@@ -32,6 +32,25 @@ template <typename T, typename U>
 //    std::transform(arr1.crbegin() + 1, arr1.crend() - 2, arr2.rbegin() + 1, [](auto a) { return a * 1000; });
 //
 //    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2({ {1, 1, 2}, {0, 0}, {1, 1} }).rbegin(), [](auto a) { return a * 100; });
+//
+//    const Array<int> arr{ {3, 2, 4}, {
+//        1, 2, 3, 4,
+//        5, 6, 7, 8,
+//        9, 10, 11, 12,
+//        13, 14, 15, 16,
+//        17, 18, 19, 20,
+//        21, 22, 23, 24} };
+//
+//    std::for_each(arr.cbegin(0), arr.cend(0), [](auto a) { std::cout << a << "\n"; });
+//    std::cout << "\n";
+//    std::for_each(arr.cbegin(1), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
+//    std::cout << "\n";
+//    std::for_each(arr.cbegin(2), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
+//
+//    std::initializer_list<std::int64_t> order = { 2, 1, 0 };
+//
+//    std::cout << "\n";
+//    std::for_each(arr.cbegin(2), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
 //}
 
 
