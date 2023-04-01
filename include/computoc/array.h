@@ -556,407 +556,6 @@ namespace computoc {
 
 
         template <template<typename> typename Internal_allocator = std::allocator>
-        class Array_subscripts_iterator
-        {
-        public:
-            Array_subscripts_iterator(std::span<const std::int64_t> start, std::span<const std::int64_t> minimum_excluded, std::span<const std::int64_t> maximum_excluded, std::int64_t axis)
-            {
-                std::int64_t bounds_size{ std::ssize(minimum_excluded) > std::ssize(maximum_excluded) ? std::ssize(minimum_excluded) : std::ssize(maximum_excluded) };
-                nsubs_ = std::ssize(start) > bounds_size ? std::ssize(start) : bounds_size;
-
-                if (nsubs_ > 0) {
-                    buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
-
-                    axis_ = modulo(axis, nsubs_);
-
-                    bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                    subs_ = bsubs_.data();
-                    start_ = subs_ + nsubs_;
-                    if (start.empty()) {
-                        std::fill(subs_, subs_ + nsubs_, 0);
-                        std::fill(start_, start_ + nsubs_, 0);
-                    }
-                    else {
-                        std::copy(start.data(), start.data() + nsubs_, subs_);
-                        std::copy(start.data(), start.data() + nsubs_, start_);
-                    }
-
-                    minimum_excluded_ = start_ + nsubs_;
-                    if (!minimum_excluded.empty()) {
-                        std::copy(minimum_excluded.data(), minimum_excluded.data() + nsubs_, minimum_excluded_);
-                    }
-                    else if(!start.empty()) {
-                        std::copy(start.data(), start.data() + nsubs_, minimum_excluded_);
-                        for (std::int64_t i = 0; i < nsubs_; ++i) {
-                            minimum_excluded_[i] -= 1;
-                        }
-                    }
-                    else {
-                        std::fill(minimum_excluded_, minimum_excluded_ + nsubs_, -1);
-                    }
-
-                    maximum_excluded_ = minimum_excluded_ + nsubs_;
-                    if (maximum_excluded.empty()) {
-                        std::fill(maximum_excluded_, maximum_excluded_ + nsubs_, 1);
-                    }
-                    else {
-                        std::copy(maximum_excluded.data(), maximum_excluded.data() + nsubs_, maximum_excluded_);
-                    }
-
-                    major_axis_ = find_major_axis();
-                    min_at_major_ = minimum_excluded_[major_axis_];
-                    max_at_major_ = maximum_excluded_[major_axis_];
-                }
-            }
-
-            Array_subscripts_iterator(std::span<const std::int64_t> start, std::span<const std::int64_t> minimum_excluded, std::span<const std::int64_t> maximum_excluded, std::span<const std::int64_t> order)
-            {
-                std::int64_t bounds_size{ std::ssize(minimum_excluded) > std::ssize(maximum_excluded) ? std::ssize(minimum_excluded) : std::ssize(maximum_excluded) };
-                nsubs_ = std::ssize(start) > bounds_size ? std::ssize(start) : bounds_size;
-
-                if (nsubs_ > 0) {
-                    if (order.size() >= nsubs_) {
-                        buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 5);
-                    }
-                    else {
-                        buff_ = simple_vector<std::int64_t, Internal_allocator>(nsubs_ * 4);
-                        axis_ = nsubs_ - 1;
-                    }
-
-
-                    bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                    subs_ = bsubs_.data();
-                    start_ = subs_ + nsubs_;
-                    if (start.empty()) {
-                        std::fill(subs_, subs_ + nsubs_, 0);
-                        std::fill(start_, start_ + nsubs_, 0);
-                    }
-                    else {
-                        std::copy(start.data(), start.data() + nsubs_, subs_);
-                        std::copy(start.data(), start.data() + nsubs_, start_);
-                    }
-
-                    minimum_excluded_ = start_ + nsubs_;
-                    if (!minimum_excluded.empty()) {
-                        std::copy(minimum_excluded.data(), minimum_excluded.data() + nsubs_, minimum_excluded_);
-                    }
-                    else if (!start.empty()) {
-                        std::copy(start.data(), start.data() + nsubs_, minimum_excluded_);
-                        for (std::int64_t i = 0; i < nsubs_; ++i) {
-                            minimum_excluded_[i] -= 1;
-                        }
-                    }
-                    else {
-                        std::fill(minimum_excluded_, minimum_excluded_ + nsubs_, -1);
-                    }
-
-                    maximum_excluded_ = minimum_excluded_ + nsubs_;
-                    if (maximum_excluded.empty()) {
-                        std::fill(maximum_excluded_, maximum_excluded_ + nsubs_, 1);
-                    }
-                    else {
-                        std::copy(maximum_excluded.data(), maximum_excluded.data() + nsubs_, maximum_excluded_);
-                    }
-
-                    major_axis_ = find_major_axis();
-
-                    if (order.size() >= nsubs_) {
-                        order_ = maximum_excluded_ + nsubs_;
-                        std::copy(order.data(), order.data() + nsubs_, order_);
-                        for (std::int64_t i = 0; i < nsubs_; ++i) {
-                            order_[i] = modulo(order_[i], nsubs_);
-                        }
-                        min_at_major_ = minimum_excluded_[order[0]];
-                        max_at_major_ = maximum_excluded_[order[0]];
-                    }
-                    else {
-                        min_at_major_ = minimum_excluded_[major_axis_];
-                        max_at_major_ = maximum_excluded_[major_axis_];
-                    }
-                }
-            }
-
-            Array_subscripts_iterator(std::span<const std::int64_t> from, std::span<const std::int64_t> to, std::int64_t axis)
-                : Array_subscripts_iterator(from, {},to, axis)
-            {
-            }
-            Array_subscripts_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::int64_t axis)
-                : Array_subscripts_iterator(std::span<const std::int64_t>(from.begin(), from.size()), std::span<const std::int64_t>(to.begin(), to.size()), axis)
-            {
-            }
-
-            Array_subscripts_iterator(const std::span<const std::int64_t> from, std::span<const std::int64_t> to, std::span<const std::int64_t> order = std::span<const std::int64_t>())
-                : Array_subscripts_iterator(from, {}, to, order)
-            {
-            }
-            Array_subscripts_iterator(std::initializer_list<std::int64_t> from, std::initializer_list<std::int64_t> to, std::initializer_list<std::int64_t> order = {})
-                : Array_subscripts_iterator(std::span<const std::int64_t>(from.begin(), from.size()), std::span<const std::int64_t>(to.begin(), to.size()), std::span<const std::int64_t>(order.begin(), order.size()))
-            {
-            }
-
-            Array_subscripts_iterator() = default;
-
-            Array_subscripts_iterator(const Array_subscripts_iterator<Internal_allocator>& other) noexcept
-                : buff_(other.buff_), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
-            {
-                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                subs_ = bsubs_.data();
-                start_ = subs_ + nsubs_;
-                minimum_excluded_ = start_ + nsubs_;
-                maximum_excluded_ = minimum_excluded_ + nsubs_;
-                if (other.order_) {
-                    order_ = maximum_excluded_ + nsubs_;
-                }
-            }
-            Array_subscripts_iterator<Internal_allocator>& operator=(const Array_subscripts_iterator<Internal_allocator>& other) noexcept
-            {
-                if (&other == this) {
-                    return *this;
-                }
-
-                buff_ = other.buff_;
-                nsubs_ = other.nsubs_;
-                axis_ = other.axis_;
-                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                subs_ = bsubs_.data();
-                start_ = subs_ + nsubs_;
-                minimum_excluded_ = start_ + nsubs_;
-                maximum_excluded_ = minimum_excluded_ + nsubs_;
-                if (other.order_) {
-                    order_ = maximum_excluded_ + nsubs_;
-                }
-                major_axis_ = other.major_axis_;
-                min_at_major_ = other.min_at_major_;
-                max_at_major_ = other.max_at_major_;
-
-                return *this;
-            }
-
-            Array_subscripts_iterator(Array_subscripts_iterator<Internal_allocator>&& other) noexcept
-                : buff_(std::move(other.buff_)), nsubs_(other.nsubs_), axis_(other.axis_), major_axis_(other.major_axis_), min_at_major_(other.min_at_major_), max_at_major_(other.max_at_major_)
-            {
-                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                subs_ = bsubs_.data();
-                start_ = subs_ + nsubs_;
-                minimum_excluded_ = start_ + nsubs_;
-                maximum_excluded_ = minimum_excluded_ + nsubs_;
-                if (other.order_) {
-                    order_ = maximum_excluded_ + nsubs_;
-                }
-
-                other.nsubs_ = 0;
-                other.axis_ = 0;
-                other.bsubs_ = {};
-                other.subs_ = nullptr;
-                other.start_ = nullptr;
-                other.minimum_excluded_ = nullptr;
-                other.maximum_excluded_ = nullptr;
-                other.order_ = nullptr;
-                other.major_axis_ = 0;
-                other.min_at_major_ = 0;
-                other.max_at_major_ = 0;
-            }
-            Array_subscripts_iterator<Internal_allocator>& operator=(Array_subscripts_iterator<Internal_allocator>&& other) noexcept
-            {
-                if (&other == this) {
-                    return *this;
-                }
-
-                buff_ = std::move(other.buff_);
-                nsubs_ = other.nsubs_;
-                axis_ = other.axis_;
-                bsubs_ = { buff_.data(), static_cast<std::size_t>(nsubs_) };
-                subs_ = bsubs_.data();
-                start_ = subs_ + nsubs_;
-                minimum_excluded_ = start_ + nsubs_;
-                maximum_excluded_ = minimum_excluded_ + nsubs_;
-                if (other.order_) {
-                    order_ = maximum_excluded_ + nsubs_;
-                }
-                major_axis_ = other.major_axis_;
-                min_at_major_ = other.min_at_major_;
-                max_at_major_ = other.max_at_major_;
-
-                other.nsubs_ = 0;
-                other.axis_ = 0;
-                other.bsubs_ = {};
-                other.subs_ = nullptr;
-                other.start_ = nullptr;
-                other.minimum_excluded_ = nullptr;
-                other.maximum_excluded_ = nullptr;
-                other.order_ = nullptr;
-                other.major_axis_ = 0;
-                other.min_at_major_ = 0;
-                other.max_at_major_ = 0;
-
-                return *this;
-            }
-
-            virtual ~Array_subscripts_iterator() = default;
-
-            void reset() noexcept
-            {
-                std::copy(start_, start_ + nsubs_, bsubs_.data());
-            }
-
-            Array_subscripts_iterator<Internal_allocator>& operator++() noexcept
-            {
-#define _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ind, major) \
-    ++subs_[ind]; \
-    if (ind == major || subs_[ind] < maximum_excluded_[ind]) { \
-        return *this; \
-    } \
-    subs_[ind] = minimum_excluded_[ind] + 1;
-
-                if (order_) {
-                    std::int64_t major_ordered{ order_[0] };
-                    for (int64_t i = nsubs_ - 1; i >= 0; --i) {
-                        std::int64_t ordered_i{ order_[i] };
-                        _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ordered_i, major_ordered);
-                    }
-                    return *this;
-                }
-
-                _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(axis_, major_axis_);
-                for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
-                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
-                }
-                for (std::int64_t i = axis_ - 1; i >= 0; --i) {
-                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__INCREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
-                }
-
-                return *this;
-            }
-
-            Array_subscripts_iterator<Internal_allocator> operator++(int) noexcept
-            {
-                Array_subscripts_iterator temp{ *this };
-                ++(*this);
-                return temp;
-            }
-
-            Array_subscripts_iterator<Internal_allocator>& operator+=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    ++(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_subscripts_iterator<Internal_allocator> operator+(std::int64_t value) const noexcept
-            {
-                Array_subscripts_iterator temp{ *this };
-                temp += value;
-                return temp;
-            }
-
-            Array_subscripts_iterator<Internal_allocator>& operator--() noexcept
-            {
-#define _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ind, major) \
-    --subs_[ind]; \
-    if (ind == major || subs_[ind] > minimum_excluded_[ind]) { \
-        return *this; \
-    } \
-    subs_[ind] = maximum_excluded_[ind] == 0 ? 0 : maximum_excluded_[ind] - 1;
-
-                if (order_) {
-                    std::int64_t major_ordered{ order_[0] };
-                    for (int64_t i = nsubs_ - 1; i >= 0; --i) {
-                        std::int64_t ordered_i{ order_[i] };
-                        _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(ordered_i, major_ordered);
-                    }
-                    return *this;
-                }
-
-                _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(axis_, major_axis_);
-                subs_[axis_] = maximum_excluded_[axis_] == 0 ? 0 : maximum_excluded_[axis_] - 1;
-                for (std::int64_t i = nsubs_ - 1; i > axis_; --i) {
-                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
-                }
-                for (std::int64_t i = axis_ - 1; i >= 0; --i) {
-                    _COMPUTOC_ARRAY_SUBSCRIPTS_ITERATOR__DECREMENT_SUBSCRIPT_AND_RETURN_IF_REQUIRED(i, major_axis_);
-                }
-
-                return *this;
-            }
-
-            Array_subscripts_iterator<Internal_allocator> operator--(int) noexcept
-            {
-                Array_subscripts_iterator temp{ *this };
-                --(*this);
-                return temp;
-            }
-
-            Array_subscripts_iterator<Internal_allocator>& operator-=(std::int64_t value) noexcept
-            {
-                for (std::int64_t i = 0; i < value; ++i) {
-                    --(*this);
-                }
-                return *this;
-            }
-
-            [[nodiscard]] Array_subscripts_iterator<Internal_allocator> operator-(std::int64_t value) const noexcept
-            {
-                Array_subscripts_iterator temp{ *this };
-                temp -= value;
-                return temp;
-            }
-
-            [[nodiscard]] explicit operator bool() const noexcept
-            {
-                if (order_) {
-                    return (subs_[order_[0]] < max_at_major_) && (subs_[order_[0]] > min_at_major_);
-                }
-
-                return (subs_[major_axis_] < max_at_major_) && (subs_[major_axis_] > min_at_major_);
-            }
-
-            [[nodiscard]] const std::span<std::int64_t>& operator*() const noexcept
-            {
-                return bsubs_;
-            }
-
-        private:
-            [[nodiscard]] std::int64_t find_major_axis() const noexcept
-            {
-                std::int64_t major_axis{ axis_ > 0 ? std::int64_t{0} : (nsubs_ > 1) };
-                if (minimum_excluded_[major_axis] == -1 && maximum_excluded_[major_axis] == 0) {
-                    bool found{ false };
-                    for (std::int64_t i = major_axis + 1; i < nsubs_ && !found; ++i) {
-                        if (maximum_excluded_[i] != 0) {
-                            major_axis = i;
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        major_axis = 0;
-                    }
-                }
-                return major_axis;
-            }
-
-            simple_vector<std::int64_t, Internal_allocator> buff_{};
-
-            std::int64_t nsubs_{ 0 };
-
-            std::span<std::int64_t> bsubs_{};
-            std::int64_t* subs_{ nullptr };
-            std::int64_t* start_{ nullptr };
-            std::int64_t* minimum_excluded_{ nullptr };
-            std::int64_t* maximum_excluded_{ nullptr };
-
-            std::int64_t axis_{ 0 };
-            std::int64_t* order_{ nullptr };
-
-            std::int64_t major_axis_{ 0 };
-            std::int64_t min_at_major_{ 0 };
-            std::int64_t max_at_major_{ 0 };
-        };
-
-
-
-
-        template <template<typename> typename Internal_allocator = std::allocator>
         class Array_indices_generator final
         {
         public:
@@ -1565,7 +1164,6 @@ namespace computoc {
         class Array {
         public:
             using Header = Array_header<Internals_allocator>;
-            using Subscripts_iterator = Array_subscripts_iterator<Internals_allocator>;
 
             Array() = default;
 
@@ -1660,8 +1258,8 @@ namespace computoc {
                     return *this;
                 }
 
-                for (Subscripts_iterator iter({}, hdr_.dims()); iter; ++iter) {
-                    (*this)(*iter) = value;
+                for (Array_indices_generator<Internals_allocator> gen(hdr_); gen; ++gen) {
+                    (*this)(*gen) = value;
                 }
 
                 return *this;
@@ -1752,6 +1350,15 @@ namespace computoc {
                 return block().data();
             }
 
+            [[nodiscard]] const T& operator()(std::int64_t index) const noexcept
+            {
+                return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
+            }
+            [[nodiscard]] T& operator()(std::int64_t index) noexcept
+            {
+                return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
+            }
+
             [[nodiscard]] const T& operator()(std::span<std::int64_t> subs) const noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
@@ -1790,8 +1397,8 @@ namespace computoc {
             {
                 Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (Subscripts_iterator iter({}, indices.header().dims()); iter; ++iter) {
-                    res(*iter) = buffsp_->data()[indices(*iter)];
+                for (Array_indices_generator<Internals_allocator> gen(indices.header()); gen; ++gen) {
+                    res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
                 return res;
@@ -1804,8 +1411,8 @@ namespace computoc {
                     return *this;
                 }
 
-                for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, header().dims()); iter; ++iter) {
-                    (*this)(*iter) = op((*this)(*iter), other(*iter));
+                for (Array_indices_generator<Internals_allocator> gen(header()); gen; ++gen) {
+                    (*this)(*gen) = op((*this)(*gen), other(*gen));
                 }
 
                 return *this;
@@ -1814,8 +1421,8 @@ namespace computoc {
             template <typename T_o, typename Binary_op>
             [[nodiscard]] Array<T, Data_allocator, Internals_allocator>& transform(const T_o& other, Binary_op&& op)
             {
-                for (typename Array<T_o, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, header().dims()); iter; ++iter) {
-                    (*this)(*iter) = op((*this)(*iter), other);
+                for (Array_indices_generator<Internals_allocator> gen(header()); gen; ++gen) {
+                    (*this)(*gen) = op((*this)(*gen), other);
                 }
 
                 return *this;
@@ -1966,8 +1573,11 @@ namespace computoc {
                 return;
             }
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator src_iter({}, src.header().dims()); src_iter; ++src_iter) {
-                dst(*src_iter) = src(*src_iter);
+            Array_indices_generator<Internals_allocator> src_gen(src.header());
+            Array_indices_generator<Internals_allocator> dst_gen(dst.header());
+
+            for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
+                dst(*dst_gen) = src(*src_gen);
             }
         }
         template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
@@ -1985,8 +1595,8 @@ namespace computoc {
 
             Array<T, Data_allocator, Internals_allocator> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
-                clone(*iter) = arr(*iter);
+            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+                clone(*gen) = arr(*gen);
             }
 
             return clone;
@@ -2013,13 +1623,13 @@ namespace computoc {
             if (arr.header().is_subarray()) {
                 Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-                typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-                typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, new_dims);
+                Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+                Array_indices_generator<Internals_allocator> res_gen(res.header());
 
-                while (arr_iter && res_iter) {
-                    res(*res_iter) = arr(*arr_iter);
-                    ++arr_iter;
-                    ++res_iter;
+                while (arr_gen && res_gen) {
+                    res(*res_gen) = arr(*arr_gen);
+                    ++arr_gen;
+                    ++res_gen;
                 }
 
                 return res;
@@ -2058,13 +1668,13 @@ namespace computoc {
 
             Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, new_dims);
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
-            while (arr_iter && res_iter) {
-                res(*res_iter) = arr(*arr_iter);
-                ++arr_iter;
-                ++res_iter;
+            while (arr_gen && res_gen) {
+                res(*res_gen) = arr(*arr_gen);
+                ++arr_gen;
+                ++res_gen;
             }
 
             return res;
@@ -2116,22 +1726,17 @@ namespace computoc {
             Array<T1, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator lhs_iter({}, lhs.header().dims());
-            typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
-
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            while (res_iter) {
-                if (lhs_iter && ((*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] || (*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
-                    res(*res_iter) = lhs(*lhs_iter);
-                    ++lhs_iter;
-                }
-                else if (rhs_iter && ((*res_iter)[fixed_axis] >= lhs.header().dims()[fixed_axis] && (*res_iter)[fixed_axis] < lhs.header().dims()[fixed_axis] + rhs.header().dims()[fixed_axis])) {
-                    res(*res_iter) = rhs(*rhs_iter);
-                    ++rhs_iter;
-                }
-                ++res_iter;
+            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
+
+            for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
+                res.data()[*res_gen] = lhs.data()[*lhs_gen];
+            }
+            for (; rhs_gen && res_gen; ++rhs_gen, ++res_gen) {
+                res.data()[*res_gen] = rhs.data()[*rhs_gen];
             }
 
             return res;
@@ -2187,23 +1792,24 @@ namespace computoc {
             Array<T1, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator lhs_iter({}, lhs.header().dims());
-            typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator rhs_iter({}, rhs.header().dims());
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
-
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
 
-            while (res_iter) {
-                if (lhs_iter && ((*res_iter)[fixed_axis] < fixed_ind || (*res_iter)[fixed_axis] >= fixed_ind + rhs.header().dims()[fixed_axis])) {
-                    res(*res_iter) = lhs(*lhs_iter);
-                    ++lhs_iter;
-                }
-                else if (rhs_iter && ((*res_iter)[fixed_axis] >= fixed_ind && (*res_iter)[fixed_axis] < fixed_ind + rhs.header().dims()[fixed_axis])) {
-                    res(*res_iter) = rhs(*rhs_iter);
-                    ++rhs_iter;
-                }
-                ++res_iter;
+            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
+
+            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
+            std::int64_t cycle = fixed_ind *
+                (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+
+            for (; lhs_gen && res_gen && cycle; --cycle, ++lhs_gen, ++res_gen) {
+                res.data()[*res_gen] = lhs.data()[*lhs_gen];
+            }
+            for (; rhs_gen && res_gen; ++rhs_gen, ++res_gen) {
+                res.data()[*res_gen] = rhs.data()[*rhs_gen];
+            }
+            for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
+                res.data()[*res_gen] = lhs.data()[*lhs_gen];
             }
 
             return res;
@@ -2257,15 +1863,22 @@ namespace computoc {
             Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), fixed_axis);
+            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
 
-            while (arr_iter) {
-                if (res_iter && ((*arr_iter)[fixed_axis] < fixed_ind || (*arr_iter)[fixed_axis] >= fixed_ind + fixed_count)) {
-                    res(*res_iter) = arr(*arr_iter);
-                    ++res_iter;
-                }
-                ++arr_iter;
+            std::int64_t cycle = fixed_ind *
+                (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+
+            std::int64_t removals = arr.header().count() - res.header().count();
+
+            for (; arr_gen && res_gen && cycle; --cycle, ++arr_gen, ++res_gen) {
+                res.data()[*res_gen] = arr.data()[*arr_gen];
+            }
+            for (; arr_gen && removals; --removals, ++arr_gen) {
+                //arr.data()[*arr_gen] = rhs.data()[*rhs_gen];
+            }
+            for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
+                res.data()[*res_gen] = arr.data()[*arr_gen];
             }
 
             return res;
@@ -2289,8 +1902,8 @@ namespace computoc {
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
-                res(*iter) = op(arr(*iter));
+            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+                res(*gen) = op(arr(*gen));
             }
 
             return res;
@@ -2306,14 +1919,14 @@ namespace computoc {
                 return T_o{};
             }
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter{ {}, arr.header().dims() };
+            Array_indices_generator<Internals_allocator> gen{ arr.header() };
 
-            T_o res{ static_cast<T_o>(arr(*iter)) };
-            ++iter;
+            T_o res{ static_cast<T_o>(arr(*gen)) };
+            ++gen;
 
-            while (iter) {
-                res = op(res, arr(*iter));
-                ++iter;
+            while (gen) {
+                res = op(res, arr(*gen));
+                ++gen;
             }
 
             return res;
@@ -2328,8 +1941,8 @@ namespace computoc {
             }
 
             T_o res{ init_value };
-            for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter{ {}, arr.header().dims() }; iter; ++iter) {
-                res = op(res, arr(*iter));
+            for (Array_indices_generator<Internals_allocator> gen{ arr.header() }; gen; ++gen) {
+                res = op(res, arr(*gen));
             }
 
             return res;
@@ -2345,7 +1958,9 @@ namespace computoc {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
 
-            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), axis);
+            const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
+
+            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), fixed_axis);
             if (new_header.empty()) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
@@ -2353,19 +1968,19 @@ namespace computoc {
             Array<T_o, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims(), axis);
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[modulo(axis, std::ssize(arr.header().dims()))] };
+            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
-            while (arr_iter && res_iter) {
-                T_o res_element{ static_cast<T_o>(arr(*arr_iter)) };
-                ++arr_iter;
-                for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_iter) {
-                    res_element = op(res_element, arr(*arr_iter));
+            while (arr_gen && res_gen) {
+                T_o res_element{ static_cast<T_o>(arr(*arr_gen)) };
+                ++arr_gen;
+                for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_gen) {
+                    res_element = op(res_element, arr(*arr_gen));
                 }
-                res(*res_iter) = res_element;
-                ++res_iter;
+                res(*res_gen) = res_element;
+                ++res_gen;
             }
 
             return res;
@@ -2393,20 +2008,20 @@ namespace computoc {
             Array<T_o, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims(), axis);
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator init_iter({}, init_values.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Internals_allocator> init_gen(init_values.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
-            while (arr_iter && res_iter && init_iter) {
-                T_o res_element{ init_values(*init_iter) };
-                for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++arr_iter) {
-                    res_element = op(res_element, arr(*arr_iter));
+            while (arr_gen && res_gen && init_gen) {
+                T_o res_element{ init_values(*init_gen) };
+                for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++arr_gen) {
+                    res_element = op(res_element, arr(*arr_gen));
                 }
-                res(*res_iter) = std::move(res_element);
-                ++res_iter;
-                ++init_iter;
+                res(*res_gen) = std::move(res_element);
+                ++res_gen;
+                ++init_gen;
             }
 
             return res;
@@ -2448,8 +2063,8 @@ namespace computoc {
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
-                res(*iter) = op(lhs(*iter), rhs(*iter));
+            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+                res(*gen) = op(lhs(*gen), rhs(*gen));
             }
 
             return res;
@@ -2463,8 +2078,8 @@ namespace computoc {
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
-                res(*iter) = op(lhs(*iter), rhs);
+            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+                res(*gen) = op(lhs(*gen), rhs);
             }
 
             return res;
@@ -2478,8 +2093,8 @@ namespace computoc {
 
             Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, rhs.header().dims()); iter; ++iter) {
-                res(*iter) = op(lhs, rhs(*iter));
+            for (Array_indices_generator<Internals_allocator> gen(rhs.header()); gen; ++gen) {
+                res(*gen) = op(lhs, rhs(*gen));
             }
 
             return res;
@@ -2494,18 +2109,18 @@ namespace computoc {
 
             Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
-            while (arr_iter && res_iter) {
-                if (pred(arr(*arr_iter))) {
-                    res(*res_iter) = arr(*arr_iter);
+            while (arr_gen && res_gen) {
+                if (pred(arr(*arr_gen))) {
+                    res(*res_gen) = arr(*arr_gen);
                     ++res_count;
-                    ++res_iter;
+                    ++res_gen;
                 }
-                ++arr_iter;
+                ++arr_gen;
             }
 
             if (res_count == 0) {
@@ -2532,21 +2147,21 @@ namespace computoc {
 
             Array<T1, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator mask_iter({}, mask.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Internals_allocator> mask_gen(mask.header());
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
-            while (arr_iter && mask_iter && res_iter) {
-                if (mask(*mask_iter)) {
-                    res(*res_iter) = arr(*arr_iter);
+            while (arr_gen && mask_gen && res_gen) {
+                if (mask(*mask_gen)) {
+                    res(*res_gen) = arr(*arr_gen);
                     ++res_count;
-                    ++res_iter;
+                    ++res_gen;
                 }
-                ++arr_iter;
-                ++mask_iter;
+                ++arr_gen;
+                ++mask_gen;
             }
 
             if (res_count == 0) {
@@ -2569,18 +2184,18 @@ namespace computoc {
 
             Array<std::int64_t, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<std::int64_t, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
-            while (arr_iter && res_iter) {
-                if (pred(arr(*arr_iter))) {
-                    res(*res_iter) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_iter);
+            while (arr_gen && res_gen) {
+                if (pred(arr(*arr_gen))) {
+                    res(*res_gen) = *arr_gen;
                     ++res_count;
-                    ++res_iter;
+                    ++res_gen;
                 }
-                ++arr_iter;
+                ++arr_gen;
             }
 
             if (res_count == 0) {
@@ -2607,21 +2222,21 @@ namespace computoc {
 
             Array<std::int64_t, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims());
-            typename Array<T2, Data_allocator, Internals_allocator>::Subscripts_iterator mask_iter({}, mask.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Internals_allocator> mask_gen(mask.header());
 
-            typename Array<std::int64_t, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
-            while (arr_iter && mask_iter && res_iter) {
-                if (mask(*mask_iter)) {
-                    res(*res_iter) = subs2ind(arr.header().offset(), arr.header().strides(), arr.header().dims(), *arr_iter);
+            while (arr_gen && mask_gen && res_gen) {
+                if (mask(*mask_gen)) {
+                    res(*res_gen) = *arr_gen;
                     ++res_count;
-                    ++res_iter;
+                    ++res_gen;
                 }
-                ++arr_iter;
-                ++mask_iter;
+                ++arr_gen;
+                ++mask_gen;
             }
 
             if (res_count == 0) {
@@ -2650,13 +2265,13 @@ namespace computoc {
             Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator arr_iter({}, arr.header().dims(), order);
-            typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator res_iter({}, res.header().dims());
+            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), order);
+            Array_indices_generator<Internals_allocator> res_gen(res.header());
 
-            while (arr_iter && res_iter) {
-                res(*res_iter) = arr(*arr_iter);
-                ++arr_iter;
-                ++res_iter;
+            while (arr_gen && res_gen) {
+                res(*res_gen) = arr(*arr_gen);
+                ++arr_gen;
+                ++res_gen;
             }
 
             return res;
@@ -3270,8 +2885,8 @@ namespace computoc {
                 return arr;
             }
 
-            for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
-                ++arr(*iter);
+            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+                ++arr(*gen);
             }
             return arr;
         }
@@ -3303,8 +2918,8 @@ namespace computoc {
                 return arr;
             }
 
-            for (typename Array<T, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, arr.header().dims()); iter; ++iter) {
-                --arr(*iter);
+            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+                --arr(*gen);
             }
             return arr;
         }
@@ -3344,8 +2959,11 @@ namespace computoc {
                 return false;
             }
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
-                if (!pred(lhs(*iter), rhs(*iter))) {
+            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header());
+            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header());
+
+            for (; lhs_gen && rhs_gen; ++lhs_gen, ++rhs_gen) {
+                if (!pred(lhs(*lhs_gen), rhs(*rhs_gen))) {
                     return false;
                 }
             }
@@ -3360,8 +2978,8 @@ namespace computoc {
                 return true;
             }
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, lhs.header().dims()); iter; ++iter) {
-                if (!pred(lhs(*iter), rhs)) {
+            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+                if (!pred(lhs(*gen), rhs)) {
                     return false;
                 }
             }
@@ -3376,8 +2994,8 @@ namespace computoc {
                 return true;
             }
 
-            for (typename Array<T1, Data_allocator, Internals_allocator>::Subscripts_iterator iter({}, rhs.header().dims()); iter; ++iter) {
-                if (!pred(lhs, rhs(*iter))) {
+            for (Array_indices_generator<Internals_allocator> gen(rhs.header()); gen; ++gen) {
+                if (!pred(lhs, rhs(*gen))) {
                     return false;
                 }
             }
@@ -3423,7 +3041,6 @@ namespace computoc {
     }
 
     using details::Array;
-    using details::Array_subscripts_iterator;
 
     using details::copy;
     using details::clone;

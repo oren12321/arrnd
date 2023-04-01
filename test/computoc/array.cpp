@@ -53,119 +53,6 @@ template <typename T, typename U>
 //    std::for_each(arr.cbegin(2), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
 //}
 
-
-TEST(Array_subscripts_iterator, simple_forward_backward_iterations)
-{
-    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
-    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
-
-    const std::int64_t expected_subs_list[][3]{
-        {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
-        {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} };
-    const std::int64_t expected_generated_subs{ 8 };
-
-    std::int64_t generated_subs_counter{ 0 };
-    computoc::Array_subscripts_iterator iter(from, to);
-
-    while (iter) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[generated_subs_counter++]), 3 }) == *(iter++));
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (--iter) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[--generated_subs_counter]), 3 }) == *iter);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(Array_subscripts_iterator, forward_backward_iterations_with_steps_bigger_than_one)
-{
-    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
-    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
-
-    const std::int64_t expected_subs_list[][3]{
-        {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
-        {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} };
-    const std::int64_t expected_generated_subs{ 4 };
-
-    std::int64_t generated_subs_counter{ 0 };
-    computoc::Array_subscripts_iterator iter(from, to);
-
-    while (iter) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[(generated_subs_counter++) * 2]), 3 }) == *iter);
-        iter = iter + 2;
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (iter -= 2) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[(--generated_subs_counter) * 2]), 3 }) == *iter);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(Array_subscripts_iterator, forward_backward_iterations_by_axis_order)
-{
-    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
-    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
-    
-    const std::initializer_list<std::int64_t> order{ 2, 0, 1 };
-
-    const std::int64_t expected_subs_list[][3]{
-        {1, 0, -1}, {2, 0, -1},
-        {1, 0, 0}, {2, 0, 0},
-        {1, 0, 1}, {2, 0, 1},
-        {1, 0, 2}, {2, 0, 2} };
-    const std::int64_t expected_generated_subs{ 8 };
-
-    std::int64_t generated_subs_counter{ 0 };
-    computoc::Array_subscripts_iterator iter(from, to, order);
-
-    while (iter) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[generated_subs_counter++]), 3 }) == *(iter++));
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (--iter) {
-        EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[--generated_subs_counter]), 3 }) == *iter);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(Array_subscripts_iterator, forward_backward_iterations_by_specific_major_axis)
-{
-    const std::initializer_list<std::int64_t> from{ 1, 0, -1 };
-    const std::initializer_list<std::int64_t> to{ 3, 0, 3 };
-
-    const std::int64_t expected_subs_list[][8][3]{
-        { {1, 0, -1}, {2, 0, -1},
-          {1, 0, 0}, {2, 0, 0},
-          {1, 0, 1}, {2, 0, 1},
-          {1, 0, 2}, {2, 0, 2} },
-
-        { {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
-          {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} },
-
-        { {1, 0, -1}, {1, 0, 0}, {1, 0, 1}, {1, 0, 2},
-          {2, 0, -1}, {2, 0, 0}, {2, 0, 1}, {2, 0, 2} } };
-    const std::int64_t expected_generated_subs{ 8 };
-
-    for (std::int64_t axis = 2; axis >= 0; --axis) {
-        std::int64_t generated_subs_counter{ 0 };
-        computoc::Array_subscripts_iterator iter(from, to, axis);
-
-        while (iter) {
-            EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[axis][generated_subs_counter++]), 3 }) == *(iter++));
-        }
-        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-        while (--iter) {
-            EXPECT_TRUE((std::span<std::int64_t>{ const_cast<std::int64_t*>(expected_subs_list[axis][--generated_subs_counter]), 3 }) == *iter);
-        }
-        EXPECT_EQ(0, generated_subs_counter);
-    }
-}
-
-
 TEST(Array_indices_generator, simple_forward_backward_iterations)
 {
     using namespace computoc::details;
@@ -2608,22 +2495,23 @@ TEST(Array_test, copy)
         EXPECT_FALSE(computoc::all_equal(arr1, arr2d));
     }
 
-    // copy to different dimensions and same count
-    {
-        const int data[] = { 1, 2, 3, 4, 5, 6 };
-        Integer_array arr{ {6}, data };
+    // test is incorrect. copy should copy elements not according to subscripts.
+    //// copy to different dimensions and same count
+    //{
+    //    const int data[] = { 1, 2, 3, 4, 5, 6 };
+    //    Integer_array arr{ {6}, data };
 
-        Integer_array tarr{ {3, 1, 2}, data };
+    //    Integer_array tarr{ {3, 1, 2}, data };
 
-        Integer_array rarr{ {3, 1, 2}, 0 };
-        EXPECT_FALSE(computoc::all_equal(tarr, rarr));
-        computoc::copy(arr, rarr);
-        EXPECT_TRUE(computoc::all_equal(
-            Integer_array{ {3, 1, 2}, {
-                5, 6,
-                0, 0,
-                0, 0 } }, rarr));
-    }
+    //    Integer_array rarr{ {3, 1, 2}, 0 };
+    //    EXPECT_FALSE(computoc::all_equal(tarr, rarr));
+    //    computoc::copy(arr, rarr);
+    //    EXPECT_TRUE(computoc::all_equal(
+    //        Integer_array{ {3, 1, 2}, {
+    //            5, 6,
+    //            0, 0,
+    //            0, 0 } }, rarr));
+    //}
 }
 
 TEST(Array_test, reshape)
@@ -3065,7 +2953,7 @@ TEST(Array_test, complex_array)
 //
 //    auto start = high_resolution_clock::now();
 //    for (int i = 0; i < 25; ++i) {
-//        for (Array_subscripts_iterator iter({}, { 1920, 1080, 3 }); iter; ++iter) {}
+//        for (details::Array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
 //    }
 //    auto stop = high_resolution_clock::now();
 //    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
