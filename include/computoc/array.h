@@ -1821,87 +1821,44 @@ namespace computoc {
                 return *this;
             }
 
-            auto begin()
-            {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
-            }
-
-            auto end()
-            {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
-            }
-
-
-            auto cbegin() const
-            {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_));
-            }
-
-            auto cend() const
-            {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, true)), Array_indices_generator<Internals_allocator>(hdr_, true));
-            }
-
-
-            auto rbegin()
-            {
-                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, true));
-            }
-
-            auto rend()
-            {
-                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]), Array_indices_generator<Internals_allocator>(hdr_));
-            }
-
-            auto crbegin() const
-            {
-                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, true));
-            }
-
-            auto crend() const
-            {
-                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_))]), Array_indices_generator<Internals_allocator>(hdr_));
-            }
-
-
-            auto begin(std::int64_t axis)
+            auto begin(std::int64_t axis = 0)
             {
                 return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
-            auto end(std::int64_t axis)
+            auto end(std::int64_t axis = 0)
             {
                 return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, axis, true)), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
             }
 
 
-            auto cbegin(std::int64_t axis) const
+            auto cbegin(std::int64_t axis = 0) const
             {
                 return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
-            auto cend(std::int64_t axis) const
+            auto cend(std::int64_t axis = 0) const
             {
                 return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Array_indices_generator<Internals_allocator>(hdr_, axis, true));
             }
 
 
-            auto rbegin(std::int64_t axis)
+            auto rbegin(std::int64_t axis = 0)
             {
                 return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
             }
 
-            auto rend(std::int64_t axis)
+            auto rend(std::int64_t axis = 0)
             {
                 return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
-            auto crbegin(std::int64_t axis) const
+            auto crbegin(std::int64_t axis = 0) const
             {
                 return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
             }
 
-            auto crend(std::int64_t axis) const
+            auto crend(std::int64_t axis = 0) const
             {
                 return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }

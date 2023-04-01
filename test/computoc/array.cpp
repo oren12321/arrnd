@@ -196,6 +196,36 @@ TEST(Array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
+TEST(Array_indices_generator, simple_backward_forward_iterations)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        5, 4,
+        3, 2,
+        1, 0 };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Array_indices_generator gen(hdr, true);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        --gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (++gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
 TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace computoc::details;
