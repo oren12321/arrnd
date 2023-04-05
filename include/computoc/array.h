@@ -769,6 +769,184 @@ namespace computoc {
         };
 
 
+
+
+        template <template<typename> typename Internal_allocator = std::allocator>
+        class Fast_array_indices_generator final
+        {
+        public:
+            Fast_array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis)
+            {
+                current_index_ = 0;
+
+                // data
+
+                last_index_ = hdr.last_index();
+
+                num_super_groups_ = hdr.dims()[axis];
+                step_size_between_super_groups_ = hdr.strides()[axis];
+
+                num_groups_in_super_group_ =
+                    std::accumulate(hdr.dims().begin(), hdr.dims().begin() + axis + 1, 1, std::multiplies<>{}) / num_super_groups_;
+                group_size_ = hdr.strides()[axis];
+                step_size_inside_group_ = hdr.strides().back();
+                step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
+
+                // accumulators
+
+                super_groups_counter_ = 0;
+
+                group_indices_counter_ = 0;
+                groups_counter_ = 0;
+
+                super_group_start_index_ = 0;
+
+                group_start_index_ = 0;
+
+
+                one_after_last_super_group_start_ = step_size_between_groups_;
+            }
+
+            Fast_array_indices_generator() = default;
+
+            Fast_array_indices_generator(const Fast_array_indices_generator<Internal_allocator>& other) = default;
+            Fast_array_indices_generator<Internal_allocator>& operator=(const Fast_array_indices_generator<Internal_allocator>& other) = default;
+
+            Fast_array_indices_generator(Fast_array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Fast_array_indices_generator<Internal_allocator>& operator=(Fast_array_indices_generator<Internal_allocator>&& other) noexcept = default;
+
+            ~Fast_array_indices_generator() = default;
+
+            Fast_array_indices_generator<Internal_allocator>& operator++() noexcept
+            {
+                // all indices incremented
+                if (super_groups_counter_ == num_super_groups_) {
+                    return *this;
+                }
+
+                ++group_indices_counter_;
+
+                current_index_ += step_size_inside_group_;
+
+                // end of group
+                if (group_indices_counter_ == group_size_) {
+                    group_start_index_ += step_size_between_groups_;
+                    ++groups_counter_;
+
+                    group_indices_counter_ = 0;
+
+                    current_index_ = group_start_index_;
+
+                }
+
+                // end of super group
+                if (groups_counter_ == num_groups_in_super_group_) {
+                    super_group_start_index_ += step_size_between_super_groups_;
+                    ++super_groups_counter_;
+
+                    groups_counter_ = 0;
+
+                    group_start_index_ = super_group_start_index_;
+                    current_index_ = super_group_start_index_;
+
+                }
+
+                return *this;
+            }
+
+            Fast_array_indices_generator<Internal_allocator> operator++(int) noexcept
+            {
+                Fast_array_indices_generator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            Fast_array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                for (std::int64_t i = 0; i < count; ++i) {
+                    ++(*this);
+                }
+                return *this;
+            }
+
+            Fast_array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Fast_array_indices_generator<Internal_allocator> temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            Fast_array_indices_generator<Internal_allocator>& operator--() noexcept
+            {
+            }
+
+            Fast_array_indices_generator<Internal_allocator> operator--(int) noexcept
+            {
+                Fast_array_indices_generator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Fast_array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                for (std::int64_t i = 0; i < count; ++i) {
+                    --(*this);
+                }
+                return *this;
+            }
+
+            Fast_array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Fast_array_indices_generator<Internal_allocator> temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] explicit operator bool() const noexcept
+            {
+                return super_group_start_index_ < one_after_last_super_group_start_;
+            }
+
+            [[nodiscard]] std::int64_t operator*() const noexcept
+            {
+                return current_index_;
+            }
+
+        private:
+            std::int64_t current_index_ = 0;
+
+            // data
+
+            std::int64_t last_index_ = 0;
+
+            std::int64_t num_super_groups_ = 0;
+            std::int64_t step_size_between_super_groups_ = 0;
+
+            std::int64_t num_groups_in_super_group_ = 0;
+            std::int64_t group_size_ = 0;
+            std::int64_t step_size_inside_group_ = 0;
+            std::int64_t step_size_between_groups_ = 0;
+            
+            // counters
+
+            std::int64_t super_groups_counter_ = 0;
+
+            std::int64_t group_indices_counter_ = 0;
+            std::int64_t groups_counter_ = 0;
+
+            std::int64_t super_group_start_index_ = 0;
+
+            std::int64_t group_start_index_ = 0;
+
+            // forward stop value
+
+            std::int64_t one_after_last_super_group_start_ = 0;
+        };
+
+
+
+
+
         template <typename T, template<typename> typename Internal_allocator = std::allocator>
         class Array_iterator final
         {
