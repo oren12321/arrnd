@@ -567,6 +567,10 @@ namespace computoc {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
+                first_dim_ = dims_.back();
+                first_stride_ = strides_.back();
+                first_ind_ = indices_.back();
+                ndims_ = std::ssize(dims_);
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
@@ -577,6 +581,10 @@ namespace computoc {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
+                first_dim_ = dims_.back();
+                first_stride_ = strides_.back();
+                first_ind_ = indices_.back();
+                ndims_ = std::ssize(dims_);
             }
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
@@ -587,6 +595,10 @@ namespace computoc {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
                 }
+                first_dim_ = dims_.back();
+                first_stride_ = strides_.back();
+                first_ind_ = indices_.back();
+                ndims_ = std::ssize(dims_);
             }
 
             Array_indices_generator() = default;
@@ -609,18 +621,24 @@ namespace computoc {
                     current_index_ = last_index_ + 1;
                     return *this;
                 }
-                for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                ++first_ind_;
+                current_index_ += first_stride_;
+                if (first_ind_ < first_dim_) {
+                    return *this;
+                }
+                current_index_ -= first_ind_ * first_stride_;
+                first_ind_ = 0;
+                for (std::int64_t i = ndims_ - 2; i >= 1; --i) {
                     ++indices_[i];
                     current_index_ += strides_[i];
                     if (indices_[i] < dims_[i]) {
                         return *this;
                     }
-                    if (i != 0)
-                    {
-                        current_index_ -= indices_[i] * strides_[i];
-                        indices_[i] = 0;
-                    }
+                    current_index_ -= indices_[i] * strides_[i];
+                    indices_[i] = 0;
                 }
+                ++indices_[0];
+                current_index_ += strides_[0];
                 return *this;
             }
 
@@ -656,18 +674,24 @@ namespace computoc {
                     current_index_ = last_index_;
                     return *this;
                 }
-                for (std::int64_t i = std::ssize(indices_) - 1; i >= 0; --i) {
+                --first_ind_;
+                current_index_ -= first_stride_;
+                if (first_ind_ > -1) {
+                    return *this;
+                }
+                first_ind_ = first_dim_ - 1;
+                current_index_ += (first_ind_ + 1) * first_stride_;
+                for (std::int64_t i = ndims_ - 2; i >= 1; --i) {
                     --indices_[i];
                     current_index_ -= strides_[i];
                     if (indices_[i] > -1) {
                         return *this;
                     }
-                    if (i != 0)
-                    {
-                        indices_[i] = dims_[i] - 1;
-                        current_index_ += (indices_[i] + 1) * strides_[i];
-                    }
+                    indices_[i] = dims_[i] - 1;
+                    current_index_ += (indices_[i] + 1) * strides_[i];
                 }
+                --indices_[0];
+                current_index_ -= strides_[0];
                 return *this;
             }
 
@@ -736,6 +760,12 @@ namespace computoc {
             std::int64_t current_index_ = 0;
 
             std::int64_t last_index_ = 0;
+
+            std::int64_t first_stride_;
+            std::int64_t first_dim_;
+            std::int64_t first_ind_;
+
+            std::int64_t ndims_;
         };
 
 
