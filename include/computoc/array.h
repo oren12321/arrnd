@@ -819,37 +819,60 @@ namespace computoc {
 
             Fast_array_indices_generator<Internal_allocator>& operator++() noexcept
             {
-                // all indices incremented
-                if (super_groups_counter_ == num_super_groups_) {
+                // the algorithm is done by three functions composition:
+                // - index
+                // - group
+                // - super group
+
+                // index function
+
+                if (current_index_ > last_index_) {
                     return *this;
                 }
 
                 ++group_indices_counter_;
-
                 current_index_ += step_size_inside_group_;
 
-                // end of group
-                if (group_indices_counter_ == group_size_) {
-                    group_start_index_ += step_size_between_groups_;
-                    ++groups_counter_;
-
-                    group_indices_counter_ = 0;
-
-                    current_index_ = group_start_index_;
-
+                if (group_indices_counter_ < group_size_) {
+                    return *this;
                 }
 
-                // end of super group
-                if (groups_counter_ == num_groups_in_super_group_) {
-                    super_group_start_index_ += step_size_between_super_groups_;
-                    ++super_groups_counter_;
+                // group function
 
-                    groups_counter_ = 0;
+                group_indices_counter_ = 0;
 
-                    group_start_index_ = super_group_start_index_;
-                    current_index_ = super_group_start_index_;
+                ++groups_counter_;
+                group_start_index_ += step_size_between_groups_;
 
+                current_index_ = group_start_index_;
+
+                if (groups_counter_ < num_groups_in_super_group_) {
+                    return *this;
                 }
+
+                // super group function
+
+                groups_counter_ = 0;
+
+                ++super_groups_counter_;
+                super_group_start_index_ += step_size_between_super_groups_;
+
+                group_start_index_ = super_group_start_index_;
+
+                current_index_ = group_start_index_;
+
+                if (super_groups_counter_ < num_super_groups_) {
+                    return *this;
+                }
+
+                group_indices_counter_ = group_size_;
+                groups_counter_ = num_groups_in_super_group_ - 1;
+                super_groups_counter_ = num_super_groups_ - 1;
+
+                super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
+                group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
+
+                current_index_ = last_index_ + 1;
 
                 return *this;
             }
@@ -878,6 +901,62 @@ namespace computoc {
 
             Fast_array_indices_generator<Internal_allocator>& operator--() noexcept
             {
+                // the algorithm is done by inverese of three functions composition:
+                // - super group
+                // - group
+                // - index
+
+                if (current_index_ < 0) {
+                    return *this;
+                }
+
+                // index function
+
+                --group_indices_counter_;
+                current_index_ -= step_size_inside_group_;
+
+                if (group_indices_counter_ >= 0) {
+                    return *this;
+                }
+
+                // group function
+
+                group_indices_counter_ = group_size_ - 1;
+
+                --groups_counter_;
+                group_start_index_ -= step_size_between_groups_;
+
+                current_index_ = group_start_index_ + (group_size_-1) * step_size_inside_group_;
+
+                if (groups_counter_ >= 0) {
+                    return *this;
+                }
+
+                // super group function
+
+                groups_counter_ = num_groups_in_super_group_ - 1;
+
+                --super_groups_counter_;
+                super_group_start_index_ -= step_size_between_super_groups_;
+
+                group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
+
+                current_index_ = group_start_index_ + (group_size_-1) * step_size_inside_group_;
+
+                if (super_groups_counter_ >= 0) {
+                    return *this;
+                }
+
+                group_indices_counter_ = -1;
+                groups_counter_ = 0;
+                super_groups_counter_ = 0;
+
+                super_group_start_index_ = 0;
+                group_start_index_ = 0;
+
+                current_index_ = -1;
+
+                return *this;
             }
 
             Fast_array_indices_generator<Internal_allocator> operator--(int) noexcept
@@ -904,7 +983,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                return super_group_start_index_ < one_after_last_super_group_start_;
+                return current_index_ >= 0 && current_index_ <= last_index_;
             }
 
             [[nodiscard]] std::int64_t operator*() const noexcept
