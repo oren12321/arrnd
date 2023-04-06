@@ -1016,10 +1016,6 @@ namespace computoc {
             std::int64_t super_group_start_index_ = 0;
 
             std::int64_t group_start_index_ = 0;
-
-            // forward stop value
-
-            std::int64_t one_after_last_super_group_start_ = 0;
         };
 
 
