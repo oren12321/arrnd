@@ -410,7 +410,7 @@ namespace computoc {
                 simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
 
                 for (std::int64_t i = 0; i < std::ssize(previous_dims); ++i) {
-                    dims[i] = previous_dims[modulo(new_order[i], previous_dims[i])];
+                    dims[i] = previous_dims[modulo(new_order[i], std::ssize(previous_dims))];
                 }
 
                 if (numel(previous_dims) != numel(dims)) {
@@ -802,9 +802,6 @@ namespace computoc {
                 super_group_start_index_ = 0;
 
                 group_start_index_ = 0;
-
-
-                one_after_last_super_group_start_ = step_size_between_groups_;
             }
 
             Fast_array_indices_generator() = default;
