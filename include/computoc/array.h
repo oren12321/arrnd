@@ -556,10 +556,10 @@ namespace computoc {
 
 
         template <template<typename> typename Internal_allocator = std::allocator>
-        class Array_indices_generator final
+        class Simple_array_indices_generator final
         {
         public:
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
+            Simple_array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -585,7 +585,7 @@ namespace computoc {
                 }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            Simple_array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -611,7 +611,7 @@ namespace computoc {
                 }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            Simple_array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -637,17 +637,17 @@ namespace computoc {
                 }
             }
 
-            Array_indices_generator() = default;
+            Simple_array_indices_generator() = default;
 
-            Array_indices_generator(const Array_indices_generator<Internal_allocator>& other) = default;
-            Array_indices_generator<Internal_allocator>& operator=(const Array_indices_generator<Internal_allocator>& other) = default;
+            Simple_array_indices_generator(const Simple_array_indices_generator<Internal_allocator>& other) = default;
+            Simple_array_indices_generator<Internal_allocator>& operator=(const Simple_array_indices_generator<Internal_allocator>& other) = default;
 
-            Array_indices_generator(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
-            Array_indices_generator<Internal_allocator>& operator=(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Simple_array_indices_generator(Simple_array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Simple_array_indices_generator<Internal_allocator>& operator=(Simple_array_indices_generator<Internal_allocator>&& other) noexcept = default;
 
-            ~Array_indices_generator() = default;
+            ~Simple_array_indices_generator() = default;
 
-            Array_indices_generator<Internal_allocator>& operator++() noexcept
+            Simple_array_indices_generator<Internal_allocator>& operator++() noexcept
             {
                 if (current_index_ < 0) {
                     current_index_ = 0;
@@ -698,14 +698,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator++(int) noexcept
+            Simple_array_indices_generator<Internal_allocator> operator++(int) noexcept
             {
-                Array_indices_generator temp{ *this };
+                Simple_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Simple_array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -713,14 +713,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            Simple_array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
             {
-                Array_indices_generator<Internal_allocator> temp{ *this };
+                Simple_array_indices_generator<Internal_allocator> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator--() noexcept
+            Simple_array_indices_generator<Internal_allocator>& operator--() noexcept
             {
                 if (current_index_ <= 0) {
                     current_index_ = -1;
@@ -771,14 +771,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator--(int) noexcept
+            Simple_array_indices_generator<Internal_allocator> operator--(int) noexcept
             {
-                Array_indices_generator temp{ *this };
+                Simple_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Simple_array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -786,9 +786,9 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            Simple_array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
             {
-                Array_indices_generator<Internal_allocator> temp{ *this };
+                Simple_array_indices_generator<Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1151,6 +1151,130 @@ namespace computoc {
         };
 
 
+
+        template <template<typename> typename Internal_allocator = std::allocator>
+        class Array_indices_generator final
+        {
+        public:
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
+            {
+                if (!hdr.is_subarray()) {
+                    use_fast_ = true;
+                    fast_gen_ = Fast_array_indices_generator<Internal_allocator>(hdr, backward);
+                }
+                else {
+                    use_fast_ = false;
+                    simple_gen_ = Simple_array_indices_generator<Internal_allocator>(hdr, backward);
+                }
+            }
+
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            {
+                if (!hdr.is_subarray()) {
+                    use_fast_ = true;
+                    fast_gen_ = Fast_array_indices_generator<Internal_allocator>(hdr, axis, backward);
+                }
+                else {
+                    use_fast_ = false;
+                    simple_gen_ = Simple_array_indices_generator<Internal_allocator>(hdr, axis, backward);
+                }
+            }
+
+            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            {
+                use_fast_ = false;
+                simple_gen_ = Simple_array_indices_generator<Internal_allocator>(hdr, order, backward);
+            }
+
+            Array_indices_generator() = default;
+
+            Array_indices_generator(const Array_indices_generator<Internal_allocator>& other) = default;
+            Array_indices_generator<Internal_allocator>& operator=(const Array_indices_generator<Internal_allocator>& other) = default;
+
+            Array_indices_generator(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Array_indices_generator<Internal_allocator>& operator=(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
+
+            ~Array_indices_generator() = default;
+
+            Array_indices_generator<Internal_allocator>& operator++() noexcept
+            {
+                if (use_fast_) {
+                    ++fast_gen_;
+                    return *this;
+                }
+                ++simple_gen_;
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator++(int) noexcept
+            {
+                Array_indices_generator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                for (std::int64_t i = 0; i < count; ++i) {
+                    ++(*this);
+                }
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Internal_allocator> temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            Array_indices_generator<Internal_allocator>& operator--() noexcept
+            {
+                if (use_fast_) {
+                    --fast_gen_;
+                    return *this;
+                }
+                --simple_gen_;
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator--(int) noexcept
+            {
+                Array_indices_generator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                for (std::int64_t i = 0; i < count; ++i) {
+                    --(*this);
+                }
+                return *this;
+            }
+
+            Array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Internal_allocator> temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] explicit operator bool() const noexcept
+            {
+                return use_fast_ ? static_cast<bool>(fast_gen_) : static_cast<bool>(simple_gen_);
+            }
+
+            [[nodiscard]] std::int64_t operator*() const noexcept
+            {
+                return use_fast_ ? *fast_gen_ : *simple_gen_;
+            }
+
+        private:
+            bool use_fast_;
+            Simple_array_indices_generator<Internal_allocator> simple_gen_;
+            Fast_array_indices_generator<Internal_allocator> fast_gen_;
+        };
 
 
 
