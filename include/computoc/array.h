@@ -1003,7 +1003,7 @@ namespace computoc {
         public:
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), last_index_(hdr.last_index())
+                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
@@ -1030,7 +1030,7 @@ namespace computoc {
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), last_index_(hdr.last_index())
+                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
@@ -1057,7 +1057,7 @@ namespace computoc {
 
             Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), last_index_(hdr.last_index())
+                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
@@ -1094,8 +1094,8 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator++() noexcept
             {
-                if (current_index_ < 0) {
-                    current_index_ = 0;
+                if (current_index_ < first_index_) {
+                    current_index_ = first_index_;
                     return *this;
                 }
                 if (current_index_ >= last_index_) {
@@ -1167,8 +1167,8 @@ namespace computoc {
 
             Array_indices_generator<Internal_allocator>& operator--() noexcept
             {
-                if (current_index_ <= 0) {
-                    current_index_ = -1;
+                if (current_index_ <= first_index_) {
+                    current_index_ = first_index_ - 1;
                     return *this;
                 }
                 if (current_index_ == last_index_ + 1) {
@@ -1240,7 +1240,7 @@ namespace computoc {
 
             [[nodiscard]] explicit operator bool() const noexcept
             {
-                return current_index_ <= last_index_ && current_index_ >= 0;//indices_[0] < dims_[0] && indices_[0] > -1;
+                return current_index_ <= last_index_ && current_index_ >= first_index_;
             }
 
             [[nodiscard]] std::int64_t operator*() const noexcept
@@ -1280,6 +1280,7 @@ namespace computoc {
             simple_vector<std::int64_t, Internal_allocator> indices_;
             std::int64_t current_index_ = 0;
 
+            std::int64_t first_index_ = 0;
             std::int64_t last_index_ = 0;
 
             std::int64_t first_stride_;
@@ -1611,11 +1612,6 @@ namespace computoc {
             {
             }
 
-            Array_iterator(T* data)
-                : data_(data)
-            {
-            }
-
             Array_iterator() = default;
 
             Array_iterator(const Array_iterator<T, Internal_allocator>& other) = default;
@@ -1712,11 +1708,6 @@ namespace computoc {
         public:
             Array_const_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
                 : gen_(gen), data_(data)
-            {
-            }
-
-            Array_const_iterator(T* data)
-                : data_(data)
             {
             }
 
@@ -1821,11 +1812,6 @@ namespace computoc {
             {
             }
 
-            Array_reverse_iterator(T* data)
-                : data_(data)
-            {
-            }
-
             Array_reverse_iterator() = default;
 
             Array_reverse_iterator(const Array_reverse_iterator<T, Internal_allocator>& other) = default;
@@ -1922,11 +1908,6 @@ namespace computoc {
         public:
             Array_const_reverse_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
                 : gen_(gen), data_(data)
-            {
-            }
-
-            Array_const_reverse_iterator(T* data)
-                : data_(data)
             {
             }
 
@@ -2290,18 +2271,18 @@ namespace computoc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, axis, true)), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, axis, true));
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
@@ -2317,7 +2298,7 @@ namespace computoc {
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
             auto crbegin(std::int64_t axis = 0) const
@@ -2327,24 +2308,24 @@ namespace computoc {
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, axis))]), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, axis));
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + *(++Array_indices_generator<Internals_allocator>(hdr_, order, true)), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, order, true));
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset(), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_const_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
@@ -2360,7 +2341,7 @@ namespace computoc {
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, order))]), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, order));
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
@@ -2370,7 +2351,7 @@ namespace computoc {
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(&(buffsp_->data()[*(--Array_indices_generator<Internals_allocator>(hdr_, order))]), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, order));
             }
 
 
