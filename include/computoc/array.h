@@ -40,7 +40,7 @@ namespace computoc {
 
             constexpr void deallocate(T* p, std::size_t n) noexcept
             {
-                operator delete[](p, n);
+                operator delete[](p, n * sizeof(T));
             }
         };
 
