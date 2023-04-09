@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <array>
 
 #include <computoc/utils.h>
 #include <computoc/array.h>
@@ -12,46 +13,69 @@ template <typename T, typename U>
 
 
 
-//TEST(Dummy, Dummy)
-//{
-//    using namespace computoc;
-//
-//    const Array<int> arr1{ {3, 1, 2}, {
-//        1, 2, 
-//        3, 4, 
-//        5, 6} };
-//    Array<int> arr2{ {3, 1, 2}, {0, 1, 2, 3, 4, 5} };
-//
-//    auto res = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
-//
-//    std::transform(arr1.crbegin(), arr1.crend(), arr2.begin(), [](auto c) { return c + 1; });
-//
-//    std::transform(arr1.cbegin() + 1, arr1.cend() - 2, arr2.begin() + 2, [](auto a) { return a * 10; });
-//
-//    
-//    std::transform(arr1.crbegin() + 1, arr1.crend() - 2, arr2.rbegin() + 1, [](auto a) { return a * 1000; });
-//
-//    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2({ {1, 1, 2}, {0, 0}, {1, 1} }).rbegin(), [](auto a) { return a * 100; });
-//
-//    const Array<int> arr{ {3, 2, 4}, {
-//        1, 2, 3, 4,
-//        5, 6, 7, 8,
-//        9, 10, 11, 12,
-//        13, 14, 15, 16,
-//        17, 18, 19, 20,
-//        21, 22, 23, 24} };
-//
-//    std::for_each(arr.cbegin(0), arr.cend(0), [](auto a) { std::cout << a << "\n"; });
-//    std::cout << "\n";
-//    std::for_each(arr.cbegin(1), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
-//    std::cout << "\n";
-//    std::for_each(arr.cbegin(2), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
-//
-//    std::initializer_list<std::int64_t> order = { 2, 1, 0 };
-//
-//    std::cout << "\n";
-//    std::for_each(arr.cbegin(2), arr.cend(2), [](auto a) { std::cout << a << "\n"; });
-//}
+TEST(Array_test, iterators)
+{
+    using namespace computoc;
+
+    const Array<int> arr1{ {3, 1, 2}, {
+        1, 2,
+        3, 4,
+        5, 6} };
+    Array<int> arr2{ {3, 1, 2}, {0, 1, 2, 3, 4, 5} };
+
+    auto product = std::inner_product(arr1.cbegin(), arr1.cend(), arr2.begin(), 1);
+
+    EXPECT_EQ(71, product);
+
+    std::transform(arr1.crbegin(), arr1.crend(), arr2.begin(), [](auto c) { return c + 1; });
+
+    EXPECT_TRUE(all_equal(Array<int>({ 3, 1, 2 },
+        { 7, 6, 5, 4, 3, 2 }), arr2));
+
+    std::transform(arr1.cbegin() + 1, arr1.cend() - 2, arr2.begin() + 2, [](auto a) { return a * 10; });
+
+    EXPECT_TRUE(all_equal(Array<int>({ 3, 1, 2 },
+        { 7, 6, 20, 30, 40, 2 }), arr2));
+
+    std::transform(arr1.crbegin() + 1, arr1.crend() - 2, arr2.rbegin() + 1, [](auto a) { return a * 1000; });
+
+    EXPECT_TRUE(all_equal(Array<int>({ 3, 1, 2 },
+        { 7, 6, 3000, 4000, 5000, 2 }), arr2));
+
+    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2({ {1, 1, 2}, {0, 0}, {1, 1} }).rbegin(), [](auto a) { return a * 100; });
+
+    EXPECT_TRUE(all_equal(Array<int>({ 3, 1, 2 },
+        { 7, 6, 3000, 100, 5000, 2 }), arr2));
+
+    const Array<int> arr{ {3, 2, 4}, {
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+        9, 10, 11, 12,
+        13, 14, 15, 16,
+        17, 18, 19, 20,
+        21, 22, 23, 24} };
+
+    std::vector<std::array<int, 3 * 2 * 4>> inds = {
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24},
+        {1, 2, 3, 4, 9, 10, 11, 12, 17, 18, 19, 20, 5, 6, 7, 8, 13, 14, 15, 16, 21, 22, 23, 24},
+        {1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24},
+        {1, 9, 17, 5, 13, 21, 2, 10, 18, 6, 14, 22, 3, 11, 19, 7, 15, 23, 4, 12, 20, 8, 16, 24}
+    };
+
+    for (int axis = 0; axis < 3; ++axis) {
+        std::vector<int> res;
+        std::copy(arr.cbegin(axis), arr.cend(axis), std::back_inserter(res));
+
+        EXPECT_TRUE(std::equal(inds[axis].begin(), inds[axis].end(), res.begin()));
+    }
+
+    std::initializer_list<std::int64_t> order = { 2, 1, 0 };
+
+    std::vector<int> res;
+    std::copy(arr.cbegin(order), arr.cend(order), std::back_inserter(res));
+
+    EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
+}
 
 TEST(Array_indices_generator, simple_forward_backward_iterations)
 {
