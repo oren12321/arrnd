@@ -17,17 +17,459 @@ namespace computoc {
     namespace details {
 
         template <typename T>
+        requires (!std::is_reference_v<T>)
+        class Lightweight_stl_allocator {
+        public:
+            using value_type = T;
+
+            constexpr Lightweight_stl_allocator() = default;
+            constexpr Lightweight_stl_allocator(const Lightweight_stl_allocator& other) = default;
+            constexpr Lightweight_stl_allocator& operator=(const Lightweight_stl_allocator& other) = default;
+            constexpr Lightweight_stl_allocator(Lightweight_stl_allocator&& other) = default;
+            constexpr Lightweight_stl_allocator& operator=(Lightweight_stl_allocator&& other) = default;
+            constexpr ~Lightweight_stl_allocator() = default;
+
+            template <typename U>
+            requires (!std::is_reference_v<U>)
+                constexpr Lightweight_stl_allocator(const Lightweight_stl_allocator<U>&) noexcept {}
+
+            [[nodiscard]] constexpr T* allocate(std::size_t n)
+            {
+                return reinterpret_cast<T*>(operator new[](n * sizeof(T)));
+            }
+
+            constexpr void deallocate(T* p, std::size_t n) noexcept
+            {
+                operator delete[](p, n);
+            }
+        };
+
+        template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
+        requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
+            class simple_dynamic_vector final {
+            public:
+                using value_type = T;
+                using size_type = std::int64_t;
+                using reference = T&;
+                using const_reference = const T&;
+                using pointer = T*;
+                using const_pointer = const T*;
+
+                using capacity_func_type = std::function<size_type(size_type)>;
+
+                constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); })
+                    : size_(size), capacity_(size), capacity_func_(capacity_func)
+                {
+                    data_ptr_ = alloc_.allocate(capacity_);
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
+                    }
+                    if (data) {
+                        std::copy(data, data + size_, data_ptr_);
+                    }
+                }
+
+                template <typename InputIt>
+                constexpr simple_dynamic_vector(InputIt first, InputIt last)
+                {
+                    size_ = capacity_ = last - first;
+                    data_ptr_ = alloc_.allocate(capacity_);
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
+                    }
+                    std::copy(first, last, data_ptr_);
+                }
+
+                constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
+                    : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
+                {
+                    data_ptr_ = alloc_.allocate(capacity_);
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
+                    }
+                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                }
+
+                constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
+                {
+                    if (this == &other) {
+                        return *this;
+                    }
+
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    }
+                    alloc_.deallocate(data_ptr_, capacity_);
+
+                    alloc_ = other.alloc_;
+                    size_ = other.size_;
+                    capacity_ = other.capacity_;
+                    capacity_func_ = other.capacity_func_;
+
+                    data_ptr_ = alloc_.allocate(capacity_);
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
+                    }
+                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+
+                    return *this;
+                }
+
+                constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
+                    : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_), capacity_func_(std::move(other.capacity_func_))
+                {
+                    data_ptr_ = other.data_ptr_;
+
+                    other.data_ptr_ = nullptr;
+                    other.size_ = 0;
+                }
+
+                constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
+                {
+                    if (this == &other) {
+                        return *this;
+                    }
+
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    }
+                    alloc_.deallocate(data_ptr_, capacity_);
+
+                    alloc_ = std::move(other.alloc_);
+                    size_ = other.size_;
+                    capacity_ = other.capacity_;
+                    capacity_func_ = std::move(other.capacity_func_);
+
+                    data_ptr_ = other.data_ptr_;
+
+                    other.data_ptr_ = nullptr;
+                    other.size_ = 0;
+
+                    return *this;
+                }
+
+                constexpr ~simple_dynamic_vector() noexcept
+                {
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    }
+                    alloc_.deallocate(data_ptr_, capacity_);
+                }
+
+                [[nodiscard]] constexpr bool empty() const noexcept
+                {
+                    return size_ == 0 || !data_ptr_;
+                }
+
+                [[nodiscard]] constexpr size_type size() const noexcept
+                {
+                    return size_;
+                }
+
+                [[nodiscard]] constexpr pointer data() const noexcept
+                {
+                    return data_ptr_;
+                }
+
+                [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+                {
+                    return data_ptr_[index];
+                }
+
+                [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+                {
+                    return data_ptr_[index];
+                }
+
+                constexpr void resize(size_type new_size)
+                {
+                    if (new_size < size_) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        }
+                        size_ = new_size;
+                    }
+                    //else if (new_size == size_) { /* do nothing */ }
+                    else if (new_size > size_) {
+                        size_type new_capacity = new_size;
+                        pointer data_ptr = alloc_.allocate(new_capacity);
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
+                        }
+                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        }
+                        alloc_.deallocate(data_ptr_, capacity_);
+
+                        data_ptr_ = data_ptr;
+                        size_ = new_size;
+                        capacity_ = new_capacity;
+                    }
+                }
+
+                constexpr void reserve(size_type new_capacity)
+                {
+                    if (new_capacity > capacity_) {
+                        pointer data_ptr = alloc_.allocate(new_capacity);
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
+                        }
+                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+
+                        alloc_.deallocate(data_ptr_, capacity_);
+                        data_ptr_ = data_ptr;
+                        capacity_ = new_capacity;
+                    }
+                }
+
+                constexpr void expand(size_type count)
+                {
+                    if (size_ + count < capacity_) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr_ + size_, data_ptr_ + size_ + count, [](auto& p) { std::construct_at<T>(&p); });
+                        }
+                        size_ += count;
+                    }
+                    else if (size_ + count >= capacity_) {
+                        size_type new_capacity = capacity_func_(size_ + count);
+                        size_type new_size = size_ + count;
+                        pointer data_ptr = alloc_.allocate(new_capacity);
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
+                        }
+                        std::move(data_ptr, data_ptr + size_, data_ptr_);
+
+                        alloc_.deallocate(data_ptr_, capacity_);
+                        data_ptr_ = data_ptr;
+                        capacity_ = new_capacity;
+                        size_ = new_size;
+                    }
+                }
+
+                constexpr void shrink(size_type count)
+                {
+                    if (count > size_) {
+                        throw std::length_error("count > size_");
+                    }
+
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    }
+                    size_ -= count;
+                }
+
+                constexpr void shrink_to_fit()
+                {
+                    if (capacity_ > size_) {
+                        pointer data_ptr = alloc_.allocate(size_);
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
+                        }
+                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+
+                        alloc_.deallocate(data_ptr_, capacity_);
+                        data_ptr_ = data_ptr;
+                        capacity_ = size_;
+                    }
+                }
+
+                [[nodiscard]] constexpr pointer begin() noexcept
+                {
+                    return data_ptr_;
+                }
+
+                [[nodiscard]] constexpr pointer end() noexcept
+                {
+                    return data_ptr_ + size_;
+                }
+
+                [[nodiscard]] constexpr const T& back() const noexcept
+                {
+                    return data_ptr_[size_-1];
+                }
+
+                [[nodiscard]] constexpr T& back() noexcept
+                {
+                    return data_ptr_[size_-1];
+                }
+
+                [[nodiscard]] constexpr const T& front() const noexcept
+                {
+                    return data_ptr_[0];
+                }
+
+                [[nodiscard]] constexpr T& front() noexcept
+                {
+                    return data_ptr_[0];
+                }
+
+            private:
+                pointer data_ptr_;
+
+                size_type size_;
+                size_type capacity_;
+
+                Allocator<T> alloc_;
+
+                capacity_func_type capacity_func_;
+        };
+
+
+
+        template <typename T, std::int64_t Capacity>
+        requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
+            class simple_static_vector final {
+            public:
+                using value_type = T;
+                using size_type = std::int64_t;
+                using reference = T&;
+                using const_reference = const T&;
+                using pointer = T*;
+                using const_pointer = const T*;
+
+                constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
+                    : size_(size)
+                {
+                    if (size_ > Capacity) {
+                        throw std::length_error("size_ > Capacity");
+                    }
+                    if (data) {
+                        std::copy(data, data + size_, data_ptr_);
+                    }
+                }
+
+                constexpr simple_static_vector(const simple_static_vector& other)
+                    : size_(other.size_)
+                {
+                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                }
+
+                constexpr simple_static_vector operator=(const simple_static_vector& other)
+                {
+                    if (this == &other) {
+                        return *this;
+                    }
+
+                    size_ = other.size_;
+
+                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+
+                    return *this;
+                }
+
+                constexpr simple_static_vector(simple_static_vector&& other) noexcept
+                    : size_(other.size_)
+                {
+                    std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+
+                    other.size_ = 0;
+                }
+
+                constexpr simple_static_vector operator=(simple_static_vector&& other) noexcept
+                {
+                    if (this == &other) {
+                        return *this;
+                    }
+
+                    size_ = other.size_;
+
+                    std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+
+                    other.size_ = 0;
+
+                    return *this;
+                }
+
+                [[nodiscard]] constexpr bool empty() const noexcept
+                {
+                    return size_ == 0;
+                }
+
+                [[nodiscard]] constexpr size_type size() const noexcept
+                {
+                    return size_;
+                }
+
+                [[nodiscard]] constexpr pointer data() const noexcept
+                {
+                    return const_cast<pointer>(data_ptr_);
+                }
+
+                [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+                {
+                    return data_ptr_[index];
+                }
+
+                [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+                {
+                    return data_ptr_[index];
+                }
+
+                constexpr void resize(size_type new_size)
+                {
+                    if (new_size > Capacity) {
+                        throw std::length_error("new_size > Capacity");
+                    }
+                    if (new_size < size_) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        }
+                        size_ = new_size;
+                    }
+                    //else if (new_size == size_) { /* do nothing */ }
+                    else if (new_size > size_) {
+                        size_ = new_size;
+                    }
+                }
+
+                constexpr void expand(size_type count)
+                {
+                    if (size_ + count > Capacity) {
+                        throw std::length_error("size_ + count > Capacity");
+                    }
+                    size_ += count;
+                }
+
+                constexpr void shrink(size_type count)
+                {
+                    if (count > size_) {
+                        throw std::length_error("count > size_");
+                    }
+
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                    }
+                    size_ -= count;
+                }
+
+            private:
+                value_type data_ptr_[Capacity];
+
+                size_type size_;
+        };
+
+        //inline constexpr std::uint32_t dynamic_vector = std::numeric_limits<std::uint32_t>::max();
+
+        //template <typename T, std::int64_t Capacity = dynamic_vector, template<typename> typename Allocator = Lightweight_stl_allocator>
+        //using simple_vector = std::conditional_t<Capacity == dynamic_vector, simple_dynamic_vector<T, Allocator>, simple_static_vector<T, Capacity>>;
+
+
+
+
+        template <typename T>
         using Replace_with_char_if_bool = std::conditional_t<std::is_same_v<bool, T>, char, T>;
 
         inline constexpr std::uint32_t dynamic_sequence = std::numeric_limits<std::uint32_t>::max();
 
-        template <typename T, std::int64_t N = dynamic_sequence, template<typename> typename Allocator = std::allocator>
+        template <typename T, std::int64_t N = dynamic_sequence, template<typename> typename Allocator = Lightweight_stl_allocator>
         requires (!std::is_same_v<bool, T> && N > 0)
         using simple_sequence = std::conditional_t<N == dynamic_sequence, std::vector<T, Allocator<T>>, std::array<T, N>>;
 
-        template <typename T, template<typename> typename Allocator = std::allocator>
+        template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
         requires (!std::is_same_v<bool, T>)
-        using simple_vector = std::vector<T, Allocator<T>>;
+            using simple_vector = simple_dynamic_vector<T, Allocator>;//std::vector<T, Allocator<T>>;
 
         template <typename T, typename U>
         [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
@@ -316,7 +758,7 @@ namespace computoc {
         offset = 28
         */
 
-        template <template<typename> typename Internal_allocator = std::allocator>
+        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_header {
         public:
             Array_header() = default;
@@ -555,7 +997,7 @@ namespace computoc {
         };
 
 
-        template <template<typename> typename Internal_allocator = std::allocator>
+        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_indices_generator final
         {
         public:
@@ -563,6 +1005,7 @@ namespace computoc {
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
@@ -589,6 +1032,7 @@ namespace computoc {
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
@@ -615,6 +1059,7 @@ namespace computoc {
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
                     current_index_ = hdr.last_index();
@@ -855,7 +1300,7 @@ namespace computoc {
 
 
 
-        template <template<typename> typename Internal_allocator = std::allocator>
+        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Fast_array_indices_generator final
         {
         public:
@@ -1154,7 +1599,7 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_iterator final
         {
         public:
@@ -1261,7 +1706,7 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_const_iterator final
         {
         public:
@@ -1364,7 +1809,7 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_reverse_iterator final
         {
         public:
@@ -1471,7 +1916,7 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = std::allocator>
+        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_const_reverse_iterator final
         {
         public:
@@ -1575,7 +2020,7 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Data_allocator = std::allocator, template<typename> typename Internals_allocator = std::allocator>
+        template <typename T, template<typename> typename Data_allocator = Lightweight_stl_allocator, template<typename> typename Internals_allocator = Lightweight_stl_allocator>
         class Array {
         public:
             using Header = Array_header<Internals_allocator>;
