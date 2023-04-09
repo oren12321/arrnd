@@ -775,16 +775,16 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::int64_t previous_offset, std::span<const Interval<std::int64_t>> intervals)
+            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
                 : is_subarray_(true)
             {
-                if (numel(previous_dims) <= 0) {
+                if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
 
-                if (compute_dims(previous_dims, intervals, dims) <= 0) {
+                if (compute_dims(previous_hdr.dims(), intervals, dims) <= 0) {
                     return;
                 }
 
@@ -792,33 +792,34 @@ namespace computoc {
                 
                 count_ = numel(dims_);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
-                compute_strides(previous_dims, previous_strides, intervals, strides_);
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                compute_strides(previous_hdr.dims(), previous_hdr.strides(), intervals, strides_);
 
-                offset_ = compute_offset(previous_dims, previous_offset, previous_strides, intervals);
+                offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), intervals);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(std::span<const std::int64_t> previous_dims, std::int64_t omitted_axis)
+            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::int64_t omitted_axis)
+                : is_subarray_(previous_hdr.is_subarray())
             {
-                if (numel(previous_dims) <= 0) {
+                if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_dims)) };
-                std::int64_t ndims{ std::ssize(previous_dims) > 1 ? std::ssize(previous_dims) - 1 : 1 };
+                std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
+                std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
 
                 dims_ = simple_vector<std::int64_t, Internal_allocator>(ndims);
 
-                if (previous_dims.size() > 1) {
+                if (previous_hdr.dims().size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
-                        dims_[i] = previous_dims[i];
+                        dims_[i] = previous_hdr.dims()[i];
                     }
-                    for (std::int64_t i = axis + 1; i < previous_dims.size(); ++i) {
-                        dims_[i - 1] = previous_dims[i];
+                    for (std::int64_t i = axis + 1; i < previous_hdr.dims().size(); ++i) {
+                        dims_[i - 1] = previous_hdr.dims()[i];
                     }
                 }
                 else {
@@ -835,9 +836,10 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> new_order)
+            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const std::int64_t> new_order)
+                : is_subarray_(previous_hdr.is_subarray())
             {
-                if (numel(previous_dims) <= 0) {
+                if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
@@ -845,19 +847,19 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
 
-                for (std::int64_t i = 0; i < std::ssize(previous_dims); ++i) {
-                    dims[i] = previous_dims[modulo(new_order[i], std::ssize(previous_dims))];
+                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
+                    dims[i] = previous_hdr.dims()[modulo(new_order[i], std::ssize(previous_hdr.dims()))];
                 }
 
-                if (numel(previous_dims) != numel(dims)) {
+                if (numel(previous_hdr.dims()) != numel(dims)) {
                     return;
                 }
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -867,17 +869,18 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(std::span<const std::int64_t> previous_dims, std::int64_t count, std::int64_t axis)
+            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::int64_t count, std::int64_t axis)
+                : is_subarray_(previous_hdr.is_subarray())
             {
-                if (numel(previous_dims) <= 0) {
+                if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
 
-                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
-                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
-                    dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + count;
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
+                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                    dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + count;
                 }
                 
                 if ((count_ = numel(dims)) <= 0) {
@@ -886,7 +889,7 @@ namespace computoc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -894,13 +897,14 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+                : is_subarray_(previous_hdr.is_subarray())
             {
-                if (previous_dims.size() != appended_dims.size()) {
+                if (previous_hdr.dims().size() != appended_dims.size()) {
                     return;
                 }
 
-                if (numel(previous_dims) <= 0) {
+                if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
@@ -908,11 +912,11 @@ namespace computoc {
                     return;
                 }
 
-                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_dims)) };
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
 
                 bool are_dims_valid_for_append{ true };
-                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
-                    if (i != fixed_axis && previous_dims[i] != appended_dims[i]) {
+                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                    if (i != fixed_axis && previous_hdr.dims()[i] != appended_dims[i]) {
                         are_dims_valid_for_append = false;
                     }
                 }
@@ -920,10 +924,10 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
 
-                for (std::int64_t i = 0; i < previous_dims.size(); ++i) {
-                    dims[i] = (i != fixed_axis) ? previous_dims[i] : previous_dims[i] + appended_dims[fixed_axis];
+                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                    dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
                 }
 
                 if ((count_ = numel(dims)) <= 0) {
@@ -932,7 +936,7 @@ namespace computoc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_dims.size());
+                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -2240,7 +2244,7 @@ namespace computoc {
                 }
 
                 Array<T, Data_allocator, Internals_allocator> slice{};
-                slice.hdr_ = Header{ hdr_.dims(), hdr_.strides(), hdr_.offset(), ranges };
+                slice.hdr_ = Header{ hdr_, ranges };
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
@@ -2574,7 +2578,7 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header().dims(), rhs.header().dims(), axis);
+            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
                 return Array<T1, Data_allocator, Internals_allocator>{};
             }
@@ -2640,7 +2644,7 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header().dims(), rhs.header().dims(), axis);
+            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
                 return Array<T1, Data_allocator, Internals_allocator>();
             }
@@ -2711,7 +2715,7 @@ namespace computoc {
             std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
             std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
-            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), -fixed_count, fixed_axis);
+            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header(), -fixed_count, fixed_axis);
             if (new_header.empty()) {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
@@ -2816,7 +2820,7 @@ namespace computoc {
 
             const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
-            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), fixed_axis);
+            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header(), fixed_axis);
             if (new_header.empty()) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
@@ -2856,7 +2860,7 @@ namespace computoc {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
 
-            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), axis);
+            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header(), axis);
             if (new_header.empty()) {
                 return Array<T_o, Data_allocator, Internals_allocator>();
             }
@@ -3113,7 +3117,7 @@ namespace computoc {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
 
-            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header().dims(), order);
+            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header(), order);
             if (new_header.empty()) {
                 return Array<T, Data_allocator, Internals_allocator>();
             }
