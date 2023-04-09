@@ -581,7 +581,7 @@ TEST(Array_test, all)
     EXPECT_EQ(false, computoc::all(arr));
 
     const bool rdata[] = { true, false };
-    computoc::Array<char> rarr{ {2}, rdata };
+    computoc::Array<bool> rarr{ {2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, computoc::all(arr, 0)));
 }
@@ -596,7 +596,7 @@ TEST(Array_test, any)
     EXPECT_EQ(true, computoc::any(arr));
 
     const bool rdata[] = { true, false };
-    computoc::Array<char> rarr{ {2}, rdata };
+    computoc::Array<bool> rarr{ {2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, computoc::any(arr, 0)));
 }
@@ -883,7 +883,7 @@ TEST(Array_test, equal)
         true, true,
         true, false,
         true, false };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
     
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 == arr2));
     EXPECT_TRUE(computoc::empty(arr1 == Integer_array{ {1} }));
@@ -909,7 +909,7 @@ TEST(Array_test, not_equal)
         false, false,
         false, true,
         false, true };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 != arr2));
     EXPECT_TRUE(computoc::empty(arr1 != Integer_array{ {1} }));
@@ -935,7 +935,7 @@ TEST(Array_test, greater)
         false, false,
         false, false,
         false, false };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 > arr2));
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 > 6));
@@ -963,7 +963,7 @@ TEST(Array_test, greater_equal)
         true, true,
         true, false,
         true, false };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 >= arr2));
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 >= 1));
@@ -972,7 +972,7 @@ TEST(Array_test, greater_equal)
         true, true,
         true, true,
         true, false };
-    computoc::Array<char> rarr2{ {3, 1, 2}, rdata2 };
+    computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
 
     EXPECT_TRUE(computoc::all_equal(rarr2, 5 >= arr2));
 
@@ -999,7 +999,7 @@ TEST(Array_test, less)
         false, false,
         false, true,
         false, true };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 < arr2));
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 < 1));
@@ -1008,7 +1008,7 @@ TEST(Array_test, less)
         false, true,
         true, true,
         true, true };
-    computoc::Array<char> rarr2{ {3, 1, 2}, rdata2 };
+    computoc::Array<bool> rarr2{ {3, 1, 2}, rdata2 };
 
     EXPECT_TRUE(computoc::all_equal(rarr2, 1 < arr2));
 
@@ -1035,7 +1035,7 @@ TEST(Array_test, less_equal)
         true, true,
         true, true,
         true, true };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 <= arr2));
     EXPECT_TRUE(computoc::all_equal(rarr, arr1 <= 5));
@@ -1063,7 +1063,7 @@ TEST(Array_test, close)
         true, true,
         true, false,
         true, false };
-    computoc::Array<char> rarr{ {3, 1, 2}, rdata };
+    computoc::Array<bool> rarr{ {3, 1, 2}, rdata };
 
     EXPECT_TRUE(computoc::all_equal(rarr, computoc::close(arr1, arr2, 2)));
     EXPECT_TRUE(computoc::all_equal(rarr, computoc::close(arr1, 3, 2)));
