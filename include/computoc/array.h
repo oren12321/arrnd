@@ -166,6 +166,11 @@ namespace computoc {
                     return size_;
                 }
 
+                [[nodiscard]] constexpr size_type capacity() const noexcept
+                {
+                    return capacity_;
+                }
+
                 [[nodiscard]] constexpr pointer data() const noexcept
                 {
                     return data_ptr_;
@@ -239,7 +244,7 @@ namespace computoc {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
                         }
-                        std::move(data_ptr, data_ptr + size_, data_ptr_);
+                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = data_ptr;
@@ -394,6 +399,11 @@ namespace computoc {
                 [[nodiscard]] constexpr size_type size() const noexcept
                 {
                     return size_;
+                }
+
+                [[nodiscard]] constexpr size_type capacity() const noexcept
+                {
+                    return Capacity;
                 }
 
                 [[nodiscard]] constexpr pointer data() const noexcept

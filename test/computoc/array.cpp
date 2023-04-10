@@ -12,6 +12,79 @@ template <typename T, typename U>
 }
 
 
+template <typename T>
+class Simple_vector_test : public testing::Test {};
+using Simple_vector_types = testing::Types<
+    computoc::details::simple_dynamic_vector<std::string>,
+    computoc::details::simple_static_vector<std::string, 16>>;
+TYPED_TEST_SUITE(Simple_vector_test, Simple_vector_types);
+
+TYPED_TEST(Simple_vector_test, basic_functionality)
+{
+    using simple_vector = TypeParam;
+
+    constexpr simple_vector::size_type size = 16;
+    std::array<std::string, 16> arr{
+        "a", "b", "c", "d", "e", "f", "g", "h",
+        "i", "j", "k", "l", "m", "n", "o", "p" };
+
+    simple_vector sv(size, arr.data());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    sv.resize(8);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(8, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+
+    sv.expand(8);
+    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
+        EXPECT_EQ(24, sv.capacity());
+    }
+    else {
+        EXPECT_EQ(16, sv.capacity());
+    }
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+
+    sv.shrink(8);
+    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
+        EXPECT_EQ(24, sv.capacity());
+    }
+    else {
+        EXPECT_EQ(16, sv.capacity());
+    }
+    EXPECT_EQ(8, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+
+    EXPECT_EQ("h", sv.back());
+    EXPECT_EQ("a", sv.front());
+
+    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
+        sv.shrink_to_fit();
+        EXPECT_EQ(8, sv.capacity());
+        EXPECT_EQ(8, sv.size());
+        EXPECT_FALSE(sv.empty());
+        EXPECT_TRUE(sv.data());
+        EXPECT_EQ("h", sv.back());
+        EXPECT_EQ("a", sv.front());
+    }
+}
+
 
 TEST(Array_test, iterators)
 {
