@@ -23,12 +23,11 @@ TYPED_TEST(Simple_vector_test, basic_functionality)
 {
     using simple_vector = TypeParam;
 
-    constexpr simple_vector::size_type size = 16;
     std::array<std::string, 16> arr{
         "a", "b", "c", "d", "e", "f", "g", "h",
         "i", "j", "k", "l", "m", "n", "o", "p" };
 
-    simple_vector sv(size, arr.data());
+    simple_vector sv(16, arr.data());
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(16, sv.size());
     EXPECT_FALSE(sv.empty());
