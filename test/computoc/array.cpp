@@ -12,16 +12,9 @@ template <typename T, typename U>
 }
 
 
-template <typename T>
-class Simple_vector_test : public testing::Test {};
-using Simple_vector_types = testing::Types<
-    computoc::details::simple_dynamic_vector<std::string>,
-    computoc::details::simple_static_vector<std::string, 16>>;
-TYPED_TEST_SUITE(Simple_vector_test, Simple_vector_types);
-
-TYPED_TEST(Simple_vector_test, basic_functionality)
+TEST(Simple_dynamic_vector_test, basic_functionality)
 {
-    using simple_vector = TypeParam;
+    using simple_vector = computoc::details::simple_dynamic_vector<std::string>;
 
     std::array<std::string, 16> arr{
         "a", "b", "c", "d", "e", "f", "g", "h",
@@ -32,6 +25,8 @@ TYPED_TEST(Simple_vector_test, basic_functionality)
     EXPECT_EQ(16, sv.size());
     EXPECT_FALSE(sv.empty());
     EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("p", sv.back());
 
     int ctr = 0;
     for (const auto& e : sv) {
@@ -42,46 +37,123 @@ TYPED_TEST(Simple_vector_test, basic_functionality)
         EXPECT_EQ(arr[i], sv[i]);
     }
 
+    sv.resize(24);
+    EXPECT_EQ(24, sv.capacity());
+    EXPECT_EQ(24, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.expand(1);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(25, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.shrink(10);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(15, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+    EXPECT_THROW(sv.shrink(30), std::length_error);
+
+    sv.expand(5);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(20, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(50);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(20, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(45);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(20, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.shrink_to_fit();
+    EXPECT_EQ(20, sv.capacity());
+    EXPECT_EQ(20, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+}
+
+
+TEST(Simple_static_vector_test, basic_functionality)
+{
+    using simple_vector = computoc::details::simple_static_vector<std::string, 16>;
+
+    std::array<std::string, 16> arr{
+        "a", "b", "c", "d", "e", "f", "g", "h",
+        "i", "j", "k", "l", "m", "n", "o", "p" };
+
+    simple_vector sv(16, arr.data());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("p", sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    EXPECT_THROW(sv.resize(24), std::length_error);
     sv.resize(8);
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(8, sv.size());
     EXPECT_FALSE(sv.empty());
     EXPECT_TRUE(sv.data());
-
-    sv.expand(8);
-    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
-        EXPECT_EQ(24, sv.capacity());
-    }
-    else {
-        EXPECT_EQ(16, sv.capacity());
-    }
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-
-    sv.shrink(8);
-    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
-        EXPECT_EQ(24, sv.capacity());
-    }
-    else {
-        EXPECT_EQ(16, sv.capacity());
-    }
-    EXPECT_EQ(8, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-
-    EXPECT_EQ("h", sv.back());
     EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("h", sv.back());
+    sv.resize(9);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(9, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("h", sv.back());
 
-    if constexpr (std::is_same_v<simple_vector, computoc::details::simple_dynamic_vector<std::string>>) {
-        sv.shrink_to_fit();
-        EXPECT_EQ(8, sv.capacity());
-        EXPECT_EQ(8, sv.size());
-        EXPECT_FALSE(sv.empty());
-        EXPECT_TRUE(sv.data());
-        EXPECT_EQ("h", sv.back());
-        EXPECT_EQ("a", sv.front());
-    }
+    EXPECT_THROW(sv.expand(10), std::length_error);
+    sv.expand(1);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(10, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    EXPECT_THROW(sv.shrink(12), std::length_error);
+    sv.shrink(5);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(5, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
 }
 
 
