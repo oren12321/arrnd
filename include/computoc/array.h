@@ -340,6 +340,10 @@ namespace computoc {
                     }
                 }
 
+                template <typename InputIt>
+                constexpr simple_static_vector(InputIt first, InputIt last)
+                    : simple_static_vector(last - first, &(*first)) {}
+
                 constexpr simple_static_vector(const simple_static_vector& other)
                     : size_(other.size_)
                 {
@@ -442,6 +446,36 @@ namespace computoc {
                         std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
                     }
                     size_ -= count;
+                }
+
+                [[nodiscard]] constexpr pointer begin() noexcept
+                {
+                    return data_ptr_;
+                }
+
+                [[nodiscard]] constexpr pointer end() noexcept
+                {
+                    return data_ptr_ + size_;
+                }
+
+                [[nodiscard]] constexpr const T& back() const noexcept
+                {
+                    return data_ptr_[size_ - 1];
+                }
+
+                [[nodiscard]] constexpr T& back() noexcept
+                {
+                    return data_ptr_[size_ - 1];
+                }
+
+                [[nodiscard]] constexpr const T& front() const noexcept
+                {
+                    return data_ptr_[0];
+                }
+
+                [[nodiscard]] constexpr T& front() noexcept
+                {
+                    return data_ptr_[0];
                 }
 
             private:
