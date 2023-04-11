@@ -621,11 +621,11 @@ namespace computoc {
         inline constexpr std::uint32_t dynamic_sequence = std::numeric_limits<std::uint32_t>::max();
 
         template <typename T, std::int64_t N = dynamic_sequence, template<typename> typename Allocator = Lightweight_stl_allocator>
-        requires (!std::is_same_v<bool, T> && N > 0)
-        using simple_sequence = std::conditional_t<N == dynamic_sequence, std::vector<T, Allocator<T>>, std::array<T, N>>;
+        requires (N > 0)
+        using simple_vector = std::conditional_t<N == dynamic_sequence, simple_dynamic_vector<T, Allocator>, simple_static_vector<T, N>>;
 
-        template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
-        using simple_vector = simple_dynamic_vector<T, Allocator>;//std::vector<T, Allocator<T>>;
+        //template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
+        //using simple_vector = simple_dynamic_vector<T, Allocator>;//std::vector<T, Allocator<T>>;
 
         template <typename T, typename U>
         [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
@@ -914,7 +914,7 @@ namespace computoc {
         offset = 28
         */
 
-        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_header {
         public:
             Array_header() = default;
@@ -925,9 +925,9 @@ namespace computoc {
                     return;
                 }
 
-                dims_ = simple_vector<std::int64_t, Internal_allocator>(dims.begin(), dims.end());
+                dims_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(dims.begin(), dims.end());
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(dims.size());
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(dims.size());
                 compute_strides(dims, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -935,14 +935,14 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
+            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
                 : is_subarray_(true)
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
 
                 if (compute_dims(previous_hdr.dims(), intervals, dims) <= 0) {
                     return;
@@ -952,7 +952,7 @@ namespace computoc {
                 
                 count_ = numel(dims_);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(previous_hdr.dims(), previous_hdr.strides(), intervals, strides_);
 
                 offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), intervals);
@@ -962,7 +962,7 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::int64_t omitted_axis)
+            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::int64_t omitted_axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -972,7 +972,7 @@ namespace computoc {
                 std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
                 std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
 
-                dims_ = simple_vector<std::int64_t, Internal_allocator>(ndims);
+                dims_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(ndims);
 
                 if (previous_hdr.dims().size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
@@ -986,7 +986,7 @@ namespace computoc {
                     dims_[0] = 1;
                 }
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(ndims);
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(ndims);
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -996,7 +996,7 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const std::int64_t> new_order)
+            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const std::int64_t> new_order)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -1007,7 +1007,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     dims[i] = previous_hdr.dims()[modulo(new_order[i], std::ssize(previous_hdr.dims()))];
@@ -1019,7 +1019,7 @@ namespace computoc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -1029,14 +1029,14 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::int64_t count, std::int64_t axis)
+            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::int64_t count, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
@@ -1049,7 +1049,7 @@ namespace computoc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1057,7 +1057,7 @@ namespace computoc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Internal_allocator>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (previous_hdr.dims().size() != appended_dims.size()) {
@@ -1084,7 +1084,7 @@ namespace computoc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Internal_allocator> dims = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
@@ -1096,7 +1096,7 @@ namespace computoc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1148,8 +1148,8 @@ namespace computoc {
             }
 
         private:
-            simple_vector<std::int64_t, Internal_allocator> dims_{};
-            simple_vector<std::int64_t, Internal_allocator> strides_{};
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_{};
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             std::int64_t last_index_{ 0 };
@@ -1157,11 +1157,11 @@ namespace computoc {
         };
 
 
-        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_indices_generator final
         {
         public:
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1188,7 +1188,7 @@ namespace computoc {
                 }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1215,7 +1215,7 @@ namespace computoc {
                 }
             }
 
-            Array_indices_generator(const Array_header<Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1244,15 +1244,15 @@ namespace computoc {
 
             Array_indices_generator() = default;
 
-            Array_indices_generator(const Array_indices_generator<Internal_allocator>& other) = default;
-            Array_indices_generator<Internal_allocator>& operator=(const Array_indices_generator<Internal_allocator>& other) = default;
+            Array_indices_generator(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
 
-            Array_indices_generator(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
-            Array_indices_generator<Internal_allocator>& operator=(Array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Array_indices_generator(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Array_indices_generator() = default;
 
-            Array_indices_generator<Internal_allocator>& operator++() noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 if (current_index_ < first_index_) {
                     current_index_ = first_index_;
@@ -1303,14 +1303,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator++(int) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1318,14 +1318,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
-                Array_indices_generator<Internal_allocator> temp{ *this };
+                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator--() noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 if (current_index_ <= first_index_) {
                     current_index_ = first_index_ - 1;
@@ -1376,14 +1376,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator--(int) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1391,9 +1391,9 @@ namespace computoc {
                 return *this;
             }
 
-            Array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
-                Array_indices_generator<Internal_allocator> temp{ *this };
+                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1409,10 +1409,10 @@ namespace computoc {
             }
 
         private:
-            static simple_vector<std::int64_t, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
+            static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
             {
                 // create ordered indices according to input axis parameter
-                simple_vector<std::int64_t, Internal_allocator> new_ordered_indices(vec.size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(vec.size());
                 new_ordered_indices[0] = axis;
                 std::int64_t pos = 1;
                 for (std::int64_t i = 0; i < vec.size(); ++i) {
@@ -1424,20 +1424,20 @@ namespace computoc {
                 return reorder(vec, new_ordered_indices);
             }
 
-            static simple_vector<std::int64_t, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
-                simple_vector<std::int64_t, Internal_allocator> res(size);
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
                 }
                 return res;
             }
 
-            simple_vector<std::int64_t, Internal_allocator> dims_;
-            simple_vector<std::int64_t, Internal_allocator> strides_;
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_;
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_;
 
-            simple_vector<std::int64_t, Internal_allocator> indices_;
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> indices_;
             std::int64_t current_index_ = 0;
 
             std::int64_t first_index_ = 0;
@@ -1461,11 +1461,11 @@ namespace computoc {
 
 
 
-        template <template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Fast_array_indices_generator final
         {
         public:
-            Fast_array_indices_generator(const Array_header<Internal_allocator>& hdr, bool backward = false)
+            Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
             {
                 // data
 
@@ -1505,7 +1505,7 @@ namespace computoc {
                 }
             }
 
-            Fast_array_indices_generator(const Array_header<Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
             {
                 // data
 
@@ -1547,15 +1547,15 @@ namespace computoc {
 
             Fast_array_indices_generator() = default;
 
-            Fast_array_indices_generator(const Fast_array_indices_generator<Internal_allocator>& other) = default;
-            Fast_array_indices_generator<Internal_allocator>& operator=(const Fast_array_indices_generator<Internal_allocator>& other) = default;
+            Fast_array_indices_generator(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
 
-            Fast_array_indices_generator(Fast_array_indices_generator<Internal_allocator>&& other) noexcept = default;
-            Fast_array_indices_generator<Internal_allocator>& operator=(Fast_array_indices_generator<Internal_allocator>&& other) noexcept = default;
+            Fast_array_indices_generator(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Fast_array_indices_generator() = default;
 
-            Fast_array_indices_generator<Internal_allocator>& operator++() noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 // the algorithm is done by three functions composition:
                 // - index
@@ -1615,14 +1615,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Internal_allocator> operator++(int) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Fast_array_indices_generator<Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1630,14 +1630,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Internal_allocator> operator+(std::int64_t count) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<Internal_allocator> temp{ *this };
+                Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Fast_array_indices_generator<Internal_allocator>& operator--() noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 // the algorithm is done by inverese of three functions composition:
                 // - super group
@@ -1697,14 +1697,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Internal_allocator> operator--(int) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Fast_array_indices_generator<Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1712,9 +1712,9 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Internal_allocator> operator-(std::int64_t count) noexcept
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<Internal_allocator> temp{ *this };
+                Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1760,29 +1760,29 @@ namespace computoc {
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename T, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_iterator final
         {
         public:
             using value_type = T;
             using difference_type = std::ptrdiff_t;
 
-            Array_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+            Array_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
 
             Array_iterator() = default;
 
-            Array_iterator(const Array_iterator<T, Internal_allocator>& other) = default;
-            Array_iterator<T, Internal_allocator>& operator=(const Array_iterator<T, Internal_allocator>& other) = default;
+            Array_iterator(const Array_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator=(const Array_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
 
-            Array_iterator(Array_iterator<T, Internal_allocator>&& other) noexcept = default;
-            Array_iterator<T, Internal_allocator>& operator=(Array_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_iterator(Array_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator=(Array_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Array_iterator() = default;
 
-            Array_iterator<T, Internal_allocator>& operator++() noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 auto diff = *gen_;
                 diff = *(++gen_) - diff;
@@ -1790,14 +1790,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_iterator<T, Internal_allocator> operator++(int) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ += count;
@@ -1806,14 +1806,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Array_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_iterator<T, Internal_allocator>& operator--() noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
                 diff -= *(--gen_);
@@ -1821,14 +1821,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_iterator<T, Internal_allocator> operator--(int) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ -= count;
@@ -1837,7 +1837,7 @@ namespace computoc {
                 return *this;
             }
 
-            Array_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            Array_iterator<T, Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Array_iterator temp{ *this };
                 temp -= count;
@@ -1849,39 +1849,39 @@ namespace computoc {
                 return *data_;
             }
 
-            [[nodiscard]] bool operator==(const Array_iterator<T, Internal_allocator>& iter) const
+            [[nodiscard]] bool operator==(const Array_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
             }
 
         private:
-            Array_indices_generator<Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename T, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_const_iterator final
         {
         public:
-            Array_const_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+            Array_const_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
 
             Array_const_iterator() = default;
 
-            Array_const_iterator(const Array_const_iterator<T, Internal_allocator>& other) = default;
-            Array_const_iterator<T, Internal_allocator>& operator=(const Array_const_iterator<T, Internal_allocator>& other) = default;
+            Array_const_iterator(const Array_const_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator=(const Array_const_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
 
-            Array_const_iterator(Array_const_iterator<T, Internal_allocator>&& other) noexcept = default;
-            Array_const_iterator<T, Internal_allocator>& operator=(Array_const_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_const_iterator(Array_const_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator=(Array_const_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Array_const_iterator() = default;
 
-            Array_const_iterator<T, Internal_allocator>& operator++() noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 auto diff = *gen_;
                 diff = *(++gen_) - diff;
@@ -1889,14 +1889,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_iterator<T, Internal_allocator> operator++(int) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_const_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_const_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ += count;
@@ -1905,14 +1905,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Array_const_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_const_iterator<T, Internal_allocator>& operator--() noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
                 diff -= *(--gen_);
@@ -1920,14 +1920,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_iterator<T, Internal_allocator> operator--(int) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_const_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_const_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ -= count;
@@ -1936,7 +1936,7 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            Array_const_iterator<T, Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Array_const_iterator temp{ *this };
                 temp -= count;
@@ -1948,41 +1948,41 @@ namespace computoc {
                 return *data_;
             }
 
-            [[nodiscard]] bool operator==(const Array_const_iterator<T, Internal_allocator>& iter) const
+            [[nodiscard]] bool operator==(const Array_const_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
             }
 
         private:
-            Array_indices_generator<Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename T, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_reverse_iterator final
         {
         public:
             using value_type = T;
             using difference_type = std::ptrdiff_t;
 
-            Array_reverse_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+            Array_reverse_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
 
             Array_reverse_iterator() = default;
 
-            Array_reverse_iterator(const Array_reverse_iterator<T, Internal_allocator>& other) = default;
-            Array_reverse_iterator<T, Internal_allocator>& operator=(const Array_reverse_iterator<T, Internal_allocator>& other) = default;
+            Array_reverse_iterator(const Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator=(const Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
 
-            Array_reverse_iterator(Array_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
-            Array_reverse_iterator<T, Internal_allocator>& operator=(Array_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_reverse_iterator(Array_reverse_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator=(Array_reverse_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Array_reverse_iterator() = default;
 
-            Array_reverse_iterator<T, Internal_allocator>& operator++() noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 auto diff = *gen_;
                 diff -= *(--gen_);
@@ -1990,14 +1990,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_reverse_iterator<T, Internal_allocator> operator++(int) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_reverse_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_reverse_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ -= count;
@@ -2006,14 +2006,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_reverse_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Array_reverse_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_reverse_iterator<T, Internal_allocator>& operator--() noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
                 diff = *(++gen_) - diff;
@@ -2021,14 +2021,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_reverse_iterator<T, Internal_allocator> operator--(int) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_reverse_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_reverse_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ += count;
@@ -2037,7 +2037,7 @@ namespace computoc {
                 return *this;
             }
 
-            Array_reverse_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            Array_reverse_iterator<T, Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Array_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2049,39 +2049,39 @@ namespace computoc {
                 return *data_;
             }
 
-            [[nodiscard]] bool operator==(const Array_reverse_iterator<T, Internal_allocator>& iter) const
+            [[nodiscard]] bool operator==(const Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
             }
 
         private:
-            Array_indices_generator<Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
 
 
 
-        template <typename T, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename T, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_const_reverse_iterator final
         {
         public:
-            Array_const_reverse_iterator(T* data, const Array_indices_generator<Internal_allocator>& gen)
+            Array_const_reverse_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
 
             Array_const_reverse_iterator() = default;
 
-            Array_const_reverse_iterator(const Array_const_reverse_iterator<T, Internal_allocator>& other) = default;
-            Array_const_reverse_iterator<T, Internal_allocator>& operator=(const Array_const_reverse_iterator<T, Internal_allocator>& other) = default;
+            Array_const_reverse_iterator(const Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator=(const Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& other) = default;
 
-            Array_const_reverse_iterator(Array_const_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
-            Array_const_reverse_iterator<T, Internal_allocator>& operator=(Array_const_reverse_iterator<T, Internal_allocator>&& other) noexcept = default;
+            Array_const_reverse_iterator(Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator=(Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
             ~Array_const_reverse_iterator() = default;
 
-            Array_const_reverse_iterator<T, Internal_allocator>& operator++() noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 auto diff = *gen_;
                 diff -= *(--gen_);
@@ -2089,14 +2089,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator> operator++(int) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_const_reverse_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ -= count;
@@ -2105,14 +2105,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator> operator+(std::int64_t count) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Array_const_reverse_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator>& operator--() noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 auto diff = *gen_;
                 diff = *(++gen_) - diff;
@@ -2120,14 +2120,14 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator> operator--(int) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_const_reverse_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 auto diff = *gen_;
                 gen_ += count;
@@ -2136,7 +2136,7 @@ namespace computoc {
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, Internal_allocator> operator-(std::int64_t count) noexcept
+            Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Array_const_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2148,37 +2148,37 @@ namespace computoc {
                 return *data_;
             }
 
-            [[nodiscard]] bool operator==(const Array_const_reverse_iterator<T, Internal_allocator>& iter) const
+            [[nodiscard]] bool operator==(const Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
                 return data_ == iter.data_;
             }
 
         private:
-            Array_indices_generator<Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
 
 
 
-        template <typename T, template<typename> typename Data_allocator = Lightweight_stl_allocator, template<typename> typename Internals_allocator = Lightweight_stl_allocator>
+        template <typename T, std::int64_t Data_capacity = dynamic_sequence, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Data_allocator = Lightweight_stl_allocator, template<typename> typename Internals_allocator = Lightweight_stl_allocator>
         class Array {
         public:
-            using Header = Array_header<Internals_allocator>;
+            using Header = Array_header<Dims_capacity, Internals_allocator>;
 
             Array() = default;
 
-            Array(Array<T, Data_allocator, Internals_allocator>&& other) = default;
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)
+            Array(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& other) = default;
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array(Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>&& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
 
-                Array<T_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
+                Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
             }
-            Array<T, Data_allocator, Internals_allocator>& operator=(Array<T, Data_allocator, Internals_allocator>&& other) & = default;
-            Array<T, Data_allocator, Internals_allocator>& operator=(Array<T, Data_allocator, Internals_allocator>&& other)&&
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& other) & = default;
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -2194,33 +2194,33 @@ namespace computoc {
 
                 return *this;
             }
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array<T, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)&
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>&& other)&
             {
-                *this = Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
-                Array<T_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
+                Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array<T, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_allocator_o, Internals_allocator_o>&& other)&&
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>&& other)&&
             {
                 if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     copy(other, *this);
                 }
-                Array<T_o, Data_allocator_o, Internals_allocator_o> dummy{std::move(other)};
+                Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o> dummy{std::move(other)};
                 return *this;
             }
 
-            Array(const Array<T, Data_allocator, Internals_allocator>& other) = default;
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)
+            Array(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& other) = default;
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array(const Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
             }
-            Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T, Data_allocator, Internals_allocator>& other) & = default;
-            Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T, Data_allocator, Internals_allocator>& other)&&
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& other) & = default;
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -2236,15 +2236,15 @@ namespace computoc {
 
                 return *this;
             }
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)&
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>& other)&
             {
-                *this = Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
-            Array<T, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_allocator_o, Internals_allocator_o>& other)&&
+            template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>& other)&&
             {
                 if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     copy(other, *this);
@@ -2253,13 +2253,13 @@ namespace computoc {
             }
 
             template <typename U>
-            Array<T, Data_allocator, Internals_allocator>& operator=(const U& value)
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
                 }
 
-                for (Array_indices_generator<Internals_allocator> gen(hdr_); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(hdr_); gen; ++gen) {
                     (*this)(*gen) = value;
                 }
 
@@ -2269,7 +2269,7 @@ namespace computoc {
             virtual ~Array() = default;
 
             Array(std::span<const std::int64_t> dims, const T* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator<simple_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator<simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
             {
                 if (data) {
                     std::copy(data, data + hdr_.count(), buffsp_->data());
@@ -2289,7 +2289,7 @@ namespace computoc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
@@ -2311,7 +2311,7 @@ namespace computoc {
 
 
             Array(std::span<const std::int64_t> dims, const T& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2321,7 +2321,7 @@ namespace computoc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_allocator>>(Internals_allocator < simple_vector<T, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2378,27 +2378,27 @@ namespace computoc {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
 
-                Array<T, Data_allocator, Internals_allocator> slice{};
+                Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> slice{};
                 slice.hdr_ = Header{ hdr_, ranges };
                 slice.buffsp_ = buffsp_;
                 return slice;
             }
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator> operator()(const Array<std::int64_t, Data_allocator, Internals_allocator>& indices) const noexcept
+            [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator()(const Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& indices) const noexcept
             {
-                Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
+                Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (Array_indices_generator<Internals_allocator> gen(indices.header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(indices.header()); gen; ++gen) {
                     res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
@@ -2406,13 +2406,13 @@ namespace computoc {
             }
 
             template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator>& transform(const Array<T_o, Data_allocator, Internals_allocator>& other, Binary_op&& op)
+            [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& transform(const Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& other, Binary_op&& op)
             {
                 if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     return *this;
                 }
 
-                for (Array_indices_generator<Internals_allocator> gen(header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other(*gen));
                 }
 
@@ -2420,9 +2420,9 @@ namespace computoc {
             }
 
             template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, Data_allocator, Internals_allocator>& transform(const T_o& other, Binary_op&& op)
+            [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& transform(const T_o& other, Binary_op&& op)
             {
-                for (Array_indices_generator<Internals_allocator> gen(header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other);
                 }
 
@@ -2431,87 +2431,87 @@ namespace computoc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, axis, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, axis));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, order, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data(), Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Internals_allocator>(hdr_, order, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Internals_allocator>(hdr_, order, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Internals_allocator>(hdr_, order));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
 
@@ -2561,42 +2561,42 @@ namespace computoc {
 
         private:
             Header hdr_{};
-            std::shared_ptr<simple_vector<T, Data_allocator>> buffsp_{ nullptr };
+            std::shared_ptr<simple_vector<T, Data_capacity, Data_allocator>> buffsp_{ nullptr };
         };
 
         /**
         * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
         */
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline void copy(const Array<T1, Data_allocator, Internals_allocator>& src, Array<T2, Data_allocator, Internals_allocator>& dst)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline void copy(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& src, Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& dst)
         {
             if (empty(src) || empty(dst)) {
                 return;
             }
 
-            Array_indices_generator<Internals_allocator> src_gen(src.header());
-            Array_indices_generator<Internals_allocator> dst_gen(dst.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> src_gen(src.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> dst_gen(dst.header());
 
             for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
                 dst(*dst_gen) = src(*src_gen);
             }
         }
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline void copy(const Array<T1, Data_allocator, Internals_allocator>& src, Array<T2, Data_allocator, Internals_allocator>&& dst)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline void copy(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& src, Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& dst)
         {
             copy(src, dst);
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> clone(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> clone(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 clone(*gen) = arr(*gen);
             }
 
@@ -2606,11 +2606,11 @@ namespace computoc {
         /**
         * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
         */
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> reshape(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> reshape(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (arr.header().dims() == new_dims) {
@@ -2618,14 +2618,14 @@ namespace computoc {
             }
 
             if (arr.header().count() != numel(new_dims)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (arr.header().is_subarray()) {
-                Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-                Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-                Array_indices_generator<Internals_allocator> res_gen(res.header());
+                Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+                Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
                 while (arr_gen && res_gen) {
                     res(*res_gen) = arr(*arr_gen);
@@ -2636,27 +2636,27 @@ namespace computoc {
                 return res;
             }
 
-            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(new_dims);
+            typename Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(new_dims);
             if (new_header.empty()) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res(arr);
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(arr);
             res.header() = std::move(new_header);
 
             return res;
         }
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> reshape(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> reshape(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> resize(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> resize(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
             }
 
             if (arr.header().dims() == new_dims) {
@@ -2664,13 +2664,13 @@ namespace computoc {
             }
 
             if (numel(new_dims) <= 0) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -2680,14 +2680,14 @@ namespace computoc {
 
             return res;
         }
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> resize(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> resize(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T1, Data_allocator, Internals_allocator> append(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> append(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2697,9 +2697,9 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            Array<T1, Data_allocator, Internals_allocator> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
 
-            Array<T2, Data_allocator, Internals_allocator> rrhs(reshape(rhs, { rhs.header().count() }));
+            Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> rrhs(reshape(rhs, { rhs.header().count() }));
 
             for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
                 res({ i }) = rhs({ i - lhs.header().count() });
@@ -2708,8 +2708,8 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T1, Data_allocator, Internals_allocator> append(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, std::int64_t axis)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> append(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, std::int64_t axis)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2719,19 +2719,19 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
+            typename Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
-                return Array<T1, Data_allocator, Internals_allocator>{};
+                return Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>{};
             }
 
-            Array<T1, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
-            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
-            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
                 res.data()[*res_gen] = lhs.data()[*lhs_gen];
@@ -2743,8 +2743,8 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T1, Data_allocator, Internals_allocator> insert(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, std::int64_t ind)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> insert(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, std::int64_t ind)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2754,10 +2754,10 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            Array<T1, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
 
-            Array<T1, Data_allocator, Internals_allocator> rlhs(reshape(lhs, { lhs.header().count() }));
-            Array<T2, Data_allocator, Internals_allocator> rrhs(reshape(rhs, { rhs.header().count() }));
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> rlhs(reshape(lhs, { lhs.header().count() }));
+            Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> rrhs(reshape(rhs, { rhs.header().count() }));
 
             std::int64_t fixed_ind{ modulo(ind, lhs.header().count() + 1) };
 
@@ -2774,8 +2774,8 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T1, Data_allocator, Internals_allocator> insert(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, std::int64_t ind, std::int64_t axis)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> insert(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, std::int64_t ind, std::int64_t axis)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2785,19 +2785,19 @@ namespace computoc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
+            typename Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
-                return Array<T1, Data_allocator, Internals_allocator>();
+                return Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T1, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
-            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
-            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
             std::int64_t cycle = fixed_ind *
@@ -2819,18 +2819,18 @@ namespace computoc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> remove(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t ind, std::int64_t count)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> remove(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::int64_t ind, std::int64_t count)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             std::int64_t fixed_ind{ modulo(ind, arr.header().count()) };
             std::int64_t fixed_count{ fixed_ind + count < arr.header().count() ? count : (arr.header().count() - fixed_ind) };
 
-            Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() - fixed_count });
-            Array<T, Data_allocator, Internals_allocator> rarr(reshape(arr, { arr.header().count() }));
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() - fixed_count });
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> rarr(reshape(arr, { arr.header().count() }));
 
             for (std::int64_t i = 0; i < fixed_ind; ++i) {
                 res({ i }) = rarr({ i });
@@ -2845,27 +2845,27 @@ namespace computoc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> remove(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> remove(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
             std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
             std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
-            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header(), -fixed_count, fixed_axis);
+            typename Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(arr.header(), -fixed_count, fixed_axis);
             if (new_header.empty()) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
             res.header() = std::move(new_header);
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), fixed_axis);
-            Array_indices_generator<Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             std::int64_t cycle = fixed_ind *
                 (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
@@ -2885,33 +2885,33 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool empty(const Array<T, Data_allocator, Internals_allocator>& arr) noexcept
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool empty(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr) noexcept
         {
             return (arr.block().empty() || arr.header().is_subarray()) && arr.header().empty();
         }
 
-        template <typename T, typename Unary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>    
-        [[nodiscard]] inline auto transform(const Array<T, Data_allocator, Internals_allocator>& arr, Unary_op&& op)
-            -> Array<decltype(op(arr.data()[0])), Data_allocator, Internals_allocator>
+        template <typename T, typename Unary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>    
+        [[nodiscard]] inline auto transform(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, Unary_op&& op)
+            -> Array<decltype(op(arr.data()[0])), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(arr.data()[0]));
 
             if (empty(arr)) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 res(*gen) = op(arr(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, Binary_op&& op)
+        template <typename T, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, Binary_op&& op)
             -> decltype(op(arr.data()[0], arr.data()[0]))
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
@@ -2920,7 +2920,7 @@ namespace computoc {
                 return T_o{};
             }
 
-            Array_indices_generator<Internals_allocator> gen{ arr.header() };
+            Array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() };
 
             T_o res{ static_cast<T_o>(arr(*gen)) };
             ++gen;
@@ -2933,8 +2933,8 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename T_o, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, const T_o& init_value, Binary_op&& op)
+        template <typename T, typename T_o, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, const T_o& init_value, Binary_op&& op)
             -> decltype(op(init_value, arr.data()[0]))
         {
             if (empty(arr)) {
@@ -2942,35 +2942,35 @@ namespace computoc {
             }
 
             T_o res{ init_value };
-            for (Array_indices_generator<Internals_allocator> gen{ arr.header() }; gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() }; gen; ++gen) {
                 res = op(res, arr(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_allocator, Internals_allocator>
+        template <typename T, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, Binary_op&& op, std::int64_t axis)
+            -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
 
             if (empty(arr)) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
-            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header(), fixed_axis);
+            typename Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(arr.header(), fixed_axis);
             if (new_header.empty()) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res({ new_header.count() });
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -2987,31 +2987,31 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename T_o, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_allocator, Internals_allocator>& arr, const Array<T_o, Data_allocator, Internals_allocator>& init_values, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_allocator, Internals_allocator>
+        template <typename T, typename T_o, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, const Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& init_values, Binary_op&& op, std::int64_t axis)
+            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             if (empty(arr)) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
             if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            typename Array<T_o, Data_allocator, Internals_allocator>::Header new_header(arr.header(), axis);
+            typename Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(arr.header(), axis);
             if (new_header.empty()) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res({ new_header.count() });
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
-            Array_indices_generator<Internals_allocator> init_gen(init_values.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> init_gen(init_values.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -3028,90 +3028,90 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return reduce(arr, [](const T& a, const T& b) { return a && b; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> all(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> all(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return a && b; }, axis);
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool any(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool any(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return reduce(arr, [](const T& a, const T& b) { return a || b; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> any(const Array<T, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> any(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return a || b; }, axis);
         }
 
-        template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_allocator, Internals_allocator>
+        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto transform(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
             
             if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
-                return Array<T_o, Data_allocator, Internals_allocator>();
+                return Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs(*gen));
             }
 
             return res;
         }
 
-        template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs)), Data_allocator, Internals_allocator>
+        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto transform(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs.data()[0], rhs)), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(lhs.data()[0], rhs));
 
-            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs);
             }
 
             return res;
         }
 
-        template <typename T1, typename T2, typename Binary_op, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs, rhs.data()[0])), Data_allocator, Internals_allocator>
+        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs, rhs.data()[0])), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             using T_o = decltype(op(lhs, rhs.data()[0]));
 
-            Array<T_o, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
+            Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
-            for (Array_indices_generator<Internals_allocator> gen(rhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs, rhs(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Unary_pred, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> filter(const Array<T, Data_allocator, Internals_allocator>& arr, Unary_pred pred)
+        template <typename T, typename Unary_pred, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> filter(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, Unary_pred pred)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() });
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3125,7 +3125,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3135,23 +3135,23 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T1, Data_allocator, Internals_allocator> filter(const Array<T1, Data_allocator, Internals_allocator>& arr, const Array<T2, Data_allocator, Internals_allocator>& mask)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> filter(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& mask)
         {
             if (empty(arr)) {
-                return Array<T1, Data_allocator, Internals_allocator>();
+                return Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<T1, Data_allocator, Internals_allocator>();
+                return Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T1, Data_allocator, Internals_allocator> res({ arr.header().count() });
+            Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-            Array_indices_generator<Internals_allocator> mask_gen(mask.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
 
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3166,7 +3166,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return Array<T1, Data_allocator, Internals_allocator>();
+                return Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3176,17 +3176,17 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, typename Unary_pred, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<std::int64_t, Data_allocator, Internals_allocator> find(const Array<T, Data_allocator, Internals_allocator>& arr, Unary_pred pred)
+        template <typename T, typename Unary_pred, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> find(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, Unary_pred pred)
         {
             if (empty(arr)) {
-                return Array<std::int64_t, Data_allocator, Internals_allocator>();
+                return Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<std::int64_t, Data_allocator, Internals_allocator> res({ arr.header().count() });
+            Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3200,7 +3200,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return Array<std::int64_t, Data_allocator, Internals_allocator>();
+                return Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3210,23 +3210,23 @@ namespace computoc {
             return res;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<std::int64_t, Data_allocator, Internals_allocator> find(const Array<T1, Data_allocator, Internals_allocator>& arr, const Array<T2, Data_allocator, Internals_allocator>& mask)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> find(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& mask)
         {
             if (empty(arr)) {
-                return Array<std::int64_t, Data_allocator, Internals_allocator>();
+                return Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<std::int64_t, Data_allocator, Internals_allocator>();
+                return Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<std::int64_t, Data_allocator, Internals_allocator> res({ arr.header().count() });
+            Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header());
-            Array_indices_generator<Internals_allocator> mask_gen(mask.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
 
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3241,7 +3241,7 @@ namespace computoc {
             }
 
             if (res_count == 0) {
-                return Array<std::int64_t, Data_allocator, Internals_allocator>();
+                return Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3251,23 +3251,23 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> transpose(const Array<T, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> order)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> transpose(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::span<const std::int64_t> order)
         {
             if (empty(arr)) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            typename Array<T, Data_allocator, Internals_allocator>::Header new_header(arr.header(), order);
+            typename Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>::Header new_header(arr.header(), order);
             if (new_header.empty()) {
-                return Array<T, Data_allocator, Internals_allocator>();
+                return Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>();
             }
 
-            Array<T, Data_allocator, Internals_allocator> res({ arr.header().count() });
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
             res.header() = std::move(new_header);
 
-            Array_indices_generator<Internals_allocator> arr_gen(arr.header(), order);
-            Array_indices_generator<Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), order);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -3278,675 +3278,675 @@ namespace computoc {
             return res;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<T, Data_allocator, Internals_allocator> transpose(const Array<T, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> order)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> transpose(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, std::initializer_list<std::int64_t> order)
         {
             return transpose(arr, std::span<const std::int64_t>(order.begin(), order.size() ));
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator==(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator==(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator!=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator!=(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> close(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> close(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> close(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator>=(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<=(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline Array<bool, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline Array<bool, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator<=(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator+(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator+(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator+(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator+(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator+(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator+(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator+=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator+=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator+=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator+=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator-(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator-(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator-(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator-(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator-(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator-(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator-=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator-=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator-=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator-=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator*(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator*(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator*(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator*(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator*(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator*(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator*=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator*=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator*=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator*=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator/(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator/(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator/(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator/(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator/(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator/(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator/=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator/=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator/=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator/=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto operator%(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto operator%(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator%(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator%(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator%(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator%(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator%=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator%=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator%=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator%=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator^(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator^(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator^(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator^(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator^(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator^(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator^=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator^=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator^=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator^=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator&=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator&=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator&=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator&=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator|(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator|(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator|(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator|(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator|(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator|(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator|=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator|=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator|=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator|=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator<<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator<<(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator<<(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator<<(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
-            -> Array<decltype(lhs << rhs.data()[0]), Data_allocator, Internals_allocator>
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
+            -> Array<decltype(lhs << rhs.data()[0]), Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator<<=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator<<=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator<<=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator<<=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator>>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator>>(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator>>(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator>>(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator>>(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator>>(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator>>=(Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator>>=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator>>=(Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator>>=(Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator~(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator~(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return ~a; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator!(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator!(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return !a; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator+(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator+(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return +a; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator-(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator-(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return -a; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto abs(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto abs(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return abs(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto acos(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto acos(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return acos(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto acosh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto acosh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return acosh(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto asin(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto asin(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return asin(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto asinh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto asinh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return asinh(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto atan(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto atan(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return atan(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto atanh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto atanh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return atanh(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto cos(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto cos(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return cos(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto cosh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto cosh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return cosh(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto exp(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto exp(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return exp(a); });
         }
         
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto log(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto log(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return log(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto log10(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto log10(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return log10(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto pow(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto pow(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return pow(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto sin(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto sin(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return sin(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto sinh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto sinh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return sinh(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto sqrt(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto sqrt(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return sqrt(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto tan(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto tan(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return tan(a); });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto tanh(const Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto tanh(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             return transform(arr, [](const T& a) { return tanh(a); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&&(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&&(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&&(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&&(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator&&(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator&&(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator||(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator||(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator||(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator||(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator||(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator||(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator++(Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator++(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             if (empty(arr)) {
                 return arr;
             }
 
-            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 ++arr(*gen);
             }
             return arr;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator++(Array<T, Data_allocator, Internals_allocator>&& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator++(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& arr)
         {
             return operator++(arr);
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto operator++(Array<T, Data_allocator, Internals_allocator>& arr, int)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto operator++(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, int)
         {
-            Array<T, Data_allocator, Internals_allocator> old = clone(arr);
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> old = clone(arr);
             operator++(arr);
             return old;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator++(Array<T, Data_allocator, Internals_allocator>&& arr, int)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator++(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& arr, int)
         {
             return operator++(arr, int{});
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto& operator--(Array<T, Data_allocator, Internals_allocator>& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto& operator--(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr)
         {
             if (empty(arr)) {
                 return arr;
             }
 
-            for (Array_indices_generator<Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 --arr(*gen);
             }
             return arr;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator--(Array<T, Data_allocator, Internals_allocator>&& arr)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator--(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& arr)
         {
             return operator--(arr);
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        inline auto operator--(Array<T, Data_allocator, Internals_allocator>& arr, int)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        inline auto operator--(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr, int)
         {
-            Array<T, Data_allocator, Internals_allocator> old = clone(arr);
+            Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> old = clone(arr);
             operator--(arr);
             return old;
         }
 
-        template <typename T, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline auto operator--(Array<T, Data_allocator, Internals_allocator>&& arr, int)
+        template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline auto operator--(Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>&& arr, int)
         {
             return operator--(arr, int{});
         }
 
-        template <typename T1, typename T2, typename Binary_pred, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_match(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_match(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, Binary_pred pred)
         {
             if (empty(lhs) && empty(rhs)) {
                 return true;
@@ -3960,8 +3960,8 @@ namespace computoc {
                 return false;
             }
 
-            Array_indices_generator<Internals_allocator> lhs_gen(lhs.header());
-            Array_indices_generator<Internals_allocator> rhs_gen(rhs.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header());
 
             for (; lhs_gen && rhs_gen; ++lhs_gen, ++rhs_gen) {
                 if (!pred(lhs(*lhs_gen), rhs(*rhs_gen))) {
@@ -3972,14 +3972,14 @@ namespace computoc {
             return true;
         }
 
-        template <typename T1, typename T2, typename Binary_pred, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_match(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_match(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs, Binary_pred pred)
         {
             if (empty(lhs)) {
                 return true;
             }
 
-            for (Array_indices_generator<Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 if (!pred(lhs(*gen), rhs)) {
                     return false;
                 }
@@ -3988,14 +3988,14 @@ namespace computoc {
             return true;
         }
 
-        template <typename T1, typename T2, typename Binary_pred, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_match(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_match(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, Binary_pred pred)
         {
             if (empty(rhs)) {
                 return true;
             }
 
-            for (Array_indices_generator<Internals_allocator> gen(rhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
                 if (!pred(lhs, rhs(*gen))) {
                     return false;
                 }
@@ -4004,38 +4004,38 @@ namespace computoc {
             return true;
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_equal(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_equal(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_equal(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_equal(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_equal(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs)
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_equal(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_close(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_close(const Array<T1, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_close(const Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
-        [[nodiscard]] inline bool all_close(const T1& lhs, const Array<T2, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
+        [[nodiscard]] inline bool all_close(const T1& lhs, const Array<T2, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
