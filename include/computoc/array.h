@@ -9,8 +9,270 @@
 #include <limits>
 #include <algorithm>
 #include <numeric>
+#include <variant>
 
 namespace computoc {
+
+    namespace details {
+        using None_option = std::monostate;
+
+        template <typename T = None_option>
+        class Unexpected {
+        public:
+            constexpr Unexpected(const T& value = None_option{})
+                : value_(value)
+            {
+            }
+            constexpr Unexpected(T&& value) noexcept
+                : value_(std::move(value))
+            {
+            }
+            constexpr Unexpected(const Unexpected&) = default;
+            constexpr Unexpected& operator=(const Unexpected&) = default;
+            constexpr Unexpected(Unexpected&&) = default;
+            constexpr Unexpected& operator=(Unexpected&&) = default;
+            ~Unexpected() = default;
+
+            [[nodiscard]] constexpr const T& value() const noexcept
+            {
+                return value_;
+            }
+
+        private:
+            T value_;
+        };
+
+        template <typename T, typename E = None_option>
+        //requires (!std::is_same_v<None_option, T>)
+        class Expected {
+        public:
+            constexpr Expected(const T& value)
+                : opts_(value)
+            {
+            }
+            constexpr Expected(T&& value) noexcept
+                : opts_(std::move(value))
+            {
+            }
+
+            constexpr Expected(const Unexpected<E>& error)
+                : opts_(error)
+            {
+            }
+            constexpr Expected(Unexpected<E>&& error) noexcept
+                : opts_(std::move(error))
+            {
+            }
+
+            constexpr Expected(const Expected& other) = default;
+            constexpr Expected& operator=(const Expected& other) = default;
+
+            constexpr Expected(Expected&& other) = default;
+            constexpr Expected& operator=(Expected&& other) = default;
+
+            constexpr ~Expected() = default;
+
+            [[nodiscard]] explicit constexpr operator bool() const noexcept
+            {
+                return opts_.index() == 0;
+            }
+
+            [[nodiscard]] constexpr bool has_value() const noexcept
+            {
+                return opts_.index() == 0;
+            }
+
+            [[nodiscard]] constexpr const T& value() const
+            {
+                if (opts_.index() == 1) {
+                    throw std::runtime_error("value is not present");
+                }
+                return std::get<T>(opts_);
+            }
+
+            [[nodiscard]] constexpr const T& operator*() const
+            {
+                if (opts_.index() == 1) {
+                    throw std::runtime_error("value is not present");
+                }
+                return std::get<T>(opts_);
+            }
+
+            [[nodiscard]] constexpr const T* operator->() const
+            {
+                if (opts_.index() == 1) {
+                    throw std::runtime_error("value is not present");
+                }
+                return &std::get<T>(opts_);
+            }
+
+            [[nodiscard]] constexpr const E& error() const
+            {
+                if (opts_.index() == 0) {
+                    throw std::runtime_error("error is not present");
+                }
+                return std::get<Unexpected<E>>(opts_).value();
+            }
+
+            template <typename U>
+            [[nodiscard]] constexpr T value_or(const U& other) const
+            {
+                return opts_.index() == 0 ? std::get<T>(opts_) : other;
+            }
+            template <typename U>
+            [[nodiscard]] constexpr T value_or(U&& other) const
+            {
+                return opts_.index() == 0 ? std::get<T>(opts_) : std::move(other);
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto and_then(Unary_op&& op) const
+            {
+                if (opts_.index() == 0) {
+                    return op(value());
+                }
+                return *this;
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto and_then(Unary_op&& op) const requires std::is_void_v<decltype(op(value()))>
+            {
+                if (opts_.index() == 0) {
+                    op(value());
+                }
+                return *this;
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto and_then(Unary_op&& op) const requires std::is_same_v<None_option, T>
+            {
+                if (opts_.index() == 0) {
+                    return op();
+                }
+                return *this;
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto or_else(Unary_op&& op) const
+            {
+                if (opts_.index() == 0) {
+                    return *this;
+                }
+                return op(error());
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto or_else(Unary_op&& op) const requires std::is_void_v<decltype(op(error()))>
+            {
+                if (opts_.index() == 0) {
+                    return *this;
+                }
+                op(error());
+                return *this;
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto or_else(Unary_op&& op) const requires std::is_same_v<None_option, E>
+            {
+                if (opts_.index() == 0) {
+                    return *this;
+                }
+                return op();
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto transform(Unary_op&& op) const
+            {
+                if (opts_.index() == 0) {
+                    return Expected<decltype(op(value())), E>(op(value()));
+                }
+                return Expected<decltype(op(value())), E>(Unexpected<E>(error()));
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] constexpr auto transform_error(Unary_op&& op) const
+            {
+                if (opts_.index() == 0) {
+                    return Expected<T, decltype(op(error()))>(value());
+                }
+                return Expected<T, decltype(op(error()))>(Unexpected<E>(op(error())));
+            }
+
+        private:
+            constexpr Expected() noexcept
+                : Expected(None_option{})
+            {
+            }
+
+            std::variant<T, Unexpected<E>> opts_;
+        };
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator==(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return false;
+            }
+
+            return lhs ? (lhs.value() == rhs.value()) : (lhs.error() == rhs.error());
+        }
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator!=(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return true;
+            }
+
+            return lhs ? (lhs.value() != rhs.value()) : (lhs.error() != rhs.error());
+        }
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator<(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return false;
+            }
+
+            return lhs ? (lhs.value() < rhs.value()) : (lhs.error() < rhs.error());
+        }
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator<=(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return false;
+            }
+
+            return lhs ? (lhs.value() <= rhs.value()) : (lhs.error() <= rhs.error());
+        }
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator>(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return false;
+            }
+
+            return lhs ? (lhs.value() > rhs.value()) : (lhs.error() > rhs.error());
+        }
+
+        template <typename T1, typename E1, typename T2, typename E2>
+        [[nodiscard]] inline constexpr bool operator>=(const Expected<T1, E1>& lhs, const Expected<T2, E2>& rhs)
+        {
+            if (static_cast<bool>(lhs) != static_cast<bool>(rhs)) {
+                return false;
+            }
+
+            return lhs ? (lhs.value() >= rhs.value()) : (lhs.error() >= rhs.error());
+        }
+    }
+
+    using details::Unexpected;
+    using details::Expected;
+    using details::None_option;
+
+
     namespace details {
         template <typename T>
         [[nodiscard]] inline constexpr T default_atol() noexcept
