@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <array>
+#include <stdexcept>
+#include <regex>
 
 #include <computoc/array.h>
 
@@ -9,6 +11,91 @@ template <typename T, typename U>
 [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
+
+class Require_test : public testing::Test {
+protected:
+    using Selected_exception = std::runtime_error;
+
+    const bool true_condition_{ true };
+    const bool false_condition_{ false };
+
+    const std::regex error_message_pattern_regex_ = std::regex("^.+ exception \\(at line [0-9]+, .+@.+\\), assertion .+ failed: .+$");
+};
+
+TEST_F(Require_test, not_throw_exception_if_condition_is_true)
+{
+    EXPECT_NO_THROW(_REQUIRE(true_condition_, Selected_exception));
+}
+
+TEST_F(Require_test, throw_exception_if_condition_is_false)
+{
+    EXPECT_THROW(_REQUIRE(false_condition_, Selected_exception), Selected_exception);
+}
+
+struct CustomTestType {};
+template <>
+struct std::formatter<CustomTestType> : std::formatter<std::string> {
+    auto format(const CustomTestType& vec, format_context& ctx) {
+        return std::formatter<std::string>::format("CustomTestType as string", ctx);
+    }
+};
+
+TEST_F(Require_test, throws_an_exception_with_specific_format)
+{
+    try {
+        _REQUIRE(false_condition_, Selected_exception, std::format("{}", CustomTestType{}));
+        FAIL();
+    }
+    catch (const Selected_exception& ex) {
+        EXPECT_TRUE(std::regex_match(ex.what(), error_message_pattern_regex_));
+    }
+}
+
+//
+//TEST(Expected_test, simple_functionality)
+//{
+//    using namespace computoc;
+//
+//    enum class MathError {
+//        division_by_zero,
+//        non_opsitive_logarithm,
+//        negative_square_root
+//    };
+//
+//    using MathResult = Expected<double, MathError>;
+//
+//    auto div = [](double x, double y) -> MathResult {
+//        if (y == 0) {
+//            return Unexpected(MathError::division_by_zero);
+//        }
+//        return x / y;
+//    };
+//
+//    auto sqrt = [](double x) -> MathResult {
+//        if (x < 0) {
+//            return Unexpected(MathError::negative_square_root);
+//        }
+//        return std::sqrt(x);
+//    };
+//
+//    auto ln = [](double x) -> MathResult {
+//        if (x < 0) {
+//            return Unexpected(MathError::non_opsitive_logarithm);
+//        }
+//        return std::log(x);
+//    };
+//
+//    auto to_string = []<typename T>(T t) {
+//        return std::to_string(t);
+//    };
+//
+//    auto result = div(10.0, 5.0)
+//        .and_then(ln)
+//        .and_then(sqrt)
+//        .transform(to_string)
+//        .value();
+//}
+
 
 
 TEST(Algorithms_test, two_numbers_can_be_compared_with_specified_percision)

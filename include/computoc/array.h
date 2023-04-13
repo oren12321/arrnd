@@ -11,6 +11,35 @@
 #include <numeric>
 #include <variant>
 
+#include <format>
+
+namespace computoc {
+    namespace details {
+        inline std::string make_error_msg(const char* failed_cond, const char* exception_type, int line, const char* func, const char* file, const std::string& desc = std::string{})
+        {
+            std::string msg = std::format("{} exception (at line {}, {}@{}), assertion {} failed", exception_type, line, func, file, failed_cond);
+            if (!desc.empty()) {
+                msg += std::format(": {}", desc);
+            }
+            return msg;
+        }
+    }
+}
+
+#ifdef __unix__
+#define _REQUIRE(condition, exception_type, ...) \
+    if(!(condition)) { \
+        std::string msg = computoc::details::make_error_msg(#condition, #exception_type, __LINE__, __FUNCTION__, __FILE__ __VA_OPT__(, __VA_ARGS__)); \
+        throw exception_type(msg); \
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+#define _REQUIRE(condition, exception_type, ...) \
+    if(!(condition)) { \
+        std::string msg = computoc::details::make_error_msg(#condition, #exception_type, __LINE__, __FUNCTION__, __FILE__, __VA_ARGS__); \
+        throw exception_type(msg); \
+    }
+#endif
+
 namespace computoc {
 
     namespace details {
