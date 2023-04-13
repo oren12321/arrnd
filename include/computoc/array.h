@@ -75,20 +75,24 @@ namespace computoc {
         //requires (!std::is_same_v<None_option, T>)
         class Expected {
         public:
-            constexpr Expected(const T& value)
+            template <typename U = T>
+            constexpr Expected(const U& value)
                 : opts_(value)
             {
             }
-            constexpr Expected(T&& value) noexcept
+            template <typename U = T>
+            constexpr Expected(U&& value) noexcept
                 : opts_(std::move(value))
             {
             }
 
-            constexpr Expected(const Unexpected<E>& error)
+            template <typename U = E>
+            constexpr Expected(const Unexpected<U>& error)
                 : opts_(error)
             {
             }
-            constexpr Expected(Unexpected<E>&& error) noexcept
+            template <typename U = E>
+            constexpr Expected(Unexpected<U>&& error) noexcept
                 : opts_(std::move(error))
             {
             }
@@ -160,7 +164,7 @@ namespace computoc {
                 if (opts_.index() == 0) {
                     return op(value());
                 }
-                return *this;
+                return decltype(op(value()))(Unexpected(error()));
             }
 
             template <typename Unary_op>
@@ -173,19 +177,19 @@ namespace computoc {
             }
 
             template <typename Unary_op>
-            [[nodiscard]] constexpr auto and_then(Unary_op&& op) const requires std::is_same_v<None_option, T>
+            [[nodiscard]] constexpr auto and_then(Unary_op&& op) const requires std::is_invocable_v<Unary_op>
             {
                 if (opts_.index() == 0) {
                     return op();
                 }
-                return *this;
+                return decltype(op())(Unexpected(error()));
             }
 
             template <typename Unary_op>
             [[nodiscard]] constexpr auto or_else(Unary_op&& op) const
             {
                 if (opts_.index() == 0) {
-                    return *this;
+                    return decltype(op(error()))(value());
                 }
                 return op(error());
             }
@@ -201,10 +205,10 @@ namespace computoc {
             }
 
             template <typename Unary_op>
-            [[nodiscard]] constexpr auto or_else(Unary_op&& op) const requires std::is_same_v<None_option, E>
+            [[nodiscard]] constexpr auto or_else(Unary_op&& op) const requires std::is_invocable_v<Unary_op>
             {
                 if (opts_.index() == 0) {
-                    return *this;
+                    return decltype(op())(value());
                 }
                 return op();
             }
@@ -215,7 +219,7 @@ namespace computoc {
                 if (opts_.index() == 0) {
                     return Expected<decltype(op(value())), E>(op(value()));
                 }
-                return Expected<decltype(op(value())), E>(Unexpected<E>(error()));
+                return Expected<decltype(op(value())), E>(error());
             }
 
             template <typename Unary_op>
@@ -224,7 +228,7 @@ namespace computoc {
                 if (opts_.index() == 0) {
                     return Expected<T, decltype(op(error()))>(value());
                 }
-                return Expected<T, decltype(op(error()))>(Unexpected<E>(op(error())));
+                return Expected<T, decltype(op(error()))>(op(error()));
             }
 
         private:
