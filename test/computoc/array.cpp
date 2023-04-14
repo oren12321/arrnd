@@ -472,7 +472,7 @@ TEST(Array_test, iterators)
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
 }
 
-TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
+TEST(Array_indices_generator, simple_forward_backward_iterations)
 {
     using namespace computoc::details;
 
@@ -486,7 +486,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr);
+    Array_indices_generator gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -502,7 +502,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
+TEST(Array_indices_generator, simple_backward_forward_iterations)
 {
     using namespace computoc::details;
 
@@ -516,7 +516,7 @@ TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr, true);
+    Array_indices_generator gen(hdr, true);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -532,7 +532,7 @@ TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace computoc::details;
 
@@ -546,7 +546,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_ste
     const std::int64_t expected_generated_subs{ 3 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr);
+    Array_indices_generator gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -562,7 +562,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_ste
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
+TEST(Array_indices_generator, forward_backward_iterations_by_axis_order)
 {
     using namespace computoc::details;
 
@@ -576,7 +576,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr, std::span(order, 3));
+    Array_indices_generator gen(hdr, std::span(order, 3));
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -592,7 +592,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+TEST(Array_indices_generator, forward_backward_iterations_by_specific_major_axis)
 {
     using namespace computoc::details;
 
@@ -614,7 +614,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_maj
 
     for (std::int64_t axis = 0; axis <= 2; ++axis) {
         std::int64_t generated_subs_counter{ 0 };
-        Simple_array_indices_generator gen(hdr, axis);
+        Array_indices_generator gen(hdr, axis);
 
         while (gen) {
             EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
@@ -3372,7 +3372,7 @@ TEST(Array_test, complex_array)
 //
 //    auto start = high_resolution_clock::now();
 //    for (int i = 0; i < 25; ++i) {
-//        for (details::Simple_array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
+//        for (details::Array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
 //    }
 //    auto stop = high_resolution_clock::now();
 //    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";

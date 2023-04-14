@@ -1829,7 +1829,7 @@ namespace computoc {
                     group_start_index_ = 0;
                 }
                 else {
-                    group_indices_counter_ = group_size_;
+                    group_indices_counter_ = group_size_ - 1;
                     groups_counter_ = num_groups_in_super_group_ - 1;
                     super_groups_counter_ = num_super_groups_ - 1;
 
@@ -2055,6 +2055,180 @@ namespace computoc {
 
 
 
+        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        class Array_indices_generator final
+        {
+        public:
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            {
+                if (hdr.is_subarray()) {
+                    vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
+                    sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
+                }
+                else {
+                    vgen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
+                    fgen_ = &std::get<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
+                }
+            }
+
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            {
+                if (hdr.is_subarray()) {
+                    vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
+                    sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
+                }
+                else {
+                    vgen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
+                    fgen_ = &std::get<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
+                }
+            }
+
+            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            {
+                vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, order, backward);
+                sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
+            }
+
+            Array_indices_generator() = default;
+
+            Array_indices_generator(const Array_indices_generator<Dims_capacity, Internal_allocator>& other)
+            {
+                vgen_ = other.vgen_;
+                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+            }
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Array_indices_generator<Dims_capacity, Internal_allocator>& other)
+            {
+                if (&other == this) {
+                    return *this;
+                }
+
+                vgen_ = other.vgen_;
+                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+
+                return *this;
+            }
+
+            Array_indices_generator(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept
+            {
+                vgen_ = std::move(other.vgen_);
+                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+
+                other.fgen_ = nullptr;
+                other.sgen_ = nullptr;
+            }
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept
+            {
+                if (&other == this) {
+                    return *this;
+                }
+
+                vgen_ = std::move(other.vgen_);
+                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
+
+                other.fgen_ = nullptr;
+                other.sgen_ = nullptr;
+
+                return *this;
+            }
+
+            ~Array_indices_generator() = default;
+
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
+            {
+                if (fgen_) {
+                    ++(*fgen_);
+                    return *this;
+                }
+                ++(*sgen_);
+                return *this;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            {
+                Array_indices_generator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            {
+                if (fgen_) {
+                    (*fgen_) += count;
+                    return *this;
+                }
+                (*sgen_) += count;
+                return *this;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            {
+                if (fgen_) {
+                    --(*fgen_);
+                    return *this;
+                }
+                --(*sgen_);
+                return *this;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            {
+                Array_indices_generator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            {
+                if (fgen_) {
+                    (*fgen_) -= count;
+                    return *this;
+                }
+                (*sgen_) -= count;
+                return *this;
+            }
+
+            Array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            {
+                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] explicit operator bool() const noexcept
+            {
+                return fgen_ ? static_cast<bool>(*fgen_) : static_cast<bool>(*sgen_);
+            }
+
+            [[nodiscard]] std::int64_t operator*() const noexcept
+            {
+                return fgen_ ? *(*fgen_) : *(*sgen_);
+            }
+
+        private:
+            std::variant<
+                Simple_array_indices_generator<Dims_capacity, Internal_allocator>,
+                Fast_array_indices_generator<Dims_capacity, Internal_allocator>> vgen_;
+
+            Simple_array_indices_generator<Dims_capacity, Internal_allocator>* sgen_ = nullptr;
+            Fast_array_indices_generator<Dims_capacity, Internal_allocator>* fgen_ = nullptr;
+        };
+
+
+
+
+
+
         template <typename T, std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_iterator final
         {
@@ -2062,7 +2236,7 @@ namespace computoc {
             using value_type = T;
             using difference_type = std::ptrdiff_t;
 
-            Array_iterator(T* data, const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& gen)
+            Array_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
@@ -2150,7 +2324,7 @@ namespace computoc {
             }
 
         private:
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
@@ -2161,7 +2335,7 @@ namespace computoc {
         class Array_const_iterator final
         {
         public:
-            Array_const_iterator(T* data, const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& gen)
+            Array_const_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
@@ -2249,7 +2423,7 @@ namespace computoc {
             }
 
         private:
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
@@ -2262,7 +2436,7 @@ namespace computoc {
             using value_type = T;
             using difference_type = std::ptrdiff_t;
 
-            Array_reverse_iterator(T* data, const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& gen)
+            Array_reverse_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
@@ -2350,7 +2524,7 @@ namespace computoc {
             }
 
         private:
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
@@ -2361,7 +2535,7 @@ namespace computoc {
         class Array_const_reverse_iterator final
         {
         public:
-            Array_const_reverse_iterator(T* data, const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& gen)
+            Array_const_reverse_iterator(T* data, const Array_indices_generator<Dims_capacity, Internal_allocator>& gen)
                 : gen_(gen), data_(data)
             {
             }
@@ -2449,7 +2623,7 @@ namespace computoc {
             }
 
         private:
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> gen_;
+            Array_indices_generator<Dims_capacity, Internal_allocator> gen_;
             T* data_ = nullptr;
         };
 
@@ -2554,7 +2728,7 @@ namespace computoc {
                     return *this;
                 }
 
-                for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(hdr_); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(hdr_); gen; ++gen) {
                     (*this)(*gen) = value;
                 }
 
@@ -2693,7 +2867,7 @@ namespace computoc {
             {
                 Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(indices.header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(indices.header()); gen; ++gen) {
                     res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
@@ -2707,7 +2881,7 @@ namespace computoc {
                     return *this;
                 }
 
-                for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other(*gen));
                 }
 
@@ -2717,7 +2891,7 @@ namespace computoc {
             template <typename T_o, typename Binary_op>
             [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& transform(const T_o& other, Binary_op&& op)
             {
-                for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
+                for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other);
                 }
 
@@ -2726,87 +2900,87 @@ namespace computoc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
             }
 
 
@@ -2869,8 +3043,8 @@ namespace computoc {
                 return;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> src_gen(src.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> dst_gen(dst.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> src_gen(src.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> dst_gen(dst.header());
 
             for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
                 dst(*dst_gen) = src(*src_gen);
@@ -2891,7 +3065,7 @@ namespace computoc {
 
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 clone(*gen) = arr(*gen);
             }
 
@@ -2919,8 +3093,8 @@ namespace computoc {
             if (arr.header().is_subarray()) {
                 Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-                Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-                Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+                Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+                Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
                 while (arr_gen && res_gen) {
                     res(*res_gen) = arr(*arr_gen);
@@ -2964,8 +3138,8 @@ namespace computoc {
 
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -3024,9 +3198,9 @@ namespace computoc {
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
                 res.data()[*res_gen] = lhs.data()[*lhs_gen];
@@ -3090,9 +3264,9 @@ namespace computoc {
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
             std::int64_t cycle = fixed_ind *
@@ -3159,8 +3333,8 @@ namespace computoc {
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
             res.header() = std::move(new_header);
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), fixed_axis);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), fixed_axis);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header(), fixed_axis);
 
             std::int64_t cycle = fixed_ind *
                 (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
@@ -3198,7 +3372,7 @@ namespace computoc {
 
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 res(*gen) = op(arr(*gen));
             }
 
@@ -3215,7 +3389,7 @@ namespace computoc {
                 return T_o{};
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() };
+            Array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() };
 
             T_o res{ static_cast<T_o>(arr(*gen)) };
             ++gen;
@@ -3237,7 +3411,7 @@ namespace computoc {
             }
 
             T_o res{ init_value };
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() }; gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen{ arr.header() }; gen; ++gen) {
                 res = op(res, arr(*gen));
             }
 
@@ -3264,8 +3438,8 @@ namespace computoc {
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -3304,9 +3478,9 @@ namespace computoc {
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> init_gen(init_values.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> init_gen(init_values.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -3359,7 +3533,7 @@ namespace computoc {
 
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs(*gen));
             }
 
@@ -3374,7 +3548,7 @@ namespace computoc {
 
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs);
             }
 
@@ -3389,7 +3563,7 @@ namespace computoc {
 
             Array<T_o, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs, rhs(*gen));
             }
 
@@ -3405,8 +3579,8 @@ namespace computoc {
 
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3443,10 +3617,10 @@ namespace computoc {
 
             Array<T1, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3480,8 +3654,8 @@ namespace computoc {
 
             Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3518,10 +3692,10 @@ namespace computoc {
 
             Array<std::int64_t, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> mask_gen(mask.header());
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3561,8 +3735,8 @@ namespace computoc {
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> res({ arr.header().count() });
             res.header() = std::move(new_header);
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), order);
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> arr_gen(arr.header(), order);
+            Array_indices_generator<Dims_capacity, Internals_allocator> res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -4181,7 +4355,7 @@ namespace computoc {
                 return arr;
             }
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 ++arr(*gen);
             }
             return arr;
@@ -4214,7 +4388,7 @@ namespace computoc {
                 return arr;
             }
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(arr.header()); gen; ++gen) {
                 --arr(*gen);
             }
             return arr;
@@ -4255,8 +4429,8 @@ namespace computoc {
                 return false;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header());
-            Simple_array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> lhs_gen(lhs.header());
+            Array_indices_generator<Dims_capacity, Internals_allocator> rhs_gen(rhs.header());
 
             for (; lhs_gen && rhs_gen; ++lhs_gen, ++rhs_gen) {
                 if (!pred(lhs(*lhs_gen), rhs(*rhs_gen))) {
@@ -4274,7 +4448,7 @@ namespace computoc {
                 return true;
             }
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(lhs.header()); gen; ++gen) {
                 if (!pred(lhs(*gen), rhs)) {
                     return false;
                 }
@@ -4290,7 +4464,7 @@ namespace computoc {
                 return true;
             }
 
-            for (Simple_array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
+            for (Array_indices_generator<Dims_capacity, Internals_allocator> gen(rhs.header()); gen; ++gen) {
                 if (!pred(lhs, rhs(*gen))) {
                     return false;
                 }
