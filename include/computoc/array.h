@@ -1456,7 +1456,7 @@ namespace computoc {
         class Simple_array_indices_generator final
         {
         public:
-            Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1483,7 +1483,7 @@ namespace computoc {
                 }
             }
 
-            Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1510,7 +1510,7 @@ namespace computoc {
                 }
             }
 
-            Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
@@ -1537,17 +1537,17 @@ namespace computoc {
                 }
             }
 
-            Simple_array_indices_generator() = default;
+            constexpr Simple_array_indices_generator() = default;
 
-            Simple_array_indices_generator(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Simple_array_indices_generator(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
 
-            Simple_array_indices_generator(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Simple_array_indices_generator(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
-            ~Simple_array_indices_generator() = default;
+            constexpr ~Simple_array_indices_generator() = default;
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 if (current_index_ < first_index_) {
                     current_index_ = first_index_;
@@ -1598,14 +1598,14 @@ namespace computoc {
                 return *this;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Simple_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1620,7 +1620,7 @@ namespace computoc {
                 return temp;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 if (current_index_ <= first_index_) {
                     current_index_ = first_index_ - 1;
@@ -1671,14 +1671,14 @@ namespace computoc {
                 return *this;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Simple_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1686,25 +1686,25 @@ namespace computoc {
                 return *this;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Simple_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] explicit operator bool() const noexcept
+            [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
                 return current_index_ <= last_index_ && current_index_ >= first_index_;
             }
 
-            [[nodiscard]] std::int64_t operator*() const noexcept
+            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
             {
                 return current_index_;
             }
 
         private:
-            static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
+            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
             {
                 // create ordered indices according to input axis parameter
                 simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(vec.size());
@@ -1719,7 +1719,7 @@ namespace computoc {
                 return reorder(vec, new_ordered_indices);
             }
 
-            static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
                 simple_vector<std::int64_t, Dims_capacity, Internal_allocator> res(size);
@@ -1760,7 +1760,7 @@ namespace computoc {
         class Fast_array_indices_generator final
         {
         public:
-            Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
             {
                 // data
 
@@ -1800,7 +1800,7 @@ namespace computoc {
                 }
             }
 
-            Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
             {
                 // data
 
@@ -1840,17 +1840,17 @@ namespace computoc {
                 }
             }
 
-            Fast_array_indices_generator() = default;
+            constexpr Fast_array_indices_generator() = default;
 
-            Fast_array_indices_generator(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Fast_array_indices_generator(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
 
-            Fast_array_indices_generator(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Fast_array_indices_generator(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
 
-            ~Fast_array_indices_generator() = default;
+            constexpr ~Fast_array_indices_generator() = default;
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
             {
                 // the algorithm is done by three functions composition:
                 // - index
@@ -1910,14 +1910,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1925,14 +1925,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
             {
                 // the algorithm is done by inverese of three functions composition:
                 // - super group
@@ -1992,14 +1992,14 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -2007,19 +2007,19 @@ namespace computoc {
                 return *this;
             }
 
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] explicit operator bool() const noexcept
+            [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
                 return current_index_ >= 0 && current_index_ <= last_index_;
             }
 
-            [[nodiscard]] std::int64_t operator*() const noexcept
+            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
             {
                 return current_index_;
             }
@@ -2052,176 +2052,111 @@ namespace computoc {
         };
 
 
-
-
-
         template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Array_indices_generator final
         {
         public:
-            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
             {
                 if (hdr.is_subarray()) {
                     vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
-                    sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
                 }
                 else {
                     vgen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
-                    fgen_ = &std::get<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
                 }
             }
 
-            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
             {
                 if (hdr.is_subarray()) {
                     vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
-                    sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
                 }
                 else {
                     vgen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
-                    fgen_ = &std::get<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
                 }
             }
 
-            Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
             {
                 vgen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, order, backward);
-                sgen_ = &std::get<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(vgen_);
             }
 
-            Array_indices_generator() = default;
+            constexpr Array_indices_generator() = default;
 
-            Array_indices_generator(const Array_indices_generator<Dims_capacity, Internal_allocator>& other)
+            constexpr Array_indices_generator(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+
+            constexpr Array_indices_generator(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+
+            constexpr ~Array_indices_generator() = default;
+
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
             {
-                vgen_ = other.vgen_;
-                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-            }
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Array_indices_generator<Dims_capacity, Internal_allocator>& other)
-            {
-                if (&other == this) {
-                    return *this;
-                }
-
-                vgen_ = other.vgen_;
-                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-
+                std::visit([](auto& gen) { ++gen; }, vgen_);
                 return *this;
             }
 
-            Array_indices_generator(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept
-            {
-                vgen_ = std::move(other.vgen_);
-                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-
-                other.fgen_ = nullptr;
-                other.sgen_ = nullptr;
-            }
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept
-            {
-                if (&other == this) {
-                    return *this;
-                }
-
-                vgen_ = std::move(other.vgen_);
-                fgen_ = std::get_if<Fast_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-                sgen_ = std::get_if<Simple_array_indices_generator<Dims_capacity, Internal_allocator>>(&vgen_);
-
-                other.fgen_ = nullptr;
-                other.sgen_ = nullptr;
-
-                return *this;
-            }
-
-            ~Array_indices_generator() = default;
-
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
-            {
-                if (fgen_) {
-                    ++(*fgen_);
-                    return *this;
-                }
-                ++(*sgen_);
-                return *this;
-            }
-
-            Array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
             {
                 Array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                if (fgen_) {
-                    (*fgen_) += count;
-                    return *this;
-                }
-                (*sgen_) += count;
+                std::visit([count](auto& gen) { gen += count; }, vgen_);
                 return *this;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
             {
                 Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
             {
-                if (fgen_) {
-                    --(*fgen_);
-                    return *this;
-                }
-                --(*sgen_);
+                std::visit([](auto& gen) { --gen; }, vgen_);
                 return *this;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
             {
                 Array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                if (fgen_) {
-                    (*fgen_) -= count;
-                    return *this;
-                }
-                (*sgen_) -= count;
+                std::visit([count](auto& gen) { gen -= count; }, vgen_);
                 return *this;
             }
 
-            Array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
             {
                 Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] explicit operator bool() const noexcept
+            [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return fgen_ ? static_cast<bool>(*fgen_) : static_cast<bool>(*sgen_);
+                return std::visit([](const auto& gen) { return static_cast<bool>(gen); }, vgen_);
             }
 
-            [[nodiscard]] std::int64_t operator*() const noexcept
+            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
             {
-                return fgen_ ? *(*fgen_) : *(*sgen_);
+                return std::visit([](const auto& gen) { return *gen; }, vgen_);
             }
 
         private:
             std::variant<
                 Simple_array_indices_generator<Dims_capacity, Internal_allocator>,
                 Fast_array_indices_generator<Dims_capacity, Internal_allocator>> vgen_;
-
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator>* sgen_ = nullptr;
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator>* fgen_ = nullptr;
         };
 
 
