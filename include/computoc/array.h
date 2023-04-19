@@ -1231,7 +1231,6 @@ namespace computoc {
             }
 
             Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
-                : is_subarray_(true)
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
@@ -1255,6 +1254,8 @@ namespace computoc {
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
+
+                is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
             }
 
             Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::int64_t omitted_axis)
@@ -2790,7 +2791,7 @@ namespace computoc {
 
                 Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> slice{};
                 slice.hdr_ = Header{ hdr_, ranges };
-                slice.buffsp_ = buffsp_;
+                slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
             [[nodiscard]] Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
@@ -3292,7 +3293,7 @@ namespace computoc {
         template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline bool empty(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr) noexcept
         {
-            return (arr.block().empty() || arr.header().is_subarray()) && arr.header().empty();
+            return arr.block().empty() && arr.header().empty();
         }
 
         template <typename T, typename Unary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>    
