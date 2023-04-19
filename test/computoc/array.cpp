@@ -472,7 +472,7 @@ TEST(Array_test, iterators)
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
 }
 
-TEST(Array_indices_generator, simple_forward_backward_iterations)
+TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
 {
     using namespace computoc::details;
 
@@ -486,7 +486,7 @@ TEST(Array_indices_generator, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Array_indices_generator gen(hdr);
+    Simple_array_indices_generator gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -502,7 +502,7 @@ TEST(Array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Array_indices_generator, simple_backward_forward_iterations)
+TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
 {
     using namespace computoc::details;
 
@@ -516,7 +516,7 @@ TEST(Array_indices_generator, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Array_indices_generator gen(hdr, true);
+    Simple_array_indices_generator gen(hdr, true);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -532,7 +532,7 @@ TEST(Array_indices_generator, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace computoc::details;
 
@@ -546,7 +546,7 @@ TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigg
     const std::int64_t expected_generated_subs{ 3 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Array_indices_generator gen(hdr);
+    Simple_array_indices_generator gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -562,7 +562,7 @@ TEST(Array_indices_generator, simple_forward_backward_iterations_with_steps_bigg
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Array_indices_generator, forward_backward_iterations_by_axis_order)
+TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
 {
     using namespace computoc::details;
 
@@ -576,7 +576,7 @@ TEST(Array_indices_generator, forward_backward_iterations_by_axis_order)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Array_indices_generator gen(hdr, std::span(order, 3));
+    Simple_array_indices_generator gen(hdr, std::span(order, 3));
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -592,7 +592,7 @@ TEST(Array_indices_generator, forward_backward_iterations_by_axis_order)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_major_axis)
 {
     using namespace computoc::details;
 
@@ -614,7 +614,7 @@ TEST(Array_indices_generator, forward_backward_iterations_by_specific_major_axis
 
     for (std::int64_t axis = 0; axis <= 2; ++axis) {
         std::int64_t generated_subs_counter{ 0 };
-        Array_indices_generator gen(hdr, axis);
+        Simple_array_indices_generator gen(hdr, axis);
 
         while (gen) {
             EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
@@ -3372,89 +3372,8 @@ TEST(Array_test, complex_array)
 //
 //    auto start = high_resolution_clock::now();
 //    for (int i = 0; i < 25; ++i) {
-//        for (details::Array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
+//        for (details::Simple_array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
 //    }
 //    auto stop = high_resolution_clock::now();
 //    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
 //}
-
-#include <vector>
-#include <numeric>
-
-class Array_indices_iterator {
-public:
-    Array_indices_iterator(const std::vector<std::int64_t>& dims, const std::vector<std::int64_t>& strides, std::int64_t offset, std::int64_t axis)
-        : offset_(offset), iters_(0),
-        current_index_(0), first_index_in_batch_(0),
-        inside_group_iteration_(0), inside_batch_iteration_(0), first_index_in_group_(0)
-    {
-        group_size_ = dims[axis];
-        step_size_inside_group_ = strides[axis];
-
-        batch_size_ = strides[axis] * dims[axis];
-        batch_max_iters_ = batch_size_ / group_size_;
-        inside_batch_counter_ = 0;
-
-        max_iterations_ = std::accumulate(dims.begin(), dims.end(), std::int64_t{ 1 }, [](std::int64_t a, std::int64_t b) { return a * b; });
-    }
-
-    [[nodiscard]] constexpr std::int64_t next() noexcept
-    {
-        ++iters_;
-
-        const std::int64_t next_index = offset_ + current_index_;
-
-        if (inside_batch_counter_ == 0) {
-            first_index_in_batch_ = current_index_;
-        }
-
-        ++inside_group_iteration_;
-        ++inside_batch_counter_;
-        if (inside_group_iteration_ >= group_size_) {
-            inside_group_iteration_ = 0;
-
-            ++inside_batch_iteration_;
-            if (inside_batch_iteration_ >= batch_max_iters_) {
-                current_index_ = first_index_in_batch_ + batch_size_;
-                inside_batch_iteration_ = 0;
-                inside_batch_counter_ = 0;
-
-                //inside_group_iteration_ = 0;
-                return next_index;
-            }
-            current_index_ = first_index_in_batch_ + inside_batch_iteration_;
-            return next_index;
-        }
-
-
-
-
-        current_index_ += step_size_inside_group_;
-
-        return next_index;
-    }
-
-    [[nodiscard]] constexpr bool has_next() const noexcept
-    {
-        return iters_ < max_iterations_;
-    }
-
-private:
-    const std::int64_t offset_;
-
-    std::int64_t current_index_;
-
-    std::int64_t group_size_;
-    std::int64_t step_size_inside_group_;
-    std::int64_t first_index_in_group_;
-    std::int64_t inside_group_iteration_;
-
-    std::int64_t batch_size_;
-    std::int64_t first_index_in_batch_;
-    std::int64_t inside_batch_iteration_;
-    std::int64_t batch_max_iters_;
-    std::int64_t inside_batch_counter_;
-
-    std::int64_t max_iterations_;
-    std::int64_t iters_;
-};
