@@ -1461,6 +1461,11 @@ namespace computoc {
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
+                if (indices_.size() != dims_.size()) {
+                    indices_.resize(dims_.size());
+                }
+
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -1488,6 +1493,11 @@ namespace computoc {
                 : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
+                if (indices_.size() != dims_.size()) {
+                    indices_.resize(dims_.size());
+                }
+
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -1515,6 +1525,11 @@ namespace computoc {
                 : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
                 , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
             {
+                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
+                if (indices_.size() != dims_.size()) {
+                    indices_.resize(dims_.size());
+                }
+
                 std::fill(indices_.begin(), indices_.end(), 0);
                 if (backward) {
                     std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
@@ -1728,6 +1743,44 @@ namespace computoc {
                     res[i] = vec[indices[i]];
                 }
                 return res;
+            }
+
+            constexpr std::tuple<
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator>, simple_vector<std::int64_t, Dims_capacity, Internal_allocator>>
+                reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
+            {
+                std::tuple<
+                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>,
+                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>> reds(dims.size(), dims.size());
+
+                auto& [rdims, rstrides] = reds;
+
+                std::int64_t rndims = 0;
+
+                std::int64_t ri = 0;
+                for (std::int64_t i = 0; i < dims.size(); ++i) {
+                    if (dims[i] > 1) {
+                        rdims[ri] = dims[i];
+                        rstrides[ri] = strides[i];
+                        ++ri;
+                        ++rndims;
+                    }
+                }
+
+                for (std::int64_t i = rndims - 1; i >= 1; --i) {
+                    if (rdims[i] == rstrides[i - 1]) {
+                        rdims[i - 1] *= rdims[i];
+                        rstrides[i - 1] = rstrides[i];
+                        --rndims;
+                    }
+                }
+
+                if (rndims != dims.size()) {
+                    rdims.resize(rndims);
+                    rstrides.resize(rndims);
+                }
+
+                return reds;
             }
 
             simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_;
