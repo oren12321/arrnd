@@ -2130,9 +2130,7 @@ namespace computoc {
 
             Array_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
-                auto diff = *gen_;
-                diff = *(++gen_) - diff;
-                data_ += diff;
+                ++gen_;
                 return *this;
             }
 
@@ -2145,10 +2143,7 @@ namespace computoc {
 
             Array_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ += count;
-                diff = *gen_ - diff;
-                data_ += diff;
                 return *this;
             }
 
@@ -2161,9 +2156,7 @@ namespace computoc {
 
             Array_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
-                auto diff = *gen_;
-                diff -= *(--gen_);
-                data_ -= diff;
+                gen_--;
                 return *this;
             }
 
@@ -2176,10 +2169,7 @@ namespace computoc {
 
             Array_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ -= count;
-                diff -= *gen_;
-                data_ -= diff;
                 return *this;
             }
 
@@ -2192,12 +2182,12 @@ namespace computoc {
 
             [[nodiscard]] T& operator*() const noexcept
             {
-                return *data_;
+                return data_[*gen_];
             }
 
             [[nodiscard]] bool operator==(const Array_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
-                return data_ == iter.data_;
+                return *gen_ == *(iter.gen_);
             }
 
         private:
@@ -2229,9 +2219,7 @@ namespace computoc {
 
             Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
-                auto diff = *gen_;
-                diff = *(++gen_) - diff;
-                data_ += diff;
+                ++gen_;
                 return *this;
             }
 
@@ -2244,10 +2232,7 @@ namespace computoc {
 
             Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ += count;
-                diff = *gen_ - diff;
-                data_ += diff;
                 return *this;
             }
 
@@ -2260,9 +2245,7 @@ namespace computoc {
 
             Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
-                auto diff = *gen_;
-                diff -= *(--gen_);
-                data_ -= diff;
+                --gen_;
                 return *this;
             }
 
@@ -2275,10 +2258,7 @@ namespace computoc {
 
             Array_const_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ -= count;
-                diff -= *gen_;
-                data_ -= diff;
                 return *this;
             }
 
@@ -2291,12 +2271,12 @@ namespace computoc {
 
             [[nodiscard]] const T& operator*() const noexcept
             {
-                return *data_;
+                return data_[*gen_];
             }
 
             [[nodiscard]] bool operator==(const Array_const_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
-                return data_ == iter.data_;
+                return *gen_ == *(iter.gen_);
             }
 
         private:
@@ -2330,9 +2310,7 @@ namespace computoc {
 
             Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
-                auto diff = *gen_;
-                diff -= *(--gen_);
-                data_ -= diff;
+                --gen_;
                 return *this;
             }
 
@@ -2345,10 +2323,7 @@ namespace computoc {
 
             Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ -= count;
-                diff -= *gen_;
-                data_ -= diff;
                 return *this;
             }
 
@@ -2361,9 +2336,7 @@ namespace computoc {
 
             Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
-                auto diff = *gen_;
-                diff = *(++gen_) - diff;
-                data_ += diff;
+                ++gen_;
                 return *this;
             }
 
@@ -2376,10 +2349,7 @@ namespace computoc {
 
             Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ += count;
-                diff = *gen_ - diff;
-                data_ += diff;
                 return *this;
             }
 
@@ -2392,12 +2362,12 @@ namespace computoc {
 
             [[nodiscard]] T& operator*() const noexcept
             {
-                return *data_;
+                return data_[*gen_];
             }
 
             [[nodiscard]] bool operator==(const Array_reverse_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
-                return data_ == iter.data_;
+                return *gen_ == *(iter.gen_);
             }
 
         private:
@@ -2429,9 +2399,7 @@ namespace computoc {
 
             Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator++() noexcept
             {
-                auto diff = *gen_;
-                diff -= *(--gen_);
-                data_ -= diff;
+                --gen_;
                 return *this;
             }
 
@@ -2444,10 +2412,7 @@ namespace computoc {
 
             Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ -= count;
-                diff -= *gen_;
-                data_ -= diff;
                 return *this;
             }
 
@@ -2460,9 +2425,7 @@ namespace computoc {
 
             Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator--() noexcept
             {
-                auto diff = *gen_;
-                diff = *(++gen_) - diff;
-                data_ += diff;
+                ++gen_;
                 return *this;
             }
 
@@ -2475,10 +2438,7 @@ namespace computoc {
 
             Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
             {
-                auto diff = *gen_;
                 gen_ += count;
-                diff = *gen_ - diff;
-                data_ += diff;
                 return *this;
             }
 
@@ -2491,12 +2451,12 @@ namespace computoc {
 
             [[nodiscard]] const T& operator*() const noexcept
             {
-                return *data_;
+                return data_[*gen_];
             }
 
             [[nodiscard]] bool operator==(const Array_const_reverse_iterator<T, Dims_capacity, Internal_allocator>& iter) const
             {
-                return data_ == iter.data_;
+                return *gen_ == *(iter.gen_);
             }
 
         private:
@@ -2782,7 +2742,7 @@ namespace computoc {
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true) + 1);
             }
 
 
@@ -2793,28 +2753,28 @@ namespace computoc {
 
             auto cend(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1 , Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() , Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true) + 1);
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis) - 1);
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, axis) - 1);
             }
 
 
@@ -2825,7 +2785,7 @@ namespace computoc {
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true) + 1);
             }
 
 
@@ -2836,28 +2796,28 @@ namespace computoc {
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index() + 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_const_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true) + 1);
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order) - 1);
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.last_index(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data() + hdr_.offset() - 1, Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order));
+                return Array_const_reverse_iterator<T, Dims_capacity, Internals_allocator>(buffsp_->data(), Simple_array_indices_generator<Dims_capacity, Internals_allocator>(hdr_, order) - 1);
             }
 
 

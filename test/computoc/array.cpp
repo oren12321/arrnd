@@ -3363,38 +3363,51 @@ TEST(Array_test, complex_array)
 //#include <thread>
 //#include <iostream>
 //#include <chrono>
-
+//
 //TEST(Parallel_test, add)
 //{
-    //using namespace computoc;
-    //using namespace std;
-    //using namespace std::chrono;
-    //using namespace computoc::details;
-
-    //{
-    //    auto print = [](const auto& cont) {
-    //        for_each(cont.begin(), cont.end(), [](const auto& e) { cout << e << ' '; });
-    //        cout << '\n';
-    //    };
-
-    //    auto arr = Array<int>({ 5, 3, 10 });
-    //    //auto arr = arr({ {1,4, 2}, {1, 2}, {1,6, 2} });
-    //    auto hdr = arr.header();
-
-    //    vector<int64_t> inds;
-    //    for (Simple_array_indices_generator gen(hdr); gen; ++gen) {
-    //        inds.push_back(*gen);
-    //    }
-
-    //    print(hdr.dims());
-    //    print(hdr.strides());
-    //    print(inds);
-    //}
-
-    //auto start = high_resolution_clock::now();
-    //for (int i = 0; i < 25; ++i) {
-    //    for (details::Simple_array_indices_generator iter(Array<int> ({ 1920, 1080, 2, 2 }).header()); iter; ++iter) {}
-    //}
-    //auto stop = high_resolution_clock::now();
-    //cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
+//    using namespace computoc;
+//    using namespace std;
+//    using namespace std::chrono;
+//    using namespace computoc::details;
+//
+//    //{
+//    //    auto print = [](const auto& cont) {
+//    //        for_each(cont.begin(), cont.end(), [](const auto& e) { cout << e << ' '; });
+//    //        cout << '\n';
+//    //    };
+//
+//    //    auto arr = Array<int>({ 5, 4, 3, 2, 15 });
+//    //    //arr = arr({ {1,4, 2}, {1, 2}, {1,6, 2} });
+//    //    //arr = arr({ {2,2} }); // specific first dimension - continuous indexing - [selected_dimension*strides[0], (selected_dimension + 1)*strides[0] - 1]
+//    //    arr = arr({ {0,4}, {0,3}, {0,2}, {0,1,2}, {0,14,2} });
+//    //    auto hdr = arr.header();
+//
+//    //    vector<int64_t> inds;
+//    //    for (Simple_array_indices_generator gen(hdr); gen; ++gen) {
+//    //        inds.push_back(*gen);
+//    //    }
+//
+//    //    cout << "Dr = "; print(hdr.dims());
+//    //    cout << "Sr = ";  print(hdr.strides());
+//    //    cout << "offset = " << hdr.offset() << '\n';
+//    //    cout << "indices:\n"; print(inds);
+//    //}
+//
+//    auto start = high_resolution_clock::now();
+//    for (int i = 0; i < 25; ++i) {
+//        Array<int> m({ 4, 1920, 1080 }, 5);
+//        auto sm = m({ {1,3}, {10,18}, {2,76} });
+//        int ctr = 0;
+//        for (auto it = sm.begin(); it != sm.end(); ++it) {
+//            *it = ctr++;
+//        }
+//        //for_each(sm.begin(), sm.end(), [](auto& e) { e = 1; });
+//        //auto ptr = sm.data();
+//        //for (Simple_array_indices_generator gen(sm.header()); gen; ++gen) {
+//        //    ptr[*gen] = ctr++;
+//        //}
+//    }
+//    auto stop = high_resolution_clock::now();
+//    cout << "avg serial[us] = " << (static_cast<double>(duration_cast<microseconds>(stop - start).count()) / (1000.0 * 1000.0)) / 25 << "\n";
 //}
