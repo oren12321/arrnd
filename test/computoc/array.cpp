@@ -261,7 +261,18 @@ TEST(Interval_test, forward)
     EXPECT_EQ(3, i2.step);
 }
 
+TEST(Simple_dynamic_vector_test, span_and_iterators_usage)
+{
+    using simple_vector = computoc::details::simple_dynamic_vector<std::string>;
 
+    auto count_elements = [](std::span<const std::string> s) {
+        return s.size();
+    };
+
+    simple_vector sv(2, std::array<std::string, 2>{ "first string", "second string" }.data());
+    EXPECT_EQ(2, count_elements(sv));
+    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) { return s.find("string") != std::string::npos; }));
+}
 
 TEST(Simple_dynamic_vector_test, basic_functionality)
 {
@@ -346,6 +357,18 @@ TEST(Simple_dynamic_vector_test, basic_functionality)
     //EXPECT_EQ("", sv.back());
 }
 
+TEST(Simple_static_vector_test, span_usage)
+{
+    using simple_vector = computoc::details::simple_static_vector<std::string, 2>;
+
+    auto count_elements = [](std::span<const std::string> s) {
+        return s.size();
+    };
+
+    simple_vector sv(2, std::array<std::string, 2>{ "first string", "second string" }.data());
+    EXPECT_EQ(2, count_elements(sv));
+    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) { return s.find("string") != std::string::npos; }));
+}
 
 TEST(Simple_static_vector_test, basic_functionality)
 {
