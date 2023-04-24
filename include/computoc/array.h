@@ -1458,99 +1458,55 @@ namespace computoc {
         {
         public:
             constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
-                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end()), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
+                : Simple_array_indices_generator(hdr, std::span<const std::int64_t>{}, backward)
             {
-                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
-                if (indices_.size() != dims_.size()) {
-                    indices_.resize(dims_.size());
-                }
-
-                std::fill(indices_.begin(), indices_.end(), 0);
-                if (backward) {
-                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
-                    current_index_ = hdr.last_index();
-                }
-                first_dim_ = dims_.back();
-                first_stride_ = strides_.back();
-                first_ind_ = indices_.back();
-                ndims_ = std::ssize(dims_);
-
-                if (ndims_ > 1) {
-                    second_dim_ = dims_[dims_.size() - 2];
-                    second_stride_ = strides_[strides_.size() - 2];
-                    second_ind_ = indices_[indices_.size() - 2];
-                }
-
-                if (ndims_ > 2) {
-                    third_dim_ = dims_[dims_.size() - 3];
-                    third_stride_ = strides_[strides_.size() - 3];
-                    third_ind_ = indices_[indices_.size() - 3];
-                }
             }
 
             constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
-                : dims_(reorder(hdr.dims(), axis)), strides_(reorder(hdr.strides(), axis)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
+                : Simple_array_indices_generator(hdr, order_from_major_axis(hdr.dims().size(), axis), backward)
             {
-                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
-                if (indices_.size() != dims_.size()) {
-                    indices_.resize(dims_.size());
-                }
-
-                std::fill(indices_.begin(), indices_.end(), 0);
-                if (backward) {
-                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
-                    current_index_ = hdr.last_index();
-                }
-                first_dim_ = dims_.back();
-                first_stride_ = strides_.back();
-                first_ind_ = indices_.back();
-                ndims_ = std::ssize(dims_);
-
-                if (ndims_ > 1) {
-                    second_dim_ = dims_[dims_.size() - 2];
-                    second_stride_ = strides_[strides_.size() - 2];
-                    second_ind_ = indices_[indices_.size() - 2];
-                }
-
-                if (ndims_ > 2) {
-                    third_dim_ = dims_[dims_.size() - 3];
-                    third_stride_ = strides_[strides_.size() - 3];
-                    third_ind_ = indices_[indices_.size() - 3];
-                }
             }
 
             constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
-                : dims_(reorder(hdr.dims(), order)), strides_(reorder(hdr.strides(), order)), indices_(hdr.dims().size())
-                , current_index_(hdr.offset()), first_index_(hdr.offset()), last_index_(hdr.last_index())
+                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end())
             {
-                std::tie(dims_, strides_) = reduce_dimensions(std::span(dims_.begin(), dims_.size()), std::span(strides_.begin(), strides_.end()));
-                if (indices_.size() != dims_.size()) {
-                    indices_.resize(dims_.size());
+                if (!order.empty()) {
+                    dims_ = reorder(dims_, order);
+                    strides_ = reorder(strides_, order);
                 }
+                std::tie(dims_, strides_) = reduce_dimensions(dims_, strides_);
 
-                std::fill(indices_.begin(), indices_.end(), 0);
-                if (backward) {
-                    std::transform(dims_.begin(), dims_.end(), indices_.begin(), [](auto a) { return a - 1; });
-                    current_index_ = hdr.last_index();
+                first_index_ = hdr.offset();
+                last_index_ = hdr.last_index();
+
+                ndims_ = dims_.size();
+
+                if (ndims_ > 0) {
+                    first_dim_ = dims_[ndims_ - 1];
+                    first_stride_ = strides_[ndims_ - 1];
+                    first_ind_ = backward ? first_dim_ - 1 : 0;
                 }
-                first_dim_ = dims_.back();
-                first_stride_ = strides_.back();
-                first_ind_ = indices_.back();
-                ndims_ = std::ssize(dims_);
 
                 if (ndims_ > 1) {
-                    second_dim_ = dims_[dims_.size() - 2];
-                    second_stride_ = strides_[strides_.size() - 2];
-                    second_ind_ = indices_[indices_.size() - 2];
+                    second_dim_ = dims_[ndims_ - 2];
+                    second_stride_ = strides_[ndims_ - 2];
+                    second_ind_ = backward ? second_dim_ - 1 : 0;
                 }
 
                 if (ndims_ > 2) {
-                    third_dim_ = dims_[dims_.size() - 3];
-                    third_stride_ = strides_[strides_.size() - 3];
-                    third_ind_ = indices_[indices_.size() - 3];
+                    third_dim_ = dims_[ndims_ - 3];
+                    third_stride_ = strides_[ndims_ - 3];
+                    third_ind_ = backward ? third_dim_ - 1 : 0;
                 }
+
+                if (ndims_ > 3) {
+                    indices_.resize(ndims_ - 3);
+                    for (std::int64_t i = 0; i < indices_.size(); ++i) {
+                        indices_[i] = backward ? dims_[i] - 1 : 0;
+                    }
+                }
+
+                current_index_ = backward ? last_index_ : first_index_;
             }
 
             constexpr Simple_array_indices_generator() = default;
@@ -1720,19 +1676,18 @@ namespace computoc {
             }
 
         private:
-            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::int64_t axis)
+            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> order_from_major_axis(std::int64_t order_size, std::int64_t axis)
             {
-                // create ordered indices according to input axis parameter
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(vec.size());
+                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(order_size);
+                std::generate(new_ordered_indices.begin(), new_ordered_indices.end(), [i = 0]() mutable { return i++; });
                 new_ordered_indices[0] = axis;
                 std::int64_t pos = 1;
-                for (std::int64_t i = 0; i < vec.size(); ++i) {
+                for (std::int64_t i = 0; i < order_size; ++i) {
                     if (i != axis) {
                         new_ordered_indices[pos++] = i;
                     }
                 }
-
-                return reorder(vec, new_ordered_indices);
+                return new_ordered_indices;
             }
 
             constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
@@ -1745,7 +1700,7 @@ namespace computoc {
                 return res;
             }
 
-            constexpr std::tuple<
+            constexpr static std::tuple<
                 simple_vector<std::int64_t, Dims_capacity, Internal_allocator>, simple_vector<std::int64_t, Dims_capacity, Internal_allocator>>
                 reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
             {
@@ -1785,12 +1740,9 @@ namespace computoc {
 
             simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_;
             simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_;
-
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> indices_;
-            std::int64_t current_index_ = 0;
-
-            std::int64_t first_index_ = 0;
-            std::int64_t last_index_ = 0;
+            std::int64_t first_index_;
+            std::int64_t last_index_;
+            std::int64_t ndims_;
 
             std::int64_t first_stride_;
             std::int64_t first_dim_;
@@ -1804,7 +1756,8 @@ namespace computoc {
             std::int64_t third_dim_;
             std::int64_t third_ind_;
 
-            std::int64_t ndims_;
+            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> indices_;
+            std::int64_t current_index_;
         };
 
 
