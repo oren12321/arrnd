@@ -655,6 +655,140 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_maj
 }
 
 
+
+
+TEST(Fast_array_indices_generator, simple_forward_backward_iterations)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0, 1,
+        2, 3,
+        4, 5 };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Fast_array_indices_generator gen(hdr);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        ++gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Fast_array_indices_generator, simple_backward_forward_iterations)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        5, 4,
+        3, 2,
+        1, 0 };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Fast_array_indices_generator gen(hdr, true);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        --gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (++gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Fast_array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[6]{
+        0,
+        2,
+        4 };
+    const std::int64_t expected_generated_subs{ 3 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    Fast_array_indices_generator gen(hdr);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+        ++generated_subs_counter;
+        gen += 2;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (gen = gen - 2) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(Fast_array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+{
+    using namespace computoc::details;
+
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    Array_header hdr(std::span(dims, 3));
+
+    const std::int64_t expected_inds_list[][6]{
+        { 0, 1,
+          2, 3,
+          4, 5 },
+
+        { 0, 1,
+          2, 3,
+          4, 5 },
+
+        { 0, 2, 4,
+          1, 3, 5} };
+    const std::int64_t expected_generated_subs{ 6 };
+
+    for (std::int64_t axis = 0; axis <= 2; ++axis) {
+        std::int64_t generated_subs_counter{ 0 };
+        Fast_array_indices_generator gen(hdr, axis);
+
+        while (gen) {
+            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+            ++generated_subs_counter;
+            ++gen;
+        }
+        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+        while (--gen) {
+            --generated_subs_counter;
+            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+        }
+        EXPECT_EQ(0, generated_subs_counter);
+    }
+}
+
+
+
+
 TEST(Array_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_array = computoc::Array<int>;

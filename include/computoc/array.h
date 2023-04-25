@@ -1770,43 +1770,8 @@ namespace computoc {
         {
         public:
             constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+                : Fast_array_indices_generator(hdr, 0, backward)
             {
-                // data
-
-                last_index_ = hdr.last_index();
-
-                num_super_groups_ = hdr.dims()[0];
-                step_size_between_super_groups_ = hdr.strides()[0];
-
-                num_groups_in_super_group_ =
-                    std::accumulate(hdr.dims().begin(), hdr.dims().begin() + 0 + 1, 1, std::multiplies<>{}) / num_super_groups_;
-                group_size_ = hdr.strides()[0];
-                step_size_inside_group_ = hdr.strides().back();
-                step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
-
-                // accumulators
-                if (!backward) {
-                    current_index_ = 0;
-
-                    super_groups_counter_ = 0;
-
-                    group_indices_counter_ = 0;
-                    groups_counter_ = 0;
-
-                    super_group_start_index_ = 0;
-
-                    group_start_index_ = 0;
-                }
-                else {
-                    group_indices_counter_ = group_size_ - 1;
-                    groups_counter_ = num_groups_in_super_group_ - 1;
-                    super_groups_counter_ = num_super_groups_ - 1;
-
-                    super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
-                    group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
-
-                    current_index_ = last_index_;
-                }
             }
 
             constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
