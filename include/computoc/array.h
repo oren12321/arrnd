@@ -1555,18 +1555,14 @@ namespace computoc {
                     current_index_ -= third_ind_ * third_stride_;
                     third_ind_ = 0;
                 }
-                if (ndims_ > 3) {
-                    for (std::int64_t i = ndims_ - 4; i >= 1; --i) {
-                        ++indices_[i];
-                        current_index_ += strides_[i];
-                        if (indices_[i] < dims_[i]) {
-                            return *this;
-                        }
-                        current_index_ -= indices_[i] * strides_[i];
-                        indices_[i] = 0;
+                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
+                    ++indices_[i];
+                    current_index_ += strides_[i];
+                    if (indices_[i] < dims_[i]) {
+                        return *this;
                     }
-                    ++indices_[0];
-                    current_index_ += strides_[0];
+                    current_index_ -= indices_[i] * strides_[i];
+                    indices_[i] = 0;
                 }
                 return *this;
             }
@@ -1628,18 +1624,14 @@ namespace computoc {
                     third_ind_ = third_dim_ - 1;
                     current_index_ += (third_ind_ + 1) * third_stride_;
                 }
-                if (ndims_ > 3) {
-                    for (std::int64_t i = ndims_ - 4; i >= 1; --i) {
-                        --indices_[i];
-                        current_index_ -= strides_[i];
-                        if (indices_[i] > -1) {
-                            return *this;
-                        }
-                        indices_[i] = dims_[i] - 1;
-                        current_index_ += (indices_[i] + 1) * strides_[i];
+                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
+                    --indices_[i];
+                    current_index_ -= strides_[i];
+                    if (indices_[i] > -1) {
+                        return *this;
                     }
-                    --indices_[0];
-                    current_index_ -= strides_[0];
+                    indices_[i] = dims_[i] - 1;
+                    current_index_ += (indices_[i] + 1) * strides_[i];
                 }
                 return *this;
             }
