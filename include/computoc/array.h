@@ -1672,7 +1672,7 @@ namespace computoc {
             constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> order_from_major_axis(std::int64_t order_size, std::int64_t axis)
             {
                 simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(order_size);
-                std::generate(new_ordered_indices.begin(), new_ordered_indices.end(), [i = 0]() mutable { return i++; });
+                std::iota(new_ordered_indices.begin(), new_ordered_indices.end(), static_cast<std::int64_t>(0));
                 new_ordered_indices[0] = axis;
                 std::int64_t pos = 1;
                 for (std::int64_t i = 0; i < order_size; ++i) {
