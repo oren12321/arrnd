@@ -446,12 +446,14 @@ namespace computoc {
 
             [[nodiscard]] constexpr T* allocate(std::size_t n)
             {
-                return reinterpret_cast<T*>(operator new[](n * sizeof(T)));
+                return n == 0 ? nullptr : reinterpret_cast<T*>(operator new[](n * sizeof(T)));
             }
 
             constexpr void deallocate(T* p, std::size_t n) noexcept
             {
-                operator delete[](p, n * sizeof(T));
+                if (p && n > 0) {
+                    operator delete[](p, n * sizeof(T));
+                }
             }
         };
 
@@ -2559,14 +2561,9 @@ namespace computoc {
                 return hdr_;
             }
 
-            [[nodiscard]] std::span<T> block() const noexcept
-            {
-                return buffsp_ ? std::span(buffsp_->data(), buffsp_->size()) : std::span<T>();
-            }
-
             [[nodiscard]] T* data() const noexcept
             {
-                return block().data();
+                return buffsp_ ? buffsp_->data() : nullptr;
             }
 
             [[nodiscard]] const T& operator()(std::int64_t index) const noexcept
@@ -3106,7 +3103,7 @@ namespace computoc {
         template <typename T, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>
         [[nodiscard]] inline bool empty(const Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& arr) noexcept
         {
-            return arr.block().empty() && arr.header().empty();
+            return !arr.data() && arr.header().empty();
         }
 
         template <typename T, typename Unary_op, std::int64_t Data_capacity, std::int64_t Dims_capacity, template<typename> typename Data_allocator, template<typename> typename Internals_allocator>    

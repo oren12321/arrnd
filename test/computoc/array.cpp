@@ -866,7 +866,7 @@ TEST(Array_test, can_return_its_header_and_data)
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
-    EXPECT_TRUE(earr.block().empty());
+    EXPECT_FALSE(earr.data());
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
@@ -878,7 +878,7 @@ TEST(Array_test, can_return_its_header_and_data)
     EXPECT_EQ(2, hdr.strides().data()[0]); EXPECT_EQ(2, hdr.strides().data()[1]); EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
-    EXPECT_FALSE(arr.block().empty());
+    EXPECT_TRUE(arr.data());
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
@@ -3153,13 +3153,13 @@ TEST(Array_test, resize)
         //EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
         EXPECT_EQ(6, rarr.header().dims().data()[0]);
-        EXPECT_NE(arr.block().data(), rarr.block().data());
+        EXPECT_NE(arr.data(), rarr.data());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {6}) };
         EXPECT_TRUE(computoc::all_equal(arr, rarr));
-        EXPECT_NE(arr.block().data(), rarr.block().data());
+        EXPECT_NE(arr.data(), rarr.data());
     }
 
     {
@@ -3169,7 +3169,7 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.block().data(), rarr.block().data());
+        EXPECT_NE(tarr.data(), rarr.data());
     }
 
     {
@@ -3182,14 +3182,14 @@ TEST(Array_test, resize)
 
         Integer_array rarr{ computoc::resize(arr, {3, 1, 2}) };
         EXPECT_TRUE(computoc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.block().data(), rarr.block().data());
+        EXPECT_NE(tarr.data(), rarr.data());
     }
 
     {
         Integer_array rarr{ computoc::resize(arr, {10}) };
         EXPECT_FALSE(computoc::all_equal(arr, rarr));
         EXPECT_TRUE(computoc::all_equal(arr, rarr({ {0, 5} })));
-        EXPECT_NE(arr.block().data(), rarr.block().data());
+        EXPECT_NE(arr.data(), rarr.data());
     }
 }
 
