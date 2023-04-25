@@ -1478,6 +1478,7 @@ namespace computoc {
 
                 first_index_ = hdr.offset();
                 last_index_ = hdr.last_index();
+                last_first_diff_ = last_index_ - first_index_;
 
                 ndims_ = dims_.size();
 
@@ -1667,7 +1668,7 @@ namespace computoc {
 
             [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return current_index_ <= last_index_ && current_index_ >= first_index_;
+                return static_cast<std::uint64_t>(current_index_ - first_index_) <= last_first_diff_;
             }
 
             [[nodiscard]] constexpr std::int64_t operator*() const noexcept
@@ -1742,6 +1743,7 @@ namespace computoc {
             simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_;
             std::int64_t first_index_;
             std::int64_t last_index_;
+            std::int64_t last_first_diff_;
             std::int64_t ndims_;
 
             std::int64_t first_stride_;
@@ -2023,7 +2025,7 @@ namespace computoc {
 
             [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return current_index_ >= 0 && current_index_ <= last_index_;
+                return static_cast<std::uint64_t>(current_index_) <= last_index_;
             }
 
             [[nodiscard]] constexpr std::int64_t operator*() const noexcept
