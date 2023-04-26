@@ -2404,14 +2404,8 @@ namespace computoc {
                     return *this;
                 }
 
-                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.hdr_.dims().begin(), other.hdr_.dims().end())) {
-                    copy(other, *this);
-                    return *this;
-                }
-
-                hdr_ = std::move(other.hdr_);
-                buffsp_ = std::move(other.buffsp_);
-
+                copy(other, *this);
+                Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator> dummy{ std::move(other) };
                 return *this;
             }
             template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
@@ -2425,10 +2419,8 @@ namespace computoc {
             template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>&& other)&&
             {
-                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
-                    copy(other, *this);
-                }
-                Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o> dummy{std::move(other)};
+                copy(other, *this);
+                Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o> dummy{ std::move(other) };
                 return *this;
             }
 
@@ -2445,15 +2437,8 @@ namespace computoc {
                 if (&other == this) {
                     return *this;
                 }
-                
-                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.hdr_.dims().begin(), other.hdr_.dims().end())) {
-                    copy(other, *this);
-                    return *this;
-                }
 
-                hdr_ = other.hdr_;
-                buffsp_ = other.buffsp_;
-
+                copy(other, *this);
                 return *this;
             }
             template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
@@ -2466,9 +2451,7 @@ namespace computoc {
             template< typename T_o, std::int64_t Data_capacity_o, std::int64_t Dims_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o>
             Array<T, Data_capacity, Dims_capacity, Data_allocator, Internals_allocator>& operator=(const Array<T_o, Data_capacity_o, Dims_capacity_o, Data_allocator_o, Internals_allocator_o>& other)&&
             {
-                if (hdr_.is_subarray() && std::equal(hdr_.dims().begin(), hdr_.dims().end(), other.header().dims().begin(), other.header().dims().end())) {
-                    copy(other, *this);
-                }
+                copy(other, *this);
                 return *this;
             }
 
