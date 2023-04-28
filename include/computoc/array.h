@@ -3034,7 +3034,7 @@ namespace computoc {
                 res({ i }) = rarr({ i });
             }
             for (std::int64_t i = fixed_ind + fixed_count; i < arr.header().count(); ++i) {
-                res({ fixed_ind + i - fixed_count + 1 }) = rarr({ i });
+                res({ i - fixed_count }) = rarr({ i });
             }
 
             return res;
