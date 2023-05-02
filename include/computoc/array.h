@@ -11,6 +11,7 @@
 #include <numeric>
 #include <variant>
 #include <sstream>
+#include <cmath>
 
 namespace computoc {
     namespace details {
