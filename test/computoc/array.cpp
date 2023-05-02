@@ -428,6 +428,12 @@ TEST(Simple_static_vector_test, basic_functionality)
     EXPECT_TRUE(sv.data());
     EXPECT_EQ("a", sv.front());
     //EXPECT_EQ("", sv.back());
+
+    // reserve and shrink_to_fit are noop
+    sv.shrink_to_fit();
+    sv.reserve(1000);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(5, sv.size());
 }
 
 

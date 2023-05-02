@@ -834,6 +834,11 @@ namespace computoc {
                     }
                 }
 
+                constexpr void reserve(size_type new_capacity)
+                {
+                    // noop
+                }
+
                 constexpr void expand(size_type count)
                 {
                     if (size_ + count > Capacity) {
@@ -852,6 +857,11 @@ namespace computoc {
                         std::destroy_n(data_ptr_ + size_ - count, count);
                     }
                     size_ -= count;
+                }
+
+                constexpr void shrink_to_fit()
+                {
+                    // noop
                 }
 
                 [[nodiscard]] constexpr pointer begin() noexcept
