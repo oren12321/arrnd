@@ -10,18 +10,18 @@
 #include <algorithm>
 #include <numeric>
 #include <variant>
-
-#include <format>
+#include <sstream>
 
 namespace computoc {
     namespace details {
         inline std::string make_error_msg(const char* failed_cond, const char* exception_type, int line, const char* func, const char* file, const std::string& desc = std::string{})
         {
-            std::string msg = std::format("{} exception (at line {}, {}@{}), assertion {} failed", exception_type, line, func, file, failed_cond);
+            std::stringstream ss;
+            ss << exception_type << " exception (at line " << line << ", " << func << "@" << file << "), assertion " << failed_cond << " failed";
             if (!desc.empty()) {
-                msg += std::format(": {}", desc);
+                ss << ": " << desc;
             }
-            return msg;
+            return ss.str();
         }
     }
 }

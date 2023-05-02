@@ -8,6 +8,8 @@
 #include <string>
 #include <span>
 #include <ranges>
+#include <ostream>
+#include <charconv>
 
 #include <computoc/array.h>
 
@@ -37,17 +39,15 @@ TEST_F(Require_test, throw_exception_if_condition_is_false)
 }
 
 struct CustomTestType {};
-template <>
-struct std::formatter<CustomTestType> : std::formatter<std::string> {
-    auto format(const CustomTestType& vec, format_context& ctx) {
-        return std::formatter<std::string>::format("CustomTestType as string", ctx);
-    }
-};
+std::ostream& operator<<(std::ostream& os, const CustomTestType& ctt) {
+    os << "CustomTestType as string";
+    return os;
+}
 
 TEST_F(Require_test, throws_an_exception_with_specific_format)
 {
     try {
-        _REQUIRE(false_condition_, Selected_exception, std::format("{}", CustomTestType{}));
+        _REQUIRE(false_condition_, Selected_exception, (std::stringstream{} << CustomTestType{}).str());
         FAIL();
     }
     catch (const Selected_exception& ex) {
@@ -138,7 +138,7 @@ namespace expected_test_dummies {
 
     auto decorate_as_error(const std::string& s)
     {
-        return std::format("error: {}", s);
+        return "error: " + s;
     }
 }
 
