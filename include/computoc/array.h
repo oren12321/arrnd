@@ -474,11 +474,11 @@ namespace computoc {
                     : size_(size), capacity_(size), capacity_func_(capacity_func)
                 {
                     data_ptr_ = alloc_.allocate(capacity_);
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    }
                     if (data) {
-                        std::copy(data, data + size_, data_ptr_);
+                        std::uninitialized_copy_n(data, size_, data_ptr_);
+                    }
+                    else if constexpr (!std::is_fundamental_v<T>) {
+                        std::uninitialized_default_construct_n(data_ptr_, size_);
                     }
                 }
 
@@ -487,20 +487,14 @@ namespace computoc {
                 {
                     size_ = capacity_ = last - first;
                     data_ptr_ = alloc_.allocate(capacity_);
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    }
-                    std::copy(first, last, data_ptr_);
+                    std::uninitialized_copy_n(first, size_, data_ptr_);
                 }
 
                 constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
                     : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
                 {
                     data_ptr_ = alloc_.allocate(capacity_);
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    }
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
                 }
 
                 constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
@@ -510,7 +504,7 @@ namespace computoc {
                     }
 
                     if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        std::destroy_n(data_ptr_, size_);
                     }
                     alloc_.deallocate(data_ptr_, capacity_);
 
@@ -520,10 +514,7 @@ namespace computoc {
                     capacity_func_ = other.capacity_func_;
 
                     data_ptr_ = alloc_.allocate(capacity_);
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::construct_at<T>(&p); });
-                    }
-                    std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
 
                     return *this;
                 }
@@ -544,7 +535,7 @@ namespace computoc {
                     }
 
                     if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        std::destroy_n(data_ptr_, size_);
                     }
                     alloc_.deallocate(data_ptr_, capacity_);
 
@@ -564,7 +555,7 @@ namespace computoc {
                 constexpr ~simple_dynamic_vector() noexcept
                 {
                     if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        std::destroy_n(data_ptr_, size_);
                     }
                     alloc_.deallocate(data_ptr_, capacity_);
                 }
@@ -603,25 +594,23 @@ namespace computoc {
                 {
                     if (new_size < size_) {
                         if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                            std::destroy_n(data_ptr_ + new_size, size_ - new_size);
                         }
                         size_ = new_size;
                     }
                     //else if (new_size == size_) { /* do nothing */ }
                     else if (new_size > size_) {
                         size_type new_capacity = new_size;
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
-                        }
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+                        pointer new_data_ptr = alloc_.allocate(new_capacity);
+                        std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
+                        std::uninitialized_default_construct_n(new_data_ptr + size_, new_size - size_);
 
                         if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr_, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                            std::destroy_n(data_ptr_, size_);
                         }
                         alloc_.deallocate(data_ptr_, capacity_);
 
-                        data_ptr_ = data_ptr;
+                        data_ptr_ = new_data_ptr;
                         size_ = new_size;
                         capacity_ = new_capacity;
                     }
@@ -629,15 +618,13 @@ namespace computoc {
 
                 constexpr void reserve(size_type new_capacity)
                 {
+                    // if (new_capacity <= capacity_) do nothing
                     if (new_capacity > capacity_) {
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
-                        }
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+                        pointer new_data_ptr = alloc_.allocate(new_capacity);
+                        std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
 
                         alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
+                        data_ptr_ = new_data_ptr;
                         capacity_ = new_capacity;
                     }
                 }
@@ -646,7 +633,7 @@ namespace computoc {
                 {
                     if (size_ + count < capacity_) {
                         if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr_ + size_, data_ptr_ + size_ + count, [](auto& p) { std::construct_at<T>(&p); });
+                            std::uninitialized_default_construct_n(data_ptr_ + size_, count);
                         }
                         size_ += count;
                     }
@@ -654,10 +641,8 @@ namespace computoc {
                         size_type new_capacity = capacity_func_(size_ + count);
                         size_type new_size = size_ + count;
                         pointer data_ptr = alloc_.allocate(new_capacity);
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr, data_ptr + new_size, [](auto& p) { std::construct_at<T>(&p); });
-                        }
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+                        std::uninitialized_move_n(data_ptr_, size_, data_ptr);
+                        std::uninitialized_default_construct_n(data_ptr + size_, count);
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = data_ptr;
@@ -673,7 +658,7 @@ namespace computoc {
                     }
 
                     if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        std::destroy_n(data_ptr_ + size_ - count, count);
                     }
                     size_ -= count;
                 }
@@ -682,10 +667,7 @@ namespace computoc {
                 {
                     if (capacity_ > size_) {
                         pointer data_ptr = alloc_.allocate(size_);
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr, data_ptr + size_, [](auto& p) { std::construct_at<T>(&p); });
-                        }
-                        std::move(data_ptr_, data_ptr_ + size_, data_ptr);
+                        std::uninitialized_move_n(data_ptr_, size_, data_ptr);
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = data_ptr;
@@ -841,7 +823,7 @@ namespace computoc {
                     }
                     if (new_size < size_) {
                         if constexpr (!std::is_fundamental_v<T>) {
-                            std::for_each(data_ptr_ + new_size, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                            std::destroy_n(data_ptr_ + new_size, size_ - new_size);
                         }
                         size_ = new_size;
                     }
@@ -866,7 +848,7 @@ namespace computoc {
                     }
 
                     if constexpr (!std::is_fundamental_v<T>) {
-                        std::for_each(data_ptr_ + size_ - count, data_ptr_ + size_, [](auto& p) { std::destroy_at<T>(&p); });
+                        std::destroy_n(data_ptr_ + size_ - count, count);
                     }
                     size_ -= count;
                 }
