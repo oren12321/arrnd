@@ -5,8 +5,10 @@ project(sample
     DESCRIPTION "A header-only C++ sample project"
     HOMEPAGE_URL "https://github.com/oren12321/cpp-header-only-sample-library")
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -Wall")
+if (NOT WIN32)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -Wall")
+    endif()
 endif()
 
 include(GNUInstallDirs)
@@ -19,7 +21,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 if (WIN32)
-    file(GLOB_RECURSE HEADER_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.h")
+    file(GLOB_RECURSE HEADER_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.h")
     add_library(${PROJECT_NAME}_ ${HEADER_SRCS})
     set_target_properties(${PROJECT_NAME}_ PROPERTIES LINKER_LANGUAGE CXX)
     target_link_libraries(${PROJECT_NAME}_ ${PROJECT_NAME}::${PROJECT_NAME})
