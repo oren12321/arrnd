@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.24.4)
 
-project(sample
+project(oc-array
     VERSION 1.0.0
-    DESCRIPTION "A header-only C++ sample project"
-    HOMEPAGE_URL "https://github.com/oren12321/cpp-header-only-sample-library")
+    DESCRIPTION "An N dimensional array implementation"
+    HOMEPAGE_URL "https://github.com/oren12321/oc-array")
 
 if (NOT WIN32)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")

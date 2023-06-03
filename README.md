@@ -1,2 +1,2 @@
-# cpp-header-only-library
-A C++ sample header-only library project including tests, benchmark and installation
+# oc-array
+A C++ N dimensional array implementation
