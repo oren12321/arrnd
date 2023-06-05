@@ -1162,6 +1162,13 @@ namespace oc {
         template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Simple_array_indices_generator final
         {
+        private:
+            struct Info {
+                std::int64_t index;
+                std::int64_t dim;
+                std::int64_t stride;
+            };
+
         public:
             friend class Array_indices_generator<Dims_capacity, Internal_allocator>;
 
@@ -1176,42 +1183,48 @@ namespace oc {
             }
 
             constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
-                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end())
+                : infos_(hdr.dims().size())
             {
-                if (!order.empty()) {
-                    dims_ = reorder(dims_, order);
-                    strides_ = reorder(strides_, order);
+                // copy header dims and strides
+                for (std::int64_t i = 0; i < hdr.dims().size(); ++i) {
+                    infos_[i].dim = hdr.dims()[i];
+                    infos_[i].stride = hdr.strides()[i];
                 }
-                std::tie(dims_, strides_) = reduce_dimensions(dims_, strides_);
+
+                // order info if required
+                if (!order.empty()) {
+                    infos_ = reorder(infos_, order);
+                }
+                infos_ = reduce_dimensions(infos_);
+                std::reverse(infos_.begin(), infos_.end());
 
                 first_index_ = hdr.offset();
                 last_index_ = hdr.last_index();
                 last_first_diff_ = last_index_ - first_index_;
 
-                ndims_ = dims_.size();
+                ndims_ = infos_.size();
 
                 if (ndims_ > 0) {
-                    first_dim_ = dims_[ndims_ - 1];
-                    first_stride_ = strides_[ndims_ - 1];
+                    first_dim_ = infos_[0].dim;
+                    first_stride_ = infos_[0].stride;
                     first_ind_ = backward ? first_dim_ - 1 : 0;
                 }
 
                 if (ndims_ > 1) {
-                    second_dim_ = dims_[ndims_ - 2];
-                    second_stride_ = strides_[ndims_ - 2];
+                    second_dim_ = infos_[1].dim;
+                    second_stride_ = infos_[1].stride;
                     second_ind_ = backward ? second_dim_ - 1 : 0;
                 }
 
                 if (ndims_ > 2) {
-                    third_dim_ = dims_[ndims_ - 3];
-                    third_stride_ = strides_[ndims_ - 3];
+                    third_dim_ = infos_[2].dim;
+                    third_stride_ = infos_[2].stride;
                     third_ind_ = backward ? third_dim_ - 1 : 0;
                 }
 
                 if (ndims_ > 3) {
-                    indices_.resize(ndims_ - 3);
-                    for (std::int64_t i = 0; i < indices_.size(); ++i) {
-                        indices_[i] = backward ? dims_[i] - 1 : 0;
+                    for (std::int64_t i = 0; i < infos_.size(); ++i) {
+                        infos_[i].index = backward ? infos_[i].dim - 1 : 0;
                     }
                 }
 
@@ -1263,14 +1276,21 @@ namespace oc {
                     current_index_ -= third_ind_ * third_stride_;
                     third_ind_ = 0;
                 }
-                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
-                    ++indices_[i];
-                    current_index_ += strides_[i];
-                    if (indices_[i] < dims_[i]) {
-                        return *this;
+                if (ndims_ > 3) {
+                    Info* infos_firstp = infos_.data();
+                    Info* infos_lastp = infos_.data() + ndims_ - 4;
+                    while (infos_firstp != infos_lastp) {
+                        std::int64_t prev_index = infos_firstp->index + 1;
+                        std::int64_t dim = infos_firstp->dim;
+                        std::int64_t stride = infos_firstp->stride;
+                        infos_firstp->index = prev_index < dim ? prev_index : 0;
+                        if (dim - prev_index) {
+                            current_index_ += stride;
+                            return *this;
+                        }
+                        current_index_ -= (prev_index - 1) * stride;
+                        ++infos_firstp;
                     }
-                    current_index_ -= indices_[i] * strides_[i];
-                    indices_[i] = 0;
                 }
                 return *this;
             }
@@ -1332,14 +1352,21 @@ namespace oc {
                     third_ind_ = third_dim_ - 1;
                     current_index_ += (third_ind_ + 1) * third_stride_;
                 }
-                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
-                    --indices_[i];
-                    current_index_ -= strides_[i];
-                    if (indices_[i] > -1) {
-                        return *this;
+                if (ndims_ > 3) {
+                    Info* infos_firstp = infos_.data();
+                    Info* infos_lastp = infos_.data() + ndims_ - 4;
+                    while (infos_firstp != infos_lastp) {
+                        std::int64_t prev_index = infos_firstp->index - 1;
+                        std::int64_t dim = infos_firstp->dim;
+                        std::int64_t stride = infos_firstp->stride;
+                        infos_firstp->index = prev_index > -1 ? prev_index : dim - 1;
+                        if (prev_index) {
+                            current_index_ -= stride;
+                            return *this;
+                        }
+                        current_index_ -= (prev_index + 1) * stride;
+                        ++infos_firstp;
                     }
-                    indices_[i] = dims_[i] - 1;
-                    current_index_ += (indices_[i] + 1) * strides_[i];
                 }
                 return *this;
             }
@@ -1391,56 +1418,48 @@ namespace oc {
                 return new_ordered_indices;
             }
 
-            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            constexpr static simple_vector<Info, Dims_capacity, Internal_allocator> reorder(std::span<const Info> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> res(size);
+                simple_vector<Info, Dims_capacity, Internal_allocator> res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
                 }
                 return res;
             }
 
-            constexpr static std::tuple<
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator>, simple_vector<std::int64_t, Dims_capacity, Internal_allocator>>
-                reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
+            constexpr static simple_vector<Info, Dims_capacity, Internal_allocator> reduce_dimensions(std::span<const Info> infos)
             {
-                std::tuple<
-                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>,
-                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>> reds(dims.size(), dims.size());
-
-                auto& [rdims, rstrides] = reds;
+                simple_vector<Info, Dims_capacity, Internal_allocator> reds(infos.size());
 
                 std::int64_t rndims = 0;
 
                 std::int64_t ri = 0;
-                for (std::int64_t i = 0; i < dims.size(); ++i) {
-                    if (dims[i] > 1) {
-                        rdims[ri] = dims[i];
-                        rstrides[ri] = strides[i];
+                for (std::int64_t i = 0; i < infos.size(); ++i) {
+                    if (infos[i].dim > 1) {
+                        reds[ri].dim = infos[i].dim;
+                        reds[ri].stride = infos[i].stride;
                         ++ri;
                         ++rndims;
                     }
                 }
 
                 for (std::int64_t i = rndims - 1; i >= 1; --i) {
-                    if (rdims[i] == rstrides[i - 1]) {
-                        rdims[i - 1] *= rdims[i];
-                        rstrides[i - 1] = rstrides[i];
+                    if (reds[i].dim == reds[i - 1].stride) {
+                        reds[i - 1].dim *= reds[i].dim;
+                        reds[i - 1].stride = reds[i].stride;
                         --rndims;
                     }
                 }
 
-                if (rndims != dims.size()) {
-                    rdims.resize(rndims);
-                    rstrides.resize(rndims);
+                if (rndims != infos.size()) {
+                    reds.resize(rndims);
                 }
 
                 return reds;
             }
 
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_;
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_;
+            simple_vector<Info, Dims_capacity, Internal_allocator> infos_;
             std::int64_t first_index_;
             std::int64_t last_index_;
             std::int64_t last_first_diff_;
@@ -1458,7 +1477,6 @@ namespace oc {
             std::int64_t third_dim_;
             std::int64_t third_ind_;
 
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> indices_;
             std::int64_t current_index_;
         };
 
