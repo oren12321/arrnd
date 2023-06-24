@@ -178,6 +178,9 @@ namespace oc {
 
                 using capacity_func_type = std::function<size_type(size_type)>;
 
+                template <typename T_o>
+                using TransformedType = simple_dynamic_vector<T_o, Allocator>;
+
                 constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); })
                     : size_(size), capacity_(size), capacity_func_(capacity_func)
                 {
@@ -436,6 +439,9 @@ namespace oc {
                 using const_reference = const T&;
                 using pointer = T*;
                 using const_pointer = const T*;
+
+                template <typename T_o>
+                using TransformedType = simple_static_vector<T_o, Capacity>;
 
                 constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
                     : size_(size)
@@ -1891,7 +1897,7 @@ namespace oc {
 
 
 
-        template <typename T, typename IndexerType = Array_indices_generator<>>
+        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
         class Array_iterator final
         {
         public:
@@ -1983,7 +1989,7 @@ namespace oc {
 
 
 
-        template <typename T, typename IndexerType = Array_indices_generator<>>
+        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
         class Array_const_iterator final
         {
         public:
@@ -2071,7 +2077,7 @@ namespace oc {
 
 
 
-        template <typename T, typename IndexerType = Array_indices_generator<>>
+        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
         class Array_reverse_iterator final
         {
         public:
@@ -2163,7 +2169,7 @@ namespace oc {
 
 
 
-        template <typename T, typename IndexerType = Array_indices_generator<>>
+        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
         class Array_const_reverse_iterator final
         {
         public:
@@ -2252,59 +2258,60 @@ namespace oc {
 
 
 
-        template <typename T, std::int64_t Data_capacity = dynamic_sequence, template<typename> typename Data_allocator = Lightweight_stl_allocator, template<typename> typename Internals_allocator = Lightweight_stl_allocator, typename HeaderType = Array_header<>, typename IndexerType = Array_indices_generator<>>
+        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename Internals_allocator = Lightweight_stl_allocator, typename HeaderType = Array_header<>, typename IndexerType = Simple_array_indices_generator<>>
         class Array {
         public:
             using Header = HeaderType;
             using Indexer = IndexerType;
+            using Storage = StorageType;
 
             Array() = default;
 
-            Array(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& other) = default;
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array(Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)
+            Array(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& other) = default;
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array(Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
 
-                Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
             }
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& other) & = default;
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& other)&&
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& other) & = default;
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& other)&&
             {
                 if (&other == this) {
                     return *this;
                 }
 
                 copy(other, *this);
-                Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> dummy{ std::move(other) };
+                Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)&
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)&
             {
-                *this = Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
-                Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)&&
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>&& other)&&
             {
                 copy(other, *this);
-                Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
                 return *this;
             }
 
-            Array(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& other) = default;
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array(const Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)
+            Array(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& other) = default;
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array(const Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
             }
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& other) & = default;
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& other)&&
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& other) & = default;
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -2313,28 +2320,28 @@ namespace oc {
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)&
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)&
             {
-                *this = Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, std::int64_t Data_capacity_o, template<typename> typename Data_allocator_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T_o, Data_capacity_o, Data_allocator_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)&&
+            template< typename T_o, typename StorageType_o, template<typename> typename Internals_allocator_o, typename HeaderType_o, typename IndexerType_o>
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, Internals_allocator_o, HeaderType_o, IndexerType_o>& other)&&
             {
                 copy(other, *this);
                 return *this;
             }
 
             template <typename U>
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& operator=(const U& value)
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
                 }
 
-                for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(hdr_); gen; ++gen) {
+                for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(hdr_); gen; ++gen) {
                     (*this)(*gen) = value;
                 }
 
@@ -2344,7 +2351,7 @@ namespace oc {
             virtual ~Array() = default;
 
             Array(std::span<const std::int64_t> dims, const T* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator<simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(Internals_allocator<StorageType>(), hdr_.count()))
             {
                 if (data) {
                     std::copy(data, data + hdr_.count(), buffsp_->data());
@@ -2364,7 +2371,7 @@ namespace oc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(Internals_allocator < StorageType>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
@@ -2386,7 +2393,7 @@ namespace oc {
 
 
             Array(std::span<const std::int64_t> dims, const T& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(Internals_allocator < StorageType>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2396,7 +2403,7 @@ namespace oc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<simple_vector<T, Data_capacity, Data_allocator>>(Internals_allocator < simple_vector<T, Data_capacity, Data_allocator>>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(Internals_allocator < StorageType>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2448,27 +2455,27 @@ namespace oc {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> operator()(std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
 
-                Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> slice{};
+                Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> slice{};
                 slice.hdr_ = Header{ hdr_, ranges };
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
-            [[nodiscard]] Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> operator()(const Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& indices) const noexcept
+            [[nodiscard]] Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> operator()(const Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>& indices) const noexcept
             {
-                Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
+                Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(indices.header()); gen; ++gen) {
+                for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(indices.header()); gen; ++gen) {
                     res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
@@ -2476,13 +2483,13 @@ namespace oc {
             }
 
             template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& transform(const Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& other, Binary_op&& op)
+            [[nodiscard]] Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& transform(const Array<T_o, StorageType, Internals_allocator, HeaderType, IndexerType>& other, Binary_op&& op)
             {
                 if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
                     return *this;
                 }
 
-                for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
+                for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other(*gen));
                 }
 
@@ -2490,9 +2497,9 @@ namespace oc {
             }
 
             template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& transform(const T_o& other, Binary_op&& op)
+            [[nodiscard]] Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& transform(const T_o& other, Binary_op&& op)
             {
-                for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
+                for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), other);
                 }
 
@@ -2631,42 +2638,42 @@ namespace oc {
 
         private:
             Header hdr_{};
-            std::shared_ptr<simple_vector<T, Data_capacity, Data_allocator>> buffsp_{ nullptr };
+            std::shared_ptr<StorageType> buffsp_{ nullptr };
         };
 
         /**
         * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
         */
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline void copy(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& src, Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& dst)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline void copy(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& src, Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& dst)
         {
             if (empty(src) || empty(dst)) {
                 return;
             }
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer src_gen(src.header());
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer dst_gen(dst.header());
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer src_gen(src.header());
+            typename Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>::Indexer dst_gen(dst.header());
 
             for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
                 dst(*dst_gen) = src(*src_gen);
             }
         }
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline void copy(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& src, Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& dst)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline void copy(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& src, Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>&& dst)
         {
             copy(src, dst);
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> clone(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> clone(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
                 clone(*gen) = arr(*gen);
             }
 
@@ -2676,11 +2683,11 @@ namespace oc {
         /**
         * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
         */
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> reshape(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> reshape(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (arr.header().dims() == new_dims) {
@@ -2688,14 +2695,14 @@ namespace oc {
             }
 
             if (arr.header().count() != numel(new_dims)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (arr.header().is_subarray()) {
-                Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-                typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-                typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+                typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+                typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
                 while (arr_gen && res_gen) {
                     res(*res_gen) = arr(*arr_gen);
@@ -2706,27 +2713,27 @@ namespace oc {
                 return res;
             }
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(new_dims);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Header new_header(new_dims);
             if (new_header.empty()) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(arr);
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res(arr);
             res.header() = std::move(new_header);
 
             return res;
         }
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> reshape(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> reshape(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> resize(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> resize(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
             }
 
             if (arr.header().dims() == new_dims) {
@@ -2734,13 +2741,13 @@ namespace oc {
             }
 
             if (numel(new_dims) <= 0) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -2750,14 +2757,14 @@ namespace oc {
 
             return res;
         }
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> resize(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> resize(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> append(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> append(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2767,9 +2774,9 @@ namespace oc {
                 return clone(lhs);
             }
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
+            Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
 
-            Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
+            Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
 
             for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
                 res({ i }) = rhs({ i - lhs.header().count() });
@@ -2778,8 +2785,8 @@ namespace oc {
             return res;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> append(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t axis)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> append(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t axis)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2789,19 +2796,19 @@ namespace oc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
-                return Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>{};
+                return Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>{};
             }
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
+            typename Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
 
             for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
                 res.data()[*res_gen] = lhs.data()[*lhs_gen];
@@ -2813,8 +2820,8 @@ namespace oc {
             return res;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> insert(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t ind)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> insert(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t ind)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2824,10 +2831,10 @@ namespace oc {
                 return clone(lhs);
             }
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> rlhs(reshape(lhs, { lhs.header().count() }));
-            Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
+            Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> rlhs(reshape(lhs, { lhs.header().count() }));
+            Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
 
             std::int64_t fixed_ind{ modulo(ind, lhs.header().count() + 1) };
 
@@ -2844,8 +2851,8 @@ namespace oc {
             return res;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> insert(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t ind, std::int64_t axis)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> insert(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, std::int64_t ind, std::int64_t axis)
         {
             if (empty(lhs)) {
                 return clone(rhs);
@@ -2855,19 +2862,19 @@ namespace oc {
                 return clone(lhs);
             }
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
             if (new_header.empty()) {
-                return Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
+            Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
             res.header() = std::move(new_header);
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
+            typename Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
 
             std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
             std::int64_t cycle = fixed_ind *
@@ -2889,18 +2896,18 @@ namespace oc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> remove(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> remove(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             std::int64_t fixed_ind{ modulo(ind, arr.header().count()) };
             std::int64_t fixed_count{ fixed_ind + count < arr.header().count() ? count : (arr.header().count() - fixed_ind) };
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() - fixed_count });
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> rarr(reshape(arr, { arr.header().count() }));
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() - fixed_count });
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> rarr(reshape(arr, { arr.header().count() }));
 
             for (std::int64_t i = 0; i < fixed_ind; ++i) {
                 res({ i }) = rarr({ i });
@@ -2915,27 +2922,27 @@ namespace oc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> remove(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> remove(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
             std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
             std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), -fixed_count, fixed_axis);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), -fixed_count, fixed_axis);
             if (new_header.empty()) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), fixed_axis);
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), fixed_axis);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
 
             std::int64_t cycle = fixed_ind *
                 (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
@@ -2955,33 +2962,33 @@ namespace oc {
             return res;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool empty(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr) noexcept
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool empty(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr) noexcept
         {
             return !arr.data() && arr.header().empty();
         }
 
-        template <typename T, typename Unary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>    
-        [[nodiscard]] inline auto transform(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, Unary_op&& op)
-            -> Array<decltype(op(arr.data()[0])), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T, typename Unary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>    
+        [[nodiscard]] inline auto transform(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, Unary_op&& op)
+            -> Array<decltype(op(arr.data()[0])), typename StorageType::template TransformedType<decltype(op(arr.data()[0]))>, Internals_allocator, HeaderType, IndexerType>
         {
             using T_o = decltype(op(arr.data()[0]));
 
             if (empty(arr)) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
+            Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
 
-            for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
                 res(*gen) = op(arr(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, Binary_op&& op)
+        template <typename T, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto reduce(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, Binary_op&& op)
             -> decltype(op(arr.data()[0], arr.data()[0]))
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
@@ -2990,7 +2997,7 @@ namespace oc {
                 return T_o{};
             }
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen{ arr.header() };
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen{ arr.header() };
 
             T_o res{ static_cast<T_o>(arr(*gen)) };
             ++gen;
@@ -3003,8 +3010,8 @@ namespace oc {
             return res;
         }
 
-        template <typename T, typename T_o, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, const T_o& init_value, Binary_op&& op)
+        template <typename T, typename T_o, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto reduce(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, const T_o& init_value, Binary_op&& op)
             -> decltype(op(init_value, arr.data()[0]))
         {
             if (empty(arr)) {
@@ -3012,35 +3019,35 @@ namespace oc {
             }
 
             T_o res{ init_value };
-            for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen{ arr.header() }; gen; ++gen) {
+            for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen{ arr.header() }; gen; ++gen) {
                 res = op(res, arr(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(arr.data()[0], arr.data()[0])), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto reduce(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, Binary_op&& op, std::int64_t axis)
+            -> Array<decltype(op(arr.data()[0], arr.data()[0])), typename StorageType::template TransformedType<decltype(op(arr.data()[0], arr.data()[0]))>, Internals_allocator, HeaderType>
         {
             using T_o = decltype(op(arr.data()[0], arr.data()[0]));
 
             if (empty(arr)) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>();
             }
 
             const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
-            typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), fixed_axis);
+            typename Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), fixed_axis);
             if (new_header.empty()) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ new_header.count() });
+            Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            typename Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -3057,31 +3064,33 @@ namespace oc {
             return res;
         }
 
-        template <typename T, typename T_o, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto reduce(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& init_values, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T, typename T_o, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto reduce(const Array<T, StorageType1, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T_o, StorageType2, Internals_allocator, HeaderType, IndexerType>& init_values, Binary_op&& op, std::int64_t axis)
+            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), typename StorageType1::template TransformedType<decltype(op(init_values.data()[0], arr.data()[0]))>, Internals_allocator, HeaderType>
         {
+            using T_r = decltype(op(init_values.data()[0], arr.data()[0]));
+
             if (empty(arr)) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType>();
             }
 
             const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
 
             if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), axis);
+            typename Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), axis);
             if (new_header.empty()) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ new_header.count() });
+            Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType> res({ new_header.count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
-            typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer init_gen(init_values.header());
+            typename Array<T, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
+            typename Array<T_r, typename StorageType1::template TransformedType<T_r>, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T_o, typename StorageType2::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Indexer init_gen(init_values.header());
 
             const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
 
@@ -3098,90 +3107,90 @@ namespace oc {
             return res;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return reduce(arr, [](const T& a, const T& b) { return a && b; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> all(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t axis)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> all(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return a && b; }, axis);
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool any(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool any(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return reduce(arr, [](const T& a, const T& b) { return a || b; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> any(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t axis)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> any(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return a || b; }, axis);
         }
 
-        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T1, typename T2, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto transform(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), typename StorageType1::template TransformedType<decltype(op(lhs.data()[0], rhs.data()[0]))>, Internals_allocator, HeaderType, IndexerType>
         {
             using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
             
             if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
-                return Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T_o, typename StorageType1::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
+            Array<T_o, typename StorageType1::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
+            for (typename Array<T_o, typename StorageType1::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs(*gen));
             }
 
             return res;
         }
 
-        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto transform(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs)), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto transform(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs.data()[0], rhs)), typename StorageType::template TransformedType<decltype(op(lhs.data()[0], rhs))>, Internals_allocator, HeaderType, IndexerType>
         {
             using T_o = decltype(op(lhs.data()[0], rhs));
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
+            Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
 
-            for (typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
+            for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs(*gen), rhs);
             }
 
             return res;
         }
 
-        template <typename T1, typename T2, typename Binary_op, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs, rhs.data()[0])), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_op&& op)
+            -> Array<decltype(op(lhs, rhs.data()[0])), typename StorageType::template TransformedType<decltype(op(lhs, rhs.data()[0]))>, Internals_allocator, HeaderType, IndexerType>
         {
             using T_o = decltype(op(lhs, rhs.data()[0]));
 
-            Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
+            Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
-            for (typename Array<T_o, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
+            for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, Internals_allocator, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
                 res(*gen) = op(lhs, rhs(*gen));
             }
 
             return res;
         }
 
-        template <typename T, typename Unary_pred, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> filter(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, Unary_pred pred)
+        template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> filter(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, Unary_pred pred)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3195,7 +3204,7 @@ namespace oc {
             }
 
             if (res_count == 0) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3205,23 +3214,23 @@ namespace oc {
             return res;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> filter(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& mask)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType> filter(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& mask)
         {
             if (empty(arr)) {
-                return Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
+            Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
+            typename Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+            typename Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3236,7 +3245,7 @@ namespace oc {
             }
 
             if (res_count == 0) {
-                return Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3246,17 +3255,17 @@ namespace oc {
             return res;
         }
 
-        template <typename T, typename Unary_pred, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> find(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, Unary_pred pred)
+        template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType> find(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, Unary_pred pred)
         {
             if (empty(arr)) {
-                return Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
+            Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+            typename Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3270,7 +3279,7 @@ namespace oc {
             }
 
             if (res_count == 0) {
-                return Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3280,23 +3289,23 @@ namespace oc {
             return res;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> find(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& mask)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType> find(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& arr, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& mask)
         {
             if (empty(arr)) {
-                return Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
+            Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
+            typename Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
 
-            typename Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             std::int64_t res_count{ 0 };
 
@@ -3311,7 +3320,7 @@ namespace oc {
             }
 
             if (res_count == 0) {
-                return Array<std::int64_t, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, Internals_allocator, HeaderType, IndexerType>();
             }
 
             if (res_count < arr.header().count()) {
@@ -3321,23 +3330,23 @@ namespace oc {
             return res;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> transpose(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> order)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> transpose(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::span<const std::int64_t> order)
         {
             if (empty(arr)) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), order);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Header new_header(arr.header(), order);
             if (new_header.empty()) {
-                return Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>();
+                return Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>();
             }
 
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> res({ arr.header().count() });
             res.header() = std::move(new_header);
 
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), order);
-            typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), order);
+            typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer res_gen(res.header());
 
             while (arr_gen && res_gen) {
                 res(*res_gen) = arr(*arr_gen);
@@ -3348,675 +3357,675 @@ namespace oc {
             return res;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> transpose(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> order)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> transpose(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> order)
         {
             return transpose(arr, std::span<const std::int64_t>(order.begin(), order.size() ));
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator==(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator==(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator==(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator==(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator==(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator==(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator!=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator!=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator!=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator!=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator!=(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator!=(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> close(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> close(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> close(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> close(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> close(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> close(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator>=(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator>=(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<=(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<=(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline Array<bool, Data_capacity, Data_allocator, Internals_allocator, HeaderType> operator<=(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, Internals_allocator, HeaderType> operator<=(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator+(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator+(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator+(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator+(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator+(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator+(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator+=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator+=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator+=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator+=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator-(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator-(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator-(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator-(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator-(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator-(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator-=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator-=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator-=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator-=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator*(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator*(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator*(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator*(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator*(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator*(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator*=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator*=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator*=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator*=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator/(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator/(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator/(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator/(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator/(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator/(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator/=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator/=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator/=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator/=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto operator%(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto operator%(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator%(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator%(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator%(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator%(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator%=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator%=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator%=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator%=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator^(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator^(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator^(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator^(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator^(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator^(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator^=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator^=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator^=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator^=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator&=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator&=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator&=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator&=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator|(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator|(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator|(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator|(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator|(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator|(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator|=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator|=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator|=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator|=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator<<(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator<<(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator<<(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator<<(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
-            -> Array<decltype(lhs << rhs.data()[0]), Data_capacity, Data_allocator, Internals_allocator, HeaderType>
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
+            -> Array<decltype(lhs << rhs.data()[0]), StorageType, Internals_allocator, HeaderType>
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator<<=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator<<=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator<<=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator<<=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator>>(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator>>(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator>>(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator>>(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator>>(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator>>(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator>>=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator>>=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator>>=(Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator>>=(Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator~(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator~(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return ~a; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator!(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator!(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return !a; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator+(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator+(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return +a; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator-(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator-(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return -a; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto abs(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto abs(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return abs(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto acos(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto acos(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return acos(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto acosh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto acosh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return acosh(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto asin(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto asin(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return asin(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto asinh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto asinh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return asinh(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto atan(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto atan(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return atan(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto atanh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto atanh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return atanh(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto cos(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto cos(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return cos(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto cosh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto cosh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return cosh(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto exp(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto exp(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return exp(a); });
         }
         
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto log(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto log(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return log(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto log10(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto log10(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return log10(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto pow(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto pow(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return pow(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto sin(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto sin(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return sin(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto sinh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto sinh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return sinh(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto sqrt(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto sqrt(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return sqrt(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto tan(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto tan(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return tan(a); });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto tanh(const Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto tanh(const Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             return transform(arr, [](const T& a) { return tanh(a); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&&(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&&(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&&(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&&(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator&&(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator&&(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator||(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator||(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator||(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator||(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator||(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator||(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator++(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator++(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             if (empty(arr)) {
                 return arr;
             }
 
-            for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
                 ++arr(*gen);
             }
             return arr;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator++(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator++(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& arr)
         {
             return operator++(arr);
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto operator++(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, int)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto operator++(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, int)
         {
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> old = clone(arr);
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> old = clone(arr);
             operator++(arr);
             return old;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator++(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& arr, int)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator++(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& arr, int)
         {
             return operator++(arr, int{});
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto& operator--(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto& operator--(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr)
         {
             if (empty(arr)) {
                 return arr;
             }
 
-            for (typename Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
                 --arr(*gen);
             }
             return arr;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator--(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& arr)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator--(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& arr)
         {
             return operator--(arr);
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        inline auto operator--(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& arr, int)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        inline auto operator--(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>& arr, int)
         {
-            Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType> old = clone(arr);
+            Array<T, StorageType, Internals_allocator, HeaderType, IndexerType> old = clone(arr);
             operator--(arr);
             return old;
         }
 
-        template <typename T, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline auto operator--(Array<T, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>&& arr, int)
+        template <typename T, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline auto operator--(Array<T, StorageType, Internals_allocator, HeaderType, IndexerType>&& arr, int)
         {
             return operator--(arr, int{});
         }
 
-        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_match(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_match(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_pred pred)
         {
             if (empty(lhs) && empty(rhs)) {
                 return true;
@@ -4030,8 +4039,8 @@ namespace oc {
                 return false;
             }
 
-            typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header());
-            typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header());
+            typename Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header());
+            typename Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header());
 
             for (; lhs_gen && rhs_gen; ++lhs_gen, ++rhs_gen) {
                 if (!pred(lhs(*lhs_gen), rhs(*rhs_gen))) {
@@ -4042,14 +4051,14 @@ namespace oc {
             return true;
         }
 
-        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_match(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_match(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_pred pred)
         {
             if (empty(lhs)) {
                 return true;
             }
 
-            for (typename Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
+            for (typename Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
                 if (!pred(lhs(*gen), rhs)) {
                     return false;
                 }
@@ -4058,14 +4067,14 @@ namespace oc {
             return true;
         }
 
-        template <typename T1, typename T2, typename Binary_pred, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_match(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_pred pred)
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_match(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs, Binary_pred pred)
         {
             if (empty(rhs)) {
                 return true;
             }
 
-            for (typename Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
+            for (typename Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
                 if (!pred(lhs, rhs(*gen))) {
                     return false;
                 }
@@ -4074,38 +4083,38 @@ namespace oc {
             return true;
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_equal(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_equal(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_equal(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_equal(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_equal(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs)
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_equal(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs)
         {
             return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_close(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_close(const Array<T1, StorageType1, Internals_allocator, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_close(const Array<T1, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_close(const Array<T1, StorageType, Internals_allocator, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
-        template <typename T1, typename T2, std::int64_t Data_capacity, typename HeaderType, template<typename> typename Data_allocator, template<typename> typename Internals_allocator, typename IndexerType>
-        [[nodiscard]] inline bool all_close(const T1& lhs, const Array<T2, Data_capacity, Data_allocator, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename Internals_allocator, typename IndexerType>
+        [[nodiscard]] inline bool all_close(const T1& lhs, const Array<T2, StorageType, Internals_allocator, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
