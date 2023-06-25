@@ -2312,30 +2312,6 @@ namespace oc {
                 return res;
             }
 
-            template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& transform(const Array<T_o, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other, Binary_op&& op)
-            {
-                if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
-                    return *this;
-                }
-
-                for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
-                    (*this)(*gen) = op((*this)(*gen), other(*gen));
-                }
-
-                return *this;
-            }
-
-            template <typename T_o, typename Binary_op>
-            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& transform(const T_o& other, Binary_op&& op)
-            {
-                for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
-                    (*this)(*gen) = op((*this)(*gen), other);
-                }
-
-                return *this;
-            }
-
             auto begin(std::int64_t axis = 0)
             {
                 return Array_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis));
@@ -2463,6 +2439,114 @@ namespace oc {
             auto crend(std::initializer_list<std::int64_t> order) const
             {
                 return crend(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+
+            template <typename Unary_op>
+            [[nodiscard]] auto transform(Unary_op&& op) const
+                -> Array<decltype(op(data()[0])), typename StorageType::template TransformedType<decltype(op(data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
+            {
+                using T_o = decltype(op(data()[0]));
+
+                if (empty(*this)) {
+                    return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
+                }
+
+                Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    res(*gen) = op((*this)(*gen));
+                }
+
+                return res;
+            }
+
+
+            template <typename T2, typename Binary_op, typename StorageType2>
+            [[nodiscard]] auto transform(const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& other, Binary_op&& op) const
+                -> Array<decltype(op(data()[0], other.data()[0])), typename StorageType::template TransformedType<decltype(op(data()[0], other.data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
+            {
+                using T_o = decltype(op(data()[0], other.data()[0]));
+
+                if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
+                    return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
+                }
+
+                Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+
+                IndexerType gen(header());
+                typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer other_gen(other.header());
+
+                for (; gen && other_gen; ++gen, ++other_gen) {
+                    res(*gen) = op((*this)(*gen), other(*other_gen));
+                }
+
+                return res;
+            }
+
+            template <typename T2, typename Binary_op>
+            [[nodiscard]] auto transform(const T2& value, Binary_op&& op) const
+                -> Array<decltype(op(data()[0], value)), typename StorageType::template TransformedType<decltype(op(data()[0], value))>, SharedRefAllocType, HeaderType, IndexerType>
+            {
+                using T_o = decltype(op(data()[0], value));
+
+                if (empty(*this)) {
+                    return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>{};
+                }
+
+                Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+
+                for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
+                    res(*gen) = op((*this)(*gen), value);
+                }
+
+                return res;
+            }
+
+            template <typename Unary_op>
+            [[nodiscard]] auto apply(Unary_op&& op)
+            {
+                if (empty(*this)) {
+                    return *this;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    (*this)(*gen) = op((*this)(*gen));
+                }
+
+                return *this;
+            }
+
+
+            template <typename T2, typename Binary_op, typename StorageType2>
+            [[nodiscard]] auto apply(const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& other, Binary_op&& op)
+            {
+                if (!std::equal(header().dims().begin(), header().dims().end(), other.header().dims().begin(), other.header().dims().end())) {
+                    return *this;
+                }
+
+                IndexerType gen(header());
+                typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer other_gen(other.header());
+
+                for (; gen && other_gen; ++gen, ++other_gen) {
+                    (*this)(*gen) = op((*this)(*gen), other(*other_gen));
+                }
+
+                return *this;
+            }
+
+            template <typename T2, typename Binary_op>
+            [[nodiscard]] auto apply(const T2& value, Binary_op&& op)
+            {
+                if (empty(*this)) {
+                    return *this;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    (*this)(*gen) = op((*this)(*gen), value);
+                }
+
+                return *this;
             }
 
 
@@ -2798,20 +2882,36 @@ namespace oc {
             return !arr.data() && arr.header().empty();
         }
 
-        template <typename T, typename Unary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>    
+        template <typename T, typename Unary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto transform(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Unary_op&& op)
-            -> Array<decltype(op(arr.data()[0])), typename StorageType::template TransformedType<decltype(op(arr.data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
         {
-            using T_o = decltype(op(arr.data()[0]));
+            return arr.transform(op);
+        }
+        
 
-            if (empty(arr)) {
-                return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
+        template <typename T1, typename T2, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline auto transform(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_op&& op)
+        {
+            return lhs.transform(rhs, op);
+        }
+        
+        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline auto transform(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_op&& op)
+        {
+            return lhs.transform(rhs, op);
+        }
+        
+        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_op&& op)
+            ->Array<decltype(op(lhs, rhs.data()[0])), typename StorageType::template TransformedType<decltype(op(lhs, rhs.data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
+        {
+            using T_o = decltype(op(lhs, rhs.data()[0]));
 
-            Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
+            Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
 
-            for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
-                res(*gen) = op(arr(*gen));
+            for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
+                res(*gen) = op(lhs, rhs(*gen));
+
             }
 
             return res;
@@ -2959,55 +3059,6 @@ namespace oc {
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
             return reduce(arr, [](const T& a, const T& b) { return a || b; }, axis);
-        }
-
-        template <typename T1, typename T2, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline auto transform(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs.data()[0])), typename StorageType1::template TransformedType<decltype(op(lhs.data()[0], rhs.data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
-        {
-            using T_o = decltype(op(lhs.data()[0], rhs.data()[0]));
-            
-            if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
-                return Array<T_o, typename StorageType1::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T_o, typename StorageType1::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
-
-            for (typename Array<T_o, typename StorageType1::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
-                res(*gen) = op(lhs(*gen), rhs(*gen));
-            }
-
-            return res;
-        }
-
-        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline auto transform(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs.data()[0], rhs)), typename StorageType::template TransformedType<decltype(op(lhs.data()[0], rhs))>, SharedRefAllocType, HeaderType, IndexerType>
-        {
-            using T_o = decltype(op(lhs.data()[0], rhs));
-
-            Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(lhs.header().dims().data(), lhs.header().dims().size()));
-
-            for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
-                res(*gen) = op(lhs(*gen), rhs);
-            }
-
-            return res;
-        }
-
-        template <typename T1, typename T2, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline auto transform(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_op&& op)
-            -> Array<decltype(op(lhs, rhs.data()[0])), typename StorageType::template TransformedType<decltype(op(lhs, rhs.data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
-        {
-            using T_o = decltype(op(lhs, rhs.data()[0]));
-
-            Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(rhs.header().dims().data(), rhs.header().dims().size()));
-
-            for (typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
-                res(*gen) = op(lhs, rhs(*gen));
-            }
-
-            return res;
         }
 
         template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -3196,596 +3247,616 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.transform(rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.transform(rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return rhs.transform(lhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
+            return rhs.transform(rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator+(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator+(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator+(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a + b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a + b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator+=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator+=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a + b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a + b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator-(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator-(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator-(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a - b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return b - a; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator-=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator-=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a - b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a - b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator*(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator*(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator*(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a * b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a * b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator*=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator*=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a * b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a * b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator/(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator/(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator/(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a / b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return b / a; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator/=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator/=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a / b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a / b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto operator%(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator%(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator%(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a % b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return b % a; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator%=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a % b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator%=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a % b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a % b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator^(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator^(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator^(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a ^ b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator^=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator^=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a ^ b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a & b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a & b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator&=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a & b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator&=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a & b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a & b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator|(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator|(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator|(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a | b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a | b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator|=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a | b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator|=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a | b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a | b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator<<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator<<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator<<(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
             -> Array<decltype(lhs << rhs.data()[0]), StorageType, SharedRefAllocType, HeaderType>
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a << b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return b << a; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator<<=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a << b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator<<=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a << b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a << b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator>>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator>>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator>>(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >> b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return b >> a; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator>>=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a >> b; });
+            return lhs;
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline auto& operator>>=(Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a >> b; });
+            lhs.apply(rhs, [](const T1& a, const T2& b) { return a >> b; });
+            return lhs;
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator~(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return ~a; });
+            return arr.transform([](const T& a) { return ~a; });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator!(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return !a; });
+            return arr.transform([](const T& a) { return !a; });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator+(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return +a; });
+            return arr.transform([](const T& a) { return +a; });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator-(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return -a; });
+            return arr.transform([](const T& a) { return -a; });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto abs(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return abs(a); });
+            return arr.transform([](const T& a) { return abs(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto acos(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return acos(a); });
+            return arr.transform([](const T& a) { return acos(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto acosh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return acosh(a); });
+            return arr.transform([](const T& a) { return acosh(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto asin(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return asin(a); });
+            return arr.transform([](const T& a) { return asin(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto asinh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return asinh(a); });
+            return arr.transform([](const T& a) { return asinh(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto atan(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return atan(a); });
+            return arr.transform([](const T& a) { return atan(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto atanh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return atanh(a); });
+            return arr.transform([](const T& a) { return atanh(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto cos(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return cos(a); });
+            return arr.transform([](const T& a) { return cos(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto cosh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return cosh(a); });
+            return arr.transform([](const T& a) { return cosh(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto exp(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return exp(a); });
+            return arr.transform([](const T& a) { return exp(a); });
         }
         
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto log(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return log(a); });
+            return arr.transform([](const T& a) { return log(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto log10(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return log10(a); });
+            return arr.transform([](const T& a) { return log10(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto pow(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return pow(a); });
+            return arr.transform([](const T& a) { return pow(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sin(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sin(a); });
+            return arr.transform([](const T& a) { return sin(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sinh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sinh(a); });
+            return arr.transform([](const T& a) { return sinh(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sqrt(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sqrt(a); });
+            return arr.transform([](const T& a) { return sqrt(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto tan(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return tan(a); });
+            return arr.transform([](const T& a) { return tan(a); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto tanh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return tanh(a); });
+            return arr.transform([](const T& a) { return tanh(a); });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&&(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&&(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator&&(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a && b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a && b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator||(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator||(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
+            return lhs.transform(rhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto operator||(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return transform(lhs, rhs, [](const T1& a, const T2& b) { return a || b; });
+            return rhs.transform(lhs, [](const T1& a, const T2& b) { return a || b; });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>

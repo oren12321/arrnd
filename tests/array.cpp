@@ -882,11 +882,13 @@ TEST(Array_test, element_wise_transformation)
     oc::Array oarr{ {dims, 3}, odata };
 
     EXPECT_TRUE(oc::all_equal(oarr, oc::transform(iarr, [](int n) {return n * 0.5; })));
+    EXPECT_TRUE(oc::all_equal(oarr, iarr.transform([](int n) {return n * 0.5; })));
 }
 
 TEST(Array_test, element_wise_transform_operation)
 {
     EXPECT_TRUE(oc::empty(oc::transform(oc::Array<int>({ 3, 1, 2 }), oc::Array<double>({ 6 }), [](int, double) {return 0.0; })));
+    EXPECT_TRUE(oc::empty(oc::Array<int>({ 3, 1, 2 }).transform(oc::Array<double>({ 6 }), [](int, double) {return 0.0; })));
 
     std::int64_t dims[]{ 3, 1, 2 };
 
@@ -905,6 +907,7 @@ TEST(Array_test, element_wise_transform_operation)
     oc::Array oarr1{ {dims, 3}, 0.5 };
 
     EXPECT_TRUE(oc::all_equal(oarr1, oc::transform(iarr1, iarr2, [](int a, double b) { return b / a; })));
+    EXPECT_TRUE(oc::all_equal(oarr1, iarr1.transform(iarr2, [](int a, double b) { return b / a; })));
 
     const int odata2[] = {
         0, 1,
@@ -913,6 +916,7 @@ TEST(Array_test, element_wise_transform_operation)
     oc::Array oarr2{ {dims, 3}, odata2 };
 
     EXPECT_TRUE(oc::all_equal(oarr2, oc::transform(iarr1, 1, [](int a, int b) { return a - b; })));
+    EXPECT_TRUE(oc::all_equal(oarr2, iarr1.transform(1, [](int a, int b) { return a - b; })));
 
     const int odata3[] = {
         0, -1,
