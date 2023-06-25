@@ -938,6 +938,7 @@ TEST(Array_test, reduce_elements)
     oc::Array iarr{ {dims, 3}, idata };
 
     EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), oc::reduce(iarr, [](double a, int b) {return a / b; }));
+    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), iarr.reduce([](double a, int b) {return a / b; }));
 
     std::int64_t dims2[]{ 3, 1 };
     const double rdata2[]{
@@ -947,6 +948,7 @@ TEST(Array_test, reduce_elements)
     };
     oc::Array rarr2{ {dims2, 2}, rdata2 };
     EXPECT_TRUE(oc::all_equal(rarr2, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2)));
+    EXPECT_TRUE(oc::all_equal(rarr2, iarr.reduce([](int value, double previous) {return previous + value; }, 2)));
 
     std::int64_t dims1[]{ 3, 2 };
     const double rdata1[]{
@@ -955,19 +957,23 @@ TEST(Array_test, reduce_elements)
         5.0, 6.0 };
     oc::Array rarr1{ {dims1, 2}, rdata1 };
     EXPECT_TRUE(oc::all_equal(rarr1, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1)));
+    EXPECT_TRUE(oc::all_equal(rarr1, iarr.reduce([](int value, double previous) {return previous + value; }, 1)));
 
     std::int64_t dims0[]{ 1, 2 };
     const double rdata0[]{
         9.0, 12.0 };
     oc::Array rarr0{ {dims0, 2}, rdata0 };
     EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 0)));
+    EXPECT_TRUE(oc::all_equal(rarr0, iarr.reduce([](int value, double previous) {return previous + value; }, 0)));
 
     oc::Array iarr1d{ {6}, idata };
     const double data1d[]{ 21.0 };
     oc::Array rarr1d{ {1}, data1d };
     EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0)));
+    EXPECT_TRUE(oc::all_equal(rarr1d, iarr1d.reduce([](int value, double previous) {return previous + value; }, 0)));
 
     EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 3)));
+    EXPECT_TRUE(oc::all_equal(rarr0, iarr.reduce([](int value, double previous) {return previous + value; }, 3)));
 
     // reduction with initial value(s)
     {
@@ -988,6 +994,23 @@ TEST(Array_test, reduce_elements)
             {std::string{"1-2"}, std::string{"5-6"}} }, byaxis));
     }
 
+    // reduction with initial value(s)
+    {
+        oc::Array arr{ {2, 2}, {1, 2, 5, 6} };
+
+        std::string chain = arr.reduce(
+            std::string{},
+            [](const std::string& s, int n) { return s + "-" + std::to_string(n); });
+        EXPECT_EQ("-1-2-5-6", chain);
+
+        oc::Array<std::string> byaxis = arr({ {0,1}, {1} }).reduce(
+            oc::Array{ {2}, {std::to_string(arr({0,0})), std::to_string(arr({1,0}))} },
+            [](const std::string& s, int n) { return s + "-" + std::to_string(n); },
+            1);
+        EXPECT_TRUE(oc::all_equal(oc::Array{ {2},
+            {std::string{"1-2"}, std::string{"5-6"}} }, byaxis));
+    }
+
     // complex array reduction
     {
         auto sum = [](int value, double previous) {
@@ -995,6 +1018,7 @@ TEST(Array_test, reduce_elements)
         };
 
         EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(oc::reduce(oc::reduce(iarr, sum, 2), sum, 1), sum, 0)));
+        EXPECT_TRUE(oc::all_equal(rarr1d, iarr.reduce(sum, 2).reduce(sum, 1).reduce(sum, 0)));
     }
 }
 
