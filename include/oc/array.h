@@ -1161,16 +1161,10 @@ namespace oc {
         };
 
 
-        template <std::int64_t Dims_capacity, template<typename> typename Internal_allocator>
-        class Array_indices_generator;
-
-
         template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
         class Simple_array_indices_generator final
         {
         public:
-            friend class Array_indices_generator<Dims_capacity, Internal_allocator>;
-
             constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
                 : Simple_array_indices_generator(hdr, std::span<const std::int64_t>{}, backward)
             {
@@ -1475,8 +1469,6 @@ namespace oc {
         class Fast_array_indices_generator final
         {
         public:
-            friend class Array_indices_generator<Dims_capacity, Internal_allocator>;
-
             constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
                 : Fast_array_indices_generator(hdr, 0, backward)
             {
@@ -1732,170 +1724,6 @@ namespace oc {
 
             std::int64_t group_start_index_ = 0;
         };
-
-
-
-
-        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
-        class Array_indices_generator final
-        {
-        public:
-            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
-            {
-                if (hdr.is_subarray()) {
-                    simple_gen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
-                    is_fast_ = false;
-                    first_index_ = simple_gen_.first_index_;
-                    last_index_ = simple_gen_.last_index_;
-                    last_first_diff_ = simple_gen_.last_first_diff_;
-                    current_index_ = simple_gen_.current_index_;
-                }
-                else {
-                    fast_gen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, backward);
-                    is_fast_ = true;
-                    first_index_ = 0;
-                    last_index_ = fast_gen_.last_index_;
-                    last_first_diff_ = fast_gen_.last_index_;
-                    current_index_ = fast_gen_.current_index_;
-                }
-            }
-
-            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
-            {
-                if (hdr.is_subarray()) {
-                    simple_gen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
-                    is_fast_ = false;
-                    first_index_ = simple_gen_.first_index_;
-                    last_index_ = simple_gen_.last_index_;
-                    last_first_diff_ = simple_gen_.last_first_diff_;
-                    current_index_ = simple_gen_.current_index_;
-                }
-                else {
-                    fast_gen_ = Fast_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, axis, backward);
-                    is_fast_ = true;
-                    first_index_ = 0;
-                    last_index_ = fast_gen_.last_index_;
-                    last_first_diff_ = fast_gen_.last_index_;
-                    current_index_ = fast_gen_.current_index_;
-                }
-            }
-
-            constexpr Array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
-            {
-                simple_gen_ = Simple_array_indices_generator<Dims_capacity, Internal_allocator>(hdr, order, backward);
-                is_fast_ = false;
-                first_index_ = simple_gen_.first_index_;
-                last_index_ = simple_gen_.last_index_;
-                last_first_diff_ = simple_gen_.last_first_diff_;
-                current_index_ = simple_gen_.current_index_;
-            }
-
-            constexpr Array_indices_generator() = default;
-
-            constexpr Array_indices_generator(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-
-            constexpr Array_indices_generator(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-
-            constexpr ~Array_indices_generator() = default;
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
-            {
-                if (is_fast_) {
-                    ++fast_gen_;
-                    current_index_ = fast_gen_.current_index_;
-                }
-                else {
-                    ++simple_gen_;
-                    current_index_ = simple_gen_.current_index_;
-                }
-                return *this;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
-            {
-                Array_indices_generator temp{ *this };
-                ++(*this);
-                return temp;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
-            {
-                for (std::int64_t i = 0; i < count; ++i) {
-                    ++(*this);
-                }
-                return *this;
-            }
-
-            Array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
-            {
-                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
-                temp += count;
-                return temp;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
-            {
-                if (is_fast_) {
-                    --fast_gen_;
-                    current_index_ = fast_gen_.current_index_;
-                }
-                else {
-                    --simple_gen_;
-                    current_index_ = simple_gen_.current_index_;
-                }
-                return *this;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
-            {
-                Array_indices_generator temp{ *this };
-                --(*this);
-                return temp;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
-            {
-                for (std::int64_t i = 0; i < count; ++i) {
-                    --(*this);
-                }
-                return *this;
-            }
-
-            constexpr Array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
-            {
-                Array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] explicit constexpr operator bool() const noexcept
-            {
-                return static_cast<std::uint64_t>(current_index_ - first_index_) <= last_first_diff_;
-            }
-
-            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
-            {
-                return current_index_;
-            }
-
-        private:
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> simple_gen_;
-            Fast_array_indices_generator<Dims_capacity, Internal_allocator> fast_gen_;
-
-            bool is_fast_ = 0;
-
-            std::int64_t first_index_;
-            std::int64_t last_index_;
-            std::int64_t last_first_diff_;
-
-            std::int64_t current_index_;
-        };
-
-
-
-
 
         template <typename T, typename IndexerType = Simple_array_indices_generator<>>
         class Array_iterator final
