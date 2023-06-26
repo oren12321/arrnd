@@ -2441,6 +2441,40 @@ namespace oc {
                 return crend(std::span<const std::int64_t>(order.begin(), order.size()));
             }
 
+            auto resize(std::span<const std::int64_t> new_dims)
+            {
+                if (empty(*this)) {
+                    *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                    return *this;
+                }
+
+                if (header().dims() == new_dims) {
+                    return *this;
+                }
+
+                if (numel(new_dims) <= 0) {
+                    *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
+                    return *this;
+                }
+
+                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+
+                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header());
+                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
+
+                while (gen && res_gen) {
+                    res(*res_gen) = (*this)(*gen);
+                    ++gen;
+                    ++res_gen;
+                }
+
+                *this = res;
+                return res;
+            }
+            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> resize(std::initializer_list<std::int64_t> new_dims)
+            {
+                return resize(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            }
 
             template <typename Unary_op>
             [[nodiscard]] auto transform(Unary_op&& op) const
@@ -2699,7 +2733,7 @@ namespace oc {
                 }
 
                 if (res_count < header().count()) {
-                    return resize(res, { res_count });
+                    return res.resize({ res_count });
                 }
 
                 return res;
@@ -2740,7 +2774,7 @@ namespace oc {
                 }
 
                 if (res_count < header().count()) {
-                    return resize(res, { res_count });
+                    res.resize({ res_count });
                 }
 
                 return res;
@@ -2843,35 +2877,12 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> resize(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
-            }
-
-            if (arr.header().dims() == new_dims) {
-                return clone(arr);
-            }
-
-            if (numel(new_dims) <= 0) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            while (arr_gen && res_gen) {
-                res(*res_gen) = arr(*arr_gen);
-                ++arr_gen;
-                ++res_gen;
-            }
-
-            return res;
+            return clone(arr).resize(new_dims);
         }
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> resize(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return clone(arr).resize(new_dims);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
