@@ -2167,7 +2167,7 @@ namespace oc {
             template <typename U>
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const U& value)
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return *this;
                 }
 
@@ -2287,7 +2287,7 @@ namespace oc {
 
             [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
-                if (ranges.empty() || empty(*this)) {
+                if (ranges.empty() || empty()) {
                     return (*this);
                 }
 
@@ -2441,6 +2441,10 @@ namespace oc {
                 return crend(std::span<const std::int64_t>(order.begin(), order.size()));
             }
 
+            [[nodiscard]] inline bool empty() const noexcept
+            {
+                return !data() && header().empty();
+            }
 
             /**
             * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
@@ -2448,7 +2452,7 @@ namespace oc {
             template <typename T2, typename StorageType2>
             void copy(Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& dst) const
             {
-                if (empty(*this) || empty(dst)) {
+                if (empty() || dst.empty()) {
                     return;
                 }
 
@@ -2462,7 +2466,7 @@ namespace oc {
 
             [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone() const
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -2478,7 +2482,7 @@ namespace oc {
 
             auto resize(std::span<const std::int64_t> new_dims)
             {
-                if (empty(*this)) {
+                if (empty()) {
                     *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
                     return *this;
                 }
@@ -2516,7 +2520,7 @@ namespace oc {
             */
             auto reshape(std::span<const std::int64_t> new_dims) const
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return *this;
                 }
 
@@ -2554,7 +2558,7 @@ namespace oc {
             {
                 using T_o = decltype(op(data()[0]));
 
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -2596,7 +2600,7 @@ namespace oc {
             {
                 using T_o = decltype(op(data()[0], value));
 
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>{};
                 }
 
@@ -2612,7 +2616,7 @@ namespace oc {
             template <typename Unary_op>
             [[nodiscard]] auto apply(Unary_op&& op)
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return *this;
                 }
 
@@ -2644,7 +2648,7 @@ namespace oc {
             template <typename T2, typename Binary_op>
             auto apply(const T2& value, Binary_op&& op)
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return *this;
                 }
 
@@ -2662,7 +2666,7 @@ namespace oc {
             {
                 using T_o = decltype(op(data()[0], data()[0]));
 
-                if (empty((*this))) {
+                if (empty()) {
                     return T_o{};
                 }
 
@@ -2683,7 +2687,7 @@ namespace oc {
             [[nodiscard]] auto reduce(const T_o& init_value, Binary_op&& op) const
                 -> decltype(op(init_value, data()[0]))
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return init_value;
                 }
 
@@ -2701,7 +2705,7 @@ namespace oc {
             {
                 using T_o = decltype(op(data()[0], data()[0]));
 
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -2739,7 +2743,7 @@ namespace oc {
             {
                 using T_r = decltype(op(init_values.data()[0], data()[0]));
 
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T_r, typename StorageType::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -2780,7 +2784,7 @@ namespace oc {
             template <typename Unary_pred>
             [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> filter(Unary_pred pred) const
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -2814,7 +2818,7 @@ namespace oc {
             template <typename T2>
             [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> filter(const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& mask) const
             {
-                if (empty(*this)) {
+                if (empty()) {
                     return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
                 }
 
@@ -3105,7 +3109,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool empty(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr) noexcept
         {
-            return !arr.data() && arr.header().empty();
+            return arr.empty();
         }
 
         template <typename T, typename Unary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
