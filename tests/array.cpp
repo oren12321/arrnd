@@ -2977,7 +2977,8 @@ TEST(Array_test, reshape)
     Integer_array arr{ {dims, 3}, data };
 
     {
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(arr, {})));
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(arr, {})));
+        EXPECT_THROW(oc::reshape(arr, {}), std::invalid_argument);
     }
 
     {
@@ -3001,13 +3002,14 @@ TEST(Array_test, reshape)
     }
 
     {
-        const int tdata[] = { 1, 5 };
-        const std::int64_t tdims[]{ 1, 2 };
-        Integer_array tarr{ {tdims, 2}, tdata };
+        //const int tdata[] = { 1, 5 };
+        //const std::int64_t tdims[]{ 1, 2 };
+        //Integer_array tarr{ {tdims, 2}, tdata };
 
-        Integer_array rarr{ oc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
-        EXPECT_TRUE(oc::all_equal(tarr, rarr));
-        EXPECT_NE(arr.data(), rarr.data());
+        //Integer_array rarr{ oc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
+        //EXPECT_TRUE(oc::all_equal(tarr, rarr));
+        //EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_THROW(oc::reshape(arr({ {0, 2, 2}, {}, {} }), { 1, 2 }), std::runtime_error);
     }
 }
 

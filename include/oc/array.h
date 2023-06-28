@@ -2476,6 +2476,43 @@ namespace oc {
                 return resize(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
             }
 
+            /**
+            * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
+            */
+            auto reshape(std::span<const std::int64_t> new_dims) const
+            {
+                if (empty(*this)) {
+                    return *this;
+                }
+
+                if (header().dims() == new_dims) {
+                    return *this;
+                }
+
+                if (header().count() != numel(new_dims)) {
+                    throw std::invalid_argument("new_dims product is different from dims");
+                }
+
+                if (header().is_subarray()) {
+                    throw std::runtime_error("invalid reshape operation for subarray - clone and reshape");
+                }
+
+                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(new_dims);
+                if (new_header.empty()) {
+                    throw std::runtime_error("header creation failed");
+                }
+
+                auto res = *this;
+                res.header() = std::move(new_header);
+
+                return res;
+            }
+            auto reshape(std::initializer_list<std::int64_t> new_dims) const
+            {
+                return reshape(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            }
+
+
             template <typename Unary_op>
             [[nodiscard]] auto transform(Unary_op&& op) const
                 -> Array<decltype(op(data()[0])), typename StorageType::template TransformedType<decltype(op(data()[0]))>, SharedRefAllocType, HeaderType, IndexerType>
@@ -2831,47 +2868,12 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> reshape(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::span<const std::int64_t> new_dims)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (arr.header().dims() == new_dims) {
-                return arr;
-            }
-
-            if (arr.header().count() != numel(new_dims)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (arr.header().is_subarray()) {
-                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
-
-                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-                while (arr_gen && res_gen) {
-                    res(*res_gen) = arr(*arr_gen);
-                    ++arr_gen;
-                    ++res_gen;
-                }
-
-                return res;
-            }
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(new_dims);
-            if (new_header.empty()) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res(arr);
-            res.header() = std::move(new_header);
-
-            return res;
+            return arr.reshape(new_dims);
         }
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> reshape(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return arr.reshape(new_dims);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
