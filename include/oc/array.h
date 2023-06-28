@@ -2102,7 +2102,7 @@ namespace oc {
             Array(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
-                copy(other, *this);
+                other.copy(*this);
 
                 Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
             }
@@ -2113,7 +2113,7 @@ namespace oc {
                     return *this;
                 }
 
-                copy(other, *this);
+                other.copy(*this);
                 Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> dummy{ std::move(other) };
                 return *this;
             }
@@ -2121,14 +2121,14 @@ namespace oc {
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)&
             {
                 *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
-                copy(other, *this);
+                other.copy(*this);
                 Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
                 return *this;
             }
             template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)&&
             {
-                copy(other, *this);
+                other.copy(*this);
                 Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
                 return *this;
             }
@@ -2138,7 +2138,7 @@ namespace oc {
             Array(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
-                copy(other, *this);
+                other.copy(*this);
             }
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other) & = default;
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other)&&
@@ -2147,20 +2147,20 @@ namespace oc {
                     return *this;
                 }
 
-                copy(other, *this);
+                other.copy(*this);
                 return *this;
             }
             template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)&
             {
                 *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
-                copy(other, *this);
+                other.copy(*this);
                 return *this;
             }
             template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)&&
             {
-                copy(other, *this);
+                other.copy(*this);
                 return *this;
             }
 
@@ -2440,6 +2440,41 @@ namespace oc {
             {
                 return crend(std::span<const std::int64_t>(order.begin(), order.size()));
             }
+
+
+            /**
+            * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
+            */
+            template <typename T2, typename StorageType2>
+            void copy(Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& dst) const
+            {
+                if (empty(*this) || empty(dst)) {
+                    return;
+                }
+
+                typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header());
+                typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer dst_gen(dst.header());
+
+                for (; gen && dst_gen; ++gen, ++dst_gen) {
+                    dst(*dst_gen) = (*this)(*gen);
+                }
+            }
+
+            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone() const
+            {
+                if (empty(*this)) {
+                    return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
+                }
+
+                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+
+                for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(header()); gen; ++gen) {
+                    clone(*gen) = (*this)(*gen);
+                }
+
+                return clone;
+            }
+
 
             auto resize(std::span<const std::int64_t> new_dims)
             {
@@ -2829,16 +2864,7 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline void copy(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& src, Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& dst)
         {
-            if (empty(src) || empty(dst)) {
-                return;
-            }
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer src_gen(src.header());
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer dst_gen(dst.header());
-
-            for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
-                dst(*dst_gen) = src(*src_gen);
-            }
+            src.copy(dst);
         }
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline void copy(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& src, Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>&& dst)
@@ -2849,17 +2875,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
-
-            for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
-                clone(*gen) = arr(*gen);
-            }
-
-            return clone;
+            return arr.clone();
         }
 
         /**
