@@ -2084,64 +2084,75 @@ namespace oc {
         };
 
 
+        struct CustomArrayTag {};
+
+        template <typename T>
+        concept CustomArray = std::is_same_v<typename T::Tag, CustomArrayTag>;
 
 
         template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = Lightweight_stl_allocator, typename HeaderType = Array_header<>, typename IndexerType = Simple_array_indices_generator<>>
         class Array {
         public:
+            using Tag = CustomArrayTag;
+
+            using ValueType = T;
             using Header = HeaderType;
             using Indexer = IndexerType;
             using Storage = StorageType;
             template <typename T>
             using SharedRefAlloc = SharedRefAllocType<T>;
 
+            using ThisArrayType = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>;
+            template <typename U>
+            using RetypedArray = Array<U, typename StorageType::template TransformedType<U>, SharedRefAllocType, HeaderType, IndexerType>;
+
             Array() = default;
 
-            Array(Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>&& other) = default;
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)
+            Array(Array&& other) = default;
+            template<CustomArray CA>
+            Array(CA&& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
 
-                Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                CA dummy{ std::move(other) };
             }
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>&& other) & = default;
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>&& other)&&
+            Array& operator=(Array&& other) & = default;
+            Array& operator=(Array&& other)&&
             {
                 if (&other == this) {
                     return *this;
                 }
 
                 copy(other, *this);
-                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> dummy{ std::move(other) };
+                Array dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)&
+            template<CustomArray CA>
+            Array& operator=(CA&& other)&
             {
-                *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
-                Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                CA dummy{ std::move(other) };
                 return *this;
             }
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>&& other)&&
+            template<CustomArray CA>
+            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(CA&& other)&&
             {
                 copy(other, *this);
-                Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o> dummy{ std::move(other) };
+                CA dummy{ std::move(other) };
                 return *this;
             }
 
-            Array(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other) = default;
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)
+            Array(const Array& other) = default;
+            template<CustomArray CA>
+            Array(const CA& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
             }
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other) & = default;
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& other)&&
+            Array& operator=(const Array& other) & = default;
+            Array& operator=(const Array& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -2150,28 +2161,28 @@ namespace oc {
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)&
+            template<CustomArray CA>
+            Array& operator=(const CA& other)&
             {
-                *this = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
-            template< typename T_o, typename StorageType_o, template<typename> typename SharedRefAllocType_o, typename HeaderType_o, typename IndexerType_o>
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const Array<T_o, StorageType_o, SharedRefAllocType_o, HeaderType_o, IndexerType_o>& other)&&
+            template<CustomArray CA>
+            Array& operator=(const CA& other)&&
             {
                 copy(other, *this);
                 return *this;
             }
 
             template <typename U>
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(const U& value)
+            Array& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
                 }
 
-                for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(hdr_); gen; ++gen) {
+                for (IndexerType gen(hdr_); gen; ++gen) {
                     (*this)(*gen) = value;
                 }
 
@@ -2285,27 +2296,27 @@ namespace oc {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> operator()(std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
                 }
 
-                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> slice{};
+                ThisArrayType slice{};
                 slice.hdr_ = Header{ hdr_, ranges };
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] Array operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
-            [[nodiscard]] Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> operator()(const Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>& indices) const noexcept
+            [[nodiscard]] Array operator()(const RetypedArray<std::int64_t>& indices) const noexcept
             {
-                Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
+                ThisArrayType res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(indices.header()); gen; ++gen) {
+                for (IndexerType gen(indices.header()); gen; ++gen) {
                     res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
@@ -2338,87 +2349,87 @@ namespace oc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis));
+                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis, true) + 1);
+                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis));
+                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data() , Indexer(hdr_, axis, true) + 1);
+                return Array_const_iterator<T, IndexerType>(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis, true));
+                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis) - 1);
+                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis, true));
+                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, axis) - 1);
+                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order));
+                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order, true) + 1);
+                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order));
+                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order, true) + 1);
+                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order, true));
+                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order) - 1);
+                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order, true));
+                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), Indexer(hdr_, order) - 1);
+                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
 
