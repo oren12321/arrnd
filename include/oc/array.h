@@ -2323,6 +2323,43 @@ namespace oc {
                 return res;
             }
 
+
+            /**
+            * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
+            */
+            template <CustomArray CA>
+            auto& copy_from(const CA& src)
+            {
+                if (empty(*this) || empty(src)) {
+                    return *this;
+                }
+
+                typename CA::Indexer src_gen(src.header());
+                IndexerType dst_gen(header());
+
+                for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
+                    (*this)(*dst_gen) = src(*src_gen);
+                }
+
+                return *this;
+            }
+
+            [[nodiscard]] auto clone() const
+            {
+                if (empty(*this)) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType clone(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    clone(*gen) = (*this)(*gen);
+                }
+
+                return clone;
+            }
+
+
             template <typename Unary_op>
             [[nodiscard]] auto transform(Unary_op&& op) const
             {
@@ -2862,16 +2899,7 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline void copy(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& src, Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& dst)
         {
-            if (empty(src) || empty(dst)) {
-                return;
-            }
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer src_gen(src.header());
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer dst_gen(dst.header());
-
-            for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
-                dst(*dst_gen) = src(*src_gen);
-            }
+            dst.copy_from(src);
         }
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         inline void copy(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& src, Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>&& dst)
@@ -2882,17 +2910,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> clone(std::span<const std::int64_t>(arr.header().dims().data(), arr.header().dims().size()));
-
-            for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(arr.header()); gen; ++gen) {
-                clone(*gen) = arr(*gen);
-            }
-
-            return clone;
+            return arr.clone();
         }
 
         /**
