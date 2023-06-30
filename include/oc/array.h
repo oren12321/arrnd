@@ -2419,6 +2419,125 @@ namespace oc {
             }
 
 
+
+            template <typename Binary_op>
+            [[nodiscard]] auto reduce(Binary_op&& op) const
+            {
+                using U = decltype(op(data()[0], data()[0]));
+
+                if (empty(*this)) {
+                    return U{};
+                }
+
+                IndexerType gen{ header() };
+
+                U res{ static_cast<U>((*this)(*gen)) };
+                ++gen;
+
+                while (gen) {
+                    res = op(res, (*this)(*gen));
+                    ++gen;
+                }
+
+                return res;
+            }
+
+            template <typename U, typename Binary_op>
+            [[nodiscard]] auto reduce(const U& init_value, Binary_op&& op) const
+            {
+                if (empty(*this)) {
+                    return init_value;
+                }
+
+                U res{ init_value };
+                for (IndexerType gen{ header() }; gen; ++gen) {
+                    res = op(res, (*this)(*gen));
+                }
+
+                return res;
+            }
+
+            template <typename Binary_op>
+            [[nodiscard]] auto reduce(Binary_op&& op, std::int64_t axis) const
+            {
+                using U = decltype(op(data()[0], data()[0]));
+
+                if (empty(*this)) {
+                    return RetypedArray<U>();
+                }
+
+                const std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
+
+                typename RetypedArray<U>::Header new_header(header(), fixed_axis);
+                if (new_header.empty()) {
+                    return RetypedArray<U>();
+                }
+
+                RetypedArray<U> res({ new_header.count() });
+                res.header() = std::move(new_header);
+
+                IndexerType gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
+                IndexerType res_gen(res.header());
+
+                const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
+
+                while (gen && res_gen) {
+                    U res_element{ static_cast<U>((*this)(*gen)) };
+                    ++gen;
+                    for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
+                        res_element = op(res_element, (*this)(*gen));
+                    }
+                    res(*res_gen) = res_element;
+                    ++res_gen;
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA, typename Binary_op>
+            [[nodiscard]] auto reduce(const CA& init_values, Binary_op&& op, std::int64_t axis) const
+            {
+                using U = decltype(op(init_values.data()[0], data()[0]));
+
+                if (empty(*this)) {
+                    return RetypedArray<U>();
+                }
+
+                const std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
+
+                if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != header().dims()[fixed_axis]) {
+                    return RetypedArray<U>();
+                }
+
+                typename RetypedArray<U>::Header new_header(header(), axis);
+                if (new_header.empty()) {
+                    return RetypedArray<U>();
+                }
+
+                RetypedArray<U> res({ new_header.count() });
+                res.header() = std::move(new_header);
+
+                IndexerType gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
+                IndexerType res_gen(res.header());
+                typename CA::Indexer init_gen(init_values.header());
+
+                const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
+
+                while (gen && res_gen && init_gen) {
+                    U res_element{ init_values(*init_gen) };
+                    for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
+                        res_element = op(res_element, (*this)(*gen));
+                    }
+                    res(*res_gen) = std::move(res_element);
+                    ++res_gen;
+                    ++init_gen;
+                }
+
+                return res;
+            }
+
+
+
             auto begin(std::int64_t axis = 0)
             {
                 return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
@@ -2888,123 +3007,31 @@ namespace oc {
         }
 
         template <typename T, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        requires std::is_invocable_v<Binary_op, T, T>
         [[nodiscard]] inline auto reduce(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Binary_op&& op)
-            -> decltype(op(arr.data()[0], arr.data()[0]))
         {
-            using T_o = decltype(op(arr.data()[0], arr.data()[0]));
-
-            if (empty(arr)) {
-                return T_o{};
-            }
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen{ arr.header() };
-
-            T_o res{ static_cast<T_o>(arr(*gen)) };
-            ++gen;
-
-            while (gen) {
-                res = op(res, arr(*gen));
-                ++gen;
-            }
-
-            return res;
+            return arr.reduce(op);
         }
 
         template <typename T, typename T_o, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        requires std::is_invocable_v<Binary_op, T_o, T>
         [[nodiscard]] inline auto reduce(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, const T_o& init_value, Binary_op&& op)
-            -> decltype(op(init_value, arr.data()[0]))
         {
-            if (empty(arr)) {
-                return init_value;
-            }
-
-            T_o res{ init_value };
-            for (typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen{ arr.header() }; gen; ++gen) {
-                res = op(res, arr(*gen));
-            }
-
-            return res;
+            return arr.reduce(init_value, op);
         }
 
         template <typename T, typename Binary_op, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        requires std::is_invocable_v<Binary_op, T, T>
         [[nodiscard]] inline auto reduce(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(arr.data()[0], arr.data()[0])), typename StorageType::template TransformedType<decltype(op(arr.data()[0], arr.data()[0]))>, SharedRefAllocType, HeaderType>
         {
-            using T_o = decltype(op(arr.data()[0], arr.data()[0]));
-
-            if (empty(arr)) {
-                return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
-
-            typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(arr.header(), fixed_axis);
-            if (new_header.empty()) {
-                return Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType> res({ new_header.count() });
-            res.header() = std::move(new_header);
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            typename Array<T_o, typename StorageType::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
-
-            while (arr_gen && res_gen) {
-                T_o res_element{ static_cast<T_o>(arr(*arr_gen)) };
-                ++arr_gen;
-                for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++arr_gen) {
-                    res_element = op(res_element, arr(*arr_gen));
-                }
-                res(*res_gen) = res_element;
-                ++res_gen;
-            }
-
-            return res;
+            return arr.reduce(op, axis);
         }
 
         template <typename T, typename T_o, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        requires std::is_invocable_v<Binary_op, T_o, T>
         [[nodiscard]] inline auto reduce(const Array<T, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& arr, const Array<T_o, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& init_values, Binary_op&& op, std::int64_t axis)
-            -> Array<decltype(op(init_values.data()[0], arr.data()[0])), typename StorageType1::template TransformedType<decltype(op(init_values.data()[0], arr.data()[0]))>, SharedRefAllocType, HeaderType>
         {
-            using T_r = decltype(op(init_values.data()[0], arr.data()[0]));
-
-            if (empty(arr)) {
-                return Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            const std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
-
-            if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != arr.header().dims()[fixed_axis]) {
-                return Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            typename Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(arr.header(), axis);
-            if (new_header.empty()) {
-                return Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType> res({ new_header.count() });
-            res.header() = std::move(new_header);
-
-            typename Array<T, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), std::ssize(arr.header().dims()) - fixed_axis - 1);
-            typename Array<T_r, typename StorageType1::template TransformedType<T_r>, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-            typename Array<T_o, typename StorageType2::template TransformedType<T_o>, SharedRefAllocType, HeaderType, IndexerType>::Indexer init_gen(init_values.header());
-
-            const std::int64_t reduction_iteration_cycle{ arr.header().dims()[fixed_axis] };
-
-            while (arr_gen && res_gen && init_gen) {
-                T_o res_element{ init_values(*init_gen) };
-                for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++arr_gen) {
-                    res_element = op(res_element, arr(*arr_gen));
-                }
-                res(*res_gen) = std::move(res_element);
-                ++res_gen;
-                ++init_gen;
-            }
-
-            return res;
+            return arr.reduce(init_values, op, axis);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
