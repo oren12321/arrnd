@@ -2953,7 +2953,8 @@ TEST(Array_test, reshape)
     }
 
     {
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(Integer_array{}, {})));
+        Integer_array x{};
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(x, {})));
     }
 
     {
@@ -2976,8 +2977,8 @@ TEST(Array_test, reshape)
         const int tdata[] = { 1, 5 };
         const std::int64_t tdims[]{ 1, 2 };
         Integer_array tarr{ {tdims, 2}, tdata };
-
-        Integer_array rarr{ oc::reshape(arr({{0, 2, 2}, {}, {}}), {1, 2}) };
+        Integer_array x = arr({ {0, 2, 2}, {}, {} });
+        Integer_array rarr{ oc::reshape(x, {1, 2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
         EXPECT_NE(arr.data(), rarr.data());
     }
@@ -2996,7 +2997,8 @@ TEST(Array_test, resize)
     }
 
     {
-        Integer_array rarr{ oc::resize(Integer_array{}, {6}) };
+        Integer_array x{};
+        Integer_array rarr{ oc::resize(x, {6}) };
         //EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
         EXPECT_EQ(6, rarr.header().dims().data()[0]);
@@ -3006,7 +3008,7 @@ TEST(Array_test, resize)
     {
         Integer_array rarr{ oc::resize(arr, {6}) };
         EXPECT_TRUE(oc::all_equal(arr, rarr));
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_EQ(arr.data(), rarr.data());
     }
 
     {
