@@ -2612,6 +2612,81 @@ namespace oc {
                 return res;
             }
 
+            template <typename Unary_pred>
+            [[nodiscard]] auto find(Unary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return RetypedArray<std::int64_t>();
+                }
+
+                RetypedArray<std::int64_t> res({ header().count() });
+
+                IndexerType gen(header());
+                typename RetypedArray<std::int64_t>::Indexer res_gen(res.header());
+
+                std::int64_t res_count{ 0 };
+
+                while (gen && res_gen) {
+                    if (pred((*this)(*gen))) {
+                        res(*res_gen) = *gen;
+                        ++res_count;
+                        ++res_gen;
+                    }
+                    ++gen;
+                }
+
+                if (res_count == 0) {
+                    return RetypedArray<std::int64_t>();
+                }
+
+                if (res_count < header().count()) {
+                    return resize(res, { res_count });
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] auto find(const CA& mask) const
+            {
+                if (empty(*this)) {
+                    return RetypedArray<std::int64_t>();
+                }
+
+                if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
+                    return RetypedArray<std::int64_t>();
+                }
+
+                RetypedArray<std::int64_t> res({ header().count() });
+
+                IndexerType gen(header());
+                typename CA::Indexer mask_gen(mask.header());
+
+                typename RetypedArray<std::int64_t>::Indexer res_gen(res.header());
+
+                std::int64_t res_count{ 0 };
+
+                while (gen && mask_gen && res_gen) {
+                    if (mask(*mask_gen)) {
+                        res(*res_gen) = *gen;
+                        ++res_count;
+                        ++res_gen;
+                    }
+                    ++gen;
+                    ++mask_gen;
+                }
+
+                if (res_count == 0) {
+                    return RetypedArray<std::int64_t>();
+                }
+
+                if (res_count < header().count()) {
+                    return resize(res, { res_count });
+                }
+
+                return res;
+            }
+
 
             auto begin(std::int64_t axis = 0)
             {
@@ -3166,76 +3241,13 @@ namespace oc {
         template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Unary_pred pred)
         {
-            if (empty(arr)) {
-                return Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() });
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            std::int64_t res_count{ 0 };
-
-            while (arr_gen && res_gen) {
-                if (pred(arr(*arr_gen))) {
-                    res(*res_gen) = *arr_gen;
-                    ++res_count;
-                    ++res_gen;
-                }
-                ++arr_gen;
-            }
-
-            if (res_count == 0) {
-                return Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (res_count < arr.header().count()) {
-                return resize(res, { res_count });
-            }
-
-            return res;
+            return arr.find(pred);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& arr, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& mask)
         {
-            if (empty(arr)) {
-                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() });
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
-
-            typename Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            std::int64_t res_count{ 0 };
-
-            while (arr_gen && mask_gen && res_gen) {
-                if (mask(*mask_gen)) {
-                    res(*res_gen) = *arr_gen;
-                    ++res_count;
-                    ++res_gen;
-                }
-                ++arr_gen;
-                ++mask_gen;
-            }
-
-            if (res_count == 0) {
-                return Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (res_count < arr.header().count()) {
-                return resize(res, { res_count });
-            }
-
-            return res;
+            return arr.find(mask);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
