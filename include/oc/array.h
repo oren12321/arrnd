@@ -2424,6 +2424,208 @@ namespace oc {
             }
 
 
+            template <CustomArray CA>
+            [[nodiscard]] auto append(const CA& arr) const
+            {
+                if (empty(*this)) {
+                    ThisArrayType res(arr);
+                    return res.clone();
+                }
+
+                if (empty(arr)) {
+                    return *this;
+                }
+
+                ThisArrayType res(resize({ header().count() + arr.header().count() }));
+
+                CA rarr(arr.reshape({ arr.header().count() }));
+
+                for (std::int64_t i = header().count(); i < res.header().count(); ++i) {
+                    res({ i }) = arr({ i - header().count() });
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] auto append(const CA& arr, std::int64_t axis) const
+            {
+                if (empty(*this)) {
+                    ThisArrayType res(arr);
+                    return res.clone();
+                }
+
+                if (empty(arr)) {
+                    return *this;
+                }
+
+                HeaderType new_header(header(), arr.header().dims(), axis);
+                if (new_header.empty()) {
+                    return ThisArrayType{};
+                }
+
+                ThisArrayType res({ header().count() + arr.header().count() });
+                res.header() = std::move(new_header);
+
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
+
+                IndexerType gen(header(), fixed_axis);
+                typename CA::Indexer arr_gen(arr.header(), fixed_axis);
+                IndexerType res_gen(res.header(), fixed_axis);
+
+                for (; gen && res_gen; ++gen, ++res_gen) {
+                    res.data()[*res_gen] = data()[*gen];
+                }
+                for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
+                    res.data()[*res_gen] = arr.data()[*arr_gen];
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] auto insert(const CA& arr, std::int64_t ind) const
+            {
+                if (empty(*this)) {
+                    ThisArrayType res(arr);
+                    return res.clone();
+                }
+
+                if (empty(arr)) {
+                    return *this;
+                }
+
+                ThisArrayType res({ header().count() + arr.header().count() });
+
+                ThisArrayType rlhs(reshape({ header().count() }));
+                CA rarr(arr.reshape({ arr.header().count() }));
+
+                std::int64_t fixed_ind{ modulo(ind, header().count() + 1) };
+
+                for (std::int64_t i = 0; i < fixed_ind; ++i) {
+                    res({ i }) = rlhs({ i });
+                }
+                for (std::int64_t i = 0; i < arr.header().count(); ++i) {
+                    res({ fixed_ind + i }) = rarr({ i });
+                }
+                for (std::int64_t i = 0; i < header().count() - fixed_ind; ++i) {
+                    res({ fixed_ind + arr.header().count() + i }) = rlhs({ fixed_ind + i });
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] auto insert(const CA& arr, std::int64_t ind, std::int64_t axis) const
+            {
+                if (empty(*this)) {
+                    ThisArrayType res(arr);
+                    return res.clone();
+                }
+
+                if (empty(arr)) {
+                    return *this;
+                }
+
+                HeaderType new_header(header(), arr.header().dims(), axis);
+                if (new_header.empty()) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType res({ header().count() + arr.header().count() });
+                res.header() = std::move(new_header);
+
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
+
+                IndexerType gen(header(), fixed_axis);
+                typename CA::Indexer arr_gen(arr.header(), fixed_axis);
+                IndexerType res_gen(res.header(), fixed_axis);
+
+                std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
+                std::int64_t cycle = fixed_ind *
+                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+
+                for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
+                    res.data()[*res_gen] = data()[*gen];
+                }
+                for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
+                    res.data()[*res_gen] = arr.data()[*arr_gen];
+                }
+                for (; gen && res_gen; ++gen, ++res_gen) {
+                    res.data()[*res_gen] = data()[*gen];
+                }
+
+                return res;
+            }
+
+            /**
+            * @note All elements starting from ind are being removed in case that count value is too big.
+            */
+            [[nodiscard]] auto remove(std::int64_t ind, std::int64_t count) const
+            {
+                if (empty(*this)) {
+                    return *this;
+                }
+
+                std::int64_t fixed_ind{ modulo(ind, header().count()) };
+                std::int64_t fixed_count{ fixed_ind + count < header().count() ? count : (header().count() - fixed_ind) };
+
+                ThisArrayType res({ header().count() - fixed_count });
+                ThisArrayType rarr(reshape({ header().count() }));
+
+                for (std::int64_t i = 0; i < fixed_ind; ++i) {
+                    res({ i }) = rarr({ i });
+                }
+                for (std::int64_t i = fixed_ind + fixed_count; i < header().count(); ++i) {
+                    res({ i - fixed_count }) = rarr({ i });
+                }
+
+                return res;
+            }
+
+            /**
+            * @note All elements starting from ind are being removed in case that count value is too big.
+            */
+            [[nodiscard]] auto remove(std::int64_t ind, std::int64_t count, std::int64_t axis) const
+            {
+                if (empty(*this)) {
+                    return *this;
+                }
+
+                std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
+                std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
+                std::int64_t fixed_count{ fixed_ind + count <= header().dims()[fixed_axis] ? count : (header().dims()[fixed_axis] - fixed_ind) };
+
+                HeaderType new_header(header(), -fixed_count, fixed_axis);
+                if (new_header.empty()) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType res({ header().count() - (header().count() / header().dims()[fixed_axis]) * fixed_count });
+                res.header() = std::move(new_header);
+
+                IndexerType gen(header(), fixed_axis);
+                IndexerType res_gen(res.header(), fixed_axis);
+
+                std::int64_t cycle = fixed_ind *
+                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+
+                std::int64_t removals = header().count() - res.header().count();
+
+                for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
+                    res.data()[*res_gen] = data()[*gen];
+                }
+                for (; gen && removals; --removals, ++gen) {
+                    //data()[*gen] = arr.data()[*arr_gen];
+                }
+                for (; gen && res_gen; ++gen, ++res_gen) {
+                    res.data()[*res_gen] = data()[*gen];
+                }
+
+                return res;
+            }
+
+
             template <typename Unary_op>
             [[nodiscard]] auto transform(Unary_op&& op) const
             {
@@ -3005,131 +3207,25 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> append(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> res(resize(lhs, { lhs.header().count() + rhs.header().count() }));
-
-            Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
-
-            for (std::int64_t i = lhs.header().count(); i < res.header().count(); ++i) {
-                res({ i }) = rhs({ i - lhs.header().count() });
-            }
-
-            return res;
+            return lhs.append(rhs);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> append(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, std::int64_t axis)
         {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
-            if (new_header.empty()) {
-                return Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>{};
-            }
-
-            Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
-            res.header() = std::move(new_header);
-
-            std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
-
-            for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
-                res.data()[*res_gen] = lhs.data()[*lhs_gen];
-            }
-            for (; rhs_gen && res_gen; ++rhs_gen, ++res_gen) {
-                res.data()[*res_gen] = rhs.data()[*rhs_gen];
-            }
-
-            return res;
+            return lhs.append(rhs, axis);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> insert(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, std::int64_t ind)
         {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
-
-            Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> rlhs(reshape(lhs, { lhs.header().count() }));
-            Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType> rrhs(reshape(rhs, { rhs.header().count() }));
-
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().count() + 1) };
-
-            for (std::int64_t i = 0; i < fixed_ind; ++i) {
-                res({ i }) = rlhs({ i });
-            }
-            for (std::int64_t i = 0; i < rhs.header().count(); ++i) {
-                res({ fixed_ind + i }) = rrhs({ i });
-            }
-            for (std::int64_t i = 0; i < lhs.header().count() - fixed_ind; ++i) {
-                res({ fixed_ind + rhs.header().count() + i }) = rlhs({ fixed_ind + i });
-            }
-
-            return res;
+            return lhs.insert(rhs, ind);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> insert(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, std::int64_t ind, std::int64_t axis)
         {
-            if (empty(lhs)) {
-                return clone(rhs);
-            }
-
-            if (empty(rhs)) {
-                return clone(lhs);
-            }
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(lhs.header(), rhs.header().dims(), axis);
-            if (new_header.empty()) {
-                return Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType> res({ lhs.header().count() + rhs.header().count() });
-            res.header() = std::move(new_header);
-
-            std::int64_t fixed_axis{ modulo(axis, std::ssize(lhs.header().dims())) };
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header(), fixed_axis);
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header(), fixed_axis);
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
-
-            std::int64_t fixed_ind{ modulo(ind, lhs.header().dims()[fixed_axis]) };
-            std::int64_t cycle = fixed_ind *
-                (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
-
-            for (; lhs_gen && res_gen && cycle; --cycle, ++lhs_gen, ++res_gen) {
-                res.data()[*res_gen] = lhs.data()[*lhs_gen];
-            }
-            for (; rhs_gen && res_gen; ++rhs_gen, ++res_gen) {
-                res.data()[*res_gen] = rhs.data()[*rhs_gen];
-            }
-            for (; lhs_gen && res_gen; ++lhs_gen, ++res_gen) {
-                res.data()[*res_gen] = lhs.data()[*lhs_gen];
-            }
-
-            return res;
+            return lhs.insert(rhs, ind, axis);
         }
 
         /**
@@ -3138,24 +3234,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> remove(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            std::int64_t fixed_ind{ modulo(ind, arr.header().count()) };
-            std::int64_t fixed_count{ fixed_ind + count < arr.header().count() ? count : (arr.header().count() - fixed_ind) };
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() - fixed_count });
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> rarr(reshape(arr, { arr.header().count() }));
-
-            for (std::int64_t i = 0; i < fixed_ind; ++i) {
-                res({ i }) = rarr({ i });
-            }
-            for (std::int64_t i = fixed_ind + fixed_count; i < arr.header().count(); ++i) {
-                res({ i - fixed_count }) = rarr({ i });
-            }
-
-            return res;
+            return arr.remove(ind, count);
         }
 
         /**
@@ -3164,41 +3243,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> remove(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            std::int64_t fixed_axis{ modulo(axis, std::ssize(arr.header().dims())) };
-            std::int64_t fixed_ind{ modulo(ind, arr.header().dims()[fixed_axis]) };
-            std::int64_t fixed_count{ fixed_ind + count <= arr.header().dims()[fixed_axis] ? count : (arr.header().dims()[fixed_axis] - fixed_ind) };
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(arr.header(), -fixed_count, fixed_axis);
-            if (new_header.empty()) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() - (arr.header().count() / arr.header().dims()[fixed_axis]) * fixed_count });
-            res.header() = std::move(new_header);
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), fixed_axis);
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header(), fixed_axis);
-
-            std::int64_t cycle = fixed_ind *
-                (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
-
-            std::int64_t removals = arr.header().count() - res.header().count();
-
-            for (; arr_gen && res_gen && cycle; --cycle, ++arr_gen, ++res_gen) {
-                res.data()[*res_gen] = arr.data()[*arr_gen];
-            }
-            for (; arr_gen && removals; --removals, ++arr_gen) {
-                //arr.data()[*arr_gen] = rhs.data()[*rhs_gen];
-            }
-            for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
-                res.data()[*res_gen] = arr.data()[*arr_gen];
-            }
-
-            return res;
+            return arr.remove(ind, count, axis);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
