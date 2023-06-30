@@ -2688,6 +2688,39 @@ namespace oc {
             }
 
 
+            [[nodiscard]] auto transpose(std::span<const std::int64_t> order) const
+            {
+                if (empty(*this)) {
+                    return ThisArrayType();
+                }
+
+                HeaderType new_header(header(), order);
+                if (new_header.empty()) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType res({ header().count() });
+                res.header() = std::move(new_header);
+
+                IndexerType gen(header(), order);
+                IndexerType res_gen(res.header());
+
+                while (gen && res_gen) {
+                    res(*res_gen) = (*this)(*gen);
+                    ++gen;
+                    ++res_gen;
+                }
+
+                return res;
+            }
+
+            [[nodiscard]] auto transpose(std::initializer_list<std::int64_t> order) const
+            {
+                return transpose(std::span<const std::int64_t>(order.begin(), order.size()));
+            }
+
+
+
             auto begin(std::int64_t axis = 0)
             {
                 return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
@@ -3253,34 +3286,13 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> transpose(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::span<const std::int64_t> order)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Header new_header(arr.header(), order);
-            if (new_header.empty()) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() });
-            res.header() = std::move(new_header);
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header(), order);
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            while (arr_gen && res_gen) {
-                res(*res_gen) = arr(*arr_gen);
-                ++arr_gen;
-                ++res_gen;
-            }
-
-            return res;
+            return arr.traspose(order);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> transpose(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::initializer_list<std::int64_t> order)
         {
-            return transpose(arr, std::span<const std::int64_t>(order.begin(), order.size() ));
+            return arr.transpose(order);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
