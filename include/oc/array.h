@@ -2537,6 +2537,81 @@ namespace oc {
             }
 
 
+            template <typename Unary_pred>
+            [[nodiscard]] auto filter(Unary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType res({ header().count() });
+
+                IndexerType gen(header());
+                IndexerType res_gen(res.header());
+
+                std::int64_t res_count{ 0 };
+
+                while (gen && res_gen) {
+                    if (pred((*this)(*gen))) {
+                        res(*res_gen) = (*this)(*gen);
+                        ++res_count;
+                        ++res_gen;
+                    }
+                    ++gen;
+                }
+
+                if (res_count == 0) {
+                    return ThisArrayType();
+                }
+
+                if (res_count < header().count()) {
+                    return resize(res, { res_count });
+                }
+
+                return res;
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] auto filter(const CA& mask) const
+            {
+                if (empty(*this)) {
+                    return ThisArrayType();
+                }
+
+                if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
+                    return ThisArrayType();
+                }
+
+                ThisArrayType res({ header().count() });
+
+                IndexerType gen(header());
+                typename CA::Indexer mask_gen(mask.header());
+
+                IndexerType res_gen(res.header());
+
+                std::int64_t res_count{ 0 };
+
+                while (gen && mask_gen && res_gen) {
+                    if (mask(*mask_gen)) {
+                        res(*res_gen) = (*this)(*gen);
+                        ++res_count;
+                        ++res_gen;
+                    }
+                    ++gen;
+                    ++mask_gen;
+                }
+
+                if (res_count == 0) {
+                    return ThisArrayType();
+                }
+
+                if (res_count < header().count()) {
+                    return resize(res, { res_count });
+                }
+
+                return res;
+            }
+
 
             auto begin(std::int64_t axis = 0)
             {
@@ -3079,76 +3154,13 @@ namespace oc {
         template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> filter(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Unary_pred pred)
         {
-            if (empty(arr)) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() });
-
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            std::int64_t res_count{ 0 };
-
-            while (arr_gen && res_gen) {
-                if (pred(arr(*arr_gen))) {
-                    res(*res_gen) = arr(*arr_gen);
-                    ++res_count;
-                    ++res_gen;
-                }
-                ++arr_gen;
-            }
-
-            if (res_count == 0) {
-                return Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (res_count < arr.header().count()) {
-                return resize(res, { res_count });
-            }
-
-            return res;
+            return arr.filter(pred);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType> filter(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& mask)
         {
-            if (empty(arr)) {
-                return Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (!std::equal(arr.header().dims().begin(), arr.header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                return Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType> res({ arr.header().count() });
-
-            typename Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer arr_gen(arr.header());
-            typename Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer mask_gen(mask.header());
-
-            typename Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer res_gen(res.header());
-
-            std::int64_t res_count{ 0 };
-
-            while (arr_gen && mask_gen && res_gen) {
-                if (mask(*mask_gen)) {
-                    res(*res_gen) = arr(*arr_gen);
-                    ++res_count;
-                    ++res_gen;
-                }
-                ++arr_gen;
-                ++mask_gen;
-            }
-
-            if (res_count == 0) {
-                return Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>();
-            }
-
-            if (res_count < arr.header().count()) {
-                return resize(res, { res_count });
-            }
-
-            return res;
+            return arr.filter(mask);
         }
 
         template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
