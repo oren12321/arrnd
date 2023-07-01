@@ -3271,6 +3271,117 @@ namespace oc {
             }
 
 
+
+            
+            [[nodiscard]] inline auto abs()
+            {
+                return transform([](const T& a) { return abs(a); });
+            }
+
+            
+            [[nodiscard]] inline auto acos()
+            {
+                return transform([](const T& a) { return acos(a); });
+            }
+
+            
+            [[nodiscard]] inline auto acosh()
+            {
+                return transform([](const T& a) { return acosh(a); });
+            }
+
+            
+            [[nodiscard]] inline auto asin()
+            {
+                return transform([](const T& a) { return asin(a); });
+            }
+
+            
+            [[nodiscard]] inline auto asinh()
+            {
+                return transform([](const T& a) { return asinh(a); });
+            }
+
+            
+            [[nodiscard]] inline auto atan()
+            {
+                return transform([](const T& a) { return atan(a); });
+            }
+
+            
+            [[nodiscard]] inline auto atanh()
+            {
+                return transform([](const T& a) { return atanh(a); });
+            }
+
+            
+            [[nodiscard]] inline auto cos()
+            {
+                return transform([](const T& a) { return cos(a); });
+            }
+
+            
+            [[nodiscard]] inline auto cosh()
+            {
+                return transform([](const T& a) { return cosh(a); });
+            }
+
+            
+            [[nodiscard]] inline auto exp()
+            {
+                return transform([](const T& a) { return exp(a); });
+            }
+
+            
+            [[nodiscard]] inline auto log()
+            {
+                return transform([](const T& a) { return log(a); });
+            }
+
+            
+            [[nodiscard]] inline auto log10()
+            {
+                return transform([](const T& a) { return log10(a); });
+            }
+
+            
+            [[nodiscard]] inline auto pow()
+            {
+                return transform([](const T& a) { return pow(a); });
+            }
+
+            
+            [[nodiscard]] inline auto sin()
+            {
+                return transform([](const T& a) { return sin(a); });
+            }
+
+            
+            [[nodiscard]] inline auto sinh()
+            {
+                return transform([](const T& a) { return sinh(a); });
+            }
+
+            
+            [[nodiscard]] inline auto sqrt()
+            {
+                return transform([](const T& a) { return sqrt(a); });
+            }
+
+            
+            [[nodiscard]] inline auto tan()
+            {
+                return transform([](const T& a) { return tan(a); });
+            }
+
+            
+            [[nodiscard]] inline auto tanh()
+            {
+                return transform([](const T& a) { return tanh(a); });
+            }
+
+
+
         private:
             Header hdr_{};
             std::shared_ptr<StorageType> buffsp_{ nullptr };
@@ -3935,109 +4046,109 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto abs(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return abs(a); });
+            return arr.abs();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto acos(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return acos(a); });
+            return arr.acos();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto acosh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return acosh(a); });
+            return arr.acosh();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto asin(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return asin(a); });
+            return arr.asin();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto asinh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return asinh(a); });
+            return arr.asinh();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto atan(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return atan(a); });
+            return arr.atan();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto atanh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return atanh(a); });
+            return arr.atanh();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto cos(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return cos(a); });
+            return arr.cos();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto cosh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return cosh(a); });
+            return arr.cosh();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto exp(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return exp(a); });
+            return arr.exp();
         }
         
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto log(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return log(a); });
+            return arr.log();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto log10(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return log10(a); });
+            return arr.log10();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto pow(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return pow(a); });
+            return arr.pow();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sin(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sin(a); });
+            return arr.sin();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sinh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sinh(a); });
+            return arr.sinh();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto sqrt(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return sqrt(a); });
+            return arr.sqrt();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto tan(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return tan(a); });
+            return arr.tan();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline auto tanh(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return transform(arr, [](const T& a) { return tanh(a); });
+            return arr.tanh();
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
