@@ -3023,6 +3023,123 @@ namespace oc {
             }
 
 
+            template <CustomArray CA, typename Binary_pred>
+            [[nodiscard]] bool all_match(const CA& arr, Binary_pred pred) const
+            {
+                if (empty(*this) && empty(arr)) {
+                    return true;
+                }
+
+                if (empty(*this) || empty(arr)) {
+                    return false;
+                }
+
+                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                    return false;
+                }
+
+                IndexerType gen(header());
+                typename CA::Indexer arr_gen(arr.header());
+
+                for (; gen && arr_gen; ++gen, ++arr_gen) {
+                    if (!pred((*this)(*gen), arr(*arr_gen))) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            template <typename U, typename Binary_pred>
+            [[nodiscard]] bool all_match(const U& value, Binary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return true;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    if (!pred((*this)(*gen), value)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            template <typename Unary_pred>
+            [[nodiscard]] bool all_match(Unary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return true;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    if (!pred((*this)(*gen))) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            template <CustomArray CA, typename Binary_pred>
+            [[nodiscard]] bool any_match(const CA& arr, Binary_pred pred) const
+            {
+                if (empty(*this) && empty(arr)) {
+                    return true;
+                }
+
+                if (empty(*this) || empty(arr)) {
+                    return false;
+                }
+
+                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                    return false;
+                }
+
+                IndexerType gen(header());
+                typename CA::Indexer arr_gen(arr.header());
+
+                for (; gen && arr_gen; ++gen, ++arr_gen) {
+                    if (pred((*this)(*gen), arr(*arr_gen))) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            template <typename U, typename Binary_pred>
+            [[nodiscard]] bool any_match(const U& value, Binary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return true;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    if (pred((*this)(*gen), value)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            template <typename Unary_pred>
+            [[nodiscard]] bool any_match(Unary_pred pred) const
+            {
+                if (empty(*this)) {
+                    return true;
+                }
+
+                for (IndexerType gen(header()); gen; ++gen) {
+                    if (pred((*this)(*gen))) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
 
             auto begin(std::int64_t axis = 0)
             {
@@ -3289,7 +3406,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return reduce(arr, [](const T& a, const T& b) { return a && b; });
+            return arr.all_match([](const T& value) { return static_cast<bool>(value); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -3301,7 +3418,7 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return reduce(arr, [](const T& a, const T& b) { return a || b; });
+            return arr.any_match([](const T& value) { return static_cast<bool>(value); });
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -4028,60 +4145,38 @@ namespace oc {
         template <typename T1, typename T2, typename Binary_pred, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_match(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_pred pred)
         {
-            if (empty(lhs) && empty(rhs)) {
-                return true;
-            }
-
-            if (empty(lhs) || empty(rhs)) {
-                return false;
-            }
-
-            if (!std::equal(lhs.header().dims().begin(), lhs.header().dims().end(), rhs.header().dims().begin(), rhs.header().dims().end())) {
-                return false;
-            }
-
-            typename Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>::Indexer lhs_gen(lhs.header());
-            typename Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>::Indexer rhs_gen(rhs.header());
-
-            for (; lhs_gen && rhs_gen; ++lhs_gen, ++rhs_gen) {
-                if (!pred(lhs(*lhs_gen), rhs(*rhs_gen))) {
-                    return false;
-                }
-            }
-
-            return true;
+            return lhs.all_match(rhs, pred);
         }
 
         template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_match(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_pred pred)
         {
-            if (empty(lhs)) {
-                return true;
-            }
-
-            for (typename Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(lhs.header()); gen; ++gen) {
-                if (!pred(lhs(*gen), rhs)) {
-                    return false;
-                }
-            }
-
-            return true;
+            return lhs.all_match(rhs, pred);
         }
 
         template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_match(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_pred pred)
         {
-            if (empty(rhs)) {
-                return true;
-            }
+            return rhs.all_match([&lhs, &pred](const T2& value) { return pred(lhs, value); });
+        }
 
-            for (typename Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>::Indexer gen(rhs.header()); gen; ++gen) {
-                if (!pred(lhs, rhs(*gen))) {
-                    return false;
-                }
-            }
 
-            return true;
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline bool any_match(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_pred pred)
+        {
+            return lhs.any_match(rhs, pred);
+        }
+
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline bool any_match(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, Binary_pred pred)
+        {
+            return lhs.any_match(rhs, pred);
+        }
+
+        template <typename T1, typename T2, typename Binary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
+        [[nodiscard]] inline bool any_match(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, Binary_pred pred)
+        {
+            return rhs.any_match([&lhs, &pred](const T2& value) { return pred(lhs, value); });
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -4133,6 +4228,7 @@ namespace oc {
 
     using details::empty;
     using details::all_match;
+    using details::any_match;
     using details::transform;
     using details::reduce;
     using details::all;
