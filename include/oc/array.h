@@ -3141,6 +3141,65 @@ namespace oc {
                 return false;
             }
 
+
+            [[nodiscard]] bool all() const
+            {
+                return all_match([](const T& value) { return static_cast<bool>(value); });
+            }
+
+            [[nodiscard]] auto all(std::int64_t axis) const
+            {
+                return reduce([](const T& a, const T& b) { return a && b; }, axis);
+            }
+
+            [[nodiscard]] bool any() const
+            {
+                return any_match([](const T& value) { return static_cast<bool>(value); });
+            }
+
+            [[nodiscard]] auto any(std::int64_t axis) const
+            {
+                return reduce([](const T& a, const T& b) { return a || b; }, axis);
+            }
+
+
+            template <CustomArray CA>
+            [[nodiscard]] RetypedArray<bool> close(const CA& arr, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ()) const
+            {
+                return transform(arr, [&atol, &rtol](const T& a, const typename CA::ValueType& b) { return oc::details::close(a, b, atol, rtol); });
+            }
+
+            template <typename U>
+            [[nodiscard]] RetypedArray<bool> close(const U& value, const decltype(T{} - U{})& atol = default_atol<decltype(T{} - U{}) > (), const decltype(T{} - U{})& rtol = default_rtol<decltype(T{} - U{}) > ()) const
+            {
+                return transform(value, [&atol, &rtol](const T& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
+            }
+
+
+            template <CustomArray CA>
+            [[nodiscard]] bool all_equal(const CA& arr) const
+            {
+                return all_match(arr, [](const T& a, const typename CA::ValueType& b) { return a == b; });
+            }
+
+            template <typename U>
+            [[nodiscard]] bool all_equal(const U& value) const
+            {
+                return all_match(value, [](const T& a, const U& b) { return a == b; });
+            }
+
+            template <CustomArray CA>
+            [[nodiscard]] bool all_close(const CA& arr, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ()) const
+            {
+                return all_match(arr, [&atol, &rtol](const T& a, const typename CA::ValueType& b) { return oc::details::close(a, b, atol, rtol); });
+            }
+
+            template <typename U>
+            [[nodiscard]] bool all_close(const U& value, const decltype(T{} - U{})& atol = default_atol<decltype(T{} - U{}) > (), const decltype(T{} - U{})& rtol = default_rtol<decltype(T{} - U{}) > ()) const
+            {
+                return all_match(value, [&atol, &rtol](const T& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
+            }
+
             auto begin(std::int64_t axis = 0)
             {
                 return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
@@ -3517,25 +3576,25 @@ namespace oc {
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return arr.all_match([](const T& value) { return static_cast<bool>(value); });
+            return arr.all();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> all(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
-            return reduce(arr, [](const T& a, const T& b) { return a && b; }, axis);
+            return arr.all(axis);
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr)
         {
-            return arr.any_match([](const T& value) { return static_cast<bool>(value); });
+            return arr.any();
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
-            return reduce(arr, [](const T& a, const T& b) { return a || b; }, axis);
+            return arr.any(axis);
         }
 
         template <typename T1, typename T2, typename Binary_op, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -3631,19 +3690,19 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return transform(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return rhs.close(lhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
@@ -4293,37 +4352,37 @@ namespace oc {
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_equal(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return lhs.all_equal(rhs);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_equal(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
-            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return lhs.all_equal(rhs);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_equal(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
-            return all_match(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
+            return rhs.all_equal(lhs);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_close(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.all_close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return lhs.all_close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
         [[nodiscard]] inline bool all_close(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
-            return all_match(lhs, rhs, [&atol, &rtol](const T1& a, const T2& b) { return close(a, b, atol, rtol); });
+            return rhs.all_close(lhs, atol, rtol);
         }
     }
 
