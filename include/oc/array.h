@@ -14,161 +14,43 @@
 #include <cmath>
 
 namespace oc {
-    namespace details {
-        template <typename T>
-        [[nodiscard]] inline constexpr T default_atol() noexcept
-        {
-            return T{};
-        }
-
-        template <std::integral T>
-        [[nodiscard]] inline constexpr T default_atol() noexcept
-        {
-            return T{ 0 };
-        }
-
-        template <std::floating_point T>
-        [[nodiscard]] inline constexpr T default_atol() noexcept
-        {
-            return T{ 1e-8 };
-        }
-
-        template <typename T>
-        [[nodiscard]] inline constexpr T default_rtol() noexcept
-        {
-            return T{};
-        }
-
-        template <std::integral T>
-        [[nodiscard]] inline constexpr T default_rtol() noexcept
-        {
-            return T{ 0 };
-        }
-
-        template <std::floating_point T>
-        [[nodiscard]] inline constexpr T default_rtol() noexcept
-        {
-            return T{ 1e-5 };
-        }
-
-        template <typename T1, typename T2>
-        [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ()) noexcept
-        {
-            const decltype(a - b) reps{ rtol * (abs(a) > abs(b) ? abs(a) : abs(b)) };
-            return abs(a - b) <= (atol > reps ? atol : reps);
-        }
-
-        template <std::integral T1, std::integral T2>
-        [[nodiscard]] inline constexpr auto modulo(const T1& value, const T2& modulus) noexcept -> decltype((value% modulus) + modulus)
-        {
-            /*decltype((value % modulus) + modulus) res{ value };
-            while (res < 0) {
-                res += modulus;
-            }
-            while (res >= modulus) {
-                res -= modulus;
-            }
-            return res;*/
-            return ((value % modulus) + modulus) % modulus;
-        }
-    }
-
-    using details::default_atol;
-    using details::default_rtol;
-
-    using details::close;
-    using details::modulo;
-
-
-
-    namespace details {
-        template <std::integral T = std::int64_t>
-        struct Interval {
-            Interval(const T& nstart, const T& nstop, const T& nstep) noexcept
-                : start(nstart), stop(nstop), step(nstep) {}
-
-            Interval(const T& nstart, const T& nstop) noexcept
-                : Interval(nstart, nstop, 1) {}
-
-            Interval(const T& nstart) noexcept
-                : Interval(nstart, nstart, 1) {}
-
-            Interval() = default;
-            Interval(const Interval&) = default;
-            Interval& operator=(const Interval&) = default;
-            Interval(Interval&) = default;
-            Interval& operator=(Interval&) = default;
-
-            T start{ 0 };
-            T stop{ 0 };
-            T step{ 1 };
-        };
-
-        template <std::integral T>
-        [[nodiscard]] inline Interval<T> reverse(const Interval<T>& i) noexcept
-        {
-            return { i.stop, i.start, -i.step };
-        }
-
-        template <std::integral T>
-        [[nodiscard]] inline Interval<T> modulo(const Interval<T>& i, const T& modulus) noexcept
-        {
-            return { modulo(i.start, modulus), modulo(i.stop, modulus), i.step };
-        }
-
-        template <std::integral T>
-        [[nodiscard]] inline Interval<T> forward(const Interval<T>& i) noexcept
-        {
-            return i.step < T{ 0 } ? reverse(i) : i;
-        }
-    }
-
-    using details::Interval;
-
-    using details::modulo;
-
-    using details::reverse;
-    using details::forward;
-
-
-
 
     namespace details {
 
         template <typename T>
         requires (!std::is_reference_v<T>)
-        class lightweight_allocator {
-        public:
-            using value_type = T;
-            using pointer = T*;
-            using const_pointer = const T*;
-            using reference = T&;
-            using const_reference = const T&;
-            using size_type = std::int64_t;
-            using difference_type = std::int64_t;
+            class lightweight_allocator {
+            public:
+                using value_type = T;
+                using pointer = T*;
+                using const_pointer = const T*;
+                using reference = T&;
+                using const_reference = const T&;
+                using size_type = std::int64_t;
+                using difference_type = std::int64_t;
 
-            constexpr lightweight_allocator() = default;
-            constexpr lightweight_allocator(const lightweight_allocator& other) = default;
-            constexpr lightweight_allocator& operator=(const lightweight_allocator& other) = default;
-            constexpr lightweight_allocator(lightweight_allocator&& other) = default;
-            constexpr lightweight_allocator& operator=(lightweight_allocator&& other) = default;
-            constexpr ~lightweight_allocator() = default;
+                constexpr lightweight_allocator() = default;
+                constexpr lightweight_allocator(const lightweight_allocator& other) = default;
+                constexpr lightweight_allocator& operator=(const lightweight_allocator& other) = default;
+                constexpr lightweight_allocator(lightweight_allocator&& other) = default;
+                constexpr lightweight_allocator& operator=(lightweight_allocator&& other) = default;
+                constexpr ~lightweight_allocator() = default;
 
-            template <typename U>
-            requires (!std::is_reference_v<U>)
-                constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept {}
+                template <typename U>
+                requires (!std::is_reference_v<U>)
+                    constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept {}
 
-            [[nodiscard]] constexpr pointer allocate(size_type n)
-            {
-                return n == 0 ? nullptr : reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
-            }
-
-            constexpr void deallocate(pointer p, size_type n) noexcept
-            {
-                if (p && n > 0) {
-                    operator delete[](p, n * sizeof(value_type));
+                [[nodiscard]] constexpr pointer allocate(size_type n)
+                {
+                    return n == 0 ? nullptr : reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
                 }
-            }
+
+                constexpr void deallocate(pointer p, size_type n) noexcept
+                {
+                    if (p && n > 0) {
+                        operator delete[](p, n * sizeof(value_type));
+                    }
+                }
         };
 
         template <typename T, template<typename> typename Allocator = lightweight_allocator>
@@ -176,19 +58,21 @@ namespace oc {
             class simple_dynamic_vector final {
             public:
                 using value_type = T;
+                using allocator_type = Allocator<T>;
                 using size_type = std::int64_t;
+                using difference_type = std::int64_t;
                 using reference = T&;
                 using const_reference = const T&;
                 using pointer = T*;
                 using const_pointer = const T*;
+                using iterator = T*;
+                using const_iterator = const T*;
 
-                using capacity_func_type = std::function<size_type(size_type)>;
+                template <typename U>
+                using replaced_type = simple_dynamic_vector<U, Allocator>;
 
-                template <typename T_o>
-                using TransformedType = simple_dynamic_vector<T_o, Allocator>;
-
-                constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr, capacity_func_type capacity_func = [](size_type s) { return static_cast<size_type>(1.5 * s); })
-                    : size_(size), capacity_(size), capacity_func_(capacity_func)
+                constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
+                    : size_(size), capacity_(size)
                 {
                     data_ptr_ = alloc_.allocate(capacity_);
                     if (data) {
@@ -208,7 +92,7 @@ namespace oc {
                 }
 
                 constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
-                    : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_), capacity_func_(other.capacity_func_)
+                    : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_)
                 {
                     data_ptr_ = alloc_.allocate(capacity_);
                     std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
@@ -228,7 +112,6 @@ namespace oc {
                     alloc_ = other.alloc_;
                     size_ = other.size_;
                     capacity_ = other.capacity_;
-                    capacity_func_ = other.capacity_func_;
 
                     data_ptr_ = alloc_.allocate(capacity_);
                     std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
@@ -237,7 +120,7 @@ namespace oc {
                 }
 
                 constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
-                    : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_), capacity_func_(std::move(other.capacity_func_))
+                    : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_)
                 {
                     data_ptr_ = other.data_ptr_;
 
@@ -259,7 +142,6 @@ namespace oc {
                     alloc_ = std::move(other.alloc_);
                     size_ = other.size_;
                     capacity_ = other.capacity_;
-                    capacity_func_ = std::move(other.capacity_func_);
 
                     data_ptr_ = other.data_ptr_;
 
@@ -355,7 +237,7 @@ namespace oc {
                         size_ += count;
                     }
                     else if (size_ + count >= capacity_) {
-                        size_type new_capacity = capacity_func_(size_ + count);
+                        size_type new_capacity = static_cast<size_type>(1.5 * (size_ + count));
                         size_type new_size = size_ + count;
                         pointer data_ptr = alloc_.allocate(new_capacity);
                         std::uninitialized_move_n(data_ptr_, size_, data_ptr);
@@ -402,22 +284,22 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodiscard]] constexpr const T& back() const noexcept
+                [[nodiscard]] constexpr const_reference back() const noexcept
                 {
-                    return data_ptr_[size_-1];
+                    return data_ptr_[size_ - 1];
                 }
 
-                [[nodiscard]] constexpr T& back() noexcept
+                [[nodiscard]] constexpr reference back() noexcept
                 {
-                    return data_ptr_[size_-1];
+                    return data_ptr_[size_ - 1];
                 }
 
-                [[nodiscard]] constexpr const T& front() const noexcept
+                [[nodiscard]] constexpr const_reference front() const noexcept
                 {
                     return data_ptr_[0];
                 }
 
-                [[nodiscard]] constexpr T& front() noexcept
+                [[nodiscard]] constexpr reference front() noexcept
                 {
                     return data_ptr_[0];
                 }
@@ -428,9 +310,7 @@ namespace oc {
                 size_type size_;
                 size_type capacity_;
 
-                Allocator<T> alloc_;
-
-                capacity_func_type capacity_func_;
+                allocator_type alloc_;
         };
 
 
@@ -441,13 +321,16 @@ namespace oc {
             public:
                 using value_type = T;
                 using size_type = std::int64_t;
+                using difference_type = std::int64_t;
                 using reference = T&;
                 using const_reference = const T&;
                 using pointer = T*;
                 using const_pointer = const T*;
+                using iterator = T*;
+                using const_iterator = const T*;
 
-                template <typename T_o>
-                using TransformedType = simple_static_vector<T_o, Capacity>;
+                template <typename U>
+                using replaced_type = simple_static_vector<U, Capacity>;
 
                 constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
                     : size_(size)
@@ -593,22 +476,22 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodiscard]] constexpr const T& back() const noexcept
+                [[nodiscard]] constexpr const_reference back() const noexcept
                 {
                     return data_ptr_[size_ - 1];
                 }
 
-                [[nodiscard]] constexpr T& back() noexcept
+                [[nodiscard]] constexpr reference back() noexcept
                 {
                     return data_ptr_[size_ - 1];
                 }
 
-                [[nodiscard]] constexpr const T& front() const noexcept
+                [[nodiscard]] constexpr const_reference front() const noexcept
                 {
                     return data_ptr_[0];
                 }
 
-                [[nodiscard]] constexpr T& front() noexcept
+                [[nodiscard]] constexpr reference front() noexcept
                 {
                     return data_ptr_[0];
                 }
@@ -618,6 +501,129 @@ namespace oc {
 
                 size_type size_;
         };
+    }
+
+
+    namespace details {
+        template <typename T>
+        [[nodiscard]] inline constexpr T default_atol() noexcept
+        {
+            return T{};
+        }
+
+        template <std::integral T>
+        [[nodiscard]] inline constexpr T default_atol() noexcept
+        {
+            return T{ 0 };
+        }
+
+        template <std::floating_point T>
+        [[nodiscard]] inline constexpr T default_atol() noexcept
+        {
+            return T{ 1e-8 };
+        }
+
+        template <typename T>
+        [[nodiscard]] inline constexpr T default_rtol() noexcept
+        {
+            return T{};
+        }
+
+        template <std::integral T>
+        [[nodiscard]] inline constexpr T default_rtol() noexcept
+        {
+            return T{ 0 };
+        }
+
+        template <std::floating_point T>
+        [[nodiscard]] inline constexpr T default_rtol() noexcept
+        {
+            return T{ 1e-5 };
+        }
+
+        template <typename T1, typename T2>
+        [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ()) noexcept
+        {
+            const decltype(a - b) reps{ rtol * (abs(a) > abs(b) ? abs(a) : abs(b)) };
+            return abs(a - b) <= (atol > reps ? atol : reps);
+        }
+
+        template <std::integral T1, std::integral T2>
+        [[nodiscard]] inline constexpr auto modulo(const T1& value, const T2& modulus) noexcept -> decltype((value% modulus) + modulus)
+        {
+            /*decltype((value % modulus) + modulus) res{ value };
+            while (res < 0) {
+                res += modulus;
+            }
+            while (res >= modulus) {
+                res -= modulus;
+            }
+            return res;*/
+            return ((value % modulus) + modulus) % modulus;
+        }
+    }
+
+    using details::default_atol;
+    using details::default_rtol;
+
+    using details::close;
+    using details::modulo;
+
+
+
+    namespace details {
+        template <std::integral T = std::int64_t>
+        struct Interval {
+            Interval(const T& nstart, const T& nstop, const T& nstep) noexcept
+                : start(nstart), stop(nstop), step(nstep) {}
+
+            Interval(const T& nstart, const T& nstop) noexcept
+                : Interval(nstart, nstop, 1) {}
+
+            Interval(const T& nstart) noexcept
+                : Interval(nstart, nstart, 1) {}
+
+            Interval() = default;
+            Interval(const Interval&) = default;
+            Interval& operator=(const Interval&) = default;
+            Interval(Interval&) = default;
+            Interval& operator=(Interval&) = default;
+
+            T start{ 0 };
+            T stop{ 0 };
+            T step{ 1 };
+        };
+
+        template <std::integral T>
+        [[nodiscard]] inline Interval<T> reverse(const Interval<T>& i) noexcept
+        {
+            return { i.stop, i.start, -i.step };
+        }
+
+        template <std::integral T>
+        [[nodiscard]] inline Interval<T> modulo(const Interval<T>& i, const T& modulus) noexcept
+        {
+            return { modulo(i.start, modulus), modulo(i.stop, modulus), i.step };
+        }
+
+        template <std::integral T>
+        [[nodiscard]] inline Interval<T> forward(const Interval<T>& i) noexcept
+        {
+            return i.step < T{ 0 } ? reverse(i) : i;
+        }
+    }
+
+    using details::Interval;
+
+    using details::modulo;
+
+    using details::reverse;
+    using details::forward;
+
+
+
+
+    namespace details {
 
         template <typename T, typename U>
         [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
@@ -2093,7 +2099,7 @@ namespace oc {
 
             using ThisArrayType = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>;
             template <typename U>
-            using RetypedArray = Array<U, typename StorageType::template TransformedType<U>, SharedRefAllocType, HeaderType, IndexerType>;
+            using RetypedArray = Array<U, typename StorageType::template replaced_type<U>, SharedRefAllocType, HeaderType, IndexerType>;
 
             Array() = default;
 
@@ -3572,7 +3578,7 @@ namespace oc {
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> all(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> all(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
             return arr.all(axis);
         }
@@ -3584,7 +3590,7 @@ namespace oc {
         }
 
         template <typename T, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> any(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, std::int64_t axis)
         {
             return arr.any(axis);
         }
@@ -3620,13 +3626,13 @@ namespace oc {
         }
 
         template <typename T, typename Unary_pred, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<std::int64_t, typename StorageType::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Unary_pred pred)
+        [[nodiscard]] inline Array<std::int64_t, typename StorageType::template replaced_type<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& arr, Unary_pred pred)
         {
             return arr.find(pred);
         }
 
         template <typename T1, typename T2, typename StorageType1, typename StorageType2, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<std::int64_t, typename StorageType1::template TransformedType<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& arr, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& mask)
+        [[nodiscard]] inline Array<std::int64_t, typename StorageType1::template replaced_type<std::int64_t>, SharedRefAllocType, HeaderType, IndexerType> find(const Array<T1, StorageType1, SharedRefAllocType, HeaderType, IndexerType>& arr, const Array<T2, StorageType2, SharedRefAllocType, HeaderType, IndexerType>& mask)
         {
             return arr.find(mask);
         }
@@ -3644,127 +3650,127 @@ namespace oc {
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator==(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator==(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator==(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a == b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator!=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator!=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator!=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a != b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>())
         {
             return lhs.close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> close(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return lhs.close(rhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> close(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> close(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ())
         {
             return rhs.close(lhs, atol, rtol);
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a > b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator>=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator>=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a >= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a < b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<=(const Array<T1, StorageType, SharedRefAllocType, HeaderType, IndexerType>& lhs, const T2& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
 
         template <typename T1, typename T2, typename StorageType, typename HeaderType, template<typename> typename SharedRefAllocType, typename IndexerType>
-        [[nodiscard]] inline Array<bool, typename StorageType::template TransformedType<bool>, SharedRefAllocType, HeaderType> operator<=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
+        [[nodiscard]] inline Array<bool, typename StorageType::template replaced_type<bool>, SharedRefAllocType, HeaderType> operator<=(const T1& lhs, const Array<T2, StorageType, SharedRefAllocType, HeaderType, IndexerType>& rhs)
         {
             return transform(lhs, rhs, [](const T1& a, const T2& b) { return a <= b; });
         }
