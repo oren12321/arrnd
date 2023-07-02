@@ -13,11 +13,6 @@
 
 #include <oc/array.h>
 
-template <typename T, typename U>
-[[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-}
-
 TEST(Algorithms_test, two_numbers_can_be_compared_with_specified_percision)
 {
     using namespace oc;
