@@ -2352,8 +2352,11 @@ namespace oc {
 
                 ThisArrayType clone(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
-                for (IndexerType gen(header()); gen; ++gen) {
-                    clone(*gen) = (*this)(*gen);
+                IndexerType gen(header());
+                IndexerType clone_gen(clone.header());
+
+                for (; gen && clone_gen; ++gen, ++clone_gen) {
+                    clone(*clone_gen) = (*this)(*gen);
                 }
 
                 return clone;
