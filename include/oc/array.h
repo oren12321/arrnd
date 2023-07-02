@@ -137,35 +137,41 @@ namespace oc {
 
         template <typename T>
         requires (!std::is_reference_v<T>)
-        class Lightweight_stl_allocator {
+        class lightweight_allocator {
         public:
             using value_type = T;
+            using pointer = T*;
+            using const_pointer = const T*;
+            using reference = T&;
+            using const_reference = const T&;
+            using size_type = std::int64_t;
+            using difference_type = std::int64_t;
 
-            constexpr Lightweight_stl_allocator() = default;
-            constexpr Lightweight_stl_allocator(const Lightweight_stl_allocator& other) = default;
-            constexpr Lightweight_stl_allocator& operator=(const Lightweight_stl_allocator& other) = default;
-            constexpr Lightweight_stl_allocator(Lightweight_stl_allocator&& other) = default;
-            constexpr Lightweight_stl_allocator& operator=(Lightweight_stl_allocator&& other) = default;
-            constexpr ~Lightweight_stl_allocator() = default;
+            constexpr lightweight_allocator() = default;
+            constexpr lightweight_allocator(const lightweight_allocator& other) = default;
+            constexpr lightweight_allocator& operator=(const lightweight_allocator& other) = default;
+            constexpr lightweight_allocator(lightweight_allocator&& other) = default;
+            constexpr lightweight_allocator& operator=(lightweight_allocator&& other) = default;
+            constexpr ~lightweight_allocator() = default;
 
             template <typename U>
             requires (!std::is_reference_v<U>)
-                constexpr Lightweight_stl_allocator(const Lightweight_stl_allocator<U>&) noexcept {}
+                constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept {}
 
-            [[nodiscard]] constexpr T* allocate(std::size_t n)
+            [[nodiscard]] constexpr pointer allocate(size_type n)
             {
-                return n == 0 ? nullptr : reinterpret_cast<T*>(operator new[](n * sizeof(T)));
+                return n == 0 ? nullptr : reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
             }
 
-            constexpr void deallocate(T* p, std::size_t n) noexcept
+            constexpr void deallocate(pointer p, size_type n) noexcept
             {
                 if (p && n > 0) {
-                    operator delete[](p, n * sizeof(T));
+                    operator delete[](p, n * sizeof(value_type));
                 }
             }
         };
 
-        template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
+        template <typename T, template<typename> typename Allocator = lightweight_allocator>
         requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
             class simple_dynamic_vector final {
             public:
@@ -2073,7 +2079,7 @@ namespace oc {
         concept CustomArray = std::is_same_v<typename T::Tag, CustomArrayTag>;
 
 
-        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = Lightweight_stl_allocator, typename HeaderType = Array_header<>, typename IndexerType = Simple_array_indices_generator<>>
+        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = Array_header<>, typename IndexerType = Simple_array_indices_generator<>>
         class Array {
         public:
             using Tag = CustomArrayTag;
