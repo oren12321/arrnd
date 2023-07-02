@@ -613,23 +613,6 @@ namespace oc {
                 size_type size_;
         };
 
-        //inline constexpr std::uint32_t dynamic_vector = std::numeric_limits<std::uint32_t>::max();
-
-        //template <typename T, std::int64_t Capacity = dynamic_vector, template<typename> typename Allocator = Lightweight_stl_allocator>
-        //using simple_vector = std::conditional_t<Capacity == dynamic_vector, simple_dynamic_vector<T, Allocator>, simple_static_vector<T, Capacity>>;
-
-
-
-
-        inline constexpr std::uint32_t dynamic_sequence = std::numeric_limits<std::uint32_t>::max();
-
-        template <typename T, std::int64_t N = dynamic_sequence, template<typename> typename Allocator = Lightweight_stl_allocator>
-        requires (N > 0)
-        using simple_vector = std::conditional_t<N == dynamic_sequence, simple_dynamic_vector<T, Allocator>, simple_static_vector<T, N>>;
-
-        //template <typename T, template<typename> typename Allocator = Lightweight_stl_allocator>
-        //using simple_vector = simple_dynamic_vector<T, Allocator>;//std::vector<T, Allocator<T>>;
-
         template <typename T, typename U>
         [[nodiscard]] inline bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
             return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
@@ -917,7 +900,7 @@ namespace oc {
         offset = 28
         */
 
-        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename StorageType = simple_dynamic_vector<std::int64_t>>
         class Array_header {
         public:
             Array_header() = default;
@@ -928,9 +911,9 @@ namespace oc {
                     return;
                 }
 
-                dims_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(dims.begin(), dims.end());
+                dims_ = StorageType(dims.begin(), dims.end());
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(dims.size());
+                strides_ = StorageType(dims.size());
                 compute_strides(dims, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -938,13 +921,13 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
+            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                StorageType dims = StorageType(previous_hdr.dims().size());
 
                 if (compute_dims(previous_hdr.dims(), intervals, dims) <= 0) {
                     return;
@@ -954,7 +937,7 @@ namespace oc {
                 
                 count_ = numel(dims_);
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = StorageType(previous_hdr.dims().size());
                 compute_strides(previous_hdr.dims(), previous_hdr.strides(), intervals, strides_);
 
                 offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), intervals);
@@ -966,7 +949,7 @@ namespace oc {
                 is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
             }
 
-            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::int64_t omitted_axis)
+            Array_header(const Array_header<StorageType>& previous_hdr, std::int64_t omitted_axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -976,7 +959,7 @@ namespace oc {
                 std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
                 std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
 
-                dims_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(ndims);
+                dims_ = StorageType(ndims);
 
                 if (previous_hdr.dims().size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
@@ -990,7 +973,7 @@ namespace oc {
                     dims_[0] = 1;
                 }
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(ndims);
+                strides_ = StorageType(ndims);
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -1000,7 +983,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const std::int64_t> new_order)
+            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const std::int64_t> new_order)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -1011,7 +994,7 @@ namespace oc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                StorageType dims = StorageType(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     dims[i] = previous_hdr.dims()[modulo(new_order[i], std::ssize(previous_hdr.dims()))];
@@ -1023,7 +1006,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = StorageType(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -1033,14 +1016,14 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::int64_t count, std::int64_t axis)
+            Array_header(const Array_header<StorageType>& previous_hdr, std::int64_t count, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                StorageType dims = StorageType(previous_hdr.dims().size());
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
@@ -1053,7 +1036,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = StorageType(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1061,7 +1044,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<Dims_capacity, Internal_allocator>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (previous_hdr.dims().size() != appended_dims.size()) {
@@ -1088,7 +1071,7 @@ namespace oc {
                     return;
                 }
 
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                StorageType dims = StorageType(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
@@ -1100,7 +1083,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = simple_vector<std::int64_t, Dims_capacity, Internal_allocator>(previous_hdr.dims().size());
+                strides_ = StorageType(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1152,8 +1135,8 @@ namespace oc {
             }
 
         private:
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_{};
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_{};
+            StorageType dims_{};
+            StorageType strides_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             std::int64_t last_index_{ 0 };
@@ -1161,21 +1144,21 @@ namespace oc {
         };
 
 
-        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename StorageType = simple_dynamic_vector<std::int64_t>, typename HeaderType = Array_header<>>
         class Simple_array_indices_generator final
         {
         public:
-            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            constexpr Simple_array_indices_generator(const HeaderType& hdr, bool backward = false)
                 : Simple_array_indices_generator(hdr, std::span<const std::int64_t>{}, backward)
             {
             }
 
-            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            constexpr Simple_array_indices_generator(const HeaderType& hdr, std::int64_t axis, bool backward = false)
                 : Simple_array_indices_generator(hdr, order_from_major_axis(hdr.dims().size(), axis), backward)
             {
             }
 
-            constexpr Simple_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::span<const std::int64_t> order, bool backward = false)
+            constexpr Simple_array_indices_generator(const HeaderType& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end())
             {
                 if (!order.empty()) {
@@ -1220,15 +1203,15 @@ namespace oc {
 
             constexpr Simple_array_indices_generator() = default;
 
-            constexpr Simple_array_indices_generator(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Simple_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Simple_array_indices_generator(const Simple_array_indices_generator<StorageType, HeaderType>& other) = default;
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator=(const Simple_array_indices_generator<StorageType, HeaderType>& other) = default;
 
-            constexpr Simple_array_indices_generator(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Simple_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Simple_array_indices_generator(Simple_array_indices_generator<StorageType, HeaderType>&& other) noexcept = default;
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator=(Simple_array_indices_generator<StorageType, HeaderType>&& other) noexcept = default;
 
             constexpr ~Simple_array_indices_generator() = default;
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator++() noexcept
             {
                 if (current_index_ < first_index_) {
                     current_index_ = first_index_;
@@ -1275,14 +1258,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator++(int) noexcept
             {
                 Simple_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1290,14 +1273,14 @@ namespace oc {
                 return *this;
             }
 
-            Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
+            Simple_array_indices_generator<StorageType, HeaderType> operator+(std::int64_t count) noexcept
             {
-                Simple_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                Simple_array_indices_generator<StorageType, HeaderType> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator--() noexcept
             {
                 if (current_index_ <= first_index_) {
                     current_index_ = first_index_ - 1;
@@ -1344,14 +1327,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator--(int) noexcept
             {
                 Simple_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1359,9 +1342,9 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator-(std::int64_t count) noexcept
             {
-                Simple_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                Simple_array_indices_generator<StorageType, HeaderType> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1377,9 +1360,9 @@ namespace oc {
             }
 
         private:
-            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> order_from_major_axis(std::int64_t order_size, std::int64_t axis)
+            constexpr static StorageType order_from_major_axis(std::int64_t order_size, std::int64_t axis)
             {
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> new_ordered_indices(order_size);
+                StorageType new_ordered_indices(order_size);
                 std::iota(new_ordered_indices.begin(), new_ordered_indices.end(), static_cast<std::int64_t>(0));
                 new_ordered_indices[0] = axis;
                 std::int64_t pos = 1;
@@ -1391,10 +1374,10 @@ namespace oc {
                 return new_ordered_indices;
             }
 
-            constexpr static simple_vector<std::int64_t, Dims_capacity, Internal_allocator> reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            constexpr static StorageType reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator> res(size);
+                StorageType res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
                 }
@@ -1402,12 +1385,12 @@ namespace oc {
             }
 
             constexpr static std::tuple<
-                simple_vector<std::int64_t, Dims_capacity, Internal_allocator>, simple_vector<std::int64_t, Dims_capacity, Internal_allocator>>
+                StorageType, StorageType>
                 reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
             {
                 std::tuple<
-                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>,
-                    simple_vector<std::int64_t, Dims_capacity, Internal_allocator>> reds(dims.size(), dims.size());
+                    StorageType,
+                    StorageType> reds(dims.size(), dims.size());
 
                 auto& [rdims, rstrides] = reds;
 
@@ -1439,8 +1422,8 @@ namespace oc {
                 return reds;
             }
 
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> dims_;
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> strides_;
+            StorageType dims_;
+            StorageType strides_;
             std::int64_t first_index_;
             std::int64_t last_index_;
             std::int64_t last_first_diff_;
@@ -1458,23 +1441,23 @@ namespace oc {
             std::int64_t third_dim_;
             std::int64_t third_ind_;
 
-            simple_vector<std::int64_t, Dims_capacity, Internal_allocator> indices_;
+            StorageType indices_;
             std::int64_t current_index_;
         };
 
 
 
 
-        template <std::int64_t Dims_capacity = dynamic_sequence, template<typename> typename Internal_allocator = Lightweight_stl_allocator>
+        template <typename HeaderType = Array_header<>>
         class Fast_array_indices_generator final
         {
         public:
-            constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, bool backward = false)
+            constexpr Fast_array_indices_generator(const HeaderType& hdr, bool backward = false)
                 : Fast_array_indices_generator(hdr, 0, backward)
             {
             }
 
-            constexpr Fast_array_indices_generator(const Array_header<Dims_capacity, Internal_allocator>& hdr, std::int64_t axis, bool backward = false)
+            constexpr Fast_array_indices_generator(const HeaderType& hdr, std::int64_t axis, bool backward = false)
             {
                 // data
 
@@ -1516,15 +1499,15 @@ namespace oc {
 
             constexpr Fast_array_indices_generator() = default;
 
-            constexpr Fast_array_indices_generator(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(const Fast_array_indices_generator<Dims_capacity, Internal_allocator>& other) = default;
+            constexpr Fast_array_indices_generator(const Fast_array_indices_generator<HeaderType>& other) = default;
+            constexpr Fast_array_indices_generator<HeaderType>& operator=(const Fast_array_indices_generator<HeaderType>& other) = default;
 
-            constexpr Fast_array_indices_generator(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator=(Fast_array_indices_generator<Dims_capacity, Internal_allocator>&& other) noexcept = default;
+            constexpr Fast_array_indices_generator(Fast_array_indices_generator<HeaderType>&& other) noexcept = default;
+            constexpr Fast_array_indices_generator<HeaderType>& operator=(Fast_array_indices_generator<HeaderType>&& other) noexcept = default;
 
             constexpr ~Fast_array_indices_generator() = default;
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator++() noexcept
+            constexpr Fast_array_indices_generator<HeaderType>& operator++() noexcept
             {
                 // the algorithm is done by three functions composition:
                 // - index
@@ -1584,14 +1567,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator++(int) noexcept
+            constexpr Fast_array_indices_generator<HeaderType> operator++(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator+=(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<HeaderType>& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1599,14 +1582,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator+(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<HeaderType> operator+(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                Fast_array_indices_generator<HeaderType> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator--() noexcept
+            constexpr Fast_array_indices_generator<HeaderType>& operator--() noexcept
             {
                 // the algorithm is done by inverese of three functions composition:
                 // - super group
@@ -1666,14 +1649,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator--(int) noexcept
+            constexpr Fast_array_indices_generator<HeaderType> operator--(int) noexcept
             {
                 Fast_array_indices_generator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator>& operator-=(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<HeaderType>& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1681,9 +1664,9 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<Dims_capacity, Internal_allocator> operator-(std::int64_t count) noexcept
+            constexpr Fast_array_indices_generator<HeaderType> operator-(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<Dims_capacity, Internal_allocator> temp{ *this };
+                Fast_array_indices_generator<HeaderType> temp{ *this };
                 temp -= count;
                 return temp;
             }
