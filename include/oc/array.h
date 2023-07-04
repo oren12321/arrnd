@@ -2111,7 +2111,7 @@ namespace oc {
 
 
         template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, typename Indexer = arrnd_general_indexer<>>
-        class Array {
+        class arrnd {
         public:
             using value_type = T;
             using size_type = std::int64_t;
@@ -2134,34 +2134,34 @@ namespace oc {
             using header_type = Header;
             using indexer_type = Indexer;
 
-            using this_type = Array<T, Storage, SharedRefAllocator, Header, Indexer>;
+            using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer>;
             template <typename U>
-            using replaced_type = Array<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
+            using replaced_type = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
 
-            Array() = default;
+            arrnd() = default;
 
-            Array(Array&& other) = default;
+            arrnd(arrnd&& other) = default;
             template<arrnd_complient ArCo>
-            Array(ArCo&& other)
-                : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
+            arrnd(ArCo&& other)
+                : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
 
                 ArCo dummy{ std::move(other) };
             }
-            Array& operator=(Array&& other) & = default;
-            Array& operator=(Array&& other)&&
+            arrnd& operator=(arrnd&& other) & = default;
+            arrnd& operator=(arrnd&& other)&&
             {
                 if (&other == this) {
                     return *this;
                 }
 
                 copy(other, *this);
-                Array dummy{ std::move(other) };
+                arrnd dummy{ std::move(other) };
                 return *this;
             }
             template<arrnd_complient ArCo>
-            Array& operator=(ArCo&& other)&
+            arrnd& operator=(ArCo&& other)&
             {
                 *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
@@ -2169,22 +2169,22 @@ namespace oc {
                 return *this;
             }
             template<arrnd_complient ArCo>
-            Array& operator=(ArCo&& other)&&
+            arrnd& operator=(ArCo&& other)&&
             {
                 copy(other, *this);
                 ArCo dummy{ std::move(other) };
                 return *this;
             }
 
-            Array(const Array& other) = default;
+            arrnd(const arrnd& other) = default;
             template<arrnd_complient ArCo>
-            Array(const ArCo& other)
-                : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
+            arrnd(const ArCo& other)
+                : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
                 copy(other, *this);
             }
-            Array& operator=(const Array& other) & = default;
-            Array& operator=(const Array& other)&&
+            arrnd& operator=(const arrnd& other) & = default;
+            arrnd& operator=(const arrnd& other)&&
             {
                 if (&other == this) {
                     return *this;
@@ -2194,21 +2194,21 @@ namespace oc {
                 return *this;
             }
             template<arrnd_complient ArCo>
-            Array& operator=(const ArCo& other)&
+            arrnd& operator=(const ArCo& other)&
             {
                 *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
             template<arrnd_complient ArCo>
-            Array& operator=(const ArCo& other)&&
+            arrnd& operator=(const ArCo& other)&&
             {
                 copy(other, *this);
                 return *this;
             }
 
             template <typename U>
-            Array& operator=(const U& value)
+            arrnd& operator=(const U& value)
             {
                 if (empty(*this)) {
                     return *this;
@@ -2221,68 +2221,68 @@ namespace oc {
                 return *this;
             }
 
-            virtual ~Array() = default;
+            virtual ~arrnd() = default;
 
-            Array(std::span<const std::int64_t> dims, const_pointer data = nullptr)
+            arrnd(std::span<const std::int64_t> dims, const_pointer data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
                 if (data) {
                     std::copy(data, data + hdr_.count(), buffsp_->data());
                 }
             }
-            Array(std::span<const std::int64_t> dims, std::initializer_list<value_type> data)
-                : Array(dims, data.begin())
+            arrnd(std::span<const std::int64_t> dims, std::initializer_list<value_type> data)
+                : arrnd(dims, data.begin())
             {
             }
-            Array(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
+            arrnd(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
-            Array(std::initializer_list<std::int64_t> dims, std::initializer_list<value_type> data)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
+            arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<value_type> data)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
             template <typename U>
-            Array(std::span<const std::int64_t> dims, const U* data = nullptr)
+            arrnd(std::span<const std::int64_t> dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
             template <typename U>
-            Array(std::span<const std::int64_t> dims, std::initializer_list<U> data)
-                : Array(dims, data.begin())
+            arrnd(std::span<const std::int64_t> dims, std::initializer_list<U> data)
+                : arrnd(dims, data.begin())
             {
             }
             template <typename U>
-            Array(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
+            arrnd(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
             template <typename U>
-            Array(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
+            arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
 
 
-            Array(std::span<const std::int64_t> dims, const_reference value)
+            arrnd(std::span<const std::int64_t> dims, const_reference value)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
-            Array(std::initializer_list<std::int64_t> dims, const_reference value)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
+            arrnd(std::initializer_list<std::int64_t> dims, const_reference value)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
             template <typename U>
-            Array(std::span<const std::int64_t> dims, const U& value)
+            arrnd(std::span<const std::int64_t> dims, const U& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             template <typename U>
-            Array(std::initializer_list<std::int64_t> dims, const U& value)
-                : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
+            arrnd(std::initializer_list<std::int64_t> dims, const U& value)
+                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
 
@@ -2328,7 +2328,7 @@ namespace oc {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] Array operator()(std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] arrnd operator()(std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
@@ -2339,12 +2339,12 @@ namespace oc {
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] Array operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] arrnd operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
-            [[nodiscard]] Array operator()(const replaced_type<std::int64_t>& indices) const noexcept
+            [[nodiscard]] arrnd operator()(const replaced_type<std::int64_t>& indices) const noexcept
             {
                 this_type res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
@@ -4420,7 +4420,17 @@ namespace oc {
         }
     }
 
-    using details::Array;
+    using details::arrnd;
+
+    using details::arrnd_header;
+    
+    using details::arrnd_general_indexer;
+    using details::arrnd_fast_indexer;
+
+    using details::arrnd_iterator;
+    using details::arrnd_const_iterator;
+    using details::arrnd_reverse_iterator;
+    using details::arrnd_const_reverse_iterator;
 
     using details::copy;
     using details::clone;
@@ -4443,7 +4453,6 @@ namespace oc {
     using details::close;
     using details::all_equal;
     using details::all_close;
-
 
     using details::abs;
     using details::acos;
