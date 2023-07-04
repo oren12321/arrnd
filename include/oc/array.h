@@ -2121,6 +2121,11 @@ namespace oc {
             using pointer = T*;
             using const_pointer = const T*;
 
+            using iterator = arrnd_iterator<T, IndexerType>;
+            using const_iterator = arrnd_const_iterator<T, IndexerType>;
+            using reverse_iterator = arrnd_reverse_iterator<T, IndexerType>;
+            using const_reverse_iterator = arrnd_const_reverse_iterator<T, IndexerType>;
+
             using tag = arrnd_tag;
 
             using Header = HeaderType;
@@ -3232,87 +3237,87 @@ namespace oc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return arrnd_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
+                return iterator(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return arrnd_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
+                return iterator(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return arrnd_const_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
+                return const_iterator(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return arrnd_const_iterator<value_type, IndexerType>(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
+                return const_iterator(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return arrnd_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return arrnd_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return arrnd_const_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return arrnd_const_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return arrnd_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
+                return iterator(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return arrnd_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return iterator(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return arrnd_const_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
+                return const_iterator(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return arrnd_const_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return const_iterator(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return arrnd_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
+                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return arrnd_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return arrnd_const_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
+                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return arrnd_const_reverse_iterator<value_type, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
 
