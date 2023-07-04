@@ -2114,6 +2114,12 @@ namespace oc {
         class Array {
         public:
             using value_type = T;
+            using size_type = std::int64_t;
+            using difference_type = std::int64_t;
+            using reference = T&;
+            using const_reference = const T&;
+            using pointer = T*;
+            using const_pointer = const T*;
 
             using tag = arrnd_tag;
 
@@ -2212,7 +2218,7 @@ namespace oc {
 
             virtual ~Array() = default;
 
-            Array(std::span<const std::int64_t> dims, const T* data = nullptr)
+            Array(std::span<const std::int64_t> dims, const_pointer data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType<StorageType>(), hdr_.count()))
             {
                 if (data) {
@@ -2223,7 +2229,7 @@ namespace oc {
                 : Array(dims, data.begin())
             {
             }
-            Array(std::initializer_list<std::int64_t> dims, const T* data = nullptr)
+            Array(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
                 : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
@@ -2254,12 +2260,12 @@ namespace oc {
             }
 
 
-            Array(std::span<const std::int64_t> dims, const T& value)
+            Array(std::span<const std::int64_t> dims, const_reference value)
                 : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType < StorageType>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
-            Array(std::initializer_list<std::int64_t> dims, const T& value)
+            Array(std::initializer_list<std::int64_t> dims, const_reference value)
                 : Array(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
@@ -2285,34 +2291,34 @@ namespace oc {
                 return hdr_;
             }
 
-            [[nodiscard]] T* data() const noexcept
+            [[nodiscard]] pointer data() const noexcept
             {
                 return buffsp_ ? buffsp_->data() : nullptr;
             }
 
-            [[nodiscard]] const T& operator()(std::int64_t index) const noexcept
+            [[nodiscard]] const_reference operator()(std::int64_t index) const noexcept
             {
                 return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
             }
-            [[nodiscard]] T& operator()(std::int64_t index) noexcept
+            [[nodiscard]] reference operator()(std::int64_t index) noexcept
             {
                 return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
             }
 
-            [[nodiscard]] const T& operator()(std::span<std::int64_t> subs) const noexcept
+            [[nodiscard]] const_reference operator()(std::span<std::int64_t> subs) const noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            [[nodiscard]] const T& operator()(std::initializer_list<std::int64_t> subs) const noexcept
+            [[nodiscard]] const_reference operator()(std::initializer_list<std::int64_t> subs) const noexcept
             {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
 
-            [[nodiscard]] T& operator()(std::span<std::int64_t> subs) noexcept
+            [[nodiscard]] reference operator()(std::span<std::int64_t> subs) noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            [[nodiscard]] T& operator()(std::initializer_list<std::int64_t> subs) noexcept
+            [[nodiscard]] reference operator()(std::initializer_list<std::int64_t> subs) noexcept
             {
                 return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
             }
