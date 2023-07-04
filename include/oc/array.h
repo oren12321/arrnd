@@ -1148,21 +1148,24 @@ namespace oc {
         };
 
 
-        template <typename StorageType = simple_dynamic_vector<std::int64_t>, typename HeaderType = Array_header<>>
-        class Simple_array_indices_generator final
+        template <typename Storage = simple_dynamic_vector<std::int64_t>, typename Header = Array_header<>>
+        class arrnd_general_indexer final
         {
         public:
-            constexpr Simple_array_indices_generator(const HeaderType& hdr, bool backward = false)
-                : Simple_array_indices_generator(hdr, std::span<const std::int64_t>{}, backward)
+            using storage_type = Storage;
+            using header_type = Header;
+
+            constexpr arrnd_general_indexer(const header_type& hdr, bool backward = false)
+                : arrnd_general_indexer(hdr, std::span<const std::int64_t>{}, backward)
             {
             }
 
-            constexpr Simple_array_indices_generator(const HeaderType& hdr, std::int64_t axis, bool backward = false)
-                : Simple_array_indices_generator(hdr, order_from_major_axis(hdr.dims().size(), axis), backward)
+            constexpr arrnd_general_indexer(const header_type& hdr, std::int64_t axis, bool backward = false)
+                : arrnd_general_indexer(hdr, order_from_major_axis(hdr.dims().size(), axis), backward)
             {
             }
 
-            constexpr Simple_array_indices_generator(const HeaderType& hdr, std::span<const std::int64_t> order, bool backward = false)
+            constexpr arrnd_general_indexer(const header_type& hdr, std::span<const std::int64_t> order, bool backward = false)
                 : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end())
             {
                 if (!order.empty()) {
@@ -1205,17 +1208,17 @@ namespace oc {
                 current_index_ = backward ? last_index_ : first_index_;
             }
 
-            constexpr Simple_array_indices_generator() = default;
+            constexpr arrnd_general_indexer() = default;
 
-            constexpr Simple_array_indices_generator(const Simple_array_indices_generator<StorageType, HeaderType>& other) = default;
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator=(const Simple_array_indices_generator<StorageType, HeaderType>& other) = default;
+            constexpr arrnd_general_indexer(const arrnd_general_indexer& other) = default;
+            constexpr arrnd_general_indexer& operator=(const arrnd_general_indexer& other) = default;
 
-            constexpr Simple_array_indices_generator(Simple_array_indices_generator<StorageType, HeaderType>&& other) noexcept = default;
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator=(Simple_array_indices_generator<StorageType, HeaderType>&& other) noexcept = default;
+            constexpr arrnd_general_indexer(arrnd_general_indexer&& other) noexcept = default;
+            constexpr arrnd_general_indexer& operator=(arrnd_general_indexer&& other) noexcept = default;
 
-            constexpr ~Simple_array_indices_generator() = default;
+            constexpr ~arrnd_general_indexer() = default;
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator++() noexcept
+            constexpr arrnd_general_indexer& operator++() noexcept
             {
                 if (current_index_ < first_index_) {
                     current_index_ = first_index_;
@@ -1262,14 +1265,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator++(int) noexcept
+            constexpr arrnd_general_indexer operator++(int) noexcept
             {
-                Simple_array_indices_generator temp{ *this };
+                arrnd_general_indexer<storage_type, header_type> temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1277,14 +1280,14 @@ namespace oc {
                 return *this;
             }
 
-            Simple_array_indices_generator<StorageType, HeaderType> operator+(std::int64_t count) noexcept
+            arrnd_general_indexer operator+(std::int64_t count) noexcept
             {
-                Simple_array_indices_generator<StorageType, HeaderType> temp{ *this };
+                arrnd_general_indexer<storage_type, header_type> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator--() noexcept
+            constexpr arrnd_general_indexer& operator--() noexcept
             {
                 if (current_index_ <= first_index_) {
                     current_index_ = first_index_ - 1;
@@ -1331,14 +1334,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator--(int) noexcept
+            constexpr arrnd_general_indexer operator--(int) noexcept
             {
-                Simple_array_indices_generator temp{ *this };
+                arrnd_general_indexer<storage_type, header_type> temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType>& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1346,9 +1349,9 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Simple_array_indices_generator<StorageType, HeaderType> operator-(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer operator-(std::int64_t count) noexcept
             {
-                Simple_array_indices_generator<StorageType, HeaderType> temp{ *this };
+                arrnd_general_indexer<storage_type, header_type> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1364,9 +1367,9 @@ namespace oc {
             }
 
         private:
-            constexpr static StorageType order_from_major_axis(std::int64_t order_size, std::int64_t axis)
+            constexpr static storage_type order_from_major_axis(std::int64_t order_size, std::int64_t axis)
             {
-                StorageType new_ordered_indices(order_size);
+                storage_type new_ordered_indices(order_size);
                 std::iota(new_ordered_indices.begin(), new_ordered_indices.end(), static_cast<std::int64_t>(0));
                 new_ordered_indices[0] = axis;
                 std::int64_t pos = 1;
@@ -1378,10 +1381,10 @@ namespace oc {
                 return new_ordered_indices;
             }
 
-            constexpr static StorageType reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
+            constexpr static storage_type reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
                 std::size_t size = std::min(vec.size(), indices.size());
-                StorageType res(size);
+                storage_type res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
                 }
@@ -1389,12 +1392,12 @@ namespace oc {
             }
 
             constexpr static std::tuple<
-                StorageType, StorageType>
+                storage_type, storage_type>
                 reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
             {
                 std::tuple<
-                    StorageType,
-                    StorageType> reds(dims.size(), dims.size());
+                    storage_type,
+                    storage_type> reds(dims.size(), dims.size());
 
                 auto& [rdims, rstrides] = reds;
 
@@ -1426,8 +1429,8 @@ namespace oc {
                 return reds;
             }
 
-            StorageType dims_;
-            StorageType strides_;
+            storage_type dims_;
+            storage_type strides_;
             std::int64_t first_index_;
             std::int64_t last_index_;
             std::int64_t last_first_diff_;
@@ -1445,23 +1448,25 @@ namespace oc {
             std::int64_t third_dim_;
             std::int64_t third_ind_;
 
-            StorageType indices_;
+            storage_type indices_;
             std::int64_t current_index_;
         };
 
 
 
 
-        template <typename HeaderType = Array_header<>>
-        class Fast_array_indices_generator final
+        template <typename Header = Array_header<>>
+        class arrnd_fast_indexer final
         {
         public:
-            constexpr Fast_array_indices_generator(const HeaderType& hdr, bool backward = false)
-                : Fast_array_indices_generator(hdr, 0, backward)
+            using header_type = Header;
+
+            constexpr arrnd_fast_indexer(const header_type& hdr, bool backward = false)
+                : arrnd_fast_indexer(hdr, 0, backward)
             {
             }
 
-            constexpr Fast_array_indices_generator(const HeaderType& hdr, std::int64_t axis, bool backward = false)
+            constexpr arrnd_fast_indexer(const header_type& hdr, std::int64_t axis, bool backward = false)
             {
                 // data
 
@@ -1501,17 +1506,17 @@ namespace oc {
                 }
             }
 
-            constexpr Fast_array_indices_generator() = default;
+            constexpr arrnd_fast_indexer() = default;
 
-            constexpr Fast_array_indices_generator(const Fast_array_indices_generator<HeaderType>& other) = default;
-            constexpr Fast_array_indices_generator<HeaderType>& operator=(const Fast_array_indices_generator<HeaderType>& other) = default;
+            constexpr arrnd_fast_indexer(const arrnd_fast_indexer& other) = default;
+            constexpr arrnd_fast_indexer& operator=(const arrnd_fast_indexer& other) = default;
 
-            constexpr Fast_array_indices_generator(Fast_array_indices_generator<HeaderType>&& other) noexcept = default;
-            constexpr Fast_array_indices_generator<HeaderType>& operator=(Fast_array_indices_generator<HeaderType>&& other) noexcept = default;
+            constexpr arrnd_fast_indexer(arrnd_fast_indexer&& other) noexcept = default;
+            constexpr arrnd_fast_indexer& operator=(arrnd_fast_indexer&& other) noexcept = default;
 
-            constexpr ~Fast_array_indices_generator() = default;
+            constexpr ~arrnd_fast_indexer() = default;
 
-            constexpr Fast_array_indices_generator<HeaderType>& operator++() noexcept
+            constexpr arrnd_fast_indexer& operator++() noexcept
             {
                 // the algorithm is done by three functions composition:
                 // - index
@@ -1571,14 +1576,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType> operator++(int) noexcept
+            constexpr arrnd_fast_indexer operator++(int) noexcept
             {
-                Fast_array_indices_generator temp{ *this };
+                arrnd_fast_indexer<header_type> temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType>& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer& operator+=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     ++(*this);
@@ -1586,14 +1591,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType> operator+(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer operator+(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<HeaderType> temp{ *this };
+                arrnd_fast_indexer<header_type> temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType>& operator--() noexcept
+            constexpr arrnd_fast_indexer& operator--() noexcept
             {
                 // the algorithm is done by inverese of three functions composition:
                 // - super group
@@ -1653,14 +1658,14 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType> operator--(int) noexcept
+            constexpr arrnd_fast_indexer operator--(int) noexcept
             {
-                Fast_array_indices_generator temp{ *this };
+                arrnd_fast_indexer<header_type> temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType>& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer& operator-=(std::int64_t count) noexcept
             {
                 for (std::int64_t i = 0; i < count; ++i) {
                     --(*this);
@@ -1668,9 +1673,9 @@ namespace oc {
                 return *this;
             }
 
-            constexpr Fast_array_indices_generator<HeaderType> operator-(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer operator-(std::int64_t count) noexcept
             {
-                Fast_array_indices_generator<HeaderType> temp{ *this };
+                arrnd_fast_indexer<header_type> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -1712,7 +1717,7 @@ namespace oc {
             std::int64_t group_start_index_ = 0;
         };
 
-        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        template <typename T, typename Indexer = arrnd_general_indexer<>>
         class arrnd_iterator final
         {
         public:
@@ -1809,7 +1814,7 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        template <typename T, typename Indexer = arrnd_general_indexer<>>
         class arrnd_const_iterator final
         {
         public:
@@ -1905,7 +1910,7 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        template <typename T, typename Indexer = arrnd_general_indexer<>>
         class arrnd_reverse_iterator final
         {
         public:
@@ -2002,7 +2007,7 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        template <typename T, typename Indexer = arrnd_general_indexer<>>
         class arrnd_const_reverse_iterator final
         {
         public:
@@ -2103,7 +2108,7 @@ namespace oc {
         concept CustomArray = std::is_same_v<typename T::Tag, CustomArrayTag>;
 
 
-        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = Array_header<>, typename IndexerType = Simple_array_indices_generator<>>
+        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = Array_header<>, typename IndexerType = arrnd_general_indexer<>>
         class Array {
         public:
             using Tag = CustomArrayTag;

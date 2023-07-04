@@ -337,7 +337,7 @@ TEST(Array_test, iterators)
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
 }
 
-TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
+TEST(arrnd_general_indexer, simple_forward_backward_iterations)
 {
     using namespace oc::details;
 
@@ -351,7 +351,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr);
+    arrnd_general_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -367,7 +367,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
+TEST(arrnd_general_indexer, simple_backward_forward_iterations)
 {
     using namespace oc::details;
 
@@ -381,7 +381,7 @@ TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr, true);
+    arrnd_general_indexer gen(hdr, true);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -397,7 +397,7 @@ TEST(Simple_array_indices_generator, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace oc::details;
 
@@ -411,7 +411,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_ste
     const std::int64_t expected_generated_subs{ 3 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr);
+    arrnd_general_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -427,7 +427,7 @@ TEST(Simple_array_indices_generator, simple_forward_backward_iterations_with_ste
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
+TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
 {
     using namespace oc::details;
 
@@ -441,7 +441,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Simple_array_indices_generator gen(hdr, std::span(order, 3));
+    arrnd_general_indexer gen(hdr, std::span(order, 3));
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -457,7 +457,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_axis_order)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
 {
     using namespace oc::details;
 
@@ -479,7 +479,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_maj
 
     for (std::int64_t axis = 0; axis <= 2; ++axis) {
         std::int64_t generated_subs_counter{ 0 };
-        Simple_array_indices_generator gen(hdr, axis);
+        arrnd_general_indexer gen(hdr, axis);
 
         while (gen) {
             EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
@@ -499,7 +499,7 @@ TEST(Simple_array_indices_generator, forward_backward_iterations_by_specific_maj
 
 
 
-TEST(Fast_array_indices_generator, simple_forward_backward_iterations)
+TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
 {
     using namespace oc::details;
 
@@ -513,7 +513,7 @@ TEST(Fast_array_indices_generator, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Fast_array_indices_generator gen(hdr);
+    arrnd_fast_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -529,7 +529,7 @@ TEST(Fast_array_indices_generator, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Fast_array_indices_generator, simple_backward_forward_iterations)
+TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
 {
     using namespace oc::details;
 
@@ -543,7 +543,7 @@ TEST(Fast_array_indices_generator, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Fast_array_indices_generator gen(hdr, true);
+    arrnd_fast_indexer gen(hdr, true);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -559,7 +559,7 @@ TEST(Fast_array_indices_generator, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Fast_array_indices_generator, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace oc::details;
 
@@ -573,7 +573,7 @@ TEST(Fast_array_indices_generator, simple_forward_backward_iterations_with_steps
     const std::int64_t expected_generated_subs{ 3 };
 
     std::int64_t generated_subs_counter{ 0 };
-    Fast_array_indices_generator gen(hdr);
+    arrnd_fast_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -589,7 +589,7 @@ TEST(Fast_array_indices_generator, simple_forward_backward_iterations_with_steps
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(Fast_array_indices_generator, forward_backward_iterations_by_specific_major_axis)
+TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
 {
     using namespace oc::details;
 
@@ -611,7 +611,7 @@ TEST(Fast_array_indices_generator, forward_backward_iterations_by_specific_major
 
     for (std::int64_t axis = 0; axis <= 2; ++axis) {
         std::int64_t generated_subs_counter{ 0 };
-        Fast_array_indices_generator gen(hdr, axis);
+        arrnd_fast_indexer gen(hdr, axis);
 
         while (gen) {
             EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
@@ -3482,7 +3482,7 @@ TEST(Array_test, complex_array)
 //    //    auto hdr = arr.header();
 //
 //    //    vector<int64_t> inds;
-//    //    for (Simple_array_indices_generator gen(hdr); gen; ++gen) {
+//    //    for (arrnd_general_indexer gen(hdr); gen; ++gen) {
 //    //        inds.push_back(*gen);
 //    //    }
 //
@@ -3502,7 +3502,7 @@ TEST(Array_test, complex_array)
 //        }
 //        //for_each(sm.begin(), sm.end(), [](auto& e) { e = 1; });
 //        //auto ptr = sm.data();
-//        //for (Simple_array_indices_generator gen(sm.header()); gen; ++gen) {
+//        //for (arrnd_general_indexer gen(sm.header()); gen; ++gen) {
 //        //    ptr[*gen] = ctr++;
 //        //}
 //    }
