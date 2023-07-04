@@ -2104,16 +2104,16 @@ namespace oc {
         };
 
 
-        struct CustomArrayTag {};
+        struct arrnd_tag {};
 
         template <typename T>
-        concept CustomArray = std::is_same_v<typename T::Tag, CustomArrayTag>;
+        concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
 
 
         template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = arrnd_header<>, typename IndexerType = arrnd_general_indexer<>>
         class Array {
         public:
-            using Tag = CustomArrayTag;
+            using tag = arrnd_tag;
 
             using ValueType = T;
             using Header = HeaderType;
@@ -2129,7 +2129,7 @@ namespace oc {
             Array() = default;
 
             Array(Array&& other) = default;
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array(CA&& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
@@ -2148,7 +2148,7 @@ namespace oc {
                 Array dummy{ std::move(other) };
                 return *this;
             }
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array& operator=(CA&& other)&
             {
                 *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
@@ -2156,7 +2156,7 @@ namespace oc {
                 CA dummy{ std::move(other) };
                 return *this;
             }
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>& operator=(CA&& other)&&
             {
                 copy(other, *this);
@@ -2165,7 +2165,7 @@ namespace oc {
             }
 
             Array(const Array& other) = default;
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array(const CA& other)
                 : Array(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
@@ -2181,14 +2181,14 @@ namespace oc {
                 copy(other, *this);
                 return *this;
             }
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array& operator=(const CA& other)&
             {
                 *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
-            template<CustomArray CA>
+            template<arrnd_complient CA>
             Array& operator=(const CA& other)&&
             {
                 copy(other, *this);
@@ -2347,7 +2347,7 @@ namespace oc {
             /**
             * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
             */
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             auto& copy_from(const CA& src)
             {
                 if (empty(*this) || empty(src)) {
@@ -2447,7 +2447,7 @@ namespace oc {
             }
 
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto append(const CA& arr) const
             {
                 if (empty(*this)) {
@@ -2470,7 +2470,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto append(const CA& arr, std::int64_t axis) const
             {
                 if (empty(*this)) {
@@ -2506,7 +2506,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto insert(const CA& arr, std::int64_t ind) const
             {
                 if (empty(*this)) {
@@ -2538,7 +2538,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto insert(const CA& arr, std::int64_t ind, std::int64_t axis) const
             {
                 if (empty(*this)) {
@@ -2667,7 +2667,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA, typename Binary_op>
+            template <arrnd_complient CA, typename Binary_op>
             [[nodiscard]] auto transform(const CA& arr, Binary_op&& op) const
             {
                 using U = decltype(op(data()[0], arr.data()[0]));
@@ -2717,7 +2717,7 @@ namespace oc {
                 return *this;
             }
 
-            template <CustomArray CA, typename Binary_op>
+            template <arrnd_complient CA, typename Binary_op>
             auto& apply(const CA& arr, Binary_op&& op)
             {
                 if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
@@ -2820,7 +2820,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA, typename Binary_op>
+            template <arrnd_complient CA, typename Binary_op>
             [[nodiscard]] auto reduce(const CA& init_values, Binary_op&& op, std::int64_t axis) const
             {
                 using U = decltype(op(init_values.data()[0], data()[0]));
@@ -2897,7 +2897,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto filter(const CA& mask) const
             {
                 if (empty(*this)) {
@@ -2972,7 +2972,7 @@ namespace oc {
                 return res;
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] auto find(const CA& mask) const
             {
                 if (empty(*this)) {
@@ -3046,7 +3046,7 @@ namespace oc {
             }
 
 
-            template <CustomArray CA, typename Binary_pred>
+            template <arrnd_complient CA, typename Binary_pred>
             [[nodiscard]] bool all_match(const CA& arr, Binary_pred pred) const
             {
                 if (empty(*this) && empty(arr)) {
@@ -3105,7 +3105,7 @@ namespace oc {
                 return true;
             }
 
-            template <CustomArray CA, typename Binary_pred>
+            template <arrnd_complient CA, typename Binary_pred>
             [[nodiscard]] bool any_match(const CA& arr, Binary_pred pred) const
             {
                 if (empty(*this) && empty(arr)) {
@@ -3186,7 +3186,7 @@ namespace oc {
             }
 
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] RetypedArray<bool> close(const CA& arr, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ()) const
             {
                 return transform(arr, [&atol, &rtol](const T& a, const typename CA::ValueType& b) { return oc::details::close(a, b, atol, rtol); });
@@ -3199,7 +3199,7 @@ namespace oc {
             }
 
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] bool all_equal(const CA& arr) const
             {
                 return all_match(arr, [](const T& a, const typename CA::ValueType& b) { return a == b; });
@@ -3211,7 +3211,7 @@ namespace oc {
                 return all_match(value, [](const T& a, const U& b) { return a == b; });
             }
 
-            template <CustomArray CA>
+            template <arrnd_complient CA>
             [[nodiscard]] bool all_close(const CA& arr, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ()) const
             {
                 return all_match(arr, [&atol, &rtol](const T& a, const typename CA::ValueType& b) { return oc::details::close(a, b, atol, rtol); });
@@ -3472,18 +3472,18 @@ namespace oc {
         /**
         * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
         */
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline void copy(const CA1& src, CA2& dst)
         {
             dst.copy_from(src);
         }
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline void copy(const CA1& src, CA2&& dst)
         {
             copy(src, dst);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto clone(const CA& arr)
         {
             return arr.clone();
@@ -3492,47 +3492,47 @@ namespace oc {
         /**
         * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
         */
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto reshape(const CA& arr, std::span<const std::int64_t> new_dims)
         {
             return arr.reshape(new_dims);
         }
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto reshape(const CA& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto resize(const CA& arr, std::span<const std::int64_t> new_dims)
         {
             return arr.resize(new_dims);
         }
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto resize(const CA& arr, std::initializer_list<std::int64_t> new_dims)
         {
             return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline CA1 append(const CA1& lhs, const CA2& rhs)
         {
             return lhs.append(rhs);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline CA1 append(const CA1& lhs, const CA2& rhs, std::int64_t axis)
         {
             return lhs.append(rhs, axis);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline CA1 insert(const CA1& lhs, const CA2& rhs, std::int64_t ind)
         {
             return lhs.insert(rhs, ind);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline CA1 insert(const CA1& lhs, const CA2& rhs, std::int64_t ind, std::int64_t axis)
         {
             return lhs.insert(rhs, ind, axis);
@@ -3541,7 +3541,7 @@ namespace oc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto remove(const CA& arr, std::int64_t ind, std::int64_t count)
         {
             return arr.remove(ind, count);
@@ -3550,725 +3550,725 @@ namespace oc {
         /**
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto remove(const CA& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
         {
             return arr.remove(ind, count, axis);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline bool empty(const CA& arr) noexcept
         {
             return !arr.data() && arr.header().empty();
         }
 
-        template <CustomArray CA, typename Unary_op>    
+        template <arrnd_complient CA, typename Unary_op>    
         [[nodiscard]] inline auto transform(const CA& arr, Unary_op&& op)
         {
             return arr.transform(op);
         }
 
-        template <CustomArray CA, typename Binary_op>
+        template <arrnd_complient CA, typename Binary_op>
         requires std::is_invocable_v<Binary_op, typename CA::ValueType, typename CA::ValueType>
         [[nodiscard]] inline auto reduce(const CA& arr, Binary_op&& op)
         {
             return arr.reduce(op);
         }
 
-        template <CustomArray CA, typename T, typename Binary_op>
+        template <arrnd_complient CA, typename T, typename Binary_op>
         requires std::is_invocable_v<Binary_op, T, typename CA::ValueType>
         [[nodiscard]] inline auto reduce(const CA& arr, const T& init_value, Binary_op&& op)
         {
             return arr.reduce(init_value, op);
         }
 
-        template <CustomArray CA, typename Binary_op>
+        template <arrnd_complient CA, typename Binary_op>
         requires std::is_invocable_v<Binary_op, typename CA::ValueType, typename CA::ValueType>
         [[nodiscard]] inline auto reduce(const CA& arr, Binary_op&& op, std::int64_t axis)
         {
             return arr.reduce(op, axis);
         }
 
-        template <CustomArray CA1, CustomArray CA2, typename Binary_op>
+        template <arrnd_complient CA1, arrnd_complient CA2, typename Binary_op>
         requires std::is_invocable_v<Binary_op, typename CA2::ValueType, typename CA1::ValueType>
         [[nodiscard]] inline auto reduce(const CA1& arr, const CA2& init_values, Binary_op&& op, std::int64_t axis)
         {
             return arr.reduce(init_values, op, axis);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline bool all(const CA& arr)
         {
             return arr.all();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto all(const CA& arr, std::int64_t axis)
         {
             return arr.all(axis);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline bool any(const CA& arr)
         {
             return arr.any();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto any(const CA& arr, std::int64_t axis)
         {
             return arr.any(axis);
         }
 
-        template <CustomArray CA1, CustomArray CA2, typename Binary_op>
+        template <arrnd_complient CA1, arrnd_complient CA2, typename Binary_op>
         [[nodiscard]] inline auto transform(const CA1& lhs, const CA2& rhs, Binary_op&& op)
         {
             return lhs.transform(rhs, op);
         }
 
-        template <CustomArray CA, typename T, typename Binary_op>
+        template <arrnd_complient CA, typename T, typename Binary_op>
         [[nodiscard]] inline auto transform(const CA& lhs, const T& rhs, Binary_op&& op)
         {
             return lhs.transform(rhs, op);
         }
 
-        template <typename T, CustomArray CA, typename Binary_op>
+        template <typename T, arrnd_complient CA, typename Binary_op>
         [[nodiscard]] inline auto transform(const T& lhs, const CA& rhs, Binary_op&& op)
         {
             return rhs.transform([&lhs, &op](const typename CA::ValueType& value) { return op(lhs, value); });
         }
 
-        template <CustomArray CA, typename Unary_pred>
+        template <arrnd_complient CA, typename Unary_pred>
         [[nodiscard]] inline auto filter(const CA& arr, Unary_pred pred)
         {
             return arr.filter(pred);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline CA1 filter(const CA1& arr, const CA2& mask)
         {
             return arr.filter(mask);
         }
 
-        template <CustomArray CA, typename Unary_pred>
+        template <arrnd_complient CA, typename Unary_pred>
         [[nodiscard]] inline auto find(const CA& arr, Unary_pred pred)
         {
             return arr.find(pred);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto find(const CA1& arr, const CA2& mask)
         {
             return arr.find(mask);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto transpose(const CA& arr, std::span<const std::int64_t> order)
         {
             return arr.traspose(order);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto transpose(const CA& arr, std::initializer_list<std::int64_t> order)
         {
             return arr.transpose(order);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator==(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a == b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator==(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a == b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator==(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a == b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator!=(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a != b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator!=(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a != b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator!=(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a != b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto close(const CA1& lhs, const CA2& rhs, const decltype(typename CA1::ValueType{} - typename CA2::ValueType{})& atol = default_atol<decltype(typename CA1::ValueType{} - typename CA2::ValueType{}) > (), const decltype(typename CA1::ValueType{} - typename CA2::ValueType{})& rtol = default_rtol<decltype(typename CA1::ValueType{} - typename CA2::ValueType{}) > ())
         {
             return lhs.close(rhs, atol, rtol);
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto close(const CA& lhs, const T& rhs, const decltype(typename CA::ValueType{} - T{})& atol = default_atol<decltype(typename CA::ValueType{} - T{}) > (), const decltype(typename CA::ValueType{} - T{})& rtol = default_rtol<decltype(typename CA::ValueType{} - T{}) > ())
         {
             return lhs.close(rhs, atol, rtol);
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto close(const T& lhs, const CA& rhs, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ())
         {
             return rhs.close(lhs, atol, rtol);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator>(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a > b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator>(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a > b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator>(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a > b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator>=(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a >= b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator>=(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a >= b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator>=(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a >= b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator<(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a < b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator<(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a < b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator<(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a < b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator<=(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a <= b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator<=(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a <= b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator<=(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a <= b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator+(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a + b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator+(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a + b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator+(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a + b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator+=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a + b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator+=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a + b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator-(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a - b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator-(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a - b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator-(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a - b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator-=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a - b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator-=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a - b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator*(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a * b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator*(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a * b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator*(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a * b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator*=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a * b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator*=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a * b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator/(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a / b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator/(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a / b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator/(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a / b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator/=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a / b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator/=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a / b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto operator%(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a % b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator%(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a % b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator%(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a % b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator%=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a % b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator%=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a % b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator^(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a ^ b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator^(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a ^ b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator^(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a ^ b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator^=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a ^ b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator^=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a ^ b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator&(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a & b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator&(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a & b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator&(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a & b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator&=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a & b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator&=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a & b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator|(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a | b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator|(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a | b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator|(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a | b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator|=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a | b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator|=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a | b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator<<(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a << b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator<<(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a << b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator<<(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a << b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator<<=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a << b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator<<=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a << b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator>>(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a >> b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator>>(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a >> b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator>>(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a >> b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         inline auto& operator>>=(CA1& lhs, const CA2& rhs)
         {
             return lhs.apply(rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a >> b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         inline auto& operator>>=(CA& lhs, const T& rhs)
         {
             return lhs.apply(rhs, [](const typename CA::ValueType& a, const T& b) { return a >> b; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator~(const CA& arr)
         {
             return transform(arr, [](const typename CA::ValueType& a) { return ~a; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator!(const CA& arr)
         {
             return transform(arr, [](const typename CA::ValueType& a) { return !a; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator+(const CA& arr)
         {
             return transform(arr, [](const typename CA::ValueType& a) { return +a; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator-(const CA& arr)
         {
             return transform(arr, [](const typename CA::ValueType& a) { return -a; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto abs(const CA& arr)
         {
             return arr.abs();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto acos(const CA& arr)
         {
             return arr.acos();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto acosh(const CA& arr)
         {
             return arr.acosh();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto asin(const CA& arr)
         {
             return arr.asin();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto asinh(const CA& arr)
         {
             return arr.asinh();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto atan(const CA& arr)
         {
             return arr.atan();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto atanh(const CA& arr)
         {
             return arr.atanh();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto cos(const CA& arr)
         {
             return arr.cos();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto cosh(const CA& arr)
         {
             return arr.cosh();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto exp(const CA& arr)
         {
             return arr.exp();
         }
         
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto log(const CA& arr)
         {
             return arr.log();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto log10(const CA& arr)
         {
             return arr.log10();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto pow(const CA& arr)
         {
             return arr.pow();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto sin(const CA& arr)
         {
             return arr.sin();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto sinh(const CA& arr)
         {
             return arr.sinh();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto sqrt(const CA& arr)
         {
             return arr.sqrt();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto tan(const CA& arr)
         {
             return arr.tan();
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto tanh(const CA& arr)
         {
             return arr.tanh();
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator&&(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a && b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator&&(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a && b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator&&(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a && b; });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline auto operator||(const CA1& lhs, const CA2& rhs)
         {
             return transform(lhs, rhs, [](const typename CA1::ValueType& a, const typename CA2::ValueType& b) { return a || b; });
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline auto operator||(const CA& lhs, const T& rhs)
         {
             return transform(lhs, rhs, [](const typename CA::ValueType& a, const T& b) { return a || b; });
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline auto operator||(const T& lhs, const CA& rhs)
         {
             return transform(lhs, rhs, [](const T& a, const typename CA::ValueType& b) { return a || b; });
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         inline auto& operator++(CA& arr)
         {
             if (empty(arr)) {
@@ -4281,13 +4281,13 @@ namespace oc {
             return arr;
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator++(CA&& arr)
         {
             return operator++(arr);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         inline auto operator++(CA& arr, int)
         {
             CA old = clone(arr);
@@ -4295,13 +4295,13 @@ namespace oc {
             return old;
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator++(CA&& arr, int)
         {
             return operator++(arr, int{});
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         inline auto& operator--(CA& arr)
         {
             if (empty(arr)) {
@@ -4314,13 +4314,13 @@ namespace oc {
             return arr;
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator--(CA&& arr)
         {
             return operator--(arr);
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         inline auto operator--(CA& arr, int)
         {
             CA old = clone(arr);
@@ -4328,80 +4328,80 @@ namespace oc {
             return old;
         }
 
-        template <CustomArray CA>
+        template <arrnd_complient CA>
         [[nodiscard]] inline auto operator--(CA&& arr, int)
         {
             return operator--(arr, int{});
         }
 
-        template <CustomArray CA1, CustomArray CA2, typename Binary_pred>
+        template <arrnd_complient CA1, arrnd_complient CA2, typename Binary_pred>
         [[nodiscard]] inline bool all_match(const CA1& lhs, const CA2& rhs, Binary_pred pred)
         {
             return lhs.all_match(rhs, pred);
         }
 
-        template <CustomArray CA, typename T, typename Binary_pred>
+        template <arrnd_complient CA, typename T, typename Binary_pred>
         [[nodiscard]] inline bool all_match(const CA& lhs, const T& rhs, Binary_pred pred)
         {
             return lhs.all_match(rhs, pred);
         }
 
-        template <typename T, CustomArray CA, typename Binary_pred>
+        template <typename T, arrnd_complient CA, typename Binary_pred>
         [[nodiscard]] inline bool all_match(const T& lhs, const CA& rhs, Binary_pred pred)
         {
             return rhs.all_match([&lhs, &pred](const typename CA::ValueType& value) { return pred(lhs, value); });
         }
 
 
-        template <CustomArray CA1, CustomArray CA2, typename Binary_pred>
+        template <arrnd_complient CA1, arrnd_complient CA2, typename Binary_pred>
         [[nodiscard]] inline bool any_match(const CA1& lhs, const CA2& rhs, Binary_pred pred)
         {
             return lhs.any_match(rhs, pred);
         }
 
-        template <CustomArray CA, typename T, typename Binary_pred>
+        template <arrnd_complient CA, typename T, typename Binary_pred>
         [[nodiscard]] inline bool any_match(const CA& lhs, const T& rhs, Binary_pred pred)
         {
             return lhs.any_match(rhs, pred);
         }
 
-        template <typename T, CustomArray CA, typename Binary_pred>
+        template <typename T, arrnd_complient CA, typename Binary_pred>
         [[nodiscard]] inline bool any_match(const T& lhs, const CA& rhs, Binary_pred pred)
         {
             return rhs.any_match([&lhs, &pred](const typename CA::ValueType& value) { return pred(lhs, value); });
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline bool all_equal(const CA1& lhs, const CA2& rhs)
         {
             return lhs.all_equal(rhs);
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline bool all_equal(const CA& lhs, const T& rhs)
         {
             return lhs.all_equal(rhs);
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline bool all_equal(const T& lhs, const CA& rhs)
         {
             return rhs.all_equal(lhs);
         }
 
-        template <CustomArray CA1, CustomArray CA2>
+        template <arrnd_complient CA1, arrnd_complient CA2>
         [[nodiscard]] inline bool all_close(const CA1& lhs, const CA2& rhs, const decltype(typename CA1::ValueType{} - typename CA2::ValueType{})& atol = default_atol<decltype(typename CA1::ValueType{} - typename CA2::ValueType{}) > (), const decltype(typename CA1::ValueType{} - typename CA2::ValueType{})& rtol = default_rtol<decltype(typename CA1::ValueType{} - typename CA2::ValueType{}) > ())
         {
             return lhs.all_close(rhs, atol, rtol);
         }
 
-        template <CustomArray CA, typename T>
+        template <arrnd_complient CA, typename T>
         [[nodiscard]] inline bool all_close(const CA& lhs, const T& rhs, const decltype(typename CA::ValueType{} - T{})& atol = default_atol<decltype(typename CA::ValueType{} - T{}) > (), const decltype(typename CA::ValueType{} - T{})& rtol = default_rtol<decltype(typename CA::ValueType{} - T{}) > ())
         {
             return lhs.all_close(rhs, atol, rtol);
         }
 
-        template <typename T, CustomArray CA>
+        template <typename T, arrnd_complient CA>
         [[nodiscard]] inline bool all_close(const T& lhs, const CA& rhs, const decltype(T{} - typename CA::ValueType{})& atol = default_atol<decltype(T{} - typename CA::ValueType{}) > (), const decltype(T{} - typename CA::ValueType{})& rtol = default_rtol<decltype(T{} - typename CA::ValueType{}) > ())
         {
             return rhs.all_close(lhs, atol, rtol);
