@@ -2110,7 +2110,7 @@ namespace oc {
         concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
 
 
-        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = arrnd_header<>, typename IndexerType = arrnd_general_indexer<>>
+        template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, typename Indexer = arrnd_general_indexer<>>
         class Array {
         public:
             using value_type = T;
@@ -2121,22 +2121,22 @@ namespace oc {
             using pointer = T*;
             using const_pointer = const T*;
 
-            using iterator = arrnd_iterator<T, IndexerType>;
-            using const_iterator = arrnd_const_iterator<T, IndexerType>;
-            using reverse_iterator = arrnd_reverse_iterator<T, IndexerType>;
-            using const_reverse_iterator = arrnd_const_reverse_iterator<T, IndexerType>;
+            using iterator = arrnd_iterator<T, Indexer>;
+            using const_iterator = arrnd_const_iterator<T, Indexer>;
+            using reverse_iterator = arrnd_reverse_iterator<T, Indexer>;
+            using const_reverse_iterator = arrnd_const_reverse_iterator<T, Indexer>;
 
             using tag = arrnd_tag;
 
-            using Header = HeaderType;
-            using Indexer = IndexerType;
-            using Storage = StorageType;
-            template <typename T>
-            using SharedRefAlloc = SharedRefAllocType<T>;
-
-            using ThisArrayType = Array<T, StorageType, SharedRefAllocType, HeaderType, IndexerType>;
+            using storage_type = Storage;
             template <typename U>
-            using RetypedArray = Array<U, typename StorageType::template replaced_type<U>, SharedRefAllocType, HeaderType, IndexerType>;
+            using shared_ref_allocator_type = SharedRefAllocator<T>;
+            using header_type = Header;
+            using indexer_type = Indexer;
+
+            using this_type = Array<T, Storage, SharedRefAllocator, Header, Indexer>;
+            template <typename U>
+            using replaced_type = Array<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
 
             Array() = default;
 
@@ -2163,7 +2163,7 @@ namespace oc {
             template<arrnd_complient ArCo>
             Array& operator=(ArCo&& other)&
             {
-                *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 ArCo dummy{ std::move(other) };
                 return *this;
@@ -2196,7 +2196,7 @@ namespace oc {
             template<arrnd_complient ArCo>
             Array& operator=(const ArCo& other)&
             {
-                *this = ThisArrayType(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
                 copy(other, *this);
                 return *this;
             }
@@ -2214,7 +2214,7 @@ namespace oc {
                     return *this;
                 }
 
-                for (IndexerType gen(hdr_); gen; ++gen) {
+                for (indexer_type gen(hdr_); gen; ++gen) {
                     (*this)(*gen) = value;
                 }
 
@@ -2224,7 +2224,7 @@ namespace oc {
             virtual ~Array() = default;
 
             Array(std::span<const std::int64_t> dims, const_pointer data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType<StorageType>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
                 if (data) {
                     std::copy(data, data + hdr_.count(), buffsp_->data());
@@ -2244,7 +2244,7 @@ namespace oc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType < StorageType>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
@@ -2266,7 +2266,7 @@ namespace oc {
 
 
             Array(std::span<const std::int64_t> dims, const_reference value)
-                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType < StorageType>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2276,7 +2276,7 @@ namespace oc {
             }
             template <typename U>
             Array(std::span<const std::int64_t> dims, const U& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<StorageType>(SharedRefAllocType < StorageType>(), hdr_.count()))
+                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
@@ -2286,12 +2286,12 @@ namespace oc {
             {
             }
 
-            [[nodiscard]] const Header& header() const noexcept
+            [[nodiscard]] const header_type& header() const noexcept
             {
                 return hdr_;
             }
 
-            [[nodiscard]] Header& header() noexcept
+            [[nodiscard]] header_type& header() noexcept
             {
                 return hdr_;
             }
@@ -2334,8 +2334,8 @@ namespace oc {
                     return (*this);
                 }
 
-                ThisArrayType slice{};
-                slice.hdr_ = Header{ hdr_, ranges };
+                this_type slice{};
+                slice.hdr_ = header_type{ hdr_, ranges };
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
@@ -2344,11 +2344,11 @@ namespace oc {
                 return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
-            [[nodiscard]] Array operator()(const RetypedArray<std::int64_t>& indices) const noexcept
+            [[nodiscard]] Array operator()(const replaced_type<std::int64_t>& indices) const noexcept
             {
-                ThisArrayType res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
+                this_type res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (IndexerType gen(indices.header()); gen; ++gen) {
+                for (indexer_type gen(indices.header()); gen; ++gen) {
                     res(*gen) = buffsp_->data()[indices(*gen)];
                 }
 
@@ -2366,8 +2366,8 @@ namespace oc {
                     return *this;
                 }
 
-                typename ArCo::Indexer src_gen(src.header());
-                IndexerType dst_gen(header());
+                typename ArCo::indexer_type src_gen(src.header());
+                indexer_type dst_gen(header());
 
                 for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
                     (*this)(*dst_gen) = src(*src_gen);
@@ -2379,13 +2379,13 @@ namespace oc {
             [[nodiscard]] auto clone() const
             {
                 if (empty(*this)) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType clone(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                this_type clone(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
-                IndexerType gen(header());
-                IndexerType clone_gen(clone.header());
+                indexer_type gen(header());
+                indexer_type clone_gen(clone.header());
 
                 for (; gen && clone_gen; ++gen, ++clone_gen) {
                     clone(*clone_gen) = (*this)(*gen);
@@ -2408,12 +2408,12 @@ namespace oc {
                     return *this;
                 }
 
-                typename ThisArrayType::Header new_header(new_dims);
+                typename this_type::header_type new_header(new_dims);
                 if (new_header.empty()) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res(*this);
+                this_type res(*this);
                 res.header() = std::move(new_header);
 
                 return res;
@@ -2429,7 +2429,7 @@ namespace oc {
             [[nodiscard]] auto resize(std::span<const std::int64_t> new_dims) const
             {
                 if (empty(*this)) {
-                    return ThisArrayType(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                    return this_type(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
                 }
 
                 if (header().dims() == new_dims) {
@@ -2437,13 +2437,13 @@ namespace oc {
                 }
 
                 if (numel(new_dims) <= 0) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
+                this_type res(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
 
-                IndexerType gen(header());
-                IndexerType res_gen(res.header());
+                indexer_type gen(header());
+                indexer_type res_gen(res.header());
 
                 while (gen && res_gen) {
                     res(*res_gen) = (*this)(*gen);
@@ -2463,7 +2463,7 @@ namespace oc {
             [[nodiscard]] auto append(const ArCo& arr) const
             {
                 if (empty(*this)) {
-                    ThisArrayType res(arr);
+                    this_type res(arr);
                     return res.clone();
                 }
 
@@ -2471,7 +2471,7 @@ namespace oc {
                     return *this;
                 }
 
-                ThisArrayType res(resize({ header().count() + arr.header().count() }));
+                this_type res(resize({ header().count() + arr.header().count() }));
 
                 ArCo rarr(arr.reshape({ arr.header().count() }));
 
@@ -2486,7 +2486,7 @@ namespace oc {
             [[nodiscard]] auto append(const ArCo& arr, std::int64_t axis) const
             {
                 if (empty(*this)) {
-                    ThisArrayType res(arr);
+                    this_type res(arr);
                     return res.clone();
                 }
 
@@ -2494,19 +2494,19 @@ namespace oc {
                     return *this;
                 }
 
-                HeaderType new_header(header(), arr.header().dims(), axis);
+                header_type new_header(header(), arr.header().dims(), axis);
                 if (new_header.empty()) {
-                    return ThisArrayType{};
+                    return this_type{};
                 }
 
-                ThisArrayType res({ header().count() + arr.header().count() });
+                this_type res({ header().count() + arr.header().count() });
                 res.header() = std::move(new_header);
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
 
-                IndexerType gen(header(), fixed_axis);
-                typename ArCo::Indexer arr_gen(arr.header(), fixed_axis);
-                IndexerType res_gen(res.header(), fixed_axis);
+                indexer_type gen(header(), fixed_axis);
+                typename ArCo::indexer_type arr_gen(arr.header(), fixed_axis);
+                indexer_type res_gen(res.header(), fixed_axis);
 
                 for (; gen && res_gen; ++gen, ++res_gen) {
                     res.data()[*res_gen] = data()[*gen];
@@ -2522,7 +2522,7 @@ namespace oc {
             [[nodiscard]] auto insert(const ArCo& arr, std::int64_t ind) const
             {
                 if (empty(*this)) {
-                    ThisArrayType res(arr);
+                    this_type res(arr);
                     return res.clone();
                 }
 
@@ -2530,9 +2530,9 @@ namespace oc {
                     return *this;
                 }
 
-                ThisArrayType res({ header().count() + arr.header().count() });
+                this_type res({ header().count() + arr.header().count() });
 
-                ThisArrayType rlhs(reshape({ header().count() }));
+                this_type rlhs(reshape({ header().count() }));
                 ArCo rarr(arr.reshape({ arr.header().count() }));
 
                 std::int64_t fixed_ind{ modulo(ind, header().count() + 1) };
@@ -2554,7 +2554,7 @@ namespace oc {
             [[nodiscard]] auto insert(const ArCo& arr, std::int64_t ind, std::int64_t axis) const
             {
                 if (empty(*this)) {
-                    ThisArrayType res(arr);
+                    this_type res(arr);
                     return res.clone();
                 }
 
@@ -2562,19 +2562,19 @@ namespace oc {
                     return *this;
                 }
 
-                HeaderType new_header(header(), arr.header().dims(), axis);
+                header_type new_header(header(), arr.header().dims(), axis);
                 if (new_header.empty()) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res({ header().count() + arr.header().count() });
+                this_type res({ header().count() + arr.header().count() });
                 res.header() = std::move(new_header);
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
 
-                IndexerType gen(header(), fixed_axis);
-                typename ArCo::Indexer arr_gen(arr.header(), fixed_axis);
-                IndexerType res_gen(res.header(), fixed_axis);
+                indexer_type gen(header(), fixed_axis);
+                typename ArCo::indexer_type arr_gen(arr.header(), fixed_axis);
+                indexer_type res_gen(res.header(), fixed_axis);
 
                 std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
                 std::int64_t cycle = fixed_ind *
@@ -2605,8 +2605,8 @@ namespace oc {
                 std::int64_t fixed_ind{ modulo(ind, header().count()) };
                 std::int64_t fixed_count{ fixed_ind + count < header().count() ? count : (header().count() - fixed_ind) };
 
-                ThisArrayType res({ header().count() - fixed_count });
-                ThisArrayType rarr(reshape({ header().count() }));
+                this_type res({ header().count() - fixed_count });
+                this_type rarr(reshape({ header().count() }));
 
                 for (std::int64_t i = 0; i < fixed_ind; ++i) {
                     res({ i }) = rarr({ i });
@@ -2631,16 +2631,16 @@ namespace oc {
                 std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
                 std::int64_t fixed_count{ fixed_ind + count <= header().dims()[fixed_axis] ? count : (header().dims()[fixed_axis] - fixed_ind) };
 
-                HeaderType new_header(header(), -fixed_count, fixed_axis);
+                header_type new_header(header(), -fixed_count, fixed_axis);
                 if (new_header.empty()) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res({ header().count() - (header().count() / header().dims()[fixed_axis]) * fixed_count });
+                this_type res({ header().count() - (header().count() / header().dims()[fixed_axis]) * fixed_count });
                 res.header() = std::move(new_header);
 
-                IndexerType gen(header(), fixed_axis);
-                IndexerType res_gen(res.header(), fixed_axis);
+                indexer_type gen(header(), fixed_axis);
+                indexer_type res_gen(res.header(), fixed_axis);
 
                 std::int64_t cycle = fixed_ind *
                     (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
@@ -2667,12 +2667,12 @@ namespace oc {
                 using U = decltype(op(data()[0]));
 
                 if (empty(*this)) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
-                RetypedArray<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     res(*gen) = op((*this)(*gen));
                 }
 
@@ -2685,13 +2685,13 @@ namespace oc {
                 using U = decltype(op(data()[0], arr.data()[0]));
 
                 if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
-                RetypedArray<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
-                IndexerType gen(header());
-                typename RetypedArray<U>::Indexer arr_gen(arr.header());
+                indexer_type gen(header());
+                typename replaced_type<U>::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
                     res(*gen) = op((*this)(*gen), arr(*arr_gen));
@@ -2705,9 +2705,9 @@ namespace oc {
             {
                 using U = decltype(op(data()[0], value));
 
-                RetypedArray<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     res(*gen) = op((*this)(*gen), value);
                 }
 
@@ -2722,7 +2722,7 @@ namespace oc {
                     return *this;
                 }
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen));
                 }
 
@@ -2736,8 +2736,8 @@ namespace oc {
                     return *this;
                 }
 
-                IndexerType gen(header());
-                typename ArCo::Indexer arr_gen(arr.header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
                     (*this)(*gen) = op((*this)(*gen), arr(*arr_gen));
@@ -2749,7 +2749,7 @@ namespace oc {
             template <typename V, typename Binary_op>
             auto& apply(const V& value, Binary_op&& op)
             {
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     (*this)(*gen) = op((*this)(*gen), value);
                 }
 
@@ -2767,7 +2767,7 @@ namespace oc {
                     return U{};
                 }
 
-                IndexerType gen{ header() };
+                indexer_type gen{ header() };
 
                 U res{ static_cast<U>((*this)(*gen)) };
                 ++gen;
@@ -2788,7 +2788,7 @@ namespace oc {
                 }
 
                 U res{ init_value };
-                for (IndexerType gen{ header() }; gen; ++gen) {
+                for (indexer_type gen{ header() }; gen; ++gen) {
                     res = op(res, (*this)(*gen));
                 }
 
@@ -2801,21 +2801,21 @@ namespace oc {
                 using U = decltype(op(data()[0], data()[0]));
 
                 if (empty(*this)) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
                 const std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
 
-                typename RetypedArray<U>::Header new_header(header(), fixed_axis);
+                typename replaced_type<U>::header_type new_header(header(), fixed_axis);
                 if (new_header.empty()) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
-                RetypedArray<U> res({ new_header.count() });
+                replaced_type<U> res({ new_header.count() });
                 res.header() = std::move(new_header);
 
-                IndexerType gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
-                IndexerType res_gen(res.header());
+                indexer_type gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
+                indexer_type res_gen(res.header());
 
                 const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
 
@@ -2838,26 +2838,26 @@ namespace oc {
                 using U = decltype(op(init_values.data()[0], data()[0]));
 
                 if (empty(*this)) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
                 const std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
 
                 if (init_values.header().dims().size() != 1 && init_values.header().dims()[fixed_axis] != header().dims()[fixed_axis]) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
-                typename RetypedArray<U>::Header new_header(header(), axis);
+                typename replaced_type<U>::header_type new_header(header(), axis);
                 if (new_header.empty()) {
-                    return RetypedArray<U>();
+                    return replaced_type<U>();
                 }
 
-                RetypedArray<U> res({ new_header.count() });
+                replaced_type<U> res({ new_header.count() });
                 res.header() = std::move(new_header);
 
-                IndexerType gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
-                IndexerType res_gen(res.header());
-                typename ArCo::Indexer init_gen(init_values.header());
+                indexer_type gen(header(), std::ssize(header().dims()) - fixed_axis - 1);
+                indexer_type res_gen(res.header());
+                typename ArCo::indexer_type init_gen(init_values.header());
 
                 const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
 
@@ -2879,13 +2879,13 @@ namespace oc {
             [[nodiscard]] auto filter(Unary_pred pred) const
             {
                 if (empty(*this)) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res({ header().count() });
+                this_type res({ header().count() });
 
-                IndexerType gen(header());
-                IndexerType res_gen(res.header());
+                indexer_type gen(header());
+                indexer_type res_gen(res.header());
 
                 std::int64_t res_count{ 0 };
 
@@ -2899,7 +2899,7 @@ namespace oc {
                 }
 
                 if (res_count == 0) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
                 if (res_count < header().count()) {
@@ -2913,19 +2913,19 @@ namespace oc {
             [[nodiscard]] auto filter(const ArCo& mask) const
             {
                 if (empty(*this)) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
                 if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res({ header().count() });
+                this_type res({ header().count() });
 
-                IndexerType gen(header());
-                typename ArCo::Indexer mask_gen(mask.header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type mask_gen(mask.header());
 
-                IndexerType res_gen(res.header());
+                indexer_type res_gen(res.header());
 
                 std::int64_t res_count{ 0 };
 
@@ -2940,7 +2940,7 @@ namespace oc {
                 }
 
                 if (res_count == 0) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
                 if (res_count < header().count()) {
@@ -2954,13 +2954,13 @@ namespace oc {
             [[nodiscard]] auto find(Unary_pred pred) const
             {
                 if (empty(*this)) {
-                    return RetypedArray<std::int64_t>();
+                    return replaced_type<std::int64_t>();
                 }
 
-                RetypedArray<std::int64_t> res({ header().count() });
+                replaced_type<std::int64_t> res({ header().count() });
 
-                IndexerType gen(header());
-                typename RetypedArray<std::int64_t>::Indexer res_gen(res.header());
+                indexer_type gen(header());
+                typename replaced_type<std::int64_t>::indexer_type res_gen(res.header());
 
                 std::int64_t res_count{ 0 };
 
@@ -2974,7 +2974,7 @@ namespace oc {
                 }
 
                 if (res_count == 0) {
-                    return RetypedArray<std::int64_t>();
+                    return replaced_type<std::int64_t>();
                 }
 
                 if (res_count < header().count()) {
@@ -2988,19 +2988,19 @@ namespace oc {
             [[nodiscard]] auto find(const ArCo& mask) const
             {
                 if (empty(*this)) {
-                    return RetypedArray<std::int64_t>();
+                    return replaced_type<std::int64_t>();
                 }
 
                 if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
-                    return RetypedArray<std::int64_t>();
+                    return replaced_type<std::int64_t>();
                 }
 
-                RetypedArray<std::int64_t> res({ header().count() });
+                replaced_type<std::int64_t> res({ header().count() });
 
-                IndexerType gen(header());
-                typename ArCo::Indexer mask_gen(mask.header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type mask_gen(mask.header());
 
-                typename RetypedArray<std::int64_t>::Indexer res_gen(res.header());
+                typename replaced_type<std::int64_t>::indexer_type res_gen(res.header());
 
                 std::int64_t res_count{ 0 };
 
@@ -3015,7 +3015,7 @@ namespace oc {
                 }
 
                 if (res_count == 0) {
-                    return RetypedArray<std::int64_t>();
+                    return replaced_type<std::int64_t>();
                 }
 
                 if (res_count < header().count()) {
@@ -3029,19 +3029,19 @@ namespace oc {
             [[nodiscard]] auto transpose(std::span<const std::int64_t> order) const
             {
                 if (empty(*this)) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                HeaderType new_header(header(), order);
+                header_type new_header(header(), order);
                 if (new_header.empty()) {
-                    return ThisArrayType();
+                    return this_type();
                 }
 
-                ThisArrayType res({ header().count() });
+                this_type res({ header().count() });
                 res.header() = std::move(new_header);
 
-                IndexerType gen(header(), order);
-                IndexerType res_gen(res.header());
+                indexer_type gen(header(), order);
+                indexer_type res_gen(res.header());
 
                 while (gen && res_gen) {
                     res(*res_gen) = (*this)(*gen);
@@ -3073,8 +3073,8 @@ namespace oc {
                     return false;
                 }
 
-                IndexerType gen(header());
-                typename ArCo::Indexer arr_gen(arr.header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
                     if (!pred((*this)(*gen), arr(*arr_gen))) {
@@ -3092,7 +3092,7 @@ namespace oc {
                     return true;
                 }
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     if (!pred((*this)(*gen), value)) {
                         return false;
                     }
@@ -3108,7 +3108,7 @@ namespace oc {
                     return true;
                 }
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     if (!pred((*this)(*gen))) {
                         return false;
                     }
@@ -3132,8 +3132,8 @@ namespace oc {
                     return false;
                 }
 
-                IndexerType gen(header());
-                typename ArCo::Indexer arr_gen(arr.header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
                     if (pred((*this)(*gen), arr(*arr_gen))) {
@@ -3151,7 +3151,7 @@ namespace oc {
                     return true;
                 }
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     if (pred((*this)(*gen), value)) {
                         return true;
                     }
@@ -3167,7 +3167,7 @@ namespace oc {
                     return true;
                 }
 
-                for (IndexerType gen(header()); gen; ++gen) {
+                for (indexer_type gen(header()); gen; ++gen) {
                     if (pred((*this)(*gen))) {
                         return true;
                     }
@@ -3199,13 +3199,13 @@ namespace oc {
 
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] RetypedArray<bool> close(const ArCo& arr, const decltype(value_type{} - typename ArCo::value_type{})& atol = default_atol<decltype(value_type{} - typename ArCo::value_type{}) > (), const decltype(value_type{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(value_type{} - typename ArCo::value_type{}) > ()) const
+            [[nodiscard]] replaced_type<bool> close(const ArCo& arr, const decltype(value_type{} - typename ArCo::value_type{})& atol = default_atol<decltype(value_type{} - typename ArCo::value_type{}) > (), const decltype(value_type{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(value_type{} - typename ArCo::value_type{}) > ()) const
             {
                 return transform(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::details::close(a, b, atol, rtol); });
             }
 
             template <typename U>
-            [[nodiscard]] RetypedArray<bool> close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
+            [[nodiscard]] replaced_type<bool> close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
             {
                 return transform(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
             }
@@ -3237,87 +3237,87 @@ namespace oc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return iterator(buffsp_->data(), IndexerType(hdr_, axis));
+                return iterator(buffsp_->data(), indexer_type(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return iterator(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
+                return iterator(buffsp_->data(), indexer_type(hdr_, axis, true) + 1);
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return const_iterator(buffsp_->data(), IndexerType(hdr_, axis));
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return const_iterator(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
+                return const_iterator(buffsp_->data() , indexer_type(hdr_, axis, true) + 1);
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return iterator(buffsp_->data(), IndexerType(hdr_, order));
+                return iterator(buffsp_->data(), indexer_type(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return iterator(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return iterator(buffsp_->data(), indexer_type(hdr_, order, true) + 1);
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return const_iterator(buffsp_->data(), IndexerType(hdr_, order));
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return const_iterator(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, order, true) + 1);
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, order, true));
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return reverse_iterator(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order) - 1);
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, order, true));
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return const_reverse_iterator(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order) - 1);
             }
 
 
@@ -3477,8 +3477,8 @@ namespace oc {
 
 
         private:
-            Header hdr_{};
-            std::shared_ptr<StorageType> buffsp_{ nullptr };
+            header_type hdr_{};
+            std::shared_ptr<storage_type> buffsp_{ nullptr };
         };
 
         /**
@@ -4287,7 +4287,7 @@ namespace oc {
                 return arr;
             }
 
-            for (typename ArCo::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename ArCo::indexer_type gen(arr.header()); gen; ++gen) {
                 ++arr(*gen);
             }
             return arr;
@@ -4320,7 +4320,7 @@ namespace oc {
                 return arr;
             }
 
-            for (typename ArCo::Indexer gen(arr.header()); gen; ++gen) {
+            for (typename ArCo::indexer_type gen(arr.header()); gen; ++gen) {
                 --arr(*gen);
             }
             return arr;

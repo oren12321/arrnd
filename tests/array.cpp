@@ -700,7 +700,7 @@ TEST(Array_test, can_return_its_header_and_data)
     using Integer_array = oc::Array<int>;
 
     Integer_array earr{};
-    const Integer_array::Header& ehdr{ earr.header() };
+    const Integer_array::header_type& ehdr{ earr.header() };
 
     EXPECT_EQ(0, ehdr.dims().size());
     EXPECT_EQ(0, ehdr.count());
@@ -712,7 +712,7 @@ TEST(Array_test, can_return_its_header_and_data)
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
-    const Integer_array::Header& hdr{ arr.header() };
+    const Integer_array::header_type& hdr{ arr.header() };
 
     EXPECT_EQ(3, hdr.dims().size());
     EXPECT_EQ(6, hdr.count());
