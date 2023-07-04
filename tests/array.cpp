@@ -342,7 +342,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         0, 1,
@@ -372,7 +372,7 @@ TEST(arrnd_general_indexer, simple_backward_forward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         5, 4,
@@ -402,7 +402,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         0,
@@ -433,7 +433,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
     const std::int64_t order[]{ 2, 0, 1 };
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         0, 2, 4,
@@ -462,7 +462,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[][6]{
         { 0, 1,
@@ -504,7 +504,7 @@ TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         0, 1,
@@ -534,7 +534,7 @@ TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         5, 4,
@@ -564,7 +564,7 @@ TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_th
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[6]{
         0,
@@ -594,7 +594,7 @@ TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
     using namespace oc::details;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    Array_header hdr(std::span(dims, 3));
+    arrnd_header hdr(std::span(dims, 3));
 
     const std::int64_t expected_inds_list[][6]{
         { 0, 1,

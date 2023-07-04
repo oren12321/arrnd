@@ -904,20 +904,22 @@ namespace oc {
         offset = 28
         */
 
-        template <typename StorageType = simple_dynamic_vector<std::int64_t>>
-        class Array_header {
+        template <typename Storage = simple_dynamic_vector<std::int64_t>>
+        class arrnd_header {
         public:
-            Array_header() = default;
+            using storage_type = Storage;
 
-            Array_header(std::span<const std::int64_t> dims)
+            arrnd_header() = default;
+
+            arrnd_header(std::span<const std::int64_t> dims)
             {
                 if ((count_ = numel(dims)) <= 0) {
                     return;
                 }
 
-                dims_ = StorageType(dims.begin(), dims.end());
+                dims_ = storage_type(dims.begin(), dims.end());
 
-                strides_ = StorageType(dims.size());
+                strides_ = storage_type(dims.size());
                 compute_strides(dims, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -925,13 +927,13 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
+            arrnd_header(const arrnd_header& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                StorageType dims = StorageType(previous_hdr.dims().size());
+                storage_type dims = storage_type(previous_hdr.dims().size());
 
                 if (compute_dims(previous_hdr.dims(), intervals, dims) <= 0) {
                     return;
@@ -941,7 +943,7 @@ namespace oc {
                 
                 count_ = numel(dims_);
 
-                strides_ = StorageType(previous_hdr.dims().size());
+                strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(previous_hdr.dims(), previous_hdr.strides(), intervals, strides_);
 
                 offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), intervals);
@@ -953,7 +955,7 @@ namespace oc {
                 is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
             }
 
-            Array_header(const Array_header<StorageType>& previous_hdr, std::int64_t omitted_axis)
+            arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -963,7 +965,7 @@ namespace oc {
                 std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
                 std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
 
-                dims_ = StorageType(ndims);
+                dims_ = storage_type(ndims);
 
                 if (previous_hdr.dims().size() > 1) {
                     for (std::int64_t i = 0; i < axis; ++i) {
@@ -977,7 +979,7 @@ namespace oc {
                     dims_[0] = 1;
                 }
 
-                strides_ = StorageType(ndims);
+                strides_ = storage_type(ndims);
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -987,7 +989,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const std::int64_t> new_order)
+            arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -998,7 +1000,7 @@ namespace oc {
                     return;
                 }
 
-                StorageType dims = StorageType(previous_hdr.dims().size());
+                storage_type dims = storage_type(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     dims[i] = previous_hdr.dims()[modulo(new_order[i], std::ssize(previous_hdr.dims()))];
@@ -1010,7 +1012,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = StorageType(previous_hdr.dims().size());
+                strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 count_ = numel(dims_);
@@ -1020,14 +1022,14 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<StorageType>& previous_hdr, std::int64_t count, std::int64_t axis)
+            arrnd_header(const arrnd_header& previous_hdr, std::int64_t count, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
                 }
 
-                StorageType dims = StorageType(previous_hdr.dims().size());
+                storage_type dims = storage_type(previous_hdr.dims().size());
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
@@ -1040,7 +1042,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = StorageType(previous_hdr.dims().size());
+                strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1048,7 +1050,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(const Array_header<StorageType>& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+            arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (previous_hdr.dims().size() != appended_dims.size()) {
@@ -1075,7 +1077,7 @@ namespace oc {
                     return;
                 }
 
-                StorageType dims = StorageType(previous_hdr.dims().size());
+                storage_type dims = storage_type(previous_hdr.dims().size());
 
                 for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
@@ -1087,7 +1089,7 @@ namespace oc {
 
                 dims_ = std::move(dims);
 
-                strides_ = StorageType(previous_hdr.dims().size());
+                strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
@@ -1095,13 +1097,13 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            Array_header(Array_header&& other) = default;
-            Array_header& operator=(Array_header&& other) = default;
+            arrnd_header(arrnd_header&& other) = default;
+            arrnd_header& operator=(arrnd_header&& other) = default;
 
-            Array_header(const Array_header& other) = default;
-            Array_header& operator=(const Array_header& other) = default;
+            arrnd_header(const arrnd_header& other) = default;
+            arrnd_header& operator=(const arrnd_header& other) = default;
 
-            virtual ~Array_header() = default;
+            virtual ~arrnd_header() = default;
 
             [[nodiscard]] std::int64_t count() const noexcept
             {
@@ -1139,8 +1141,8 @@ namespace oc {
             }
 
         private:
-            StorageType dims_{};
-            StorageType strides_{};
+            storage_type dims_{};
+            storage_type strides_{};
             std::int64_t count_{ 0 };
             std::int64_t offset_{ 0 };
             std::int64_t last_index_{ 0 };
@@ -1148,7 +1150,7 @@ namespace oc {
         };
 
 
-        template <typename Storage = simple_dynamic_vector<std::int64_t>, typename Header = Array_header<>>
+        template <typename Storage = simple_dynamic_vector<std::int64_t>, typename Header = arrnd_header<>>
         class arrnd_general_indexer final
         {
         public:
@@ -1455,7 +1457,7 @@ namespace oc {
 
 
 
-        template <typename Header = Array_header<>>
+        template <typename Header = arrnd_header<>>
         class arrnd_fast_indexer final
         {
         public:
@@ -2108,7 +2110,7 @@ namespace oc {
         concept CustomArray = std::is_same_v<typename T::Tag, CustomArrayTag>;
 
 
-        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = Array_header<>, typename IndexerType = arrnd_general_indexer<>>
+        template <typename T, typename StorageType = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocType = lightweight_allocator, typename HeaderType = arrnd_header<>, typename IndexerType = arrnd_general_indexer<>>
         class Array {
         public:
             using Tag = CustomArrayTag;
