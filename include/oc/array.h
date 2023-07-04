@@ -1712,362 +1712,388 @@ namespace oc {
             std::int64_t group_start_index_ = 0;
         };
 
-        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
-        class Array_iterator final
+        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        class arrnd_iterator final
         {
         public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
             using value_type = T;
-            using difference_type = std::ptrdiff_t;
+            using pointer = T*;
+            using reference = T&;
 
-            Array_iterator(T* data, const IndexerType& gen)
+            using indexer_type = Indexer;
+
+            constexpr arrnd_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
             {
             }
 
-            Array_iterator() = default;
+            constexpr arrnd_iterator() = default;
 
-            Array_iterator(const Array_iterator<T, IndexerType>& other) = default;
-            Array_iterator<T, IndexerType>& operator=(const Array_iterator<T, IndexerType>& other) = default;
+            constexpr arrnd_iterator(const arrnd_iterator& other) = default;
+            constexpr arrnd_iterator& operator=(const arrnd_iterator& other) = default;
 
-            Array_iterator(Array_iterator<T, IndexerType>&& other) noexcept = default;
-            Array_iterator<T, IndexerType>& operator=(Array_iterator<T, IndexerType>&& other) noexcept = default;
+            constexpr arrnd_iterator(arrnd_iterator&& other) noexcept = default;
+            constexpr arrnd_iterator& operator=(arrnd_iterator&& other) noexcept = default;
 
-            ~Array_iterator() = default;
+            constexpr ~arrnd_iterator() = default;
 
-            Array_iterator<T, IndexerType>& operator++() noexcept
+            constexpr arrnd_iterator& operator++() noexcept
             {
                 ++gen_;
                 return *this;
             }
 
-            Array_iterator<T, IndexerType> operator++(int) noexcept
+            constexpr arrnd_iterator operator++(int) noexcept
             {
-                Array_iterator temp{ *this };
+                arrnd_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_iterator<T, IndexerType>& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_iterator& operator+=(difference_type count) noexcept
             {
                 gen_ += count;
                 return *this;
             }
 
-            Array_iterator<T, IndexerType> operator+(std::int64_t count) noexcept
+            constexpr arrnd_iterator operator+(difference_type count) noexcept
             {
-                Array_iterator temp{ *this };
+                arrnd_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_iterator<T, IndexerType>& operator--() noexcept
+            constexpr arrnd_iterator& operator--() noexcept
             {
                 gen_--;
                 return *this;
             }
 
-            Array_iterator<T, IndexerType> operator--(int) noexcept
+            constexpr arrnd_iterator operator--(int) noexcept
             {
-                Array_iterator temp{ *this };
+                arrnd_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_iterator<T, IndexerType>& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_iterator& operator-=(difference_type count) noexcept
             {
                 gen_ -= count;
                 return *this;
             }
 
-            Array_iterator<T, IndexerType> operator-(std::int64_t count) noexcept
+            constexpr arrnd_iterator operator-(difference_type count) noexcept
             {
-                Array_iterator temp{ *this };
+                arrnd_iterator temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] T& operator*() const noexcept
+            [[nodiscard]] constexpr reference operator*() const noexcept
             {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] bool operator==(const Array_iterator<T, IndexerType>& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_iterator& iter) const
             {
                 return *gen_ == *(iter.gen_);
             }
 
         private:
-            IndexerType gen_;
-            T* data_ = nullptr;
+            indexer_type gen_;
+            pointer data_ = nullptr;
         };
 
 
 
 
-        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
-        class Array_const_iterator final
+        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        class arrnd_const_iterator final
         {
         public:
-            Array_const_iterator(T* data, const IndexerType& gen)
-                : gen_(gen), data_(data)
-            {
-            }
-
-            Array_const_iterator() = default;
-
-            Array_const_iterator(const Array_const_iterator<T, IndexerType>& other) = default;
-            Array_const_iterator<T, IndexerType>& operator=(const Array_const_iterator<T, IndexerType>& other) = default;
-
-            Array_const_iterator(Array_const_iterator<T, IndexerType>&& other) noexcept = default;
-            Array_const_iterator<T, IndexerType>& operator=(Array_const_iterator<T, IndexerType>&& other) noexcept = default;
-
-            ~Array_const_iterator() = default;
-
-            Array_const_iterator<T, IndexerType>& operator++() noexcept
-            {
-                ++gen_;
-                return *this;
-            }
-
-            Array_const_iterator<T, IndexerType> operator++(int) noexcept
-            {
-                Array_const_iterator temp{ *this };
-                ++(*this);
-                return temp;
-            }
-
-            Array_const_iterator<T, IndexerType>& operator+=(std::int64_t count) noexcept
-            {
-                gen_ += count;
-                return *this;
-            }
-
-            Array_const_iterator<T, IndexerType> operator+(std::int64_t count) noexcept
-            {
-                Array_const_iterator temp{ *this };
-                temp += count;
-                return temp;
-            }
-
-            Array_const_iterator<T, IndexerType>& operator--() noexcept
-            {
-                --gen_;
-                return *this;
-            }
-
-            Array_const_iterator<T, IndexerType> operator--(int) noexcept
-            {
-                Array_const_iterator temp{ *this };
-                --(*this);
-                return temp;
-            }
-
-            Array_const_iterator<T, IndexerType>& operator-=(std::int64_t count) noexcept
-            {
-                gen_ -= count;
-                return *this;
-            }
-
-            Array_const_iterator<T, IndexerType> operator-(std::int64_t count) noexcept
-            {
-                Array_const_iterator temp{ *this };
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] const T& operator*() const noexcept
-            {
-                return data_[*gen_];
-            }
-
-            [[nodiscard]] bool operator==(const Array_const_iterator<T, IndexerType>& iter) const
-            {
-                return *gen_ == *(iter.gen_);
-            }
-
-        private:
-            IndexerType gen_;
-            T* data_ = nullptr;
-        };
-
-
-
-        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
-        class Array_reverse_iterator final
-        {
-        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
             using value_type = T;
-            using difference_type = std::ptrdiff_t;
+            using pointer = T*;
+            using reference = T&;
 
-            Array_reverse_iterator(T* data, const IndexerType& gen)
+            using indexer_type = Indexer;
+
+            constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
             {
             }
 
-            Array_reverse_iterator() = default;
+            constexpr arrnd_const_iterator() = default;
 
-            Array_reverse_iterator(const Array_reverse_iterator<T, IndexerType>& other) = default;
-            Array_reverse_iterator<T, IndexerType>& operator=(const Array_reverse_iterator<T, IndexerType>& other) = default;
+            constexpr arrnd_const_iterator(const arrnd_const_iterator& other) = default;
+            constexpr arrnd_const_iterator& operator=(const arrnd_const_iterator& other) = default;
 
-            Array_reverse_iterator(Array_reverse_iterator<T, IndexerType>&& other) noexcept = default;
-            Array_reverse_iterator<T, IndexerType>& operator=(Array_reverse_iterator<T, IndexerType>&& other) noexcept = default;
+            constexpr arrnd_const_iterator(arrnd_const_iterator&& other) noexcept = default;
+            constexpr arrnd_const_iterator& operator=(arrnd_const_iterator&& other) noexcept = default;
 
-            ~Array_reverse_iterator() = default;
+            constexpr ~arrnd_const_iterator() = default;
 
-            Array_reverse_iterator<T, IndexerType>& operator++() noexcept
-            {
-                --gen_;
-                return *this;
-            }
-
-            Array_reverse_iterator<T, IndexerType> operator++(int) noexcept
-            {
-                Array_reverse_iterator temp{ *this };
-                --(*this);
-                return temp;
-            }
-
-            Array_reverse_iterator<T, IndexerType>& operator+=(std::int64_t count) noexcept
-            {
-                gen_ -= count;
-                return *this;
-            }
-
-            Array_reverse_iterator<T, IndexerType> operator+(std::int64_t count) noexcept
-            {
-                Array_reverse_iterator temp{ *this };
-                temp += count;
-                return temp;
-            }
-
-            Array_reverse_iterator<T, IndexerType>& operator--() noexcept
+            constexpr arrnd_const_iterator& operator++() noexcept
             {
                 ++gen_;
                 return *this;
             }
 
-            Array_reverse_iterator<T, IndexerType> operator--(int) noexcept
+            constexpr arrnd_const_iterator operator++(int) noexcept
             {
-                Array_reverse_iterator temp{ *this };
+                arrnd_const_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_reverse_iterator<T, IndexerType>& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_const_iterator& operator+=(difference_type count) noexcept
             {
                 gen_ += count;
                 return *this;
             }
 
-            Array_reverse_iterator<T, IndexerType> operator-(std::int64_t count) noexcept
+            constexpr arrnd_const_iterator operator+(difference_type count) noexcept
             {
-                Array_reverse_iterator temp{ *this };
+                arrnd_const_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_const_iterator& operator--() noexcept
+            {
+                --gen_;
+                return *this;
+            }
+
+            constexpr arrnd_const_iterator operator--(int) noexcept
+            {
+                arrnd_const_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_const_iterator& operator-=(difference_type count) noexcept
+            {
+                gen_ -= count;
+                return *this;
+            }
+
+            constexpr arrnd_const_iterator operator-(difference_type count) noexcept
+            {
+                arrnd_const_iterator temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] T& operator*() const noexcept
+            [[nodiscard]] constexpr const reference operator*() const noexcept
             {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] bool operator==(const Array_reverse_iterator<T, IndexerType>& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_const_iterator& iter) const
             {
                 return *gen_ == *(iter.gen_);
             }
 
         private:
-            IndexerType gen_;
-            T* data_ = nullptr;
+            indexer_type gen_;
+            pointer data_ = nullptr;
+        };
+
+
+
+        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        class arrnd_reverse_iterator final
+        {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = T;
+            using pointer = T*;
+            using reference = T&;
+
+            using indexer_type = Indexer;
+
+            constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
+                : gen_(gen), data_(data)
+            {
+            }
+
+            constexpr arrnd_reverse_iterator() = default;
+
+            constexpr arrnd_reverse_iterator(const arrnd_reverse_iterator& other) = default;
+            constexpr arrnd_reverse_iterator& operator=(const arrnd_reverse_iterator& other) = default;
+
+            constexpr arrnd_reverse_iterator(arrnd_reverse_iterator&& other) noexcept = default;
+            constexpr arrnd_reverse_iterator& operator=(arrnd_reverse_iterator&& other) noexcept = default;
+
+            constexpr ~arrnd_reverse_iterator() = default;
+
+            constexpr arrnd_reverse_iterator& operator++() noexcept
+            {
+                --gen_;
+                return *this;
+            }
+
+            constexpr arrnd_reverse_iterator operator++(int) noexcept
+            {
+                arrnd_reverse_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_reverse_iterator& operator+=(difference_type count) noexcept
+            {
+                gen_ -= count;
+                return *this;
+            }
+
+            constexpr arrnd_reverse_iterator operator+(difference_type count) noexcept
+            {
+                arrnd_reverse_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_reverse_iterator& operator--() noexcept
+            {
+                ++gen_;
+                return *this;
+            }
+
+            constexpr arrnd_reverse_iterator operator--(int) noexcept
+            {
+                arrnd_reverse_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_reverse_iterator& operator-=(difference_type count) noexcept
+            {
+                gen_ += count;
+                return *this;
+            }
+
+            constexpr arrnd_reverse_iterator operator-(difference_type count) noexcept
+            {
+                arrnd_reverse_iterator temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr reference operator*() const noexcept
+            {
+                return data_[*gen_];
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_reverse_iterator& iter) const
+            {
+                return *gen_ == *(iter.gen_);
+            }
+
+        private:
+            indexer_type gen_;
+            pointer data_ = nullptr;
         };
 
 
 
 
-        template <typename T, typename IndexerType = Simple_array_indices_generator<>>
-        class Array_const_reverse_iterator final
+        template <typename T, typename Indexer = Simple_array_indices_generator<>>
+        class arrnd_const_reverse_iterator final
         {
         public:
-            Array_const_reverse_iterator(T* data, const IndexerType& gen)
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = T;
+            using pointer = T*;
+            using reference = T&;
+
+            using indexer_type = Indexer;
+
+            constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
             {
             }
 
-            Array_const_reverse_iterator() = default;
+            constexpr arrnd_const_reverse_iterator() = default;
 
-            Array_const_reverse_iterator(const Array_const_reverse_iterator<T, IndexerType>& other) = default;
-            Array_const_reverse_iterator<T, IndexerType>& operator=(const Array_const_reverse_iterator<T, IndexerType>& other) = default;
+            constexpr arrnd_const_reverse_iterator(const arrnd_const_reverse_iterator& other) = default;
+            constexpr arrnd_const_reverse_iterator& operator=(const arrnd_const_reverse_iterator& other) = default;
 
-            Array_const_reverse_iterator(Array_const_reverse_iterator<T, IndexerType>&& other) noexcept = default;
-            Array_const_reverse_iterator<T, IndexerType>& operator=(Array_const_reverse_iterator<T, IndexerType>&& other) noexcept = default;
+            constexpr arrnd_const_reverse_iterator(arrnd_const_reverse_iterator&& other) noexcept = default;
+            constexpr arrnd_const_reverse_iterator& operator=(arrnd_const_reverse_iterator&& other) noexcept = default;
 
-            ~Array_const_reverse_iterator() = default;
+            constexpr ~arrnd_const_reverse_iterator() = default;
 
-            Array_const_reverse_iterator<T, IndexerType>& operator++() noexcept
+            constexpr arrnd_const_reverse_iterator& operator++() noexcept
             {
                 --gen_;
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, IndexerType> operator++(int) noexcept
+            constexpr arrnd_const_reverse_iterator operator++(int) noexcept
             {
-                Array_const_reverse_iterator temp{ *this };
+                arrnd_const_reverse_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, IndexerType>& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_const_reverse_iterator& operator+=(difference_type count) noexcept
             {
                 gen_ -= count;
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, IndexerType> operator+(std::int64_t count) noexcept
+            constexpr arrnd_const_reverse_iterator operator+(difference_type count) noexcept
             {
-                Array_const_reverse_iterator temp{ *this };
+                arrnd_const_reverse_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, IndexerType>& operator--() noexcept
+            constexpr arrnd_const_reverse_iterator& operator--() noexcept
             {
                 ++gen_;
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, IndexerType> operator--(int) noexcept
+            constexpr arrnd_const_reverse_iterator operator--(int) noexcept
             {
-                Array_const_reverse_iterator temp{ *this };
+                arrnd_const_reverse_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            Array_const_reverse_iterator<T, IndexerType>& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_const_reverse_iterator& operator-=(difference_type count) noexcept
             {
                 gen_ += count;
                 return *this;
             }
 
-            Array_const_reverse_iterator<T, IndexerType> operator-(std::int64_t count) noexcept
+            constexpr arrnd_const_reverse_iterator operator-(difference_type count) noexcept
             {
-                Array_const_reverse_iterator temp{ *this };
+                arrnd_const_reverse_iterator temp{ *this };
                 temp -= count;
                 return temp;
             }
 
-            [[nodiscard]] const T& operator*() const noexcept
+            [[nodiscard]] constexpr const reference operator*() const noexcept
             {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] bool operator==(const Array_const_reverse_iterator<T, IndexerType>& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const
             {
                 return *gen_ == *(iter.gen_);
             }
 
         private:
-            IndexerType gen_;
-            T* data_ = nullptr;
+            indexer_type gen_;
+            pointer data_ = nullptr;
         };
 
 
@@ -3192,87 +3218,87 @@ namespace oc {
 
             auto begin(std::int64_t axis = 0)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
+                return arrnd_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto end(std::int64_t axis = 0)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
+                return arrnd_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto cbegin(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
+                return arrnd_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis));
             }
 
             auto cend(std::int64_t axis = 0) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
+                return arrnd_const_iterator<T, IndexerType>(buffsp_->data() , IndexerType(hdr_, axis, true) + 1);
             }
 
 
             auto rbegin(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return arrnd_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto rend(std::int64_t axis = 0)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return arrnd_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
             auto crbegin(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
+                return arrnd_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis, true));
             }
 
             auto crend(std::int64_t axis = 0) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
+                return arrnd_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, axis) - 1);
             }
 
 
             auto begin(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
+                return arrnd_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto end(std::span<const std::int64_t> order)
             {
-                return Array_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return arrnd_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto cbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
+                return arrnd_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order));
             }
 
             auto cend(std::span<const std::int64_t> order) const
             {
-                return Array_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
+                return arrnd_const_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true) + 1);
             }
 
 
             auto rbegin(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
+                return arrnd_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto rend(std::span<const std::int64_t> order)
             {
-                return Array_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return arrnd_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
             auto crbegin(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
+                return arrnd_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order, true));
             }
 
             auto crend(std::span<const std::int64_t> order) const
             {
-                return Array_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
+                return arrnd_const_reverse_iterator<T, IndexerType>(buffsp_->data(), IndexerType(hdr_, order) - 1);
             }
 
 
