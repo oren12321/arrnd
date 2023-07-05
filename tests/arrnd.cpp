@@ -11,7 +11,7 @@
 #include <ostream>
 #include <charconv>
 
-#include <oc/array.h>
+#include <oc/arrnd.h>
 
 TEST(Algorithms_test, two_numbers_can_be_compared_with_specified_percision)
 {

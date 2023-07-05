@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.24.4)
 
-project(oc-array
+project(oc-arrnd
     VERSION 1.0.0
     DESCRIPTION "An N dimensional array implementation"
-    HOMEPAGE_URL "https://github.com/oren12321/oc-array")
+    HOMEPAGE_URL "https://github.com/oren12321/oc-arrnd")
 
 if (NOT WIN32)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -84,5 +84,5 @@ target_include_directories(${PROJECT_NAME}_benchmark PUBLIC ${CMAKE_SOURCE_DIR}/
 target_link_libraries(${PROJECT_NAME}_benchmark ${PROJECT_NAME}::${PROJECT_NAME} benchmark::benchmark)
 set_property(TARGET ${PROJECT_NAME}_benchmark PROPERTY CXX_STANDARD 20)
 
-add_custom_target(run_oc-array_tests COMMAND ${PROJECT_NAME}_tests DEPENDS ${PROJECT_NAME}_tests)
-add_custom_target(run_oc-array_benchmark COMMAND ${PROJECT_NAME}_benchmark DEPENDS ${PROJECT_NAME}_benchmark)
+add_custom_target(run_oc-arrnd_tests COMMAND ${PROJECT_NAME}_tests DEPENDS ${PROJECT_NAME}_tests)
+add_custom_target(run_oc-arrnd_benchmark COMMAND ${PROJECT_NAME}_benchmark DEPENDS ${PROJECT_NAME}_benchmark)
