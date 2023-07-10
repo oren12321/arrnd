@@ -2215,7 +2215,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(hdr_); gen; ++gen) {
-                    (*this)(*gen) = value;
+                    (*this)[*gen] = value;
                 }
 
                 return *this;
@@ -2223,65 +2223,65 @@ namespace oc {
 
             virtual ~arrnd() = default;
 
-            arrnd(std::span<const std::int64_t> dims, const_pointer data = nullptr)
+            explicit arrnd(std::span<const std::int64_t> dims, const_pointer data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
                 if (data) {
                     std::copy(data, data + hdr_.count(), buffsp_->data());
                 }
             }
-            arrnd(std::span<const std::int64_t> dims, std::initializer_list<value_type> data)
+            explicit arrnd(std::span<const std::int64_t> dims, std::initializer_list<value_type> data)
                 : arrnd(dims, data.begin())
             {
             }
-            arrnd(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
-            arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<value_type> data)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<value_type> data)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
             template <typename U>
-            arrnd(std::span<const std::int64_t> dims, const U* data = nullptr)
+            explicit arrnd(std::span<const std::int64_t> dims, const U* data = nullptr)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::copy(data, data + hdr_.count(), buffsp_->data());
             }
             template <typename U>
-            arrnd(std::span<const std::int64_t> dims, std::initializer_list<U> data)
+            explicit arrnd(std::span<const std::int64_t> dims, std::initializer_list<U> data)
                 : arrnd(dims, data.begin())
             {
             }
             template <typename U>
-            arrnd(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
             {
             }
             template <typename U>
-            arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
             {
             }
 
 
-            arrnd(std::span<const std::int64_t> dims, const_reference value)
+            explicit arrnd(std::span<const std::int64_t> dims, const_reference value)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
-            arrnd(std::initializer_list<std::int64_t> dims, const_reference value)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, const_reference value)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
             template <typename U>
-            arrnd(std::span<const std::int64_t> dims, const U& value)
+            explicit arrnd(std::span<const std::int64_t> dims, const U& value)
                 : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
             {
                 std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
             template <typename U>
-            arrnd(std::initializer_list<std::int64_t> dims, const U& value)
+            explicit arrnd(std::initializer_list<std::int64_t> dims, const U& value)
                 : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
             {
             }
@@ -2301,34 +2301,34 @@ namespace oc {
                 return buffsp_ ? buffsp_->data() : nullptr;
             }
 
-            [[nodiscard]] const_reference operator()(std::int64_t index) const noexcept
+            [[nodiscard]] const_reference operator[](std::int64_t index) const noexcept
             {
                 return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
             }
-            [[nodiscard]] reference operator()(std::int64_t index) noexcept
+            [[nodiscard]] reference operator[](std::int64_t index) noexcept
             {
                 return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
             }
 
-            [[nodiscard]] const_reference operator()(std::span<std::int64_t> subs) const noexcept
+            [[nodiscard]] const_reference operator[](std::span<std::int64_t> subs) const noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            [[nodiscard]] const_reference operator()(std::initializer_list<std::int64_t> subs) const noexcept
+            [[nodiscard]] const_reference operator[](std::initializer_list<std::int64_t> subs) const noexcept
             {
-                return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
+                return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
             }
 
-            [[nodiscard]] reference operator()(std::span<std::int64_t> subs) noexcept
+            [[nodiscard]] reference operator[](std::span<std::int64_t> subs) noexcept
             {
                 return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            [[nodiscard]] reference operator()(std::initializer_list<std::int64_t> subs) noexcept
+            [[nodiscard]] reference operator[](std::initializer_list<std::int64_t> subs) noexcept
             {
-                return (*this)(std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() });
+                return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
             }
 
-            [[nodiscard]] arrnd operator()(std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] arrnd operator[](std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
@@ -2339,17 +2339,17 @@ namespace oc {
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] arrnd operator()(std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] arrnd operator[](std::initializer_list<Interval<std::int64_t>> ranges) const
             {
-                return (*this)(std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
+                return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
             }
 
-            [[nodiscard]] arrnd operator()(const replaced_type<std::int64_t>& indices) const noexcept
+            [[nodiscard]] arrnd operator[](const replaced_type<std::int64_t>& indices) const noexcept
             {
                 this_type res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
                 for (indexer_type gen(indices.header()); gen; ++gen) {
-                    res(*gen) = buffsp_->data()[indices(*gen)];
+                    res[*gen] = buffsp_->data()[indices[*gen]];
                 }
 
                 return res;
@@ -2370,7 +2370,7 @@ namespace oc {
                 indexer_type dst_gen(header());
 
                 for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
-                    (*this)(*dst_gen) = src(*src_gen);
+                    (*this)[*dst_gen] = src[*src_gen];
                 }
 
                 return *this;
@@ -2388,7 +2388,7 @@ namespace oc {
                 indexer_type clone_gen(clone.header());
 
                 for (; gen && clone_gen; ++gen, ++clone_gen) {
-                    clone(*clone_gen) = (*this)(*gen);
+                    clone[*clone_gen] = (*this)[*gen];
                 }
 
                 return clone;
@@ -2446,7 +2446,7 @@ namespace oc {
                 indexer_type res_gen(res.header());
 
                 while (gen && res_gen) {
-                    res(*res_gen) = (*this)(*gen);
+                    res[*res_gen] = (*this)[*gen];
                     ++gen;
                     ++res_gen;
                 }
@@ -2476,7 +2476,7 @@ namespace oc {
                 ArCo rarr(arr.reshape({ arr.header().count() }));
 
                 for (std::int64_t i = header().count(); i < res.header().count(); ++i) {
-                    res({ i }) = arr({ i - header().count() });
+                    res[{ i }] = arr[{ i - header().count() }];
                 }
 
                 return res;
@@ -2538,13 +2538,13 @@ namespace oc {
                 std::int64_t fixed_ind{ modulo(ind, header().count() + 1) };
 
                 for (std::int64_t i = 0; i < fixed_ind; ++i) {
-                    res({ i }) = rlhs({ i });
+                    res[{ i }] = rlhs[{ i }];
                 }
                 for (std::int64_t i = 0; i < arr.header().count(); ++i) {
-                    res({ fixed_ind + i }) = rarr({ i });
+                    res[{ fixed_ind + i }] = rarr[{ i }];
                 }
                 for (std::int64_t i = 0; i < header().count() - fixed_ind; ++i) {
-                    res({ fixed_ind + arr.header().count() + i }) = rlhs({ fixed_ind + i });
+                    res[{ fixed_ind + arr.header().count() + i }] = rlhs[{ fixed_ind + i }];
                 }
 
                 return res;
@@ -2609,10 +2609,10 @@ namespace oc {
                 this_type rarr(reshape({ header().count() }));
 
                 for (std::int64_t i = 0; i < fixed_ind; ++i) {
-                    res({ i }) = rarr({ i });
+                    res[{ i }] = rarr[{ i }];
                 }
                 for (std::int64_t i = fixed_ind + fixed_count; i < header().count(); ++i) {
-                    res({ i - fixed_count }) = rarr({ i });
+                    res[{ i - fixed_count }] = rarr[{ i }];
                 }
 
                 return res;
@@ -2673,7 +2673,7 @@ namespace oc {
                 replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    res(*gen) = op((*this)(*gen));
+                    res[*gen] = op((*this)[*gen]);
                 }
 
                 return res;
@@ -2694,7 +2694,7 @@ namespace oc {
                 typename replaced_type<U>::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
-                    res(*gen) = op((*this)(*gen), arr(*arr_gen));
+                    res[*gen] = op((*this)[*gen], arr[*arr_gen]);
                 }
 
                 return res;
@@ -2708,7 +2708,7 @@ namespace oc {
                 replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    res(*gen) = op((*this)(*gen), value);
+                    res[*gen] = op((*this)[*gen], value);
                 }
 
                 return res;
@@ -2723,7 +2723,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    (*this)(*gen) = op((*this)(*gen));
+                    (*this)[*gen] = op((*this)[*gen]);
                 }
 
                 return *this;
@@ -2740,7 +2740,7 @@ namespace oc {
                 typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
-                    (*this)(*gen) = op((*this)(*gen), arr(*arr_gen));
+                    (*this)[*gen] = op((*this)[*gen], arr[*arr_gen]);
                 }
 
                 return *this;
@@ -2750,7 +2750,7 @@ namespace oc {
             auto& apply(const V& value, Binary_op&& op)
             {
                 for (indexer_type gen(header()); gen; ++gen) {
-                    (*this)(*gen) = op((*this)(*gen), value);
+                    (*this)[*gen] = op((*this)[*gen], value);
                 }
 
                 return *this;
@@ -2769,11 +2769,11 @@ namespace oc {
 
                 indexer_type gen{ header() };
 
-                U res{ static_cast<U>((*this)(*gen)) };
+                U res{ static_cast<U>((*this)[*gen]) };
                 ++gen;
 
                 while (gen) {
-                    res = op(res, (*this)(*gen));
+                    res = op(res, (*this)[*gen]);
                     ++gen;
                 }
 
@@ -2789,7 +2789,7 @@ namespace oc {
 
                 U res{ init_value };
                 for (indexer_type gen{ header() }; gen; ++gen) {
-                    res = op(res, (*this)(*gen));
+                    res = op(res, (*this)[*gen]);
                 }
 
                 return res;
@@ -2820,12 +2820,12 @@ namespace oc {
                 const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
 
                 while (gen && res_gen) {
-                    U res_element{ static_cast<U>((*this)(*gen)) };
+                    U res_element{ static_cast<U>((*this)[*gen]) };
                     ++gen;
                     for (std::int64_t i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
-                        res_element = op(res_element, (*this)(*gen));
+                        res_element = op(res_element, (*this)[*gen]);
                     }
-                    res(*res_gen) = res_element;
+                    res[*res_gen] = res_element;
                     ++res_gen;
                 }
 
@@ -2862,11 +2862,11 @@ namespace oc {
                 const std::int64_t reduction_iteration_cycle{ header().dims()[fixed_axis] };
 
                 while (gen && res_gen && init_gen) {
-                    U res_element{ init_values(*init_gen) };
+                    U res_element{ init_values[*init_gen] };
                     for (std::int64_t i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
-                        res_element = op(res_element, (*this)(*gen));
+                        res_element = op(res_element, (*this)[*gen]);
                     }
-                    res(*res_gen) = std::move(res_element);
+                    res[*res_gen] = std::move(res_element);
                     ++res_gen;
                     ++init_gen;
                 }
@@ -2890,8 +2890,8 @@ namespace oc {
                 std::int64_t res_count{ 0 };
 
                 while (gen && res_gen) {
-                    if (pred((*this)(*gen))) {
-                        res(*res_gen) = (*this)(*gen);
+                    if (pred((*this)[*gen])) {
+                        res[*res_gen] = (*this)[*gen];
                         ++res_count;
                         ++res_gen;
                     }
@@ -2930,8 +2930,8 @@ namespace oc {
                 std::int64_t res_count{ 0 };
 
                 while (gen && mask_gen && res_gen) {
-                    if (mask(*mask_gen)) {
-                        res(*res_gen) = (*this)(*gen);
+                    if (mask[*mask_gen]) {
+                        res[*res_gen] = (*this)[*gen];
                         ++res_count;
                         ++res_gen;
                     }
@@ -2965,8 +2965,8 @@ namespace oc {
                 std::int64_t res_count{ 0 };
 
                 while (gen && res_gen) {
-                    if (pred((*this)(*gen))) {
-                        res(*res_gen) = *gen;
+                    if (pred((*this)[*gen])) {
+                        res[*res_gen] = *gen;
                         ++res_count;
                         ++res_gen;
                     }
@@ -3005,8 +3005,8 @@ namespace oc {
                 std::int64_t res_count{ 0 };
 
                 while (gen && mask_gen && res_gen) {
-                    if (mask(*mask_gen)) {
-                        res(*res_gen) = *gen;
+                    if (mask[*mask_gen]) {
+                        res[*res_gen] = *gen;
                         ++res_count;
                         ++res_gen;
                     }
@@ -3044,7 +3044,7 @@ namespace oc {
                 indexer_type res_gen(res.header());
 
                 while (gen && res_gen) {
-                    res(*res_gen) = (*this)(*gen);
+                    res[*res_gen] = (*this)[*gen];
                     ++gen;
                     ++res_gen;
                 }
@@ -3077,7 +3077,7 @@ namespace oc {
                 typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
-                    if (!pred((*this)(*gen), arr(*arr_gen))) {
+                    if (!pred((*this)[*gen], arr[*arr_gen])) {
                         return false;
                     }
                 }
@@ -3093,7 +3093,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    if (!pred((*this)(*gen), value)) {
+                    if (!pred((*this)[*gen], value)) {
                         return false;
                     }
                 }
@@ -3109,7 +3109,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    if (!pred((*this)(*gen))) {
+                    if (!pred((*this)[*gen])) {
                         return false;
                     }
                 }
@@ -3136,7 +3136,7 @@ namespace oc {
                 typename ArCo::indexer_type arr_gen(arr.header());
 
                 for (; gen && arr_gen; ++gen, ++arr_gen) {
-                    if (pred((*this)(*gen), arr(*arr_gen))) {
+                    if (pred((*this)[*gen], arr[*arr_gen])) {
                         return true;
                     }
                 }
@@ -3152,7 +3152,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    if (pred((*this)(*gen), value)) {
+                    if (pred((*this)[*gen], value)) {
                         return true;
                     }
                 }
@@ -3168,7 +3168,7 @@ namespace oc {
                 }
 
                 for (indexer_type gen(header()); gen; ++gen) {
-                    if (pred((*this)(*gen))) {
+                    if (pred((*this)[*gen])) {
                         return true;
                     }
                 }
@@ -4288,7 +4288,7 @@ namespace oc {
             }
 
             for (typename ArCo::indexer_type gen(arr.header()); gen; ++gen) {
-                ++arr(*gen);
+                ++arr[*gen];
             }
             return arr;
         }
@@ -4321,7 +4321,7 @@ namespace oc {
             }
 
             for (typename ArCo::indexer_type gen(arr.header()); gen; ++gen) {
-                --arr(*gen);
+                --arr[*gen];
             }
             return arr;
         }
