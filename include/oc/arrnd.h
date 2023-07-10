@@ -2661,7 +2661,7 @@ namespace oc {
             }
 
 
-            template <typename Unary_op>
+            template <typename Unary_op> requires std::is_invocable_v<Unary_op, T>
             [[nodiscard]] auto transform(Unary_op&& op) const
             {
                 using U = decltype(op(data()[0]));
@@ -2679,7 +2679,7 @@ namespace oc {
                 return res;
             }
 
-            template <arrnd_complient ArCo, typename Binary_op>
+            template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
             [[nodiscard]] auto transform(const ArCo& arr, Binary_op&& op) const
             {
                 using U = decltype(op(data()[0], arr.data()[0]));
@@ -2700,7 +2700,7 @@ namespace oc {
                 return res;
             }
 
-            template <typename V, typename Binary_op>
+            template <typename V, typename Binary_op> requires std::is_invocable_v<Binary_op, T, V>
             [[nodiscard]] auto transform(const V& value, Binary_op&& op) const
             {
                 using U = decltype(op(data()[0], value));
@@ -2715,7 +2715,7 @@ namespace oc {
             }
 
 
-            template <typename Unary_op>
+            template <typename Unary_op> requires std::is_invocable_v<Unary_op, T>
             auto& apply(Unary_op&& op)
             {
                 if (empty(*this)) {
@@ -2729,7 +2729,7 @@ namespace oc {
                 return *this;
             }
 
-            template <arrnd_complient ArCo, typename Binary_op>
+            template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
             auto& apply(const ArCo& arr, Binary_op&& op)
             {
                 if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
@@ -2746,7 +2746,7 @@ namespace oc {
                 return *this;
             }
 
-            template <typename V, typename Binary_op>
+            template <typename V, typename Binary_op> requires std::is_invocable_v<Binary_op, T, V>
             auto& apply(const V& value, Binary_op&& op)
             {
                 for (indexer_type gen(header()); gen; ++gen) {
@@ -2758,7 +2758,7 @@ namespace oc {
 
 
 
-            template <typename Binary_op>
+            template <typename Binary_op> requires std::is_invocable_v<Binary_op, T, T>
             [[nodiscard]] auto reduce(Binary_op&& op) const
             {
                 using U = decltype(op(data()[0], data()[0]));
@@ -2780,7 +2780,7 @@ namespace oc {
                 return res;
             }
 
-            template <typename U, typename Binary_op>
+            template <typename U, typename Binary_op> requires std::is_invocable_v<Binary_op, U, T>
             [[nodiscard]] auto reduce(const U& init_value, Binary_op&& op) const
             {
                 if (empty(*this)) {
@@ -2795,7 +2795,7 @@ namespace oc {
                 return res;
             }
 
-            template <typename Binary_op>
+            template <typename Binary_op> requires std::is_invocable_v<Binary_op, T, T>
             [[nodiscard]] auto reduce(Binary_op&& op, std::int64_t axis) const
             {
                 using U = decltype(op(data()[0], data()[0]));
@@ -2832,7 +2832,7 @@ namespace oc {
                 return res;
             }
 
-            template <arrnd_complient ArCo, typename Binary_op>
+            template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
             [[nodiscard]] auto reduce(const ArCo& init_values, Binary_op&& op, std::int64_t axis) const
             {
                 using U = decltype(op(init_values.data()[0], data()[0]));
@@ -2875,7 +2875,7 @@ namespace oc {
             }
 
 
-            template <typename Unary_pred>
+            template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
             [[nodiscard]] auto filter(Unary_pred pred) const
             {
                 if (empty(*this)) {
@@ -2950,7 +2950,7 @@ namespace oc {
                 return res;
             }
 
-            template <typename Unary_pred>
+            template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
             [[nodiscard]] auto find(Unary_pred pred) const
             {
                 if (empty(*this)) {
@@ -3058,7 +3058,7 @@ namespace oc {
             }
 
 
-            template <arrnd_complient ArCo, typename Binary_pred>
+            template <arrnd_complient ArCo, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, typename ArCo::value_type>
             [[nodiscard]] bool all_match(const ArCo& arr, Binary_pred pred) const
             {
                 if (empty(*this) && empty(arr)) {
@@ -3085,7 +3085,7 @@ namespace oc {
                 return true;
             }
 
-            template <typename U, typename Binary_pred>
+            template <typename U, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, U>
             [[nodiscard]] bool all_match(const U& value, Binary_pred pred) const
             {
                 if (empty(*this)) {
@@ -3101,7 +3101,7 @@ namespace oc {
                 return true;
             }
 
-            template <typename Unary_pred>
+            template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
             [[nodiscard]] bool all_match(Unary_pred pred) const
             {
                 if (empty(*this)) {
@@ -3117,7 +3117,7 @@ namespace oc {
                 return true;
             }
 
-            template <arrnd_complient ArCo, typename Binary_pred>
+            template <arrnd_complient ArCo, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, typename ArCo::value_type>
             [[nodiscard]] bool any_match(const ArCo& arr, Binary_pred pred) const
             {
                 if (empty(*this) && empty(arr)) {
@@ -3144,7 +3144,7 @@ namespace oc {
                 return false;
             }
 
-            template <typename U, typename Binary_pred>
+            template <typename U, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, U>
             [[nodiscard]] bool any_match(const U& value, Binary_pred pred) const
             {
                 if (empty(*this)) {
@@ -3160,7 +3160,7 @@ namespace oc {
                 return false;
             }
 
-            template <typename Unary_pred>
+            template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
             [[nodiscard]] bool any_match(Unary_pred pred) const
             {
                 if (empty(*this)) {
@@ -3574,35 +3574,31 @@ namespace oc {
             return !arr.data() && arr.header().empty();
         }
 
-        template <arrnd_complient ArCo, typename Unary_op>    
+        template <arrnd_complient ArCo, typename Unary_op> requires std::is_invocable_v<Unary_op, typename ArCo::value_type>
         [[nodiscard]] inline auto transform(const ArCo& arr, Unary_op&& op)
         {
             return arr.transform(op);
         }
 
-        template <arrnd_complient ArCo, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
+        template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
         [[nodiscard]] inline auto reduce(const ArCo& arr, Binary_op&& op)
         {
             return arr.reduce(op);
         }
 
-        template <arrnd_complient ArCo, typename T, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
+        template <arrnd_complient ArCo, typename T, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
         [[nodiscard]] inline auto reduce(const ArCo& arr, const T& init_value, Binary_op&& op)
         {
             return arr.reduce(init_value, op);
         }
 
-        template <arrnd_complient ArCo, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
+        template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
         [[nodiscard]] inline auto reduce(const ArCo& arr, Binary_op&& op, std::int64_t axis)
         {
             return arr.reduce(op, axis);
         }
 
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo2::value_type, typename ArCo1::value_type>
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo2::value_type, typename ArCo1::value_type>
         [[nodiscard]] inline auto reduce(const ArCo1& arr, const ArCo2& init_values, Binary_op&& op, std::int64_t axis)
         {
             return arr.reduce(init_values, op, axis);
@@ -3632,25 +3628,25 @@ namespace oc {
             return arr.any(axis);
         }
 
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op>
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo1::value_type, typename ArCo2::value_type>
         [[nodiscard]] inline auto transform(const ArCo1& lhs, const ArCo2& rhs, Binary_op&& op)
         {
             return lhs.transform(rhs, op);
         }
 
-        template <arrnd_complient ArCo, typename T, typename Binary_op>
+        template <arrnd_complient ArCo, typename T, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
         [[nodiscard]] inline auto transform(const ArCo& lhs, const T& rhs, Binary_op&& op)
         {
             return lhs.transform(rhs, op);
         }
 
-        template <typename T, arrnd_complient ArCo, typename Binary_op>
+        template <typename T, arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
         [[nodiscard]] inline auto transform(const T& lhs, const ArCo& rhs, Binary_op&& op)
         {
             return rhs.transform([&lhs, &op](const typename ArCo::value_type& value) { return op(lhs, value); });
         }
 
-        template <arrnd_complient ArCo, typename Unary_pred>
+        template <arrnd_complient ArCo, typename Unary_pred> requires std::is_invocable_v<Unary_pred, typename ArCo::value_type>
         [[nodiscard]] inline auto filter(const ArCo& arr, Unary_pred pred)
         {
             return arr.filter(pred);
@@ -3662,7 +3658,7 @@ namespace oc {
             return arr.filter(mask);
         }
 
-        template <arrnd_complient ArCo, typename Unary_pred>
+        template <arrnd_complient ArCo, typename Unary_pred> requires std::is_invocable_v<Unary_pred, typename ArCo::value_type>
         [[nodiscard]] inline auto find(const ArCo& arr, Unary_pred pred)
         {
             return arr.find(pred);
@@ -4346,38 +4342,38 @@ namespace oc {
             return operator--(arr, int{});
         }
 
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_pred>
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_pred> requires std::is_invocable_v<Binary_pred, typename ArCo1::value_type, typename ArCo2::value_type>
         [[nodiscard]] inline bool all_match(const ArCo1& lhs, const ArCo2& rhs, Binary_pred pred)
         {
             return lhs.all_match(rhs, pred);
         }
 
-        template <arrnd_complient ArCo, typename T, typename Binary_pred>
+        template <arrnd_complient ArCo, typename T, typename Binary_pred> requires std::is_invocable_v<Binary_pred, typename ArCo::value_type, T>
         [[nodiscard]] inline bool all_match(const ArCo& lhs, const T& rhs, Binary_pred pred)
         {
             return lhs.all_match(rhs, pred);
         }
 
-        template <typename T, arrnd_complient ArCo, typename Binary_pred>
+        template <typename T, arrnd_complient ArCo, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, typename ArCo::value_type>
         [[nodiscard]] inline bool all_match(const T& lhs, const ArCo& rhs, Binary_pred pred)
         {
             return rhs.all_match([&lhs, &pred](const typename ArCo::value_type& value) { return pred(lhs, value); });
         }
 
 
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_pred>
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_pred> requires std::is_invocable_v<Binary_pred, typename ArCo1::value_type, typename ArCo2::value_type>
         [[nodiscard]] inline bool any_match(const ArCo1& lhs, const ArCo2& rhs, Binary_pred pred)
         {
             return lhs.any_match(rhs, pred);
         }
 
-        template <arrnd_complient ArCo, typename T, typename Binary_pred>
+        template <arrnd_complient ArCo, typename T, typename Binary_pred> requires std::is_invocable_v<Binary_pred, typename ArCo::value_type, T>
         [[nodiscard]] inline bool any_match(const ArCo& lhs, const T& rhs, Binary_pred pred)
         {
             return lhs.any_match(rhs, pred);
         }
 
-        template <typename T, arrnd_complient ArCo, typename Binary_pred>
+        template <typename T, arrnd_complient ArCo, typename Binary_pred> requires std::is_invocable_v<Binary_pred, T, typename ArCo::value_type>
         [[nodiscard]] inline bool any_match(const T& lhs, const ArCo& rhs, Binary_pred pred)
         {
             return rhs.any_match([&lhs, &pred](const typename ArCo::value_type& value) { return pred(lhs, value); });
