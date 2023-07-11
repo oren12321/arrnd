@@ -971,7 +971,7 @@ namespace oc {
                     for (std::int64_t i = 0; i < axis; ++i) {
                         dims_[i] = previous_hdr.dims()[i];
                     }
-                    for (std::int64_t i = axis + 1; i < previous_hdr.dims().size(); ++i) {
+                    for (std::int64_t i = axis + 1; i < std::ssize(previous_hdr.dims()); ++i) {
                         dims_[i - 1] = previous_hdr.dims()[i];
                     }
                 }
@@ -1068,7 +1068,7 @@ namespace oc {
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
 
                 bool are_dims_valid_for_append{ true };
-                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     if (i != fixed_axis && previous_hdr.dims()[i] != appended_dims[i]) {
                         are_dims_valid_for_append = false;
                     }
@@ -1079,7 +1079,7 @@ namespace oc {
 
                 storage_type dims = storage_type(previous_hdr.dims().size());
 
-                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
                 }
 
@@ -1385,7 +1385,7 @@ namespace oc {
 
             constexpr static storage_type reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
-                std::size_t size = std::min(std::ssize(vec), std::ssize(indices));
+                std::int64_t size = std::min(std::ssize(vec), std::ssize(indices));
                 storage_type res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
@@ -1423,7 +1423,7 @@ namespace oc {
                     }
                 }
 
-                if (rndims != dims.size()) {
+                if (rndims != std::ssize(dims)) {
                     rdims.resize(rndims);
                     rstrides.resize(rndims);
                 }
