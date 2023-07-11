@@ -541,7 +541,7 @@ namespace oc {
             return T{ 1e-5 };
         }
 
-        template <typename T1, typename T2>
+        template <typename T1, typename T2> requires (!arrnd_complient<T1> && !arrnd_complient<T2>)
         [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ()) noexcept
         {
             const decltype(a - b) reps{ rtol * (abs(a) > abs(b) ? abs(a) : abs(b)) };
@@ -3204,7 +3204,7 @@ namespace oc {
                 return transform(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::details::close(a, b, atol, rtol); });
             }
 
-            template <typename U>
+            template <typename U> requires (!arrnd_complient<U>)
             [[nodiscard]] replaced_type<bool> close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
             {
                 return transform(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
@@ -3229,7 +3229,7 @@ namespace oc {
                 return all_match(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::details::close(a, b, atol, rtol); });
             }
 
-            template <typename U>
+            template <typename U> requires (!arrnd_complient<U>)
             [[nodiscard]] bool all_close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
             {
                 return all_match(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
@@ -3724,13 +3724,13 @@ namespace oc {
             return lhs.close(rhs, atol, rtol);
         }
 
-        template <arrnd_complient ArCo, typename T>
+        template <arrnd_complient ArCo, typename T> requires (!arrnd_complient<T>)
         [[nodiscard]] inline auto close(const ArCo& lhs, const T& rhs, const decltype(typename ArCo::value_type{} - T{})& atol = default_atol<decltype(typename ArCo::value_type{} - T{}) > (), const decltype(typename ArCo::value_type{} - T{})& rtol = default_rtol<decltype(typename ArCo::value_type{} - T{}) > ())
         {
             return lhs.close(rhs, atol, rtol);
         }
 
-        template <typename T, arrnd_complient ArCo>
+        template <typename T, arrnd_complient ArCo> requires (!arrnd_complient<T>)
         [[nodiscard]] inline auto close(const T& lhs, const ArCo& rhs, const decltype(T{} - typename ArCo::value_type{})& atol = default_atol<decltype(T{} - typename ArCo::value_type{}) > (), const decltype(T{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(T{} - typename ArCo::value_type{}) > ())
         {
             return rhs.close(lhs, atol, rtol);
@@ -4403,13 +4403,13 @@ namespace oc {
             return lhs.all_close(rhs, atol, rtol);
         }
 
-        template <arrnd_complient ArCo, typename T>
+        template <arrnd_complient ArCo, typename T> requires (!arrnd_complient<T>)
         [[nodiscard]] inline bool all_close(const ArCo& lhs, const T& rhs, const decltype(typename ArCo::value_type{} - T{})& atol = default_atol<decltype(typename ArCo::value_type{} - T{}) > (), const decltype(typename ArCo::value_type{} - T{})& rtol = default_rtol<decltype(typename ArCo::value_type{} - T{}) > ())
         {
             return lhs.all_close(rhs, atol, rtol);
         }
 
-        template <typename T, arrnd_complient ArCo>
+        template <typename T, arrnd_complient ArCo> requires (!arrnd_complient<T>)
         [[nodiscard]] inline bool all_close(const T& lhs, const ArCo& rhs, const decltype(T{} - typename ArCo::value_type{})& atol = default_atol<decltype(T{} - typename ArCo::value_type{}) > (), const decltype(T{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(T{} - typename ArCo::value_type{}) > ())
         {
             return rhs.all_close(lhs, atol, rtol);
