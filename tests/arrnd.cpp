@@ -420,7 +420,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger
     }
     EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-    while (gen = gen - 2) {
+    while (gen = (gen - 2)) {
         --generated_subs_counter;
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
     }
@@ -582,7 +582,7 @@ TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_th
     }
     EXPECT_EQ(expected_generated_subs, generated_subs_counter);
 
-    while (gen = gen - 2) {
+    while (gen = (gen - 2)) {
         --generated_subs_counter;
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
     }

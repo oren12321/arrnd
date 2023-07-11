@@ -305,12 +305,12 @@ namespace oc {
                 }
 
             private:
-                pointer data_ptr_;
+                allocator_type alloc_;
 
                 size_type size_;
                 size_type capacity_;
 
-                allocator_type alloc_;
+                pointer data_ptr_;
         };
 
 
@@ -758,8 +758,8 @@ namespace oc {
             }
 
             // compute strides from previous dimensions
-            if (intervals.size() < previous_dims.size() && nstrides >= previous_dims.size()) {
-                strides[previous_dims.size() - 1] = 1;
+            if (std::ssize(intervals) < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
+                strides[std::ssize(previous_dims) - 1] = 1;
                 for (std::int64_t i = std::ssize(previous_dims) - 2; i >= std::ssize(intervals); --i) {
                     strides[i] = strides[i + 1] * previous_dims[i + 1];
                 }
@@ -1178,7 +1178,7 @@ namespace oc {
 
                 first_index_ = hdr.offset();
                 last_index_ = hdr.last_index();
-                last_first_diff_ = last_index_ - first_index_;
+                last_first_diff_ = static_cast<std::uint64_t>(last_index_ - first_index_);
 
                 ndims_ = dims_.size();
 
@@ -1385,7 +1385,7 @@ namespace oc {
 
             constexpr static storage_type reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
             {
-                std::size_t size = std::min(vec.size(), indices.size());
+                std::size_t size = std::min(std::ssize(vec), std::ssize(indices));
                 storage_type res(size);
                 for (std::int64_t i = 0; i < size; ++i) {
                     res[i] = vec[indices[i]];
@@ -1406,7 +1406,7 @@ namespace oc {
                 std::int64_t rndims = 0;
 
                 std::int64_t ri = 0;
-                for (std::int64_t i = 0; i < dims.size(); ++i) {
+                for (std::int64_t i = 0; i < std::ssize(dims); ++i) {
                     if (dims[i] > 1) {
                         rdims[ri] = dims[i];
                         rstrides[ri] = strides[i];
@@ -1435,7 +1435,7 @@ namespace oc {
             storage_type strides_;
             std::int64_t first_index_;
             std::int64_t last_index_;
-            std::int64_t last_first_diff_;
+            std::uint64_t last_first_diff_;
             std::int64_t ndims_;
 
             std::int64_t first_stride_;
@@ -1684,7 +1684,7 @@ namespace oc {
 
             [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return static_cast<std::uint64_t>(current_index_) <= last_index_;
+                return static_cast<std::uint64_t>(current_index_) <= static_cast<std::uint64_t>(last_index_);
             }
 
             [[nodiscard]] constexpr std::int64_t operator*() const noexcept
