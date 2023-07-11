@@ -1032,7 +1032,7 @@ namespace oc {
                 storage_type dims = storage_type(previous_hdr.dims().size());
 
                 std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
-                for (std::int64_t i = 0; i < previous_hdr.dims().size(); ++i) {
+                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
                     dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + count;
                 }
                 
