@@ -503,6 +503,12 @@ namespace oc {
         };
     }
 
+    namespace details {
+        struct arrnd_tag {};
+
+        template <typename T>
+        concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
+    }
 
     namespace details {
         template <typename T>
@@ -2102,12 +2108,6 @@ namespace oc {
             indexer_type gen_;
             pointer data_ = nullptr;
         };
-
-
-        struct arrnd_tag {};
-
-        template <typename T>
-        concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
 
 
         template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, typename Indexer = arrnd_general_indexer<>>
