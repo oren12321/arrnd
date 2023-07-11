@@ -3673,7 +3673,7 @@ namespace oc {
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto transpose(const ArCo& arr, std::span<const std::int64_t> order)
         {
-            return arr.traspose(order);
+            return arr.transpose(order);
         }
 
         template <arrnd_complient ArCo>
