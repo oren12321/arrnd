@@ -2344,12 +2344,16 @@ namespace oc {
                 return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
             }
 
-            [[nodiscard]] arrnd operator[](const replaced_type<std::int64_t>& indices) const noexcept
+            template <arrnd_complient ArCo> requires std::is_integral_v<typename ArCo::value_type>
+            [[nodiscard]] arrnd operator[](const ArCo& indices) const noexcept
             {
                 this_type res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
-                for (indexer_type gen(indices.header()); gen; ++gen) {
-                    res[*gen] = buffsp_->data()[indices[*gen]];
+                indexer_type res_gen(res.header());
+                typename ArCo::indexer_type ind_gen(indices.header());
+
+                for (; res_gen && ind_gen; ++res_gen, ++ind_gen) {
+                    res[*res_gen] = (*this)[indices[*ind_gen]];
                 }
 
                 return res;
