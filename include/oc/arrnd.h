@@ -2359,24 +2359,113 @@ namespace oc {
                 return res;
             }
 
-
             /**
-            * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
+            * @note copy this array to dst partially or full depending on the arrays size
             */
             template <arrnd_complient ArCo>
-            auto& copy_from(const ArCo& src)
+            const arrnd& copy_to(ArCo& dst) const
             {
-                if (empty(*this) || empty(src)) {
+                if (empty(*this) || empty(dst)) {
                     return *this;
                 }
 
-                typename ArCo::indexer_type src_gen(src.header());
-                indexer_type dst_gen(header());
+                indexer_type gen(header());
+                typename ArCo::indexer_type dst_gen(dst.header());
 
-                for (; src_gen && dst_gen; ++src_gen, ++dst_gen) {
-                    (*this)[*dst_gen] = src[*src_gen];
+                for (; gen && dst_gen; ++gen, ++dst_gen) {
+                    dst[*dst_gen] = (*this)[*gen];
+                }
+                
+                return *this;
+            }
+
+            template <arrnd_complient ArCo1, arrnd_complient ArCo2> requires std::is_integral_v<typename ArCo2::value_type>
+            const arrnd& copy_to(ArCo1& dst, const ArCo2& indices) const
+            {
+                if (empty(*this) || empty(dst) || empty(indices)) {
+                    return *this;
                 }
 
+                indexer_type gen(header());
+                typename ArCo2::indexer_type ind_gen(indices.header());
+
+                for (;gen && ind_gen; ++gen, ++ind_gen) {
+                    dst[indices[*ind_gen]] = (*this)[*gen];
+                }
+
+                return *this;
+            }
+
+            template <arrnd_complient ArCo>
+            const arrnd& copy_to(ArCo& dst, std::span<const Interval<std::int64_t>> ranges) const
+            {
+                auto slice = dst[ranges];
+                copy_to(slice);
+                return *this;
+            }
+            template <arrnd_complient ArCo>
+            const arrnd& copy_to(ArCo& dst, std::initializer_list<Interval<std::int64_t>> ranges) const
+            {
+                return copy_to(dst, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
+            }
+
+            /**
+            * @note if buffer reallocation not required use copy_to function
+            */
+            template <arrnd_complient ArCo>
+            const arrnd& set_to(ArCo& dst) const
+            {
+                if (empty(*this)) {
+                    dst = ArCo{};
+                    return *this;
+                }
+
+                if (empty(dst)) {
+                    dst = ArCo{ header().dims() };
+                    return copy_to(dst);
+                }
+
+                if (header().count() == dst.header().count()) {
+                    if (header().dims() != dst.header().dims()) {
+                        dst.header() = header_type{ header().dims() };
+                    }
+                    return copy_to(dst);
+                }
+
+                dst = ArCo{ header().dims() };
+                return copy_to(dst);
+            }
+
+            template <arrnd_complient ArCo>
+            arrnd& copy_from(const ArCo& src)
+            {
+                src.copy_to(*this);
+                return *this;
+            }
+
+            template <arrnd_complient ArCo1, arrnd_complient ArCo2> requires std::is_integral_v<typename ArCo2::value_type>
+            arrnd& copy_from(const ArCo1& src, const ArCo2& indices)
+            {
+                src.copy_to(*this, indices);
+                return *this;
+            }
+
+            template <arrnd_complient ArCo>
+            arrnd& copy_from(const ArCo& src, std::span<const Interval<std::int64_t>> ranges)
+            {
+                src.copy_to(*this, ranges);
+                return *this;
+            }
+            template <arrnd_complient ArCo>
+            arrnd& copy_from(const ArCo& src, std::initializer_list<Interval<std::int64_t>> ranges)
+            {
+                return copy_from(src, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
+            }
+
+            template <arrnd_complient ArCo>
+            arrnd& set_from(const ArCo& src)
+            {
+                src.set_to(*this);
                 return *this;
             }
 

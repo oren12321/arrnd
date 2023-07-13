@@ -2919,6 +2919,263 @@ TEST(arrnd_test, clone)
     EXPECT_FALSE(oc::all_equal((sarr[{ {1, 1}, {0, 0}, {0, 0} }]), csubarr));
 }
 
+TEST(arrnd_test, copy_from)
+{
+    using namespace oc;
+
+    // empty src
+    {
+        arrnd<double> src{};
+        arrnd<int> dst{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+
+        dst.copy_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{};
+        arrnd<int> dst{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+
+        dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].copy_from(src);
+        arrnd<int> sres{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // empty dst
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{};
+
+        dst.copy_from(src);
+        arrnd<int> res{};
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{};
+
+        dst.copy_from(src[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}]);
+        arrnd<int> sres{};
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // same dimensions
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].copy_from(src[{ { 1, 2 }, { 0, 0 }, { 0, 0 }}]);
+        arrnd<int> sres{ {3, 1, 2}, {6, 3, 4, 5, 2, 1} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // same sizes
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].copy_from(src[{ {0, 1} }]);
+        arrnd<int> sres{ {3, 1, 2}, {6, 1, 4, 2, 2, 1} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // size(src) < size(dst)
+    {
+        arrnd<double> src{ {3}, {1, 2, 3} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 3, 2, 1} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst[{ { 0, 2 }, { 0, 0 }, { 0, 0 }}].copy_from(src[{ {1, 2} }]);
+        arrnd<int> sres{ {3, 1, 2}, {2, 5, 3, 3, 2, 1} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // size(src) > size(dst)
+    {
+        arrnd<double> src{ {10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst[{ { 0, 1 }, { 0, 0 }, { 0, 0 }}].copy_from(src[{ {1, 5} }]);
+        arrnd<int> sres{ {3, 1, 2}, {2, 5, 3, 3, 2, 1} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // speicifc indices
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<std::int64_t> indices{ {3}, {0, 2, 4} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src, indices);
+        arrnd<int> res{ {3, 1, 2}, {1, 5, 2, 3, 3, 1} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+
+    // specific ranges
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        std::initializer_list<Interval<std::int64_t>> ranges{ {0, 2}, {0, 0}, {1, 1} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.copy_from(src, ranges);
+        arrnd<int> res{ {3, 1, 2}, {6, 1, 4, 2, 2, 3} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+}
+
+TEST(arrnd_test, set_from)
+{
+    using namespace oc;
+
+    // empty src
+    {
+        arrnd<double> src{};
+        arrnd<int> dst{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+
+        dst.set_from(src);
+        arrnd<int> res{};
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{};
+        arrnd<int> dst{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+
+        auto ref = dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].set_from(src);
+        arrnd<int> sres{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(sres, dst));
+        EXPECT_TRUE(all_equal(src, ref));
+    }
+
+    // empty dst
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{};
+
+        dst.set_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{};
+
+        dst.set_from(src[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}]);
+        arrnd<int> sres{ {2, 1, 1}, {2, 4} };
+        EXPECT_TRUE(all_equal(sres, dst));
+    }
+
+    // same dimensions
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.set_from(src);
+        arrnd<int> res{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {3, 1, 2}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        auto ref = dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].set_from(src[{ { 1, 2 }, { 0, 0 }, { 0, 0 }}]);
+        arrnd<int> sres{ {3, 1, 2}, {6, 3, 4, 5, 2, 1} };
+        arrnd<int> rres{ {2, 1, 1}, {3, 5} };
+        EXPECT_TRUE(all_equal(sres, dst));
+        EXPECT_TRUE(all_equal(rres, ref));
+    }
+
+    // same sizes
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.set_from(src);
+        arrnd<int> res{ {6}, {1, 2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        auto ref = dst[{ { 0, 1 }, { 0, 0 }, { 1, 1 }}].set_from(src[{ {0, 1} }]);
+        arrnd<int> sres{ {3, 1, 2}, {1, 2, 4, 3, 2, 1} };;
+        arrnd<int> rres{ {2}, {1, 2} };
+        EXPECT_TRUE(all_equal(sres, dst));
+        EXPECT_TRUE(all_equal(rres, ref));
+    }
+
+    // size(src) < size(dst)
+    {
+        arrnd<double> src{ {3}, {1, 2, 3} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.set_from(src);
+        arrnd<int> res{ {3}, {1, 2, 3} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        auto ref = dst[{ { 0, 2 }, { 0, 0 }, { 0, 0 }}].set_from(src[{ {1, 2} }]);
+        arrnd<int> sres{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+        arrnd<int> rres{ {2}, {2, 3} };
+        EXPECT_TRUE(all_equal(sres, dst));
+        EXPECT_TRUE(all_equal(rres, ref));
+    }
+
+    // size(src) > size(dst)
+    {
+        arrnd<double> src{ {10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        dst.set_from(src);
+        arrnd<int> res{ {10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} };
+        EXPECT_TRUE(all_equal(res, dst));
+    }
+    {
+        arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
+        arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+
+        auto ref = dst[{ { 0, 1 }, { 0, 0 }, { 0, 0 }}].set_from(src[{ {1, 5} }]);
+        arrnd<int> sres{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
+        arrnd<int> rres{ {5}, {2, 3, 4, 5, 6} };
+        EXPECT_TRUE(all_equal(sres, dst));
+        EXPECT_TRUE(all_equal(rres, ref));
+    }
+}
+
 TEST(arrnd_test, copy)
 {
     using Integer_array = oc::arrnd<int>;
