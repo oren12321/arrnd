@@ -3649,7 +3649,7 @@ namespace oc {
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto reshape(const ArCo& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return reshape(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return arr.reshape(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
         template <arrnd_complient ArCo>
@@ -3660,7 +3660,7 @@ namespace oc {
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto resize(const ArCo& arr, std::initializer_list<std::int64_t> new_dims)
         {
-            return resize(arr, std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return arr.resize(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -3822,37 +3822,37 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator==(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a == b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a == b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator==(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a == b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a == b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator==(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a == b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a == b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator!=(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a != b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a != b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator!=(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a != b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a != b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator!=(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a != b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a != b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -3876,91 +3876,91 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator>(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a > b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a > b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator>(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a > b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a > b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator>(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a > b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a > b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator>=(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a >= b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a >= b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator>=(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a >= b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a >= b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator>=(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a >= b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a >= b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator<(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a < b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a < b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator<(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a < b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a < b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator<(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a < b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a < b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator<=(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a <= b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a <= b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator<=(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a <= b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a <= b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator<=(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a <= b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a <= b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator+(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a + b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a + b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator+(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a + b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a + b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator+(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a + b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a + b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -3978,19 +3978,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator-(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a - b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a - b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator-(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a - b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a - b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator-(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a - b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a - b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4008,19 +4008,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator*(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a * b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a * b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator*(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a * b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a * b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator*(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a * b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a * b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4038,19 +4038,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator/(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a / b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a / b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator/(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a / b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a / b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator/(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a / b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a / b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4068,19 +4068,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         inline auto operator%(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a % b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a % b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator%(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a % b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a % b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator%(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a % b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a % b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4098,19 +4098,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator^(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a ^ b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a ^ b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator^(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a ^ b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a ^ b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator^(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a ^ b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a ^ b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4128,19 +4128,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator&(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a & b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a & b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator&(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a & b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a & b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator&(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a & b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a & b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4158,19 +4158,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator|(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a | b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a | b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator|(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a | b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a | b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator|(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a | b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a | b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4188,19 +4188,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator<<(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a << b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a << b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator<<(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a << b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a << b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator<<(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a << b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a << b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4218,19 +4218,19 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator>>(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a >> b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a >> b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator>>(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a >> b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a >> b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator>>(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a >> b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a >> b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4248,25 +4248,25 @@ namespace oc {
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto operator~(const ArCo& arr)
         {
-            return transform(arr, [](const typename ArCo::value_type& a) { return ~a; });
+            return arr.transform([](const typename ArCo::value_type& a) { return ~a; });
         }
 
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto operator!(const ArCo& arr)
         {
-            return transform(arr, [](const typename ArCo::value_type& a) { return !a; });
+            return arr.transform([](const typename ArCo::value_type& a) { return !a; });
         }
 
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto operator+(const ArCo& arr)
         {
-            return transform(arr, [](const typename ArCo::value_type& a) { return +a; });
+            return arr.transform([](const typename ArCo::value_type& a) { return +a; });
         }
 
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto operator-(const ArCo& arr)
         {
-            return transform(arr, [](const typename ArCo::value_type& a) { return -a; });
+            return arr.transform([](const typename ArCo::value_type& a) { return -a; });
         }
 
         template <arrnd_complient ArCo>
@@ -4380,37 +4380,37 @@ namespace oc {
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator&&(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a && b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a && b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator&&(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a && b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a && b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator&&(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a && b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a && b; });
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
         [[nodiscard]] inline auto operator||(const ArCo1& lhs, const ArCo2& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a || b; });
+            return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a || b; });
         }
 
         template <arrnd_complient ArCo, typename T>
         [[nodiscard]] inline auto operator||(const ArCo& lhs, const T& rhs)
         {
-            return transform(lhs, rhs, [](const typename ArCo::value_type& a, const T& b) { return a || b; });
+            return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a || b; });
         }
 
         template <typename T, arrnd_complient ArCo>
         [[nodiscard]] inline auto operator||(const T& lhs, const ArCo& rhs)
         {
-            return transform(lhs, rhs, [](const T& a, const typename ArCo::value_type& b) { return a || b; });
+            return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a || b; });
         }
 
         template <arrnd_complient ArCo>
