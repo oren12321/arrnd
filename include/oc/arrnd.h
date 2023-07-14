@@ -3459,112 +3459,111 @@ namespace oc {
 
 
 
-            
-            [[nodiscard]] inline auto abs()
+            [[nodiscard]] auto abs()
             {
-                return transform([](const value_type& a) { return abs(a); });
+                return transform([](const value_type& a) { return ::abs(a); });
             }
 
             
-            [[nodiscard]] inline auto acos()
+            [[nodiscard]] auto acos()
             {
-                return transform([](const value_type& a) { return acos(a); });
+                return transform([](const value_type& a) { return ::acos(a); });
             }
 
             
-            [[nodiscard]] inline auto acosh()
+            [[nodiscard]] auto acosh()
             {
-                return transform([](const value_type& a) { return acosh(a); });
+                return transform([](const value_type& a) { return ::acosh(a); });
             }
 
             
-            [[nodiscard]] inline auto asin()
+            [[nodiscard]] auto asin()
             {
-                return transform([](const value_type& a) { return asin(a); });
+                return transform([](const value_type& a) { return ::asin(a); });
             }
 
             
-            [[nodiscard]] inline auto asinh()
+            [[nodiscard]] auto asinh()
             {
-                return transform([](const value_type& a) { return asinh(a); });
+                return transform([](const value_type& a) { return ::asinh(a); });
             }
 
             
-            [[nodiscard]] inline auto atan()
+            [[nodiscard]] auto atan()
             {
-                return transform([](const value_type& a) { return atan(a); });
+                return transform([](const value_type& a) { return ::atan(a); });
             }
 
             
-            [[nodiscard]] inline auto atanh()
+            [[nodiscard]] auto atanh()
             {
-                return transform([](const value_type& a) { return atanh(a); });
+                return transform([](const value_type& a) { return ::atanh(a); });
             }
 
             
-            [[nodiscard]] inline auto cos()
+            [[nodiscard]] auto cos()
             {
-                return transform([](const value_type& a) { return cos(a); });
+                return transform([](const value_type& a) { return ::cos(a); });
             }
 
             
-            [[nodiscard]] inline auto cosh()
+            [[nodiscard]] auto cosh()
             {
-                return transform([](const value_type& a) { return cosh(a); });
+                return transform([](const value_type& a) { return ::cosh(a); });
             }
 
             
-            [[nodiscard]] inline auto exp()
+            [[nodiscard]] auto exp()
             {
-                return transform([](const value_type& a) { return exp(a); });
+                return transform([](const value_type& a) { return ::exp(a); });
             }
 
             
-            [[nodiscard]] inline auto log()
+            [[nodiscard]] auto log()
             {
-                return transform([](const value_type& a) { return log(a); });
+                return transform([](const value_type& a) { return ::log(a); });
             }
 
             
-            [[nodiscard]] inline auto log10()
+            [[nodiscard]] auto log10()
             {
-                return transform([](const value_type& a) { return log10(a); });
+                return transform([](const value_type& a) { return ::log10(a); });
             }
 
             
-            [[nodiscard]] inline auto pow()
+            [[nodiscard]] auto pow()
             {
-                return transform([](const value_type& a) { return pow(a); });
+                return transform([](const value_type& a) { return ::pow(a); });
             }
 
             
-            [[nodiscard]] inline auto sin()
+            [[nodiscard]] auto sin()
             {
-                return transform([](const value_type& a) { return sin(a); });
+                return transform([](const value_type& a) { return ::sin(a); });
             }
 
             
-            [[nodiscard]] inline auto sinh()
+            [[nodiscard]] auto sinh()
             {
-                return transform([](const value_type& a) { return sinh(a); });
+                return transform([](const value_type& a) { return ::sinh(a); });
             }
 
             
-            [[nodiscard]] inline auto sqrt()
+            [[nodiscard]] auto sqrt()
             {
-                return transform([](const value_type& a) { return sqrt(a); });
+                return transform([](const value_type& a) { return ::sqrt(a); });
             }
 
             
-            [[nodiscard]] inline auto tan()
+            [[nodiscard]] auto tan()
             {
-                return transform([](const value_type& a) { return tan(a); });
+                return transform([](const value_type& a) { return ::tan(a); });
             }
 
             
-            [[nodiscard]] inline auto tanh()
+            [[nodiscard]] auto tanh()
             {
-                return transform([](const value_type& a) { return tanh(a); });
+                return transform([](const value_type& a) { return ::tanh(a); });
             }
 
 
