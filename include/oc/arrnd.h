@@ -3578,15 +3578,59 @@ namespace oc {
         * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
         */
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline void copy(const ArCo1& src, ArCo2& dst)
+        inline auto& copy(const ArCo1& src, ArCo2& dst)
         {
-            dst.copy_from(src);
+            return dst.copy_from(src);
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline void copy(const ArCo1& src, ArCo2&& dst)
+        inline auto& copy(const ArCo1& src, ArCo2&& dst)
         {
-            copy(src, dst);
+            return dst.copy_from(src);
         }
+
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, arrnd_complient ArCo3>
+        inline auto& copy(const ArCo1& src, ArCo2& dst, const ArCo3& indices)
+        {
+            return dst.copy_from(src, indices);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, arrnd_complient ArCo3>
+        inline auto& copy(const ArCo1& src, ArCo2&& dst, const ArCo3& indices)
+        {
+            return dst.copy_from(src, indices);
+        }
+
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& copy(const ArCo1& src, ArCo2& dst, std::span<const Interval<std::int64_t>> ranges)
+        {
+            return dst.copy_from(src, ranges);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::span<const Interval<std::int64_t>> ranges)
+        {
+            return dst.copy_from(src, ranges);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& copy(const ArCo1& src, ArCo2& dst, std::initializer_list<Interval<std::int64_t>> ranges)
+        {
+            return dst.copy_from(src, ranges);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<Interval<std::int64_t>> ranges)
+        {
+            return dst.copy_from(src, ranges);
+        }
+
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& set(const ArCo1& src, ArCo2& dst)
+        {
+            return dst.set_from(src);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+        inline auto& set(const ArCo1& src, ArCo2&& dst)
+        {
+            return dst.set_from(src);
+        }
+
 
         template <arrnd_complient ArCo>
         [[nodiscard]] inline auto clone(const ArCo& arr)
