@@ -12,6 +12,7 @@
 #include <variant>
 #include <sstream>
 #include <cmath>
+#include <functional>
 
 namespace oc {
 
@@ -2138,6 +2139,11 @@ namespace oc {
             template <typename U>
             using replaced_type = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
 
+            template <typename U>
+            using shared_ref = U;
+            template <typename U>
+            using maybe_shared_ref = U;
+
             arrnd() = default;
 
             arrnd(arrnd&& other) = default;
@@ -2328,7 +2334,7 @@ namespace oc {
                 return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
             }
 
-            [[nodiscard]] arrnd operator[](std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] shared_ref<this_type> operator[](std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
                     return (*this);
@@ -2339,13 +2345,13 @@ namespace oc {
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] arrnd operator[](std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] shared_ref<this_type> operator[](std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
             }
 
             template <arrnd_complient ArCo> requires std::is_integral_v<typename ArCo::value_type>
-            [[nodiscard]] arrnd operator[](const ArCo& indices) const noexcept
+            [[nodiscard]] this_type operator[](const ArCo& indices) const noexcept
             {
                 this_type res(std::span<const std::int64_t>(indices.header().dims().data(), indices.header().dims().size()));
 
@@ -2363,7 +2369,7 @@ namespace oc {
             * @note copy this array to dst partially or full depending on the arrays size
             */
             template <arrnd_complient ArCo>
-            const arrnd& copy_to(ArCo& dst) const
+            const this_type& copy_to(ArCo& dst) const
             {
                 if (empty(*this) || empty(dst)) {
                     return *this;
@@ -2380,7 +2386,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo1, arrnd_complient ArCo2> requires std::is_integral_v<typename ArCo2::value_type>
-            const arrnd& copy_to(ArCo1& dst, const ArCo2& indices) const
+            const this_type& copy_to(ArCo1& dst, const ArCo2& indices) const
             {
                 if (empty(*this) || empty(dst) || empty(indices)) {
                     return *this;
@@ -2397,14 +2403,14 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            const arrnd& copy_to(ArCo& dst, std::span<const Interval<std::int64_t>> ranges) const
+            const this_type& copy_to(ArCo& dst, std::span<const Interval<std::int64_t>> ranges) const
             {
                 auto slice = dst[ranges];
                 copy_to(slice);
                 return *this;
             }
             template <arrnd_complient ArCo>
-            const arrnd& copy_to(ArCo& dst, std::initializer_list<Interval<std::int64_t>> ranges) const
+            const this_type& copy_to(ArCo& dst, std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return copy_to(dst, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
@@ -2413,7 +2419,7 @@ namespace oc {
             * @note if buffer reallocation not required use copy_to function
             */
             template <arrnd_complient ArCo>
-            const arrnd& set_to(ArCo& dst) const
+            const this_type& set_to(ArCo& dst) const
             {
                 if (empty(*this)) {
                     dst = ArCo{};
@@ -2437,39 +2443,39 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            arrnd& copy_from(const ArCo& src)
+            this_type& copy_from(const ArCo& src)
             {
                 src.copy_to(*this);
                 return *this;
             }
 
             template <arrnd_complient ArCo1, arrnd_complient ArCo2> requires std::is_integral_v<typename ArCo2::value_type>
-            arrnd& copy_from(const ArCo1& src, const ArCo2& indices)
+            this_type& copy_from(const ArCo1& src, const ArCo2& indices)
             {
                 src.copy_to(*this, indices);
                 return *this;
             }
 
             template <arrnd_complient ArCo>
-            arrnd& copy_from(const ArCo& src, std::span<const Interval<std::int64_t>> ranges)
+            this_type& copy_from(const ArCo& src, std::span<const Interval<std::int64_t>> ranges)
             {
                 src.copy_to(*this, ranges);
                 return *this;
             }
             template <arrnd_complient ArCo>
-            arrnd& copy_from(const ArCo& src, std::initializer_list<Interval<std::int64_t>> ranges)
+            this_type& copy_from(const ArCo& src, std::initializer_list<Interval<std::int64_t>> ranges)
             {
                 return copy_from(src, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
             template <arrnd_complient ArCo>
-            arrnd& set_from(const ArCo& src)
+            this_type& set_from(const ArCo& src)
             {
                 src.set_to(*this);
                 return *this;
             }
 
-            [[nodiscard]] auto clone() const
+            [[nodiscard]] this_type clone() const
             {
                 if (empty(*this)) {
                     return this_type();
@@ -2491,7 +2497,7 @@ namespace oc {
             /**
             * @note Returning a reference to the input array and no allocation performed. If empty array, subarray, or different dimensions resizing.
             */
-            [[nodiscard]] auto reshape(std::span<const std::int64_t> new_dims) const
+            [[nodiscard]] maybe_shared_ref<this_type> reshape(std::span<const std::int64_t> new_dims) const
             {
                 if (header().count() != numel(new_dims) || header().is_subarray()) {
                     return resize(new_dims);
@@ -2511,7 +2517,7 @@ namespace oc {
 
                 return res;
             }
-            [[nodiscard]] auto reshape(std::initializer_list<std::int64_t> new_dims) const
+            [[nodiscard]] maybe_shared_ref<this_type> reshape(std::initializer_list<std::int64_t> new_dims) const
             {
                 return reshape(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
             }
@@ -2519,7 +2525,7 @@ namespace oc {
             /*
             * @note Other references to this array buffer are not modified. Resize is not performed if dims and new_dims are equal.
             */
-            [[nodiscard]] auto resize(std::span<const std::int64_t> new_dims) const
+            [[nodiscard]] maybe_shared_ref<this_type> resize(std::span<const std::int64_t> new_dims) const
             {
                 if (empty(*this)) {
                     return this_type(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
@@ -2546,14 +2552,14 @@ namespace oc {
 
                 return res;
             }
-            [[nodiscard]] auto resize(std::initializer_list<std::int64_t> new_dims) const
+            [[nodiscard]] maybe_shared_ref<this_type> resize(std::initializer_list<std::int64_t> new_dims) const
             {
                 return resize(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
             }
 
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto append(const ArCo& arr) const
+            [[nodiscard]] maybe_shared_ref<this_type> append(const ArCo& arr) const
             {
                 if (empty(*this)) {
                     this_type res(arr);
@@ -2576,7 +2582,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto append(const ArCo& arr, std::int64_t axis) const
+            [[nodiscard]] maybe_shared_ref<this_type> append(const ArCo& arr, std::int64_t axis) const
             {
                 if (empty(*this)) {
                     this_type res(arr);
@@ -2612,7 +2618,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto insert(const ArCo& arr, std::int64_t ind) const
+            [[nodiscard]] maybe_shared_ref<this_type> insert(const ArCo& arr, std::int64_t ind) const
             {
                 if (empty(*this)) {
                     this_type res(arr);
@@ -2644,7 +2650,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto insert(const ArCo& arr, std::int64_t ind, std::int64_t axis) const
+            [[nodiscard]] maybe_shared_ref<this_type> insert(const ArCo& arr, std::int64_t ind, std::int64_t axis) const
             {
                 if (empty(*this)) {
                     this_type res(arr);
@@ -2689,7 +2695,7 @@ namespace oc {
             /**
             * @note All elements starting from ind are being removed in case that count value is too big.
             */
-            [[nodiscard]] auto remove(std::int64_t ind, std::int64_t count) const
+            [[nodiscard]] maybe_shared_ref<this_type> remove(std::int64_t ind, std::int64_t count) const
             {
                 if (empty(*this)) {
                     return *this;
@@ -2714,7 +2720,7 @@ namespace oc {
             /**
             * @note All elements starting from ind are being removed in case that count value is too big.
             */
-            [[nodiscard]] auto remove(std::int64_t ind, std::int64_t count, std::int64_t axis) const
+            [[nodiscard]] maybe_shared_ref<this_type> remove(std::int64_t ind, std::int64_t count, std::int64_t axis) const
             {
                 if (empty(*this)) {
                     return *this;
@@ -2755,9 +2761,9 @@ namespace oc {
 
 
             template <typename Unary_op> requires std::is_invocable_v<Unary_op, T>
-            [[nodiscard]] auto transform(Unary_op&& op) const
+            [[nodiscard]] replaced_type<std::invoke_result_t<Unary_op, T>> transform(Unary_op&& op) const
             {
-                using U = decltype(op(data()[0]));
+                using U = std::invoke_result_t<Unary_op, T>;
 
                 if (empty(*this)) {
                     return replaced_type<U>();
@@ -2773,9 +2779,9 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
-            [[nodiscard]] auto transform(const ArCo& arr, Binary_op&& op) const
+            [[nodiscard]] replaced_type<std::invoke_result_t<Binary_op, T, typename ArCo::value_type>> transform(const ArCo& arr, Binary_op&& op) const
             {
-                using U = decltype(op(data()[0], arr.data()[0]));
+                using U = std::invoke_result_t<Binary_op, T, typename ArCo::value_type>;
 
                 if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
                     return replaced_type<U>();
@@ -2794,11 +2800,9 @@ namespace oc {
             }
 
             template <typename V, typename Binary_op> requires std::is_invocable_v<Binary_op, T, V>
-            [[nodiscard]] auto transform(const V& value, Binary_op&& op) const
+            [[nodiscard]] replaced_type<std::invoke_result_t<Binary_op, T, V>> transform(const V& value, Binary_op&& op) const
             {
-                using U = decltype(op(data()[0], value));
-
-                replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                replaced_type<std::invoke_result_t<Binary_op, T, V>> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
 
                 for (indexer_type gen(header()); gen; ++gen) {
                     res[*gen] = op((*this)[*gen], value);
@@ -2809,7 +2813,7 @@ namespace oc {
 
 
             template <typename Unary_op> requires std::is_invocable_v<Unary_op, T>
-            auto& apply(Unary_op&& op)
+            this_type& apply(Unary_op&& op)
             {
                 if (empty(*this)) {
                     return *this;
@@ -2823,7 +2827,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
-            auto& apply(const ArCo& arr, Binary_op&& op)
+            this_type& apply(const ArCo& arr, Binary_op&& op)
             {
                 if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
                     return *this;
@@ -2840,7 +2844,7 @@ namespace oc {
             }
 
             template <typename V, typename Binary_op> requires std::is_invocable_v<Binary_op, T, V>
-            auto& apply(const V& value, Binary_op&& op)
+            this_type& apply(const V& value, Binary_op&& op)
             {
                 for (indexer_type gen(header()); gen; ++gen) {
                     (*this)[*gen] = op((*this)[*gen], value);
@@ -2852,9 +2856,9 @@ namespace oc {
 
 
             template <typename Binary_op> requires std::is_invocable_v<Binary_op, T, T>
-            [[nodiscard]] auto reduce(Binary_op&& op) const
+            [[nodiscard]] std::invoke_result_t<Binary_op, T, T> reduce(Binary_op&& op) const
             {
-                using U = decltype(op(data()[0], data()[0]));
+                using U = std::invoke_result_t<Binary_op, T, T>;
 
                 if (empty(*this)) {
                     return U{};
@@ -2874,13 +2878,13 @@ namespace oc {
             }
 
             template <typename U, typename Binary_op> requires std::is_invocable_v<Binary_op, U, T>
-            [[nodiscard]] auto reduce(const U& init_value, Binary_op&& op) const
+            [[nodiscard]] std::invoke_result_t<Binary_op, U, T> reduce(const U& init_value, Binary_op&& op) const
             {
                 if (empty(*this)) {
                     return init_value;
                 }
 
-                U res{ init_value };
+                std::invoke_result_t<Binary_op, U, T> res{ init_value };
                 for (indexer_type gen{ header() }; gen; ++gen) {
                     res = op(res, (*this)[*gen]);
                 }
@@ -2889,9 +2893,9 @@ namespace oc {
             }
 
             template <typename Binary_op> requires std::is_invocable_v<Binary_op, T, T>
-            [[nodiscard]] auto reduce(Binary_op&& op, std::int64_t axis) const
+            [[nodiscard]] replaced_type<std::invoke_result_t<Binary_op, T, T>> reduce(Binary_op&& op, std::int64_t axis) const
             {
-                using U = decltype(op(data()[0], data()[0]));
+                using U = std::invoke_result_t<Binary_op, T, T>;
 
                 if (empty(*this)) {
                     return replaced_type<U>();
@@ -2926,9 +2930,9 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
-            [[nodiscard]] auto reduce(const ArCo& init_values, Binary_op&& op, std::int64_t axis) const
+            [[nodiscard]] replaced_type<std::invoke_result_t<Binary_op, typename ArCo::value_type, T>> reduce(const ArCo& init_values, Binary_op&& op, std::int64_t axis) const
             {
-                using U = decltype(op(init_values.data()[0], data()[0]));
+                using U = std::invoke_result_t<Binary_op, typename ArCo::value_type, T>;
 
                 if (empty(*this)) {
                     return replaced_type<U>();
@@ -2969,7 +2973,7 @@ namespace oc {
 
 
             template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
-            [[nodiscard]] auto filter(Unary_pred pred) const
+            [[nodiscard]] this_type filter(Unary_pred pred) const
             {
                 if (empty(*this)) {
                     return this_type();
@@ -3003,7 +3007,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto filter(const ArCo& mask) const
+            [[nodiscard]] this_type filter(const ArCo& mask) const
             {
                 if (empty(*this)) {
                     return this_type();
@@ -3044,7 +3048,7 @@ namespace oc {
             }
 
             template <typename Unary_pred> requires std::is_invocable_v<Unary_pred, T>
-            [[nodiscard]] auto find(Unary_pred pred) const
+            [[nodiscard]] replaced_type<std::int64_t> find(Unary_pred pred) const
             {
                 if (empty(*this)) {
                     return replaced_type<std::int64_t>();
@@ -3078,7 +3082,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            [[nodiscard]] auto find(const ArCo& mask) const
+            [[nodiscard]] replaced_type<std::int64_t> find(const ArCo& mask) const
             {
                 if (empty(*this)) {
                     return replaced_type<std::int64_t>();
@@ -3119,7 +3123,7 @@ namespace oc {
             }
 
 
-            [[nodiscard]] auto transpose(std::span<const std::int64_t> order) const
+            [[nodiscard]] this_type transpose(std::span<const std::int64_t> order) const
             {
                 if (empty(*this)) {
                     return this_type();
@@ -3145,7 +3149,7 @@ namespace oc {
                 return res;
             }
 
-            [[nodiscard]] auto transpose(std::initializer_list<std::int64_t> order) const
+            [[nodiscard]] this_type transpose(std::initializer_list<std::int64_t> order) const
             {
                 return transpose(std::span<const std::int64_t>(order.begin(), order.size()));
             }
@@ -3275,7 +3279,7 @@ namespace oc {
                 return all_match([](const value_type& value) { return static_cast<bool>(value); });
             }
 
-            [[nodiscard]] auto all(std::int64_t axis) const
+            [[nodiscard]] replaced_type<bool> all(std::int64_t axis) const
             {
                 return reduce([](const value_type& a, const value_type& b) { return a && b; }, axis);
             }
@@ -3285,7 +3289,7 @@ namespace oc {
                 return any_match([](const value_type& value) { return static_cast<bool>(value); });
             }
 
-            [[nodiscard]] auto any(std::int64_t axis) const
+            [[nodiscard]] replaced_type<bool> any(std::int64_t axis) const
             {
                 return reduce([](const value_type& a, const value_type& b) { return a || b; }, axis);
             }
