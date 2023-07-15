@@ -3667,25 +3667,25 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline ArCo1 append(const ArCo1& lhs, const ArCo2& rhs)
+        [[nodiscard]] inline auto append(const ArCo1& lhs, const ArCo2& rhs)
         {
             return lhs.append(rhs);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline ArCo1 append(const ArCo1& lhs, const ArCo2& rhs, std::int64_t axis)
+        [[nodiscard]] inline auto append(const ArCo1& lhs, const ArCo2& rhs, std::int64_t axis)
         {
             return lhs.append(rhs, axis);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline ArCo1 insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind)
+        [[nodiscard]] inline auto insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind)
         {
             return lhs.insert(rhs, ind);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline ArCo1 insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind, std::int64_t axis)
+        [[nodiscard]] inline auto insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind, std::int64_t axis)
         {
             return lhs.insert(rhs, ind, axis);
         }
