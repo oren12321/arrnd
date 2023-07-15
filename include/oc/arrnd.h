@@ -2151,7 +2151,7 @@ namespace oc {
             arrnd(ArCo&& other)
                 : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
-                copy(other, *this);
+                copy_from(other);
 
                 ArCo dummy{ std::move(other) };
             }
@@ -2162,7 +2162,7 @@ namespace oc {
                     return *this;
                 }
 
-                copy(other, *this);
+                copy_from(other);
                 arrnd dummy{ std::move(other) };
                 return *this;
             }
@@ -2170,14 +2170,14 @@ namespace oc {
             arrnd& operator=(ArCo&& other)&
             {
                 *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
-                copy(other, *this);
+                copy_from(other);
                 ArCo dummy{ std::move(other) };
                 return *this;
             }
             template<arrnd_complient ArCo>
             arrnd& operator=(ArCo&& other)&&
             {
-                copy(other, *this);
+                copy_from(other);
                 ArCo dummy{ std::move(other) };
                 return *this;
             }
@@ -2187,7 +2187,7 @@ namespace oc {
             arrnd(const ArCo& other)
                 : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
             {
-                copy(other, *this);
+                copy_from(other);
             }
             arrnd& operator=(const arrnd& other) & = default;
             arrnd& operator=(const arrnd& other)&&
@@ -2196,20 +2196,20 @@ namespace oc {
                     return *this;
                 }
 
-                copy(other, *this);
+                copy_from(other);
                 return *this;
             }
             template<arrnd_complient ArCo>
             arrnd& operator=(const ArCo& other)&
             {
                 *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
-                copy(other, *this);
+                copy_from(other);
                 return *this;
             }
             template<arrnd_complient ArCo>
             arrnd& operator=(const ArCo& other)&&
             {
-                copy(other, *this);
+                copy_from(other);
                 return *this;
             }
 
