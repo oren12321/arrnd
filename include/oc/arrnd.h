@@ -285,6 +285,16 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
+                [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+                {
+                    return data_ptr_;
+                }
+
+                [[nodiscard]] constexpr const_pointer cend() const noexcept
+                {
+                    return data_ptr_ + size_;
+                }
+
                 [[nodiscard]] constexpr const_reference back() const noexcept
                 {
                     return data_ptr_[size_ - 1];
@@ -473,6 +483,16 @@ namespace oc {
                 }
 
                 [[nodiscard]] constexpr pointer end() noexcept
+                {
+                    return data_ptr_ + size_;
+                }
+
+                [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+                {
+                    return data_ptr_;
+                }
+
+                [[nodiscard]] constexpr const_pointer cend() const noexcept
                 {
                     return data_ptr_ + size_;
                 }
@@ -1111,6 +1131,24 @@ namespace oc {
             arrnd_header& operator=(const arrnd_header& other) = default;
 
             virtual ~arrnd_header() = default;
+
+            [[nodiscard]] arrnd_header extract_dim(std::int64_t dim) const
+            {
+                std::int64_t ind = modulo(dim, dims_[0]);
+                arrnd_header<storage_type> exthdr = *this;
+                exthdr.dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
+                exthdr.strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
+
+                exthdr.offset_ += ind * strides_[0];
+
+                exthdr.last_index_ = exthdr.offset_ + std::inner_product(exthdr.dims_.begin(), exthdr.dims_.end(), exthdr.strides_.begin(), 0,
+                    [](auto a, auto b) { return a + b; },
+                    [](auto a, auto b) { return (a - 1) * b; });
+
+                exthdr.is_subarray_ = true;
+
+                return exthdr;
+            }
 
             [[nodiscard]] std::int64_t count() const noexcept
             {
@@ -2337,7 +2375,7 @@ namespace oc {
             [[nodiscard]] shared_ref<this_type> operator[](std::span<const Interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty(*this)) {
-                    return (*this);
+                    return *this;
                 }
 
                 this_type slice{};
@@ -2348,6 +2386,18 @@ namespace oc {
             [[nodiscard]] shared_ref<this_type> operator[](std::initializer_list<Interval<std::int64_t>> ranges) const
             {
                 return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
+            }
+
+            [[nodiscard]] shared_ref<this_type> extract_dim(std::int64_t dim) const
+            {
+                if (empty(*this) || std::ssize(header().dims()) == 1) {
+                    return *this;
+                }
+
+                this_type slice{};
+                slice.hdr_ = hdr_.extract_dim(dim);
+                slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
+                return slice;
             }
 
             template <arrnd_complient ArCo> requires std::is_integral_v<typename ArCo::value_type>

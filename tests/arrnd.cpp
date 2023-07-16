@@ -3700,17 +3700,29 @@ TEST(arrnd_test, complex_array)
     const std::int64_t dims[]{ 2, 2, 2, 3, 3 };
     Integer_array arr{ {dims, 5}, reinterpret_cast<const int*>(data) };
 
-    const int sdata1[1][1][1][2][1]{ { {{{47},{53}}} } };
-    const std::int64_t sdims1[]{ 1, 1, 1, 2, 1 };
+    const int sdata1[2][1][1][2][1]{ { {{{11},{17}}} }, { {{{47},{53}}} } };
+    const std::int64_t sdims1[]{ 2, 1, 1, 2, 1 };
     Integer_array sarr1{ {sdims1, 5}, reinterpret_cast<const int*>(sdata1) };
 
-    EXPECT_TRUE(oc::all_equal(sarr1, (arr[{ {1, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }])));
+    EXPECT_TRUE(oc::all_equal(sarr1, (arr[{ {0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }])));
 
-    const int sdata2[1][1][1][1][1]{ { {{{53}}} } };
+    const int sdata2[1][1][1][1][1]{ { {{{17}}} } };
     const std::int64_t sdims2[]{ 1, 1, 1, 1, 1 };
     Integer_array sarr2{ {sdims2, 5}, reinterpret_cast<const int*>(sdata2) };
 
     EXPECT_TRUE(oc::all_equal(sarr2, (sarr1[{ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} }])));
+
+    {
+        const int edata1[1][2][1]{ {{11},{17}} };
+        oc::arrnd<int> rarr1{ {1, 2, 1}, reinterpret_cast<const int*>(edata1) };
+        auto earr1 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }].extract_dim(0).extract_dim(0);
+        EXPECT_TRUE(oc::all_equal(rarr1, earr1));
+
+        const int edata2[1][2][1]{ {{47},{53}} };
+        oc::arrnd<int> rarr2{ {1, 2, 1}, reinterpret_cast<const int*>(edata2) };
+        auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }].extract_dim(1).extract_dim(0);
+        EXPECT_TRUE(oc::all_equal(rarr2, earr2));
+    }
 }
 
 
