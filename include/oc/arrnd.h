@@ -12,7 +12,7 @@
 #include <variant>
 #include <sstream>
 #include <cmath>
-#include <functional>
+#include <ostream>
 
 namespace oc {
 
@@ -4250,7 +4250,7 @@ namespace oc {
             return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) { return a << b; });
         }
 
-        template <typename T, arrnd_complient ArCo>
+        template <typename T, arrnd_complient ArCo> requires (!std::derived_from<T, std::ios_base> && !arrnd_complient<T>)
         [[nodiscard]] inline auto operator<<(const T& lhs, const ArCo& rhs)
         {
             return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) { return a << b; });
@@ -4603,6 +4603,49 @@ namespace oc {
         [[nodiscard]] inline bool all_close(const T& lhs, const ArCo& rhs, const decltype(T{} - typename ArCo::value_type{})& atol = default_atol<decltype(T{} - typename ArCo::value_type{}) > (), const decltype(T{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(T{} - typename ArCo::value_type{}) > ())
         {
             return rhs.all_close(lhs, atol, rtol);
+        }
+
+        template <arrnd_complient ArCo>
+        std::ostream& ostream_operator_recursive(std::ostream& os, const ArCo& arco, std::int64_t nvectical_spaces)
+        {
+            if (empty(arco)) {
+                os << "[]";
+                return os;
+            }
+
+            if (std::ssize(arco.header().dims()) > 1) {
+                os << '[';
+                for (std::int64_t i = 0; i < arco.header().dims()[0]; ++i) {
+                    if (i > 0) {
+                        for (std::int64_t i = 0; i < nvectical_spaces - (std::ssize(arco.header().dims()) - 1) + 1; ++i) {
+                            os << ' ';
+                        }
+                    }
+                    ostream_operator_recursive(os, arco.extract_dim(i), nvectical_spaces);
+                    if (i < arco.header().dims()[0] - 1) {
+                        os << '\n';
+                    }
+                }
+                os << ']';
+                return os;
+            }
+
+            os << '[';
+            typename ArCo::indexer_type gen(arco.header());
+            os << arco[*gen];
+            ++gen;
+            for (; gen; ++gen) {
+                os << ' ' << arco[*gen];
+            }
+            os << ']';
+            return os;
+        }
+
+        template <arrnd_complient ArCo>
+        inline std::ostream& operator<<(std::ostream& os, const ArCo& arco)
+        {
+            std::int64_t nvectical_spaces = std::ssize(arco.header().dims()) - 1;
+            return ostream_operator_recursive(os, arco, nvectical_spaces);
         }
     }
 

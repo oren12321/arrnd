@@ -3725,6 +3725,35 @@ TEST(arrnd_test, complex_array)
     }
 }
 
+TEST(arrnd_test, ostream_operator)
+{
+    // empty array
+    {
+        std::stringstream ss;
+        ss << oc::arrnd<int>{};
+        EXPECT_EQ("[]", ss.str());
+    }
+
+    // one dimensional array
+    {
+        std::stringstream ss;
+        ss << oc::arrnd<int>{ {6}, { 1, 2, 3, 4, 5, 6 }};
+        EXPECT_EQ("[1 2 3 4 5 6]", ss.str());
+    }
+
+    // multi dimensional array
+    {
+        std::stringstream ss;
+        ss << oc::arrnd<int>{ {2, 1, 2, 3}, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }};
+        EXPECT_EQ(
+            "[[[[1 2 3]\n"
+            "   [4 5 6]]]\n"
+            " [[[7 8 9]\n"
+            "   [10 11 12]]]]",
+            ss.str());
+    }
+}
+
 
 
 //#include <thread>
