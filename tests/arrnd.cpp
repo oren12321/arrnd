@@ -3715,12 +3715,12 @@ TEST(arrnd_test, complex_array)
     {
         const int edata1[1][2][1]{ {{11},{17}} };
         oc::arrnd<int> rarr1{ {1, 2, 1}, reinterpret_cast<const int*>(edata1) };
-        auto earr1 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }].extract_dim(0).extract_dim(0);
+        auto earr1 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::Interval<std::int64_t>{0, 0}][oc::Interval<std::int64_t>{0, 0}];
         EXPECT_TRUE(oc::all_equal(rarr1, earr1));
 
         const int edata2[1][2][1]{ {{47},{53}} };
         oc::arrnd<int> rarr2{ {1, 2, 1}, reinterpret_cast<const int*>(edata2) };
-        auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }].extract_dim(1).extract_dim(0);
+        auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::Interval<std::int64_t>{1, 1}][oc::Interval<std::int64_t>{0, 0}];
         EXPECT_TRUE(oc::all_equal(rarr2, earr2));
     }
 }

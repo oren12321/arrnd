@@ -784,10 +784,20 @@ namespace oc {
                 strides[i] = previous_strides[i] * forward(intervals[i]).step;
             }
 
+            // set strides from previous strides
+            if (std::ssize(previous_strides) > ncomp_from_intervals) {
+                for (std::int64_t i = ncomp_from_intervals; i < std::ssize(previous_strides); ++i) {
+                    strides[i] = previous_strides[i];
+                }
+            }
+
+            std::int64_t nstrides_calc =
+                (std::ssize(previous_strides) > ncomp_from_intervals ? std::ssize(previous_strides) : ncomp_from_intervals);
+
             // compute strides from previous dimensions
-            if (std::ssize(intervals) < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
+            if (nstrides_calc < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
                 strides[std::ssize(previous_dims) - 1] = 1;
-                for (std::int64_t i = std::ssize(previous_dims) - 2; i >= std::ssize(intervals); --i) {
+                for (std::int64_t i = std::ssize(previous_dims) - 2; i >= nstrides_calc - 1; --i) {
                     strides[i] = strides[i + 1] * previous_dims[i + 1];
                 }
             }
@@ -982,6 +992,26 @@ namespace oc {
                 is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
             }
 
+            arrnd_header(const arrnd_header& previous_hdr, Interval<std::int64_t> interval)
+                : arrnd_header(previous_hdr, std::span<Interval<std::int64_t>>(&interval, 1))
+            {
+                if (empty()) {
+                    return;
+                }
+
+                auto fixed_ival = modulo(interval, dims_[0]);
+
+                if (dims_[0] == 1) {
+                    offset_ += fixed_ival.start * strides_[0];
+                    dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
+                    strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
+                    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                        [](auto a, auto b) { return a + b; },
+                        [](auto a, auto b) { return (a - 1) * b; });
+                    is_subarray_ = true;
+                }
+            }
+
             arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
@@ -1131,24 +1161,6 @@ namespace oc {
             arrnd_header& operator=(const arrnd_header& other) = default;
 
             virtual ~arrnd_header() = default;
-
-            [[nodiscard]] arrnd_header extract_dim(std::int64_t dim) const
-            {
-                std::int64_t ind = modulo(dim, dims_[0]);
-                arrnd_header<storage_type> exthdr = *this;
-                exthdr.dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
-                exthdr.strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
-
-                exthdr.offset_ += ind * strides_[0];
-
-                exthdr.last_index_ = exthdr.offset_ + std::inner_product(exthdr.dims_.begin(), exthdr.dims_.end(), exthdr.strides_.begin(), 0,
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
-
-                exthdr.is_subarray_ = true;
-
-                return exthdr;
-            }
 
             [[nodiscard]] std::int64_t count() const noexcept
             {
@@ -2388,14 +2400,14 @@ namespace oc {
                 return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
             }
 
-            [[nodiscard]] shared_ref<this_type> extract_dim(std::int64_t dim) const
+            [[nodiscard]] shared_ref<this_type> operator[](Interval<std::int64_t> range) const
             {
                 if (empty() || std::ssize(header().dims()) == 1) {
                     return *this;
                 }
 
                 this_type slice{};
-                slice.hdr_ = hdr_.extract_dim(dim);
+                slice.hdr_ = header_type{ hdr_, range };
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
@@ -4626,7 +4638,7 @@ namespace oc {
                             os << ' ';
                         }
                     }
-                    ostream_operator_recursive(os, arco.extract_dim(i), nvectical_spaces);
+                    ostream_operator_recursive(os, arco[Interval<std::int64_t>{i, i}], nvectical_spaces);
                     if (i < arco.header().dims()[0] - 1) {
                         os << '\n';
                     }
