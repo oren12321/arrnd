@@ -879,6 +879,22 @@ TEST(arrnd_test, element_wise_transformation)
     EXPECT_TRUE(oc::all_equal(oarr, oc::transform(iarr, [](int n) {return n * 0.5; })));
 }
 
+TEST(arrnd_test, apply_transformation_on_array_elements)
+{
+    using namespace oc;
+
+    arrnd<int> arr({ 3, 1, 2 }, { 1, 2, 3, 4, 5, 6 });
+
+    auto& tarr = apply(arr, [](int val) { return 2 * val; });
+    tarr = apply(tarr, arrnd<int>({ 3, 1, 2 }, { 1, 0, 1, 0, 1, 0 }), [](int val1, int val2) { return val1 * val2; });
+    tarr = apply(tarr, 2, [](int val1, int val2) { return val1 == 0 ? 0 : val1 + val2; });
+    tarr = apply(2, tarr, [](int val1, int val2) { return val2 == 0 ? 0 : val1 + val2; });
+
+    arrnd<int> res({ 3, 1, 2 }, { 6, 0, 10, 0, 14, 0 });
+
+    EXPECT_TRUE(all_equal(res, arr));
+}
+
 TEST(arrnd_test, element_wise_transform_operation)
 {
     EXPECT_TRUE(oc::empty(oc::transform(oc::arrnd<int>({ 3, 1, 2 }), oc::arrnd<double>({ 6 }), [](int, double) {return 0.0; })));

@@ -3781,12 +3781,6 @@ namespace oc {
             return arr.empty();
         }
 
-        template <arrnd_complient ArCo, typename Unary_op> requires std::is_invocable_v<Unary_op, typename ArCo::value_type>
-        [[nodiscard]] inline auto transform(const ArCo& arr, Unary_op&& op)
-        {
-            return arr.transform(op);
-        }
-
         template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
         [[nodiscard]] inline auto reduce(const ArCo& arr, Binary_op&& op)
         {
@@ -3835,6 +3829,12 @@ namespace oc {
             return arr.any(axis);
         }
 
+        template <arrnd_complient ArCo, typename Unary_op> requires std::is_invocable_v<Unary_op, typename ArCo::value_type>
+        [[nodiscard]] inline auto transform(const ArCo& arr, Unary_op&& op)
+        {
+            return arr.transform(op);
+        }
+
         template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo1::value_type, typename ArCo2::value_type>
         [[nodiscard]] inline auto transform(const ArCo1& lhs, const ArCo2& rhs, Binary_op&& op)
         {
@@ -3851,6 +3851,30 @@ namespace oc {
         [[nodiscard]] inline auto transform(const T& lhs, const ArCo& rhs, Binary_op&& op)
         {
             return rhs.transform([&lhs, &op](const typename ArCo::value_type& value) { return op(lhs, value); });
+        }
+
+        template <arrnd_complient ArCo, typename Unary_op> requires std::is_invocable_v<Unary_op, typename ArCo::value_type>
+        [[nodiscard]] inline auto& apply(ArCo& arr, Unary_op&& op)
+        {
+            return arr.apply(op);
+        }
+
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo1::value_type, typename ArCo2::value_type>
+        [[nodiscard]] inline auto& apply(ArCo1& lhs, const ArCo2& rhs, Binary_op&& op)
+        {
+            return lhs.apply(rhs, op);
+        }
+
+        template <arrnd_complient ArCo, typename T, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
+        [[nodiscard]] inline auto& apply(ArCo& lhs, const T& rhs, Binary_op&& op)
+        {
+            return lhs.apply(rhs, op);
+        }
+
+        template <typename T, arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
+        [[nodiscard]] inline auto& apply(const T& lhs, ArCo& rhs, Binary_op&& op)
+        {
+            return rhs.apply([&lhs, &op](const typename ArCo::value_type& value) { return op(lhs, value); });
         }
 
         template <arrnd_complient ArCo, typename Unary_pred> requires std::is_invocable_v<Unary_pred, typename ArCo::value_type>
@@ -4690,6 +4714,7 @@ namespace oc {
     using details::all_match;
     using details::any_match;
     using details::transform;
+    using details::apply;
     using details::reduce;
     using details::all;
     using details::any;
