@@ -302,12 +302,12 @@ TEST(arrnd_test, iterators)
     EXPECT_TRUE(all_equal(arrnd<int>({ 3, 1, 2 },
         { 7, 6, 3000, 4000, 5000, 2 }), arr2));
 
-    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2[{ {1, 1, 2}, {0, 0}, {1, 1} }].rbegin(), [](auto a) { return a * 100; });
+    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2[{ {1, 1, 2}, { 0, 0 }, { 1, 1 } }].rbegin(), [](auto a) { return a * 100; });
 
     EXPECT_TRUE(all_equal(arrnd<int>({ 3, 1, 2 },
         { 7, 6, 3000, 100, 5000, 2 }), arr2));
 
-    const arrnd<int> arr{ {3, 2, 4}, {
+    arrnd<int> arr{ {3, 2, 4}, {
         1, 2, 3, 4,
         5, 6, 7, 8,
         9, 10, 11, 12,
@@ -335,6 +335,22 @@ TEST(arrnd_test, iterators)
     std::copy(arr.cbegin(order), arr.cend(order), std::back_inserter(res));
 
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
+
+    // axis iterators
+    std::for_each(arr.begin_subarray(), arr.end_subarray(), [](const auto& sa) {
+        auto exsa = sa[Interval<std::int64_t>{0, 0}];
+        std::for_each(exsa.rbegin_subarray(), exsa.rend_subarray(), [](auto& sa) { sa *= 2; });
+        });
+
+    arrnd<int> axis_iter_res{ {3, 2, 4}, {
+        2, 4, 6, 8,
+        10, 12, 14, 16,
+        18, 20, 22, 24,
+        26, 28, 30, 32,
+        34, 36, 38, 40,
+        42, 44, 46, 48} };
+    
+    EXPECT_TRUE(all_equal(axis_iter_res, arr));
 }
 
 TEST(arrnd_general_indexer, simple_forward_backward_iterations)

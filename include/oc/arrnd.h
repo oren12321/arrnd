@@ -2161,6 +2161,574 @@ namespace oc {
         };
 
 
+        template <typename Arrnd>
+        class arrnd_axis_iterator final
+        {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = Arrnd;
+            using reference = Arrnd&;
+
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+
+            constexpr arrnd_axis_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
+                : arrnd_ref_(arrnd_ref)
+            {
+                fixed_axis_ = fixed_axis;
+                if (fixed_axis < 0) {
+                    fixed_axis_ = 0;
+                }
+                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
+                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
+                }
+
+                current_index_ = start_index;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
+                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
+                }
+
+                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
+
+                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
+                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                }
+                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
+                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                }
+            }
+
+            constexpr arrnd_axis_iterator() = default;
+
+            constexpr arrnd_axis_iterator(const arrnd_axis_iterator& other) = default;
+            constexpr arrnd_axis_iterator& operator=(const arrnd_axis_iterator& other) = default;
+
+            constexpr arrnd_axis_iterator(arrnd_axis_iterator&& other) noexcept = default;
+            constexpr arrnd_axis_iterator& operator=(arrnd_axis_iterator&& other) noexcept = default;
+
+            constexpr ~arrnd_axis_iterator() = default;
+
+            constexpr arrnd_axis_iterator& operator++()
+            {
+                ++current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_iterator operator++(int) noexcept
+            {
+                arrnd_axis_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_iterator& operator+=(difference_type count)
+            {
+                current_index_ += count;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                if (current_index_ >= last_index_) {
+                    return *this;
+                }
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_iterator operator+(difference_type count)
+            {
+                arrnd_axis_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_axis_iterator& operator--()
+            {
+                --current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_iterator operator--(int)
+            {
+                arrnd_axis_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_iterator& operator-=(difference_type count)
+            {
+                current_index_ -= count;
+                if (current_index_ < 0) {
+                    current_index_  = -1;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                if (current_index_ < 0) {
+                    return *this;
+                }
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_iterator operator-(difference_type count)
+            {
+                arrnd_axis_iterator temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr reference operator*() noexcept
+            {
+                return slice_;
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_axis_iterator& iter) const noexcept
+            {
+                return current_index_ == iter.current_index_;
+            }
+
+        private:
+            value_type arrnd_ref_;
+            std::int64_t fixed_axis_;
+            std::int64_t current_index_;
+            std::int64_t last_index_;
+            storage_type intervals_;
+
+            value_type slice_;
+        };
+
+        template <typename Arrnd>
+        class arrnd_axis_const_iterator final
+        {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = Arrnd;
+            using const_reference = const Arrnd&;
+
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+
+            constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
+                : arrnd_ref_(arrnd_ref)
+            {
+                fixed_axis_ = fixed_axis;
+                if (fixed_axis < 0) {
+                    fixed_axis_ = 0;
+                }
+                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
+                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
+                }
+
+                current_index_ = start_index;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
+                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
+                }
+
+                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
+
+                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
+                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                }
+                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
+                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                }
+            }
+
+            constexpr arrnd_axis_const_iterator() = default;
+
+            constexpr arrnd_axis_const_iterator(const arrnd_axis_const_iterator& other) = default;
+            constexpr arrnd_axis_const_iterator& operator=(const arrnd_axis_const_iterator& other) = default;
+
+            constexpr arrnd_axis_const_iterator(arrnd_axis_const_iterator&& other) noexcept = default;
+            constexpr arrnd_axis_const_iterator& operator=(arrnd_axis_const_iterator&& other) noexcept = default;
+
+            constexpr ~arrnd_axis_const_iterator() = default;
+
+            constexpr arrnd_axis_const_iterator& operator++()
+            {
+                ++current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_const_iterator operator++(int)
+            {
+                arrnd_axis_const_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_const_iterator& operator+=(difference_type count)
+            {
+                current_index_ += count;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_const_iterator operator+(difference_type count)
+            {
+                arrnd_axis_const_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_axis_const_iterator& operator--()
+            {
+                --current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_const_iterator operator--(int)
+            {
+                arrnd_axis_const_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_const_iterator& operator-=(difference_type count)
+            {
+                current_index_ -= count;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_const_iterator operator-(difference_type count)
+            {
+                arrnd_axis_const_iterator temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr const_reference operator*() const noexcept
+            {
+                return slice_;
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_axis_const_iterator& iter) const noexcept
+            {
+                return current_index_ == iter.current_index_;
+            }
+
+        private:
+            value_type arrnd_ref_;
+            std::int64_t fixed_axis_;
+            std::int64_t current_index_;
+            std::int64_t last_index_;
+            storage_type intervals_;
+
+            value_type slice_;
+        };
+
+
+
+        template <typename Arrnd>
+        class arrnd_axis_reverse_iterator final
+        {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = Arrnd;
+            using reference = Arrnd&;
+
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+
+            constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
+                : arrnd_ref_(arrnd_ref)
+            {
+                fixed_axis_ = fixed_axis;
+                if (fixed_axis < 0) {
+                    fixed_axis_ = 0;
+                }
+                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
+                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
+                }
+
+                current_index_ = start_index;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
+                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
+                }
+
+                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
+
+                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
+                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                }
+                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
+                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                }
+            }
+
+            constexpr arrnd_axis_reverse_iterator() = default;
+
+            constexpr arrnd_axis_reverse_iterator(const arrnd_axis_reverse_iterator& other) = default;
+            constexpr arrnd_axis_reverse_iterator& operator=(const arrnd_axis_reverse_iterator& other) = default;
+
+            constexpr arrnd_axis_reverse_iterator(arrnd_axis_reverse_iterator&& other) noexcept = default;
+            constexpr arrnd_axis_reverse_iterator& operator=(arrnd_axis_reverse_iterator&& other) noexcept = default;
+
+            constexpr ~arrnd_axis_reverse_iterator() = default;
+
+            constexpr arrnd_axis_reverse_iterator& operator--()
+            {
+                ++current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_iterator operator--(int) noexcept
+            {
+                arrnd_axis_reverse_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_iterator& operator-=(difference_type count)
+            {
+                current_index_ += count;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                if (current_index_ >= last_index_) {
+                    return *this;
+                }
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_iterator operator-(difference_type count)
+            {
+                arrnd_axis_reverse_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_iterator& operator++()
+            {
+                --current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_iterator operator++(int)
+            {
+                arrnd_axis_reverse_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_iterator& operator+=(difference_type count)
+            {
+                current_index_ -= count;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                if (current_index_ < 0) {
+                    return *this;
+                }
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_iterator operator+(difference_type count)
+            {
+                arrnd_axis_reverse_iterator temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr reference operator*() noexcept
+            {
+                return slice_;
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_iterator& iter) const noexcept
+            {
+                return current_index_ == iter.current_index_;
+            }
+
+        private:
+            value_type arrnd_ref_;
+            std::int64_t fixed_axis_;
+            std::int64_t current_index_;
+            std::int64_t last_index_;
+            storage_type intervals_;
+
+            value_type slice_;
+        };
+
+        template <typename Arrnd>
+        class arrnd_axis_reverse_const_iterator final
+        {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using difference_type = std::int64_t;
+            using value_type = Arrnd;
+            using const_reference = const Arrnd&;
+
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+
+            constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
+                : arrnd_ref_(arrnd_ref)
+            {
+                fixed_axis_ = fixed_axis;
+                if (fixed_axis < 0) {
+                    fixed_axis_ = 0;
+                }
+                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
+                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
+                }
+
+                current_index_ = start_index;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
+                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
+                }
+
+                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
+
+                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
+                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                }
+                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
+                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                }
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator() = default;
+
+            constexpr arrnd_axis_reverse_const_iterator(const arrnd_axis_reverse_const_iterator& other) = default;
+            constexpr arrnd_axis_reverse_const_iterator& operator=(const arrnd_axis_reverse_const_iterator& other) = default;
+
+            constexpr arrnd_axis_reverse_const_iterator(arrnd_axis_reverse_const_iterator&& other) noexcept = default;
+            constexpr arrnd_axis_reverse_const_iterator& operator=(arrnd_axis_reverse_const_iterator&& other) noexcept = default;
+
+            constexpr ~arrnd_axis_reverse_const_iterator() = default;
+
+            constexpr arrnd_axis_reverse_const_iterator& operator--()
+            {
+                ++current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator operator--(int)
+            {
+                arrnd_axis_reverse_const_iterator temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator& operator-=(difference_type count)
+            {
+                current_index_ += count;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator operator-(difference_type count)
+            {
+                arrnd_axis_reverse_const_iterator temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator& operator++()
+            {
+                --current_index_;
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator operator++(int)
+            {
+                arrnd_axis_reverse_const_iterator temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator& operator+=(difference_type count)
+            {
+                current_index_ -= count;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                return *this;
+            }
+
+            constexpr arrnd_axis_reverse_const_iterator operator+(difference_type count)
+            {
+                arrnd_axis_reverse_const_iterator temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr const_reference operator*() const noexcept
+            {
+                return slice_;
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_const_iterator& iter) const noexcept
+            {
+                return current_index_ == iter.current_index_;
+            }
+
+        private:
+            value_type arrnd_ref_;
+            std::int64_t fixed_axis_;
+            std::int64_t current_index_;
+            std::int64_t last_index_;
+            storage_type intervals_;
+
+            value_type slice_;
+        };
+
+
+
         template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, typename Indexer = arrnd_general_indexer<>>
         class arrnd {
         public:
@@ -2193,6 +2761,11 @@ namespace oc {
             using shared_ref = U;
             template <typename U>
             using maybe_shared_ref = U;
+
+            using subarray_iterator = arrnd_axis_iterator<this_type>;
+            using const_subarray_iterator = arrnd_axis_const_iterator<this_type>;
+            using reverse_subarray_iterator = arrnd_axis_reverse_iterator<this_type>;
+            using const_reverse_subarray_iterator = arrnd_axis_reverse_const_iterator<this_type>;
 
             arrnd() = default;
 
@@ -3530,6 +4103,50 @@ namespace oc {
 
 
 
+            auto begin_subarray(std::int64_t fixed_axis = 0)
+            {
+                return subarray_iterator(*this, fixed_axis, 0);
+            }
+
+            auto end_subarray(std::int64_t fixed_axis = 0)
+            {
+                return subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis]);
+            }
+
+
+            auto cbegin_subarray(std::int64_t fixed_axis = 0) const
+            {
+                return const_subarray_iterator(*this, fixed_axis, 0);
+            }
+
+            auto cend_subarray(std::int64_t fixed_axis = 0) const
+            {
+                return const_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis]);
+            }
+
+
+            auto rbegin_subarray(std::int64_t fixed_axis = 0)
+            {
+                return reverse_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis] - 1);
+            }
+
+            auto rend_subarray(std::int64_t fixed_axis = 0)
+            {
+                return reverse_subarray_iterator(*this, fixed_axis, -1);
+            }
+
+            auto crbegin_subarray(std::int64_t fixed_axis = 0) const
+            {
+                return const_reverse_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis] - 1);
+            }
+
+            auto crend_subarray(std::int64_t fixed_axis = 0) const
+            {
+                return const_reverse_subarray_iterator(*this, fixed_axis, -1);
+            }
+
+
+
             [[nodiscard]] auto abs()
             {
                 return transform([](const value_type& a) { return ::abs(a); });
@@ -4701,6 +5318,8 @@ namespace oc {
     using details::arrnd_const_iterator;
     using details::arrnd_reverse_iterator;
     using details::arrnd_const_reverse_iterator;
+
+    using details::arrnd_axis_iterator;
 
     using details::copy;
     using details::clone;
