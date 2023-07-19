@@ -2930,6 +2930,16 @@ namespace oc {
                 return buffsp_ ? buffsp_->data() : nullptr;
             }
 
+            [[nodiscard]] auto size() const noexcept
+            {
+                return hdr_.size();
+            }
+
+            [[nodiscard]] auto dims() const noexcept
+            {
+                return hdr_.dims();
+            }
+
             [[nodiscard]] const_reference operator[](std::int64_t index) const noexcept
             {
                 return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
@@ -4398,6 +4408,18 @@ namespace oc {
             return arr.empty();
         }
 
+        template <arrnd_complient ArCo>
+        [[nodiscard]] inline auto size(const ArCo& arr) noexcept
+        {
+            return arr.size();
+        }
+
+        template <arrnd_complient ArCo>
+        [[nodiscard]] inline auto dims(const ArCo& arr) noexcept
+        {
+            return arr.dims();
+        }
+
         template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
         [[nodiscard]] inline auto reduce(const ArCo& arr, Binary_op&& op)
         {
@@ -5307,6 +5329,8 @@ namespace oc {
         }
     }
 
+    using details::arrnd_complient;
+
     using details::arrnd;
 
     using details::arrnd_header;
@@ -5320,6 +5344,9 @@ namespace oc {
     using details::arrnd_const_reverse_iterator;
 
     using details::arrnd_axis_iterator;
+    using details::arrnd_axis_const_iterator;
+    using details::arrnd_axis_reverse_iterator;
+    using details::arrnd_axis_reverse_const_iterator;
 
     using details::copy;
     using details::clone;
@@ -5330,6 +5357,8 @@ namespace oc {
     using details::remove;
 
     using details::empty;
+    using details::size;
+    using details::dims;
     using details::all_match;
     using details::any_match;
     using details::transform;
