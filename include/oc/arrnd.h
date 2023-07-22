@@ -611,6 +611,26 @@ namespace oc {
             T start{ 0 };
             T stop{ 0 };
             T step{ 1 };
+
+            [[nodicsard]] static constexpr Interval full() noexcept {
+                return Interval{ std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
+            }
+
+            [[nodiscard]] static constexpr Interval from(T nstart) {
+                return Interval{ nstart, std::numeric_limits<T>::max() };
+            }
+
+            [[nodicsard]] static constexpr Interval to(T nstop) noexcept {
+                return Interval{ std::numeric_limits<T>::min(), nstop };
+            }
+
+            [[nodicsard]] static constexpr Interval at(T npos) noexcept {
+                return Interval{ npos, npos };
+            }
+
+            [[nodiscard]] static constexpr Interval between(T nstart, T nstop, T nstep = 1) noexcept {
+                return Interval{ nstart, nstop, nstep };
+            }
         };
 
         template <std::integral T>
@@ -622,7 +642,10 @@ namespace oc {
         template <std::integral T>
         [[nodiscard]] inline Interval<T> modulo(const Interval<T>& i, const T& modulus) noexcept
         {
-            return { modulo(i.start, modulus), modulo(i.stop, modulus), i.step };
+            T nstart = i.start == std::numeric_limits<T>::min() ? 0 : i.start;
+            T nstop = i.stop == std::numeric_limits<T>::max() ? modulus - 1 : i.stop;
+
+            return { modulo(nstart, modulus), modulo(nstop, modulus), i.step };
         }
 
         template <std::integral T>

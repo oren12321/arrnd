@@ -97,6 +97,39 @@ TEST(Interval_test, forward)
     EXPECT_EQ(3, i2.step);
 }
 
+TEST(Interval_test, presets)
+{
+    oc::Interval<std::int64_t> i1 = oc::Interval<std::int64_t>::at(5);
+    EXPECT_EQ(5, i1.start);
+    EXPECT_EQ(5, i1.stop);
+    EXPECT_EQ(1, i1.step);
+
+    oc::Interval<std::int64_t> i2 = oc::Interval<std::int64_t>::full();
+    EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i2.start);
+    EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i2.stop);
+    EXPECT_EQ(1, i2.step);
+
+    oc::Interval<std::int64_t> i3 = oc::Interval<std::int64_t>::from(5);
+    EXPECT_EQ(5, i3.start);
+    EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i3.stop);
+    EXPECT_EQ(1, i3.step);
+
+    oc::Interval<std::int64_t> i4 = oc::Interval<std::int64_t>::to(5);
+    EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i4.start);
+    EXPECT_EQ(5, i4.stop);
+    EXPECT_EQ(1, i4.step);
+
+    oc::Interval<std::int64_t> i5 = oc::Interval<std::int64_t>::between(1, 5);
+    EXPECT_EQ(1, i5.start);
+    EXPECT_EQ(5, i5.stop);
+    EXPECT_EQ(1, i5.step);
+
+    oc::Interval<std::int64_t> i6 = oc::Interval<std::int64_t>::between(1, 5, 5);
+    EXPECT_EQ(1, i6.start);
+    EXPECT_EQ(5, i6.stop);
+    EXPECT_EQ(5, i6.step);
+}
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::details::simple_dynamic_vector<std::string>;
