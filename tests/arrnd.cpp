@@ -45,86 +45,86 @@ TEST(Algorithms_test, two_numbers_can_be_compared_with_specified_percision)
 
 
 
-TEST(Interval_test, initialization)
+TEST(interval_test, initialization)
 {
-    oc::Interval i1{};
+    oc::interval i1{};
     EXPECT_EQ(0, i1.start);
     EXPECT_EQ(0, i1.stop);
     EXPECT_EQ(1, i1.step);
 
-    oc::Interval i2{ 1 };
+    oc::interval i2{ 1 };
     EXPECT_EQ(1, i2.start);
     EXPECT_EQ(1, i2.stop);
     EXPECT_EQ(1, i2.step);
 
-    oc::Interval i3{ 1, 2 };
+    oc::interval i3{ 1, 2 };
     EXPECT_EQ(1, i3.start);
     EXPECT_EQ(2, i3.stop);
     EXPECT_EQ(1, i3.step);
 
-    oc::Interval i4{ 1, 2, 3 };
+    oc::interval i4{ 1, 2, 3 };
     EXPECT_EQ(1, i4.start);
     EXPECT_EQ(2, i4.stop);
     EXPECT_EQ(3, i4.step);
 }
 
-TEST(Interval_test, reverse)
+TEST(interval_test, reverse)
 {
-    oc::Interval i{ oc::reverse(oc::Interval{ 1, 2, 3 }) };
+    oc::interval i{ oc::reverse(oc::interval{ 1, 2, 3 }) };
     EXPECT_EQ(2, i.start);
     EXPECT_EQ(1, i.stop);
     EXPECT_EQ(-3, i.step);
 }
 
-TEST(Interval_test, modulo)
+TEST(interval_test, modulo)
 {
-    oc::Interval i{ oc::modulo(oc::Interval{-26, 26, -1}, 5) };
+    oc::interval i{ oc::modulo(oc::interval{-26, 26, -1}, 5) };
     EXPECT_EQ(4, i.start);
     EXPECT_EQ(1, i.stop);
     EXPECT_EQ(-1, i.step);
 }
 
-TEST(Interval_test, forward)
+TEST(interval_test, forward)
 {
-    oc::Interval i1{ oc::forward(oc::Interval{ 1, 2, 3 }) };
+    oc::interval i1{ oc::forward(oc::interval{ 1, 2, 3 }) };
     EXPECT_EQ(1, i1.start);
     EXPECT_EQ(2, i1.stop);
     EXPECT_EQ(3, i1.step);
 
-    oc::Interval i2{ oc::forward(oc::Interval{ 2, 1, -3 }) };
+    oc::interval i2{ oc::forward(oc::interval{ 2, 1, -3 }) };
     EXPECT_EQ(1, i2.start);
     EXPECT_EQ(2, i2.stop);
     EXPECT_EQ(3, i2.step);
 }
 
-TEST(Interval_test, presets)
+TEST(interval_test, presets)
 {
-    oc::Interval<std::int64_t> i1 = oc::Interval<std::int64_t>::at(5);
+    oc::interval<std::int64_t> i1 = oc::interval<std::int64_t>::at(5);
     EXPECT_EQ(5, i1.start);
     EXPECT_EQ(5, i1.stop);
     EXPECT_EQ(1, i1.step);
 
-    oc::Interval<std::int64_t> i2 = oc::Interval<std::int64_t>::full();
+    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full();
     EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i2.start);
     EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i2.stop);
     EXPECT_EQ(1, i2.step);
 
-    oc::Interval<std::int64_t> i3 = oc::Interval<std::int64_t>::from(5);
+    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5);
     EXPECT_EQ(5, i3.start);
     EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i3.stop);
     EXPECT_EQ(1, i3.step);
 
-    oc::Interval<std::int64_t> i4 = oc::Interval<std::int64_t>::to(5);
+    oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5);
     EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i4.start);
     EXPECT_EQ(5, i4.stop);
     EXPECT_EQ(1, i4.step);
 
-    oc::Interval<std::int64_t> i5 = oc::Interval<std::int64_t>::between(1, 5);
+    oc::interval<std::int64_t> i5 = oc::interval<std::int64_t>::between(1, 5);
     EXPECT_EQ(1, i5.start);
     EXPECT_EQ(5, i5.stop);
     EXPECT_EQ(1, i5.step);
 
-    oc::Interval<std::int64_t> i6 = oc::Interval<std::int64_t>::between(1, 5, 5);
+    oc::interval<std::int64_t> i6 = oc::interval<std::int64_t>::between(1, 5, 5);
     EXPECT_EQ(1, i6.start);
     EXPECT_EQ(5, i6.stop);
     EXPECT_EQ(5, i6.step);
@@ -371,7 +371,7 @@ TEST(arrnd_test, iterators)
 
     // axis iterators
     std::for_each(arr.begin_subarray(), arr.end_subarray(), [](const auto& sa) {
-        auto exsa = sa[Interval<std::int64_t>{0, 0}];
+        auto exsa = sa[interval<std::int64_t>{0, 0}];
         std::for_each(exsa.rbegin_subarray(), exsa.rend_subarray(), [](auto& sa) { sa *= 2; });
         });
 
@@ -2602,7 +2602,7 @@ TEST(arrnd_test, can_return_slice)
 
     // empty ranges
     {
-        std::initializer_list<oc::Interval<std::int64_t>> ranges{};
+        std::initializer_list<oc::interval<std::int64_t>> ranges{};
         Integer_array rarr{ arr[ranges] };
         EXPECT_TRUE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.data(), rarr.data());
@@ -2616,7 +2616,7 @@ TEST(arrnd_test, can_return_slice)
 
     // empty array
     {
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[std::initializer_list<oc::Interval<std::int64_t>>{}])));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[std::initializer_list<oc::interval<std::int64_t>>{}])));
         EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[{ {0,1}, {0,4,2} }])));
     }
 
@@ -3110,7 +3110,7 @@ TEST(arrnd_test, copy_from)
     // specific ranges
     {
         arrnd<double> src{ {6}, {1, 2, 3, 4, 5, 6} };
-        std::initializer_list<Interval<std::int64_t>> ranges{ {0, 2}, {0, 0}, {1, 1} };
+        std::initializer_list<interval<std::int64_t>> ranges{ {0, 2}, {0, 0}, {1, 1} };
         arrnd<int> dst{ {3, 1, 2}, {6, 5, 4, 3, 2, 1} };
 
         copy(src, dst, ranges);
@@ -3780,12 +3780,12 @@ TEST(arrnd_test, complex_array)
     {
         const int edata1[1][2][1]{ {{11},{17}} };
         oc::arrnd<int> rarr1{ {1, 2, 1}, reinterpret_cast<const int*>(edata1) };
-        auto earr1 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::Interval<std::int64_t>{0, 0}][oc::Interval<std::int64_t>{0, 0}];
+        auto earr1 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::interval<std::int64_t>{0, 0}][oc::interval<std::int64_t>{0, 0}];
         EXPECT_TRUE(oc::all_equal(rarr1, earr1));
 
         const int edata2[1][2][1]{ {{47},{53}} };
         oc::arrnd<int> rarr2{ {1, 2, 1}, reinterpret_cast<const int*>(edata2) };
-        auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::Interval<std::int64_t>{1, 1}][oc::Interval<std::int64_t>{0, 0}];
+        auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::interval<std::int64_t>{1, 1}][oc::interval<std::int64_t>{0, 0}];
         EXPECT_TRUE(oc::all_equal(rarr2, earr2));
     }
 }

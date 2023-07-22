@@ -592,55 +592,55 @@ namespace oc {
 
     namespace details {
         template <std::integral T = std::int64_t>
-        struct Interval {
-            Interval(const T& nstart, const T& nstop, const T& nstep) noexcept
+        struct interval {
+            interval(const T& nstart, const T& nstop, const T& nstep) noexcept
                 : start(nstart), stop(nstop), step(nstep) {}
 
-            Interval(const T& nstart, const T& nstop) noexcept
-                : Interval(nstart, nstop, 1) {}
+            interval(const T& nstart, const T& nstop) noexcept
+                : interval(nstart, nstop, 1) {}
 
-            Interval(const T& nstart) noexcept
-                : Interval(nstart, nstart, 1) {}
+            interval(const T& nstart) noexcept
+                : interval(nstart, nstart, 1) {}
 
-            Interval() = default;
-            Interval(const Interval&) = default;
-            Interval& operator=(const Interval&) = default;
-            Interval(Interval&) = default;
-            Interval& operator=(Interval&) = default;
+            interval() = default;
+            interval(const interval&) = default;
+            interval& operator=(const interval&) = default;
+            interval(interval&) = default;
+            interval& operator=(interval&) = default;
 
             T start{ 0 };
             T stop{ 0 };
             T step{ 1 };
 
-            [[nodicsard]] static constexpr Interval full() noexcept {
-                return Interval{ std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
+            [[nodicsard]] static constexpr interval full() noexcept {
+                return interval{ std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
             }
 
-            [[nodiscard]] static constexpr Interval from(T nstart) {
-                return Interval{ nstart, std::numeric_limits<T>::max() };
+            [[nodiscard]] static constexpr interval from(T nstart) {
+                return interval{ nstart, std::numeric_limits<T>::max() };
             }
 
-            [[nodicsard]] static constexpr Interval to(T nstop) noexcept {
-                return Interval{ std::numeric_limits<T>::min(), nstop };
+            [[nodicsard]] static constexpr interval to(T nstop) noexcept {
+                return interval{ std::numeric_limits<T>::min(), nstop };
             }
 
-            [[nodicsard]] static constexpr Interval at(T npos) noexcept {
-                return Interval{ npos, npos };
+            [[nodicsard]] static constexpr interval at(T npos) noexcept {
+                return interval{ npos, npos };
             }
 
-            [[nodiscard]] static constexpr Interval between(T nstart, T nstop, T nstep = 1) noexcept {
-                return Interval{ nstart, nstop, nstep };
+            [[nodiscard]] static constexpr interval between(T nstart, T nstop, T nstep = 1) noexcept {
+                return interval{ nstart, nstop, nstep };
             }
         };
 
         template <std::integral T>
-        [[nodiscard]] inline Interval<T> reverse(const Interval<T>& i) noexcept
+        [[nodiscard]] inline interval<T> reverse(const interval<T>& i) noexcept
         {
             return { i.stop, i.start, -i.step };
         }
 
         template <std::integral T>
-        [[nodiscard]] inline Interval<T> modulo(const Interval<T>& i, const T& modulus) noexcept
+        [[nodiscard]] inline interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
         {
             T nstart = i.start == std::numeric_limits<T>::min() ? 0 : i.start;
             T nstop = i.stop == std::numeric_limits<T>::max() ? modulus - 1 : i.stop;
@@ -649,13 +649,13 @@ namespace oc {
         }
 
         template <std::integral T>
-        [[nodiscard]] inline Interval<T> forward(const Interval<T>& i) noexcept
+        [[nodiscard]] inline interval<T> forward(const interval<T>& i) noexcept
         {
             return i.step < T{ 0 } ? reverse(i) : i;
         }
     }
 
-    using details::Interval;
+    using details::interval;
 
     using details::modulo;
 
@@ -791,31 +791,31 @@ namespace oc {
         /**
         * @param[out] strides An already allocated memory for computed strides.
         * @return Number of computed strides
-        * @note When number of interval is smaller than number of strides, the other strides computed from previous dimensions.
+        * @note When number of ranges is smaller than number of strides, the other strides computed from previous dimensions.
         */
-        inline std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const Interval<std::int64_t>> intervals, std::span<std::int64_t> strides) noexcept
+        inline std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> strides) noexcept
         {
             std::int64_t nstrides{ std::ssize(previous_strides) > std::ssize(strides) ? std::ssize(strides) : std::ssize(previous_strides) };
             if (nstrides <= 0) {
                 return 0;
             }
 
-            std::int64_t ncomp_from_intervals{ nstrides > std::ssize(intervals) ? std::ssize(intervals) : nstrides };
+            std::int64_t ncomp_from_ranges{ nstrides > std::ssize(ranges) ? std::ssize(ranges) : nstrides };
 
-            // compute strides with interval step
-            for (std::int64_t i = 0; i < ncomp_from_intervals; ++i) {
-                strides[i] = previous_strides[i] * forward(intervals[i]).step;
+            // compute strides with range step
+            for (std::int64_t i = 0; i < ncomp_from_ranges; ++i) {
+                strides[i] = previous_strides[i] * forward(ranges[i]).step;
             }
 
             // set strides from previous strides
-            if (std::ssize(previous_strides) > ncomp_from_intervals) {
-                for (std::int64_t i = ncomp_from_intervals; i < std::ssize(previous_strides); ++i) {
+            if (std::ssize(previous_strides) > ncomp_from_ranges) {
+                for (std::int64_t i = ncomp_from_ranges; i < std::ssize(previous_strides); ++i) {
                     strides[i] = previous_strides[i];
                 }
             }
 
             std::int64_t nstrides_calc =
-                (std::ssize(previous_strides) > ncomp_from_intervals ? std::ssize(previous_strides) : ncomp_from_intervals);
+                (std::ssize(previous_strides) > ncomp_from_ranges ? std::ssize(previous_strides) : ncomp_from_ranges);
 
             // compute strides from previous dimensions
             if (nstrides_calc < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
@@ -831,23 +831,23 @@ namespace oc {
         /**
         * @param[out] dims An already allocated memory for computed dimensions.
         * @return Number of computed dimensions
-        * @note Previous dimensions are used in case of small number of intervals.
+        * @note Previous dimensions are used in case of small number of ranges.
         */
-        inline std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const Interval<std::int64_t>> intervals, std::span<std::int64_t> dims) noexcept
+        inline std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> dims) noexcept
         {
             std::int64_t ndims{ std::ssize(previous_dims) > std::ssize(dims) ? std::ssize(dims) : std::ssize(previous_dims) };
             if (ndims <= 0) {
                 return 0;
             }
 
-            std::int64_t num_computed_dims{ ndims > std::ssize(intervals) ? std::ssize(intervals) : ndims };
+            std::int64_t num_computed_dims{ ndims > std::ssize(ranges) ? std::ssize(ranges) : ndims };
 
             for (std::int64_t i = 0; i < num_computed_dims; ++i) {
-                Interval<std::int64_t> interval{ forward(modulo(intervals[i], previous_dims[i])) };
-                if (interval.start > interval.stop || interval.step <= 0) {
+                interval<std::int64_t> range{ forward(modulo(ranges[i], previous_dims[i])) };
+                if (range.start > range.stop || range.step <= 0) {
                     return 0;
                 }
-                dims[i] = static_cast<std::int64_t>(std::ceil((interval.stop - interval.start + 1.0) / interval.step));
+                dims[i] = static_cast<std::int64_t>(std::ceil((range.stop - range.start + 1.0) / range.step));
             }
 
             for (std::int64_t i = num_computed_dims; i < ndims; ++i) {
@@ -857,19 +857,19 @@ namespace oc {
             return ndims;
         }
 
-        [[nodiscard]] inline std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const Interval<std::int64_t>> intervals) noexcept
+        [[nodiscard]] inline std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges) noexcept
         {
             std::int64_t offset{ previous_offset };
 
-            if (previous_dims.empty() || previous_strides.empty() || intervals.empty()) {
+            if (previous_dims.empty() || previous_strides.empty() || ranges.empty()) {
                 return offset;
             }
 
             std::int64_t num_computations{ std::ssize(previous_dims) > std::ssize(previous_strides) ? std::ssize(previous_strides) : std::ssize(previous_dims) };
-            num_computations = (num_computations > std::ssize(intervals) ? std::ssize(intervals) : num_computations);
+            num_computations = (num_computations > std::ssize(ranges) ? std::ssize(ranges) : num_computations);
 
             for (std::int64_t i = 0; i < num_computations; ++i) {
-                offset += previous_strides[i] * forward(modulo(intervals[i], previous_dims[i])).start;
+                offset += previous_strides[i] * forward(modulo(ranges[i], previous_dims[i])).start;
             }
             return offset;
         }
@@ -987,7 +987,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            arrnd_header(const arrnd_header& previous_hdr, std::span<const Interval<std::int64_t>> intervals)
+            arrnd_header(const arrnd_header& previous_hdr, std::span<const interval<std::int64_t>> ranges)
             {
                 if (numel(previous_hdr.dims()) <= 0) {
                     return;
@@ -995,7 +995,7 @@ namespace oc {
 
                 storage_type dims = storage_type(previous_hdr.dims().size());
 
-                if (compute_dims(previous_hdr.dims(), intervals, dims) <= 0) {
+                if (compute_dims(previous_hdr.dims(), ranges, dims) <= 0) {
                     return;
                 }
 
@@ -1004,9 +1004,9 @@ namespace oc {
                 count_ = numel(dims_);
 
                 strides_ = storage_type(previous_hdr.dims().size());
-                compute_strides(previous_hdr.dims(), previous_hdr.strides(), intervals, strides_);
+                compute_strides(previous_hdr.dims(), previous_hdr.strides(), ranges, strides_);
 
-                offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), intervals);
+                offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), ranges);
 
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
                     [](auto a, auto b) { return a + b; },
@@ -1015,14 +1015,14 @@ namespace oc {
                 is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
             }
 
-            arrnd_header(const arrnd_header& previous_hdr, Interval<std::int64_t> interval)
-                : arrnd_header(previous_hdr, std::span<Interval<std::int64_t>>(&interval, 1))
+            arrnd_header(const arrnd_header& previous_hdr, interval<std::int64_t> range)
+                : arrnd_header(previous_hdr, std::span<interval<std::int64_t>>(&range, 1))
             {
                 if (empty()) {
                     return;
                 }
 
-                auto fixed_ival = modulo(interval, dims_[0]);
+                auto fixed_ival = modulo(range, dims_[0]);
 
                 if (dims_[0] == 1) {
                     offset_ += fixed_ival.start * strides_[0];
@@ -2193,7 +2193,7 @@ namespace oc {
             using value_type = Arrnd;
             using reference = Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
 
             constexpr arrnd_axis_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
                 : arrnd_ref_(arrnd_ref)
@@ -2216,13 +2216,13 @@ namespace oc {
 
                 last_index_ = arrnd_ref.header().dims()[fixed_axis_];
 
-                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
                 for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
                 }
-                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                ranges_[fixed_axis_] = { current_index_, current_index_ };
                 if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 }
             }
 
@@ -2239,8 +2239,8 @@ namespace oc {
             constexpr arrnd_axis_iterator& operator++()
             {
                 ++current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2257,11 +2257,11 @@ namespace oc {
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 if (current_index_ >= last_index_) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2275,8 +2275,8 @@ namespace oc {
             constexpr arrnd_axis_iterator& operator--()
             {
                 --current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2293,11 +2293,11 @@ namespace oc {
                 if (current_index_ < 0) {
                     current_index_  = -1;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 if (current_index_ < 0) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2323,7 +2323,7 @@ namespace oc {
             std::int64_t fixed_axis_;
             std::int64_t current_index_;
             std::int64_t last_index_;
-            storage_type intervals_;
+            storage_type ranges_;
 
             value_type slice_;
         };
@@ -2337,7 +2337,7 @@ namespace oc {
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
 
             constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
                 : arrnd_ref_(arrnd_ref)
@@ -2360,13 +2360,13 @@ namespace oc {
 
                 last_index_ = arrnd_ref.header().dims()[fixed_axis_];
 
-                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
                 for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
                 }
-                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                ranges_[fixed_axis_] = { current_index_, current_index_ };
                 if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 }
             }
 
@@ -2383,8 +2383,8 @@ namespace oc {
             constexpr arrnd_axis_const_iterator& operator++()
             {
                 ++current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2401,8 +2401,8 @@ namespace oc {
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2416,8 +2416,8 @@ namespace oc {
             constexpr arrnd_axis_const_iterator& operator--()
             {
                 --current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2434,8 +2434,8 @@ namespace oc {
                 if (current_index_ < 0) {
                     current_index_ = -1;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2461,7 +2461,7 @@ namespace oc {
             std::int64_t fixed_axis_;
             std::int64_t current_index_;
             std::int64_t last_index_;
-            storage_type intervals_;
+            storage_type ranges_;
 
             value_type slice_;
         };
@@ -2477,7 +2477,7 @@ namespace oc {
             using value_type = Arrnd;
             using reference = Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
 
             constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
                 : arrnd_ref_(arrnd_ref)
@@ -2500,13 +2500,13 @@ namespace oc {
 
                 last_index_ = arrnd_ref.header().dims()[fixed_axis_];
 
-                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
                 for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
                 }
-                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                ranges_[fixed_axis_] = { current_index_, current_index_ };
                 if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 }
             }
 
@@ -2523,8 +2523,8 @@ namespace oc {
             constexpr arrnd_axis_reverse_iterator& operator--()
             {
                 ++current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2541,11 +2541,11 @@ namespace oc {
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 if (current_index_ >= last_index_) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2559,8 +2559,8 @@ namespace oc {
             constexpr arrnd_axis_reverse_iterator& operator++()
             {
                 --current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2577,11 +2577,11 @@ namespace oc {
                 if (current_index_ < 0) {
                     current_index_ = -1;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 if (current_index_ < 0) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2607,7 +2607,7 @@ namespace oc {
             std::int64_t fixed_axis_;
             std::int64_t current_index_;
             std::int64_t last_index_;
-            storage_type intervals_;
+            storage_type ranges_;
 
             value_type slice_;
         };
@@ -2621,7 +2621,7 @@ namespace oc {
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<Interval<std::int64_t>>;
+            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
 
             constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
                 : arrnd_ref_(arrnd_ref)
@@ -2644,13 +2644,13 @@ namespace oc {
 
                 last_index_ = arrnd_ref.header().dims()[fixed_axis_];
 
-                intervals_ = storage_type(std::ssize(arrnd_ref.header().dims()));
+                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
                 for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    intervals_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
+                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
                 }
-                intervals_[fixed_axis_] = { current_index_, current_index_ };
+                ranges_[fixed_axis_] = { current_index_, current_index_ };
                 if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 }
             }
 
@@ -2667,8 +2667,8 @@ namespace oc {
             constexpr arrnd_axis_reverse_const_iterator& operator--()
             {
                 ++current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2685,8 +2685,8 @@ namespace oc {
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2700,8 +2700,8 @@ namespace oc {
             constexpr arrnd_axis_reverse_const_iterator& operator++()
             {
                 --current_index_;
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2718,8 +2718,8 @@ namespace oc {
                 if (current_index_ < 0) {
                     current_index_ = -1;
                 }
-                intervals_[fixed_axis_] = Interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<Interval<std::int64_t>>(intervals_.data(), intervals_.size())];
+                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2745,7 +2745,7 @@ namespace oc {
             std::int64_t fixed_axis_;
             std::int64_t current_index_;
             std::int64_t last_index_;
-            storage_type intervals_;
+            storage_type ranges_;
 
             value_type slice_;
         };
@@ -2990,7 +2990,7 @@ namespace oc {
                 return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
             }
 
-            [[nodiscard]] shared_ref<this_type> operator[](std::span<const Interval<std::int64_t>> ranges) const
+            [[nodiscard]] shared_ref<this_type> operator[](std::span<const interval<std::int64_t>> ranges) const
             {
                 if (ranges.empty() || empty()) {
                     return *this;
@@ -3001,12 +3001,12 @@ namespace oc {
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] shared_ref<this_type> operator[](std::initializer_list<Interval<std::int64_t>> ranges) const
+            [[nodiscard]] shared_ref<this_type> operator[](std::initializer_list<interval<std::int64_t>> ranges) const
             {
-                return (*this)[std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()}];
+                return (*this)[std::span<const interval<std::int64_t>>{ranges.begin(), ranges.size()}];
             }
 
-            [[nodiscard]] shared_ref<this_type> operator[](Interval<std::int64_t> range) const
+            [[nodiscard]] shared_ref<this_type> operator[](interval<std::int64_t> range) const
             {
                 if (empty() || std::ssize(header().dims()) == 1) {
                     return *this;
@@ -3076,16 +3076,16 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            const this_type& copy_to(ArCo& dst, std::span<const Interval<std::int64_t>> ranges) const
+            const this_type& copy_to(ArCo& dst, std::span<const interval<std::int64_t>> ranges) const
             {
                 auto slice = dst[ranges];
                 copy_to(slice);
                 return *this;
             }
             template <arrnd_complient ArCo>
-            const this_type& copy_to(ArCo& dst, std::initializer_list<Interval<std::int64_t>> ranges) const
+            const this_type& copy_to(ArCo& dst, std::initializer_list<interval<std::int64_t>> ranges) const
             {
-                return copy_to(dst, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
+                return copy_to(dst, std::span<const interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
             /**
@@ -3130,15 +3130,15 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo>
-            this_type& copy_from(const ArCo& src, std::span<const Interval<std::int64_t>> ranges)
+            this_type& copy_from(const ArCo& src, std::span<const interval<std::int64_t>> ranges)
             {
                 src.copy_to(*this, ranges);
                 return *this;
             }
             template <arrnd_complient ArCo>
-            this_type& copy_from(const ArCo& src, std::initializer_list<Interval<std::int64_t>> ranges)
+            this_type& copy_from(const ArCo& src, std::initializer_list<interval<std::int64_t>> ranges)
             {
-                return copy_from(src, std::span<const Interval<std::int64_t>>{ranges.begin(), ranges.size()});
+                return copy_from(src, std::span<const interval<std::int64_t>>{ranges.begin(), ranges.size()});
             }
 
             template <arrnd_complient ArCo>
@@ -4320,22 +4320,22 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline auto& copy(const ArCo1& src, ArCo2& dst, std::span<const Interval<std::int64_t>> ranges)
+        inline auto& copy(const ArCo1& src, ArCo2& dst, std::span<const interval<std::int64_t>> ranges)
         {
             return dst.copy_from(src, ranges);
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::span<const Interval<std::int64_t>> ranges)
+        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::span<const interval<std::int64_t>> ranges)
         {
             return dst.copy_from(src, ranges);
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline auto& copy(const ArCo1& src, ArCo2& dst, std::initializer_list<Interval<std::int64_t>> ranges)
+        inline auto& copy(const ArCo1& src, ArCo2& dst, std::initializer_list<interval<std::int64_t>> ranges)
         {
             return dst.copy_from(src, ranges);
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<Interval<std::int64_t>> ranges)
+        inline auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<interval<std::int64_t>> ranges)
         {
             return dst.copy_from(src, ranges);
         }
@@ -5324,7 +5324,7 @@ namespace oc {
                             os << ' ';
                         }
                     }
-                    ostream_operator_recursive(os, arco[Interval<std::int64_t>{i, i}], nvectical_spaces);
+                    ostream_operator_recursive(os, arco[interval<std::int64_t>{i, i}], nvectical_spaces);
                     if (i < arco.header().dims()[0] - 1) {
                         os << '\n';
                     }
