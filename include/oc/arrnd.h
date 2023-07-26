@@ -3456,7 +3456,7 @@ namespace oc {
             {
                 using U = std::invoke_result_t<Binary_op, T, typename ArCo::value_type>;
 
-                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                if (header().dims() != arr.header().dims()) {
                     return replaced_type<U>();
                 }
 
@@ -3502,7 +3502,7 @@ namespace oc {
             template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
             constexpr this_type& apply(const ArCo& arr, Binary_op&& op)
             {
-                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                if (header().dims() != arr.header().dims()) {
                     return *this;
                 }
 
@@ -3686,7 +3686,7 @@ namespace oc {
                     return this_type();
                 }
 
-                if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
+                if (header().dims() != mask.header().dims()) {
                     return this_type();
                 }
 
@@ -3761,7 +3761,7 @@ namespace oc {
                     return replaced_type<std::int64_t>();
                 }
 
-                if (!std::equal(header().dims().begin(), header().dims().end(), mask.header().dims().begin(), mask.header().dims().end())) {
+                if (header().dims() != mask.header().dims()) {
                     return replaced_type<std::int64_t>();
                 }
 
@@ -3839,7 +3839,7 @@ namespace oc {
                     return false;
                 }
 
-                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                if (header().dims() != arr.header().dims()) {
                     return false;
                 }
 
@@ -3898,7 +3898,7 @@ namespace oc {
                     return false;
                 }
 
-                if (!std::equal(header().dims().begin(), header().dims().end(), arr.header().dims().begin(), arr.header().dims().end())) {
+                if (header().dims() != arr.header().dims()) {
                     return false;
                 }
 
