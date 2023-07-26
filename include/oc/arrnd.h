@@ -982,7 +982,7 @@ namespace oc {
                 strides_ = storage_type(dims.size());
                 compute_strides(dims, strides_);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
@@ -1008,7 +1008,7 @@ namespace oc {
 
                 offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), ranges);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
 
@@ -1028,7 +1028,7 @@ namespace oc {
                     offset_ += fixed_ival.start * strides_[0];
                     dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
                     strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
-                    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                         [](auto a, auto b) { return a + b; },
                         [](auto a, auto b) { return (a - 1) * b; });
                     is_subarray_ = true;
@@ -1064,7 +1064,7 @@ namespace oc {
 
                 count_ = numel(dims_);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
@@ -1097,7 +1097,7 @@ namespace oc {
 
                 count_ = numel(dims_);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
@@ -1125,7 +1125,7 @@ namespace oc {
                 strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
@@ -1172,7 +1172,7 @@ namespace oc {
                 strides_ = storage_type(previous_hdr.dims().size());
                 compute_strides(dims_, strides_);
 
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), 0,
+                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }
@@ -1558,7 +1558,7 @@ namespace oc {
                 step_size_between_super_groups_ = hdr.strides()[axis];
 
                 num_groups_in_super_group_ =
-                    std::accumulate(hdr.dims().begin(), hdr.dims().begin() + axis + 1, 1, std::multiplies<>{}) / num_super_groups_;
+                    std::accumulate(hdr.dims().begin(), hdr.dims().begin() + axis + 1, std::int64_t{ 1 }, std::multiplies<>{}) / num_super_groups_;
                 group_size_ = hdr.strides()[axis];
                 step_size_inside_group_ = hdr.strides().back();
                 step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
@@ -3350,7 +3350,7 @@ namespace oc {
 
                 std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
                 std::int64_t cycle = fixed_ind *
-                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), std::int64_t{ 1 }, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
 
                 for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
                     res.data()[*res_gen] = data()[*gen];
@@ -3415,7 +3415,7 @@ namespace oc {
                 indexer_type res_gen(res.header(), fixed_axis);
 
                 std::int64_t cycle = fixed_ind *
-                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), 1, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
+                    (std::accumulate(res.header().dims().begin(), res.header().dims().end(), std::int64_t{ 1 }, std::multiplies<>{}) / res.header().dims()[fixed_axis]);
 
                 std::int64_t removals = header().count() - res.header().count();
 
