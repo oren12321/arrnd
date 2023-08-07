@@ -13,6 +13,7 @@
 #include <sstream>
 #include <cmath>
 #include <ostream>
+#include <cassert>
 
 namespace oc {
 
@@ -43,14 +44,19 @@ namespace oc {
 
                 [[nodiscard]] constexpr pointer allocate(size_type n)
                 {
-                    return n == 0 ? nullptr : reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
+                    assert(n > 0 && "non positive allocation size");
+                    auto p = reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
+                    if (!p) {
+                        throw std::bad_alloc{};
+                    }
+                    return p;
                 }
 
                 constexpr void deallocate(pointer p, size_type n) noexcept
                 {
-                    if (p && n > 0) {
-                        operator delete[](p, n * sizeof(value_type));
-                    }
+                    assert(p && "nullptr deallocation");
+                    assert(n > 0 && "non positive size deallocation");
+                    operator delete[](p, n * sizeof(value_type));
                 }
         };
 
@@ -75,28 +81,29 @@ namespace oc {
                 constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
                     : size_(size), capacity_(size)
                 {
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    if (data) {
-                        std::uninitialized_copy_n(data, size_, data_ptr_);
-                    }
-                    else if constexpr (!std::is_fundamental_v<T>) {
-                        std::uninitialized_default_construct_n(data_ptr_, size_);
+                    assert(size_ >= 0 && "negative vector size");
+                    if (size > 0) {
+                        data_ptr_ = alloc_.allocate(capacity_);
+                        if (data) {
+                            std::uninitialized_copy_n(data, size_, data_ptr_);
+                        }
+                        else if constexpr (!std::is_fundamental_v<T>) {
+                            std::uninitialized_default_construct_n(data_ptr_, size_);
+                        }
                     }
                 }
 
                 template <typename InputIt>
                 constexpr simple_dynamic_vector(InputIt first, InputIt last)
-                {
-                    size_ = capacity_ = last - first;
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::uninitialized_copy_n(first, size_, data_ptr_);
-                }
+                    : simple_dynamic_vector(last - first, &(*first)) {}
 
                 constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
                     : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_)
                 {
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    if (!other.empty()) {
+                        data_ptr_ = alloc_.allocate(capacity_);
+                        std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    }
                 }
 
                 constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
@@ -105,17 +112,23 @@ namespace oc {
                         return *this;
                     }
 
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(data_ptr_, size_);
+                    if (!empty()) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::destroy_n(data_ptr_, size_);
+                        }
+                        alloc_.deallocate(data_ptr_, capacity_);
                     }
-                    alloc_.deallocate(data_ptr_, capacity_);
 
                     alloc_ = other.alloc_;
                     size_ = other.size_;
                     capacity_ = other.capacity_;
 
-                    data_ptr_ = alloc_.allocate(capacity_);
-                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    if (!other.empty()) {
+                        data_ptr_ = alloc_.allocate(capacity_);
+                        if (data_ptr_) {
+                            std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                        }
+                    }
 
                     return *this;
                 }
@@ -135,10 +148,12 @@ namespace oc {
                         return *this;
                     }
 
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(data_ptr_, size_);
+                    if (!empty()) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::destroy_n(data_ptr_, size_);
+                        }
+                        alloc_.deallocate(data_ptr_, capacity_);
                     }
-                    alloc_.deallocate(data_ptr_, capacity_);
 
                     alloc_ = std::move(other.alloc_);
                     size_ = other.size_;
@@ -154,10 +169,12 @@ namespace oc {
 
                 constexpr ~simple_dynamic_vector() noexcept
                 {
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(data_ptr_, size_);
+                    if (!empty()) {
+                        if constexpr (!std::is_fundamental_v<T>) {
+                            std::destroy_n(data_ptr_, size_);
+                        }
+                        alloc_.deallocate(data_ptr_, capacity_);
                     }
-                    alloc_.deallocate(data_ptr_, capacity_);
                 }
 
                 [[nodiscard]] constexpr bool empty() const noexcept
@@ -182,16 +199,19 @@ namespace oc {
 
                 [[nodiscard]] constexpr reference operator[](size_type index) noexcept
                 {
+                    assert(index >= 0 && "negative index");
                     return data_ptr_[index];
                 }
 
                 [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
                 {
+                    assert(index >= 0 && "negative index");
                     return data_ptr_[index];
                 }
 
                 constexpr void resize(size_type new_size)
                 {
+                    assert(new_size >= 0 && "negative resize");
                     if (new_size < size_) {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::destroy_n(data_ptr_ + new_size, size_ - new_size);
@@ -202,13 +222,17 @@ namespace oc {
                     else if (new_size > size_) {
                         size_type new_capacity = new_size;
                         pointer new_data_ptr = alloc_.allocate(new_capacity);
-                        std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
-                        std::uninitialized_default_construct_n(new_data_ptr + size_, new_size - size_);
-
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::destroy_n(data_ptr_, size_);
+                        if (new_data_ptr) {
+                            std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
+                            std::uninitialized_default_construct_n(new_data_ptr + size_, new_size - size_);
                         }
-                        alloc_.deallocate(data_ptr_, capacity_);
+
+                        if (!empty()) {
+                            if constexpr (!std::is_fundamental_v<T>) {
+                                std::destroy_n(data_ptr_, size_);
+                            }
+                            alloc_.deallocate(data_ptr_, capacity_);
+                        }
 
                         data_ptr_ = new_data_ptr;
                         size_ = new_size;
@@ -218,10 +242,13 @@ namespace oc {
 
                 constexpr void reserve(size_type new_capacity)
                 {
+                    assert(new_capacity >= 0 && "negative reserve");
                     // if (new_capacity <= capacity_) do nothing
                     if (new_capacity > capacity_) {
                         pointer new_data_ptr = alloc_.allocate(new_capacity);
-                        std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
+                        if (new_data_ptr) {
+                            std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
+                        }
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = new_data_ptr;
@@ -231,6 +258,7 @@ namespace oc {
 
                 constexpr void expand(size_type count)
                 {
+                    assert(count >= 0 && "negative expand size");
                     if (size_ + count < capacity_) {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::uninitialized_default_construct_n(data_ptr_ + size_, count);
@@ -241,8 +269,10 @@ namespace oc {
                         size_type new_capacity = static_cast<size_type>(1.5 * (size_ + count));
                         size_type new_size = size_ + count;
                         pointer data_ptr = alloc_.allocate(new_capacity);
-                        std::uninitialized_move_n(data_ptr_, size_, data_ptr);
-                        std::uninitialized_default_construct_n(data_ptr + size_, count);
+                        if (data_ptr) {
+                            std::uninitialized_move_n(data_ptr_, size_, data_ptr);
+                            std::uninitialized_default_construct_n(data_ptr + size_, count);
+                        }
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = data_ptr;
@@ -253,10 +283,7 @@ namespace oc {
 
                 constexpr void shrink(size_type count)
                 {
-                    if (count > size_) {
-                        throw std::length_error("count > size_");
-                    }
-
+                    assert(count <= size_ && "shrink input bigger than vector size");
                     if constexpr (!std::is_fundamental_v<T>) {
                         std::destroy_n(data_ptr_ + size_ - count, count);
                     }
@@ -267,7 +294,9 @@ namespace oc {
                 {
                     if (capacity_ > size_) {
                         pointer data_ptr = alloc_.allocate(size_);
-                        std::uninitialized_move_n(data_ptr_, size_, data_ptr);
+                        if (data_ptr) {
+                            std::uninitialized_move_n(data_ptr_, size_, data_ptr);
+                        }
 
                         alloc_.deallocate(data_ptr_, capacity_);
                         data_ptr_ = data_ptr;
@@ -318,10 +347,10 @@ namespace oc {
             private:
                 allocator_type alloc_;
 
-                size_type size_;
-                size_type capacity_;
+                size_type size_ = 0;
+                size_type capacity_ = 0;
 
-                pointer data_ptr_;
+                pointer data_ptr_ = nullptr;
         };
 
 
@@ -346,9 +375,7 @@ namespace oc {
                 constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
                     : size_(size)
                 {
-                    if (size_ > Capacity) {
-                        throw std::length_error("size_ > Capacity");
-                    }
+                    assert(size_ <= Capacity && "invalid vector size");
                     if (data) {
                         std::copy(data, data + size_, data_ptr_);
                     }
@@ -422,19 +449,19 @@ namespace oc {
 
                 [[nodiscard]] constexpr reference operator[](size_type index) noexcept
                 {
+                    assert(index >= 0 && "invalid index");
                     return data_ptr_[index];
                 }
 
                 [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
                 {
+                    assert(index >= 0 && "invalid index");
                     return data_ptr_[index];
                 }
 
                 constexpr void resize(size_type new_size)
                 {
-                    if (new_size > Capacity) {
-                        throw std::length_error("new_size > Capacity");
-                    }
+                    assert(new_size <= Capacity && "invalid resize input");
                     if (new_size < size_) {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::destroy_n(data_ptr_ + new_size, size_ - new_size);
@@ -454,18 +481,13 @@ namespace oc {
 
                 constexpr void expand(size_type count)
                 {
-                    if (size_ + count > Capacity) {
-                        throw std::length_error("size_ + count > Capacity");
-                    }
+                    assert(size_ + count <= Capacity && "invalid exapnd size");
                     size_ += count;
                 }
 
                 constexpr void shrink(size_type count)
                 {
-                    if (count > size_) {
-                        throw std::length_error("count > size_");
-                    }
-
+                    assert(count <= size_ && "invalid shrink size");
                     if constexpr (!std::is_fundamental_v<T>) {
                         std::destroy_n(data_ptr_ + size_ - count, count);
                     }
@@ -520,7 +542,7 @@ namespace oc {
             private:
                 value_type data_ptr_[Capacity];
 
-                size_type size_;
+                size_type size_ = 0;
         };
     }
 

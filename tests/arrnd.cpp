@@ -191,7 +191,7 @@ TEST(simple_dynamic_vector_test, basic_functionality)
     EXPECT_TRUE(sv.data());
     EXPECT_EQ("a", sv.front());
     //EXPECT_EQ("", sv.back());
-    EXPECT_THROW(sv.shrink(30), std::length_error);
+    //EXPECT_THROW(sv.shrink(30), std::length_error); // assertion failure
 
     sv.expand(5);
     EXPECT_EQ(37, sv.capacity());
@@ -264,7 +264,7 @@ TEST(simple_static_vector_test, basic_functionality)
         EXPECT_EQ(arr[i], sv[i]);
     }
 
-    EXPECT_THROW(sv.resize(24), std::length_error);
+    //EXPECT_THROW(sv.resize(24), std::length_error); // assertion failure
     sv.resize(8);
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(8, sv.size());
@@ -280,7 +280,7 @@ TEST(simple_static_vector_test, basic_functionality)
     EXPECT_EQ("a", sv.front());
     //EXPECT_EQ("h", sv.back());
 
-    EXPECT_THROW(sv.expand(10), std::length_error);
+    //EXPECT_THROW(sv.expand(10), std::length_error); // assertion failure
     sv.expand(1);
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(10, sv.size());
@@ -289,7 +289,7 @@ TEST(simple_static_vector_test, basic_functionality)
     EXPECT_EQ("a", sv.front());
     //EXPECT_EQ("", sv.back());
 
-    EXPECT_THROW(sv.shrink(12), std::length_error);
+    //EXPECT_THROW(sv.shrink(12), std::length_error); // assertion failure
     sv.shrink(5);
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(5, sv.size());
