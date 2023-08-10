@@ -1821,17 +1821,17 @@ namespace oc {
             std::int64_t group_start_index_ = 0;
         };
 
-        template <typename T, typename Indexer = arrnd_general_indexer<>>
+        template <typename Arrnd>
         class arrnd_iterator final
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
             using difference_type = std::int64_t;
-            using value_type = T;
-            using pointer = T*;
-            using reference = T&;
+            using value_type = Arrnd::value_type;
+            using pointer = Arrnd::value_type*;
+            using reference = Arrnd::value_type&;
 
-            using indexer_type = Indexer;
+            using indexer_type = Arrnd::indexer_type;
 
             constexpr arrnd_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -1918,17 +1918,17 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = arrnd_general_indexer<>>
+        template <typename Arrnd>
         class arrnd_const_iterator final
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
             using difference_type = std::int64_t;
-            using value_type = T;
-            using pointer = T*;
-            using reference = T&;
+            using value_type = Arrnd::value_type;
+            using pointer = Arrnd::value_type*;
+            using reference = Arrnd::value_type&;
 
-            using indexer_type = Indexer;
+            using indexer_type = Arrnd::indexer_type;
 
             constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2014,17 +2014,17 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = arrnd_general_indexer<>>
+        template <typename Arrnd>
         class arrnd_reverse_iterator final
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
             using difference_type = std::int64_t;
-            using value_type = T;
-            using pointer = T*;
-            using reference = T&;
+            using value_type = Arrnd::value_type;
+            using pointer = Arrnd::value_type*;
+            using reference = Arrnd::value_type&;
 
-            using indexer_type = Indexer;
+            using indexer_type = Arrnd::indexer_type;
 
             constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2111,17 +2111,17 @@ namespace oc {
 
 
 
-        template <typename T, typename Indexer = arrnd_general_indexer<>>
+        template <typename Arrnd>
         class arrnd_const_reverse_iterator final
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
             using difference_type = std::int64_t;
-            using value_type = T;
-            using pointer = T*;
-            using reference = T&;
+            using value_type = Arrnd::value_type;
+            using pointer = Arrnd::value_type*;
+            using reference = Arrnd::value_type&;
 
-            using indexer_type = Indexer;
+            using indexer_type = Arrnd::indexer_type;
 
             constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2785,11 +2785,6 @@ namespace oc {
             using pointer = T*;
             using const_pointer = const T*;
 
-            using iterator = arrnd_iterator<T, Indexer>;
-            using const_iterator = arrnd_const_iterator<T, Indexer>;
-            using reverse_iterator = arrnd_reverse_iterator<T, Indexer>;
-            using const_reverse_iterator = arrnd_const_reverse_iterator<T, Indexer>;
-
             using tag = arrnd_tag;
 
             using storage_type = Storage;
@@ -2806,6 +2801,11 @@ namespace oc {
             using shared_ref = U;
             template <typename U>
             using maybe_shared_ref = U;
+
+            using iterator = arrnd_iterator<this_type>;
+            using const_iterator = arrnd_const_iterator<this_type>;
+            using reverse_iterator = arrnd_reverse_iterator<this_type>;
+            using const_reverse_iterator = arrnd_const_reverse_iterator<this_type>;
 
             using subarray_iterator = arrnd_axis_iterator<this_type>;
             using const_subarray_iterator = arrnd_axis_const_iterator<this_type>;
