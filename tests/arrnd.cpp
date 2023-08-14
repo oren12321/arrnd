@@ -384,6 +384,19 @@ TEST(arrnd_test, iterators)
         42, 44, 46, 48} };
     
     EXPECT_TRUE(all_equal(axis_iter_res, arr));
+
+    // std ranges
+    {
+        arrnd<int> arr5({ 2, 1, 3 }, { 1, 2, 3, 4, 5, 6 });
+
+        std::vector<int> vec1;
+
+        for (int i : std::views::transform(std::views::filter(arr5, [](int i) { return i % 2 == 0; }), [](int i) {return i * 2; })) {
+            vec1.push_back(i);
+        }
+
+        EXPECT_EQ(std::vector<int>({ 4, 8, 12 }), vec1);
+    }
 }
 
 TEST(arrnd_general_indexer, simple_forward_backward_iterations)
