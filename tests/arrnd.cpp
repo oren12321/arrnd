@@ -224,6 +224,17 @@ TEST(simple_dynamic_vector_test, basic_functionality)
     EXPECT_TRUE(sv.data());
     EXPECT_EQ("a", sv.front());
     //EXPECT_EQ("", sv.back());
+
+    // iterators
+    {
+        std::array<int, 5> arr1{ 1, 2, 3, 4, 5 };
+        oc::details::simple_dynamic_vector<int> vec1(5, arr1.data());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{ 0 }, std::plus<>{}));
+    }
 }
 
 TEST(simple_static_vector_test, span_usage)
@@ -303,6 +314,17 @@ TEST(simple_static_vector_test, basic_functionality)
     sv.reserve(1000);
     EXPECT_EQ(16, sv.capacity());
     EXPECT_EQ(5, sv.size());
+
+    // iterators
+    {
+        std::array<int, 5> arr1{ 1, 2, 3, 4, 5 };
+        oc::details::simple_static_vector<int, 5> vec1(5, arr1.data());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{ 0 }, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{ 0 }, std::plus<>{}));
+    }
 }
 
 

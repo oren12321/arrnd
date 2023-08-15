@@ -14,6 +14,7 @@
 #include <cmath>
 #include <ostream>
 #include <cassert>
+#include <iterator>
 
 namespace oc {
 
@@ -74,6 +75,8 @@ namespace oc {
                 using const_pointer = const T*;
                 using iterator = T*;
                 using const_iterator = const T*;
+                using reverse_iterator = std::reverse_iterator<pointer>;
+                using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
                 template <typename U>
                 using replaced_type = simple_dynamic_vector<U, Allocator>;
@@ -324,6 +327,26 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
+                [[nodsicard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                {
+                    return std::make_reverse_iterator(end());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                {
+                    return std::make_reverse_iterator(begin());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                {
+                    return std::make_reverse_iterator(cend());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                {
+                    return std::make_reverse_iterator(cbegin());
+                }
+
                 [[nodiscard]] constexpr const_reference back() const noexcept
                 {
                     return data_ptr_[size_ - 1];
@@ -368,6 +391,8 @@ namespace oc {
                 using const_pointer = const T*;
                 using iterator = T*;
                 using const_iterator = const T*;
+                using reverse_iterator = std::reverse_iterator<pointer>;
+                using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
                 template <typename U>
                 using replaced_type = simple_static_vector<U, Capacity>;
@@ -517,6 +542,26 @@ namespace oc {
                 [[nodiscard]] constexpr const_pointer cend() const noexcept
                 {
                     return data_ptr_ + size_;
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                {
+                    return std::make_reverse_iterator(end());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                {
+                    return std::make_reverse_iterator(begin());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                {
+                    return std::make_reverse_iterator(cend());
+                }
+
+                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                {
+                    return std::make_reverse_iterator(cbegin());
                 }
 
                 [[nodiscard]] constexpr const_reference back() const noexcept
