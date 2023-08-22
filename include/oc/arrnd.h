@@ -1031,12 +1031,39 @@ namespace oc {
         offset = 28
         */
 
+        template <typename Iter>
+        using iter_value_type = typename std::iterator_traits<Iter>::value_type;
+
         template <typename Storage = simple_dynamic_vector<std::int64_t>>
         class arrnd_header {
         public:
             using storage_type = Storage;
 
             constexpr arrnd_header() = default;
+
+            template <typename InputIt>
+            constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
+            {
+                assert(first_dim <= last_dim);
+                assert(std::all_of(first_dim, last_dim, [](auto d) { return d >= 0; }));
+
+                if (first_dim == last_dim) {
+                    return;
+                }
+
+                count_ = std::reduce(first_dim, last_dim, iter_value_type<InputIt>{1}, std::multiplies<>{});
+                if (count_ == 0) {
+                    return;
+                }
+
+                dims_ = storage_type(first_dim, last_dim);
+
+                strides_ = storage_type(dims_.size());
+                std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), typename storage_type::value_type{ 1 }, std::multiplies<>{});
+
+                last_index_ = std::inner_product(dims_.cbegin(), dims_.cend(), strides_.cbegin(), typename storage_type::value_type{ 0 },
+                    std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
+            }
 
             constexpr arrnd_header(std::span<const std::int64_t> dims)
             {
@@ -2942,66 +2969,122 @@ namespace oc {
 
             virtual constexpr ~arrnd() = default;
 
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, const_pointer data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+
+            template <typename InputDimsIt, typename InputDataIt>
+            requires (std::input_iterator<InputDimsIt> && std::input_iterator<InputDataIt>)
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
+                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                if (data) {
-                    std::copy(data, data + hdr_.count(), buffsp_->data());
-                }
+                std::copy(first_data, first_data + hdr_.count(), buffsp_->data());
             }
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, std::initializer_list<value_type> data)
-                : arrnd(dims, data.begin())
-            {
-            }
-            explicit constexpr arrnd(std::initializer_list<std::int64_t> dims, const_pointer data = nullptr)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
-            {
-            }
-            explicit constexpr arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<value_type> data)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
+            template <typename InputDataIt>
+            requires std::input_iterator<InputDataIt>
+            explicit constexpr arrnd(std::span<const size_type> dims, InputDataIt first_data)
+                : arrnd(dims.begin(), dims.end(), first_data)
             {
             }
-            template <typename U>
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, const U* data = nullptr)
-                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
+            template <typename InputDataIt>
+            requires std::input_iterator<InputDataIt>
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, InputDataIt first_data)
+                : arrnd(dims.begin(), dims.end(), first_data)
             {
-                std::copy(data, data + hdr_.count(), buffsp_->data());
             }
-            template <typename U>
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, std::initializer_list<U> data)
-                : arrnd(dims, data.begin())
+            template <typename InputDimsIt, typename U>
+            requires (std::input_iterator<InputDimsIt> && !(std::is_pointer_v<U> || std::is_array_v<U>))
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<U> data)
+                : arrnd(first_dim, last_dim, data.begin())
             {
             }
             template <typename U>
-            explicit constexpr arrnd(std::initializer_list<std::int64_t> dims, const U* data = nullptr)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data)
+            requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
+            explicit constexpr arrnd(std::span<const size_type> dims, std::initializer_list<U> data)
+                : arrnd(dims.begin(), dims.end(), data.begin())
             {
             }
             template <typename U>
-            explicit arrnd(std::initializer_list<std::int64_t> dims, std::initializer_list<U> data = nullptr)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, data.begin())
+            requires !(std::is_pointer_v<U> || std::is_array_v<U>)
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<U> data)
+                : arrnd(dims.begin(), dims.end(), data.begin())
             {
             }
 
+            template <typename InputDimsIt>
+            requires std::input_iterator<InputDimsIt>
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_pointer first_data)
+                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count(), first_data))
+            {
+            }
+            explicit constexpr arrnd(std::span<const size_type> dims, const_pointer first_data)
+                : arrnd(dims.begin(), dims.end(), first_data)
+            {
+            }
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, const_pointer first_data)
+                : arrnd(dims.begin(), dims.end(), first_data)
+            {
+            }
+            template <typename InputDimsIt>
+            requires std::input_iterator<InputDimsIt>
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<T> data)
+                : arrnd(first_dim, last_dim, data.begin())
+            {
+            }
+            explicit constexpr arrnd(std::span<const size_type> dims, std::initializer_list<T> data)
+                : arrnd(dims.begin(), dims.end(), data.begin())
+            {
+            }
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<T> data)
+                : arrnd(dims.begin(), dims.end(), data.begin())
+            {
+            }
 
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, const_reference value)
-                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
+            template <typename InputDimsIt>
+            requires std::input_iterator<InputDimsIt>
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim)
+                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
-            explicit constexpr arrnd(std::initializer_list<std::int64_t> dims, const_reference value)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
+            explicit constexpr arrnd(std::span<const size_type> dims)
+                : arrnd(dims.begin(), dims.end())
+            {
+            }
+            explicit constexpr arrnd(std::initializer_list<size_type> dims)
+                : arrnd(dims.begin(), dims.end())
+            {
+            }
+
+            template <typename InputDimsIt, typename U>
+            requires (std::input_iterator<InputDimsIt> && !(std::is_pointer_v<U> || std::is_array_v<U>))
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
+                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+            {
+                std::fill(buffsp_->begin(), buffsp_->end(), value);
+            }
+            template <typename U>
+            requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
+            explicit constexpr arrnd(std::span<const size_type> dims, const U& value)
+                : arrnd(dims.begin(), dims.end(), value)
             {
             }
             template <typename U>
-            explicit constexpr arrnd(std::span<const std::int64_t> dims, const U& value)
-                : hdr_(dims), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type < storage_type>(), hdr_.count()))
+            requires !(std::is_pointer_v<U> || std::is_array_v<U>)
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, const U& value)
+                : arrnd(dims.begin(), dims.end(), value)
             {
-                std::fill(buffsp_->data(), buffsp_->data() + buffsp_->size(), value);
             }
-            template <typename U>
-            explicit constexpr arrnd(std::initializer_list<std::int64_t> dims, const U& value)
-                : arrnd(std::span<const std::int64_t>{dims.begin(), dims.size()}, value)
+
+            template <typename InputDimsIt>
+            requires std::input_iterator<InputDimsIt>
+            explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_reference value)
+                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+            {
+                std::fill(buffsp_->begin(), buffsp_->end(), value);
+            }
+            explicit constexpr arrnd(std::span<const size_type> dims, const_reference value)
+                : arrnd(dims.begin(), dims.end(), value)
+            {
+            }
+            explicit constexpr arrnd(std::initializer_list<size_type> dims, const_reference value)
+                : arrnd(dims.begin(), dims.end(), value)
             {
             }
 
