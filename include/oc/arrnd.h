@@ -98,7 +98,7 @@ namespace oc {
 
                 template <typename InputIt>
                 constexpr simple_dynamic_vector(InputIt first, InputIt last)
-                    : simple_dynamic_vector(last - first, &(*first)) {}
+                    : simple_dynamic_vector(std::distance(first, last), &(*first)) {}
 
                 constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
                     : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_)
@@ -402,13 +402,13 @@ namespace oc {
                 {
                     assert(size_ <= Capacity && "invalid vector size");
                     if (data) {
-                        std::copy(data, data + size_, data_ptr_);
+                        std::copy(data, std::next(data, size), data_ptr_);
                     }
                 }
 
                 template <typename InputIt>
                 constexpr simple_static_vector(InputIt first, InputIt last)
-                    : simple_static_vector(last - first, &(*first)) {}
+                    : simple_static_vector(std::distance(first, last), &(*first)) {}
 
                 constexpr simple_static_vector(const simple_static_vector& other)
                     : size_(other.size_)
