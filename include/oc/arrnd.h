@@ -376,6 +376,11 @@ namespace oc {
                 pointer data_ptr_ = nullptr;
         };
 
+        template <typename T, template<typename> typename Allocator = lightweight_allocator>
+        [[nodiscard]] inline constexpr bool operator==(const simple_dynamic_vector<T, Allocator>& lhs, const simple_dynamic_vector<T, Allocator>& rhs)
+        {
+            return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+        }
 
 
         template <typename T, std::int64_t Capacity>
@@ -589,6 +594,12 @@ namespace oc {
 
                 size_type size_ = 0;
         };
+
+        template <typename T, std::int64_t Capacity>
+        [[nodiscard]] inline constexpr bool operator==(const simple_static_vector<T, Capacity>& lhs, const simple_static_vector<T, Capacity>& rhs)
+        {
+            return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+        }
     }
 
     namespace details {
@@ -1418,14 +1429,24 @@ namespace oc {
                 return count_;
             }
 
-            [[nodiscard]] constexpr std::span<const value_type> dims() const noexcept
+            [[nodiscard]] constexpr const storage_type& dims() const noexcept
             {
-                return std::span<const value_type>(dims_.data(), dims_.size());
+                return dims_;
             }
 
-            [[nodiscard]] constexpr std::span<const value_type> strides() const noexcept
+            [[nodiscard]] constexpr storage_type& dims() noexcept
             {
-                return std::span<const value_type>(strides_.data(), strides_.size());
+                return dims_;
+            }
+
+            [[nodiscard]] constexpr const storage_type& strides() const noexcept
+            {
+                return strides_;
+            }
+
+            [[nodiscard]] constexpr storage_type& strides() noexcept
+            {
+                return strides_;
             }
 
             [[nodiscard]] constexpr value_type offset() const noexcept
@@ -1476,7 +1497,7 @@ namespace oc {
             }
 
             constexpr arrnd_general_indexer(const header_type& hdr, std::span<const std::int64_t> order, bool backward = false)
-                : dims_(hdr.dims().begin(), hdr.dims().end()), strides_(hdr.strides().begin(), hdr.strides().end())
+                : dims_(hdr.dims().cbegin(), hdr.dims().cend()), strides_(hdr.strides().cbegin(), hdr.strides().cend())
             {
                 if (!order.empty()) {
                     dims_ = reorder(dims_, order);
@@ -1786,7 +1807,7 @@ namespace oc {
                 step_size_between_super_groups_ = hdr.strides()[axis];
 
                 num_groups_in_super_group_ =
-                    std::accumulate(hdr.dims().begin(), hdr.dims().begin() + axis + 1, std::int64_t{ 1 }, std::multiplies<>{}) / num_super_groups_;
+                    std::accumulate(hdr.dims().cbegin(), hdr.dims().cbegin() + axis + 1, std::int64_t{ 1 }, std::multiplies<>{}) / num_super_groups_;
                 group_size_ = hdr.strides()[axis];
                 step_size_inside_group_ = hdr.strides().back();
                 step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
@@ -3246,7 +3267,7 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator[](std::span<std::int64_t> subs) const noexcept
             {
-                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[subs2ind(hdr_.offset(), std::span<const std::int64_t>(hdr_.strides().data(), hdr_.strides().size()), std::span<const std::int64_t>(hdr_.dims().data(), hdr_.dims().size()), subs)];
             }
             [[nodiscard]] constexpr const_reference operator[](std::initializer_list<std::int64_t> subs) const noexcept
             {
@@ -3372,18 +3393,18 @@ namespace oc {
                 }
 
                 if (dst.empty()) {
-                    dst = ArCo{ header().dims() };
+                    dst = ArCo{ header().dims().cbegin(), header().dims().cend() };
                     return copy_to(dst);
                 }
 
                 if (header().count() == dst.header().count()) {
                     if (header().dims() != dst.header().dims()) {
-                        dst.header() = header_type{ header().dims().begin(), header().dims().end() };
+                        dst.header() = header_type{ header().dims().cbegin(), header().dims().cend() };
                     }
                     return copy_to(dst);
                 }
 
-                dst = ArCo{ header().dims() };
+                dst = ArCo{ header().dims().cbegin(), header().dims().cend() };
                 return copy_to(dst);
             }
 
@@ -3448,7 +3469,7 @@ namespace oc {
                     return resize(new_dims);
                 }
 
-                if (header().dims() == new_dims) {
+                if (std::equal(header().dims().cbegin(), header().dims().cend(), new_dims.begin(), new_dims.end())) {
                     return *this;
                 }
 
@@ -3476,7 +3497,7 @@ namespace oc {
                     return this_type(std::span<const std::int64_t>(new_dims.data(), new_dims.size()));
                 }
 
-                if (header().dims() == new_dims) {
+                if (std::equal(header().dims().cbegin(), header().dims().cend(), new_dims.begin(), new_dims.end())) {
                     return *this;
                 }
 
