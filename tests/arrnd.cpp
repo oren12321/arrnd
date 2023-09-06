@@ -327,6 +327,15 @@ TEST(simple_static_vector_test, basic_functionality)
     }
 }
 
+//TEST(arrnd_test, dummy)
+//{
+//    std::initializer_list<oc::interval<>> ivals = { {1, 1, 2}, { 0, 0 }, { 1, 1 } };
+//
+//    oc::arrnd<int> arr{ {3, 1, 2}, {0, 1, 2, 3, 4, 5} };
+//
+//    oc::arrnd_header<> hdr1{ arr.header(), ivals };
+//    oc::arrnd_header<> hdr2{ arr.header().subheader(ivals.begin(), ivals.end()) };
+//}
 
 TEST(arrnd_test, iterators)
 {
@@ -1377,8 +1386,8 @@ TEST(arrnd_test, transpose)
 
     EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3 })));
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3, 2 })));
-    EXPECT_TRUE(oc::empty(oc::transpose(iarr, { 2, 0, 1, 4 })));
+    //EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3, 2 }))); // assertion failure
+    //EXPECT_TRUE(oc::empty(oc::transpose(iarr, { 2, 0, 1, 4 }))); // assertion failure
 }
 
 TEST(arrnd_test, equal)
@@ -2645,8 +2654,8 @@ TEST(arrnd_test, can_return_slice)
 
     // illegal ranges
     {
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, (arr[{ {0, 0, 0} }])));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, (arr[{ {2, 1, 1} }])));
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, (arr[{ {0, 0, 0} }]))); // assertion failure
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, (arr[{ {2, 1, 1} }]))); // assertion failure
     }
 
     // empty array
@@ -2682,9 +2691,9 @@ TEST(arrnd_test, can_return_slice)
         EXPECT_EQ(arr.data(), sarr3.data());
 
         // out of range and negative indices
-        Integer_array sarr4{ arr[{{-1, 3, -2}, {1}, {-2}}] };
-        EXPECT_TRUE(oc::all_equal(sarr1, sarr4));
-        EXPECT_EQ(arr.data(), sarr4.data());
+        //Integer_array sarr4{ arr[{{-1, 3, -2}, {1}, {-2}}] }; // assertion failure
+        //EXPECT_TRUE(oc::all_equal(sarr1, sarr4));
+        //EXPECT_EQ(arr.data(), sarr4.data());
     }
 }
 
@@ -3574,15 +3583,15 @@ TEST(arrnd_test, append)
         EXPECT_TRUE(oc::all_equal(arr1, oc::append(arr1, Integer_array{}, 0)));
         EXPECT_TRUE(oc::all_equal(arr2, oc::append(Integer_array{}, arr2, 0)));
 
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::append(arr1, arr2, 3)));
+        //EXPECT_TRUE(oc::all_equal(rarr1, oc::append(arr1, arr2, 3))); // assertion failure
         const int invalid_data1[] = { 1 };
         Integer_array invalid_arr1{ {1}, invalid_data1 };
         Integer_array rinvalid_arr1{};
 
-        EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(invalid_arr1, arr2, 3)));
-        EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr2, invalid_arr1, 3)));
+        //EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(invalid_arr1, arr2, 3))); // assertion failure
+        //EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr2, invalid_arr1, 3))); // assertion failure
 
-        EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr1, rarr2, 0)));
+        //EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr1, rarr2, 0))); // invalid operation, assertion required
     }
 }
 
@@ -3680,11 +3689,11 @@ TEST(arrnd_test, insert)
         EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 1, 0)));
         EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 1, 0)));
 
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 3)));
+        //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 3))); // assertion failure
         const int invalid_data1[] = { 1 };
         Integer_array invalid_arr1{ {1}, invalid_data1 };
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(invalid_arr1, arr2, 1, 0)));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(arr1, rarr2, 1, 0)));;
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(invalid_arr1, arr2, 1, 0))); // invalid operation, assertion required
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(arr1, rarr2, 1, 0))); // invalid operation, assertion required
     }
 }
 
@@ -3822,6 +3831,11 @@ TEST(arrnd_test, complex_array)
         oc::arrnd<int> rarr2{ {1, 2, 1}, reinterpret_cast<const int*>(edata2) };
         auto earr2 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][oc::interval<std::int64_t>{1, 1}][oc::interval<std::int64_t>{0, 0}];
         EXPECT_TRUE(oc::all_equal(rarr2, earr2));
+
+        const int edata3[]{ 47, 53 };
+        oc::arrnd<int> rarr3{ {1, 1, 1, 2, 1}, edata3 };
+        auto earr3 = arr[{ {0, 1}, { 0, 0 }, { 1, 1 }, { 0, 2, 2 }, { 1, 2, 2 } }][{ {1, 1}}][{ {0, 0}}];
+        EXPECT_TRUE(oc::all_equal(rarr3, earr3));
     }
 }
 

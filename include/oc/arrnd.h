@@ -841,7 +841,7 @@ namespace oc {
         * @param[out] strides An already allocated memory for computed strides.
         * @return Number of computed strides
         */
-        inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> dims, std::span<std::int64_t> strides) noexcept
+        /*inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> dims, std::span<std::int64_t> strides) noexcept
         {
             std::int64_t num_strides{ std::ssize(dims) > std::ssize(strides) ? std::ssize(strides) : std::ssize(dims) };
             if (num_strides <= 0) {
@@ -853,54 +853,54 @@ namespace oc {
                 strides[i] = strides[i + 1] * dims[i + 1];
             }
             return num_strides;
-        }
+        }*/
 
         /**
         * @param[out] strides An already allocated memory for computed strides.
         * @return Number of computed strides
         * @note When number of ranges is smaller than number of strides, the other strides computed from previous dimensions.
         */
-        inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> strides) noexcept
-        {
-            std::int64_t nstrides{ std::ssize(previous_strides) > std::ssize(strides) ? std::ssize(strides) : std::ssize(previous_strides) };
-            if (nstrides <= 0) {
-                return 0;
-            }
+        //inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> strides) noexcept
+        //{
+        //    std::int64_t nstrides{ std::ssize(previous_strides) > std::ssize(strides) ? std::ssize(strides) : std::ssize(previous_strides) };
+        //    if (nstrides <= 0) {
+        //        return 0;
+        //    }
 
-            std::int64_t ncomp_from_ranges{ nstrides > std::ssize(ranges) ? std::ssize(ranges) : nstrides };
+        //    std::int64_t ncomp_from_ranges{ nstrides > std::ssize(ranges) ? std::ssize(ranges) : nstrides };
 
-            // compute strides with range step
-            for (std::int64_t i = 0; i < ncomp_from_ranges; ++i) {
-                strides[i] = previous_strides[i] * forward(ranges[i]).step;
-            }
+        //    // compute strides with range step
+        //    for (std::int64_t i = 0; i < ncomp_from_ranges; ++i) {
+        //        strides[i] = previous_strides[i] * forward(ranges[i]).step;
+        //    }
 
-            // set strides from previous strides
-            if (std::ssize(previous_strides) > ncomp_from_ranges) {
-                for (std::int64_t i = ncomp_from_ranges; i < std::ssize(previous_strides); ++i) {
-                    strides[i] = previous_strides[i];
-                }
-            }
+        //    // set strides from previous strides
+        //    if (std::ssize(previous_strides) > ncomp_from_ranges) {
+        //        for (std::int64_t i = ncomp_from_ranges; i < std::ssize(previous_strides); ++i) {
+        //            strides[i] = previous_strides[i];
+        //        }
+        //    }
 
-            std::int64_t nstrides_calc =
-                (std::ssize(previous_strides) > ncomp_from_ranges ? std::ssize(previous_strides) : ncomp_from_ranges);
+        //    std::int64_t nstrides_calc =
+        //        (std::ssize(previous_strides) > ncomp_from_ranges ? std::ssize(previous_strides) : ncomp_from_ranges);
 
-            // compute strides from previous dimensions
-            if (nstrides_calc < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
-                strides[std::ssize(previous_dims) - 1] = 1;
-                for (std::int64_t i = std::ssize(previous_dims) - 2; i >= nstrides_calc - 1; --i) {
-                    strides[i] = strides[i + 1] * previous_dims[i + 1];
-                }
-            }
+        //    // compute strides from previous dimensions
+        //    if (nstrides_calc < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
+        //        strides[std::ssize(previous_dims) - 1] = 1;
+        //        for (std::int64_t i = std::ssize(previous_dims) - 2; i >= nstrides_calc - 1; --i) {
+        //            strides[i] = strides[i + 1] * previous_dims[i + 1];
+        //        }
+        //    }
 
-            return nstrides;
-        }
+        //    return nstrides;
+        //}
 
         /**
         * @param[out] dims An already allocated memory for computed dimensions.
         * @return Number of computed dimensions
         * @note Previous dimensions are used in case of small number of ranges.
         */
-        inline constexpr std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> dims) noexcept
+        /*inline constexpr std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> dims) noexcept
         {
             std::int64_t ndims{ std::ssize(previous_dims) > std::ssize(dims) ? std::ssize(dims) : std::ssize(previous_dims) };
             if (ndims <= 0) {
@@ -922,9 +922,9 @@ namespace oc {
             }
 
             return ndims;
-        }
+        }*/
 
-        [[nodiscard]] inline constexpr std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges) noexcept
+        /*[[nodiscard]] inline constexpr std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges) noexcept
         {
             std::int64_t offset{ previous_offset };
 
@@ -939,7 +939,7 @@ namespace oc {
                 offset += previous_strides[i] * forward(modulo(ranges[i], previous_dims[i])).start;
             }
             return offset;
-        }
+        }*/
 
         /**
         * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
@@ -1038,6 +1038,8 @@ namespace oc {
         class arrnd_header {
         public:
             using storage_type = Storage;
+            using value_type = Storage::value_type;
+            using size_type = Storage::size_type;
 
             constexpr arrnd_header() = default;
 
@@ -1059,111 +1061,210 @@ namespace oc {
                 dims_ = storage_type(first_dim, last_dim);
 
                 strides_ = storage_type(dims_.size());
-                std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), typename storage_type::value_type{ 1 }, std::multiplies<>{});
+                std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), value_type{ 1 }, std::multiplies<>{});
 
-                last_index_ = std::inner_product(dims_.cbegin(), dims_.cend(), strides_.cbegin(), typename storage_type::value_type{ 0 },
+                last_index_ = std::inner_product(dims_.cbegin(), dims_.cend(), strides_.cbegin(), value_type{ 0 },
                     std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
             }
 
-            constexpr arrnd_header(std::span<const std::int64_t> dims)
+            constexpr arrnd_header(std::span<const value_type> dims)
+                : arrnd_header(dims.begin(), dims.end())
             {
-                if ((count_ = numel(dims)) <= 0) {
-                    return;
-                }
-
-                dims_ = storage_type(dims.begin(), dims.end());
-
-                strides_ = storage_type(dims.size());
-                compute_strides(dims, strides_);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
             }
 
-            constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const interval<std::int64_t>> ranges)
+            template <typename InputIt> requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
+            [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
             {
-                if (numel(previous_hdr.dims()) <= 0) {
-                    return;
-                }
+                assert(first_range <= last_range);
 
-                storage_type dims = storage_type(previous_hdr.dims().size());
-
-                if (compute_dims(previous_hdr.dims(), ranges, dims) <= 0) {
-                    return;
-                }
-
-                dims_ = std::move(dims);
-                
-                count_ = numel(dims_);
-
-                strides_ = storage_type(previous_hdr.dims().size());
-                compute_strides(previous_hdr.dims(), previous_hdr.strides(), ranges, strides_);
-
-                offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), ranges);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
-
-                is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
-            }
-
-            constexpr arrnd_header(const arrnd_header& previous_hdr, interval<std::int64_t> range)
-                : arrnd_header(previous_hdr, std::span<interval<std::int64_t>>(&range, 1))
-            {
                 if (empty()) {
-                    return;
+                    return *this;
                 }
 
-                auto fixed_ival = modulo(range, dims_[0]);
+                size_type nranges = std::min(std::distance(first_range, last_range), dims_.size());
 
-                if (dims_[0] == 1) {
-                    offset_ += fixed_ival.start * strides_[0];
-                    dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
-                    strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
-                    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                        [](auto a, auto b) { return a + b; },
-                        [](auto a, auto b) { return (a - 1) * b; });
-                    is_subarray_ = true;
+                auto valid_ranges = [&]() {
+                    return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
+                        std::logical_and<>{},
+                        [](const auto& r, auto d) { return (r.start <= r.stop && r.step >= 1) && (r.start >= 0 && r.stop < d); });
+                };
+                assert(valid_ranges());
+
+                if (first_range == last_range) {
+                    return *this;
                 }
+
+                arrnd_header res{};
+
+                res.dims_ = storage_type(dims_.size());
+                std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(),
+                    [](const auto& r) { return static_cast<value_type>(std::ceil((r.stop - r.start + 1.0) / r.step)); });
+                std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
+
+                if (std::equal(res.dims_.cbegin(), res.dims_.cend(), dims_.cbegin(), dims_.cend())) {
+                    return *this;
+                }
+
+                res.count_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), value_type{1}, std::multiplies<>{});
+
+                res.strides_ = storage_type(res.dims_.size());
+                std::transform(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range, res.strides_.begin(),
+                    [](auto s, const auto& r) { return s * r.step; });
+                std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
+
+                res.offset_ = offset_ + std::transform_reduce(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range,
+                    value_type{ 0 }, std::plus<>{},
+                    [](auto s, const auto& r) { return s * r.start; });
+
+                res.last_index_ = res.offset_ + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), value_type{ 0 },
+                    std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
+
+                res.is_subarray_ = true;
+
+                return res;
             }
 
-            constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
-                : is_subarray_(previous_hdr.is_subarray())
+            //constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const interval<std::int64_t>> ranges)
+            //{
+            //    if (numel(previous_hdr.dims()) <= 0) {
+            //        return;
+            //    }
+
+            //    storage_type dims = storage_type(previous_hdr.dims().size());
+
+            //    if (compute_dims(previous_hdr.dims(), ranges, dims) <= 0) {
+            //        return;
+            //    }
+
+            //    dims_ = std::move(dims);
+            //    
+            //    count_ = numel(dims_);
+
+            //    strides_ = storage_type(previous_hdr.dims().size());
+            //    compute_strides(previous_hdr.dims(), previous_hdr.strides(), ranges, strides_);
+
+            //    offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), ranges);
+
+            //    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
+            //        [](auto a, auto b) { return a + b; },
+            //        [](auto a, auto b) { return (a - 1) * b; });
+
+            //    is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
+            //}
+
+            [[nodiscard]] constexpr arrnd_header subheader(interval<value_type> range) const
             {
-                if (numel(previous_hdr.dims()) <= 0) {
-                    return;
+                std::initializer_list<interval<value_type>> ranges = { range };
+
+                auto res = subheader(ranges.begin(), ranges.end());
+                if (res.empty() || res.dims_.front() != 1) {
+                    return res;
                 }
 
-                std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
-                std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
+                //res.offset_ += range.start * res.strides_.front();
+                res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
+                res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
+                res.last_index_ = res.offset_ + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), value_type{ 0 },
+                    std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
+                res.is_subarray_ = true;
 
-                dims_ = storage_type(ndims);
-
-                if (previous_hdr.dims().size() > 1) {
-                    for (std::int64_t i = 0; i < axis; ++i) {
-                        dims_[i] = previous_hdr.dims()[i];
-                    }
-                    for (std::int64_t i = axis + 1; i < std::ssize(previous_hdr.dims()); ++i) {
-                        dims_[i - 1] = previous_hdr.dims()[i];
-                    }
-                }
-                else {
-                    dims_[0] = 1;
-                }
-
-                strides_ = storage_type(ndims);
-                compute_strides(dims_, strides_);
-
-                count_ = numel(dims_);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
+                return res;
             }
 
-            constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
+            //constexpr arrnd_header(const arrnd_header& previous_hdr, interval<std::int64_t> range)
+            //    : arrnd_header(previous_hdr, std::span<interval<std::int64_t>>(&range, 1))
+            //{
+            //    if (empty()) {
+            //        return;
+            //    }
+
+            //    auto fixed_ival = modulo(range, dims_[0]);
+
+            //    if (dims_[0] == 1) {
+            //        offset_ += fixed_ival.start * strides_[0];
+            //        dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
+            //        strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
+            //        last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
+            //            [](auto a, auto b) { return a + b; },
+            //            [](auto a, auto b) { return (a - 1) * b; });
+            //        is_subarray_ = true;
+            //    }
+            //}
+
+            [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
+            {
+                assert(omitted_axis >= 0 && omitted_axis < dims_.size());
+
+                if (empty()) {
+                    return *this;
+                }
+
+                storage_type new_dims(dims_.size() > 1 ? dims_.size() - 1 : 1);
+
+                if (dims_.size() == 1) {
+                    new_dims.front() = 1;
+                    return arrnd_header(new_dims);
+                }
+
+                std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
+                std::copy(std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
+
+                return arrnd_header(new_dims);
+            }
+
+            //constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
+            //    : is_subarray_(previous_hdr.is_subarray())
+            //{
+            //    if (numel(previous_hdr.dims()) <= 0) {
+            //        return;
+            //    }
+
+            //    std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
+            //    std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
+
+            //    dims_ = storage_type(ndims);
+
+            //    if (previous_hdr.dims().size() > 1) {
+            //        for (std::int64_t i = 0; i < axis; ++i) {
+            //            dims_[i] = previous_hdr.dims()[i];
+            //        }
+            //        for (std::int64_t i = axis + 1; i < std::ssize(previous_hdr.dims()); ++i) {
+            //            dims_[i - 1] = previous_hdr.dims()[i];
+            //        }
+            //    }
+            //    else {
+            //        dims_[0] = 1;
+            //    }
+
+            //    strides_ = storage_type(ndims);
+            //    compute_strides(dims_, strides_);
+
+            //    count_ = numel(dims_);
+
+            //    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
+            //        [](auto a, auto b) { return a + b; },
+            //        [](auto a, auto b) { return (a - 1) * b; });
+            //}
+
+            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>>
+            [[nodiscard]] constexpr arrnd_header subheader(InputIt first_order, InputIt last_order) const
+            {
+                assert(std::distance(first_order, last_order) == dims_.size());
+                assert(std::all_of(first_order, last_order, [&](auto order) { return order >= 0 && order < dims_.size(); }));
+
+                if (empty()) {
+                    return *this;
+                }
+
+                storage_type new_dims(dims_.size());
+                for (size_type i = 0; i < dims_.size(); ++i) {
+                    *std::next(new_dims.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
+                }
+
+                return arrnd_header(new_dims);
+            }
+
+            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -1194,9 +1295,24 @@ namespace oc {
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
+            }*/
+
+            [[nodiscard]] constexpr arrnd_header subheader(value_type count, size_type axis) const
+            {
+                assert(axis >= 0 && axis < dims_.size());
+                assert(count >= -*std::next(dims_.cbegin(), axis));
+
+                if (empty()) {
+                    return *this;
+                }
+
+                storage_type new_dims(dims_);
+                *std::next(new_dims.begin(), axis) += count;
+
+                return arrnd_header(new_dims);
             }
 
-            constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t count, std::int64_t axis)
+            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t count, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (numel(previous_hdr.dims()) <= 0) {
@@ -1222,9 +1338,27 @@ namespace oc {
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
-            }
+            }*/
 
-            constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
+            /*template <typename InputIt> requires std::is_same_v<typename storage_type::value_type, iter_value_type<InputIt>>
+            constexpr arrnd_header subheader(InputIt first_appended_dim, InputIt last_appended_dim, typename storage_type::value_type axis) const
+            {
+                assert(std::distance(first_appended_dim, last_appended_dim) == dims_.size());
+                assert(std::all_of(first_appended_dim, last_appended_dim, [&](auto d) { return d >= 0; }));
+
+                if (empty()) {
+                    return *this;
+                }
+
+                storage_type new_dims(dims_.size());
+                for (typename storage_type::size_type i = 0; i < dims_.size(); ++i) {
+                    *std::next(new_dims.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
+                }
+
+                return arrnd_header(new_dims);
+            }*/
+
+            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
                 : is_subarray_(previous_hdr.is_subarray())
             {
                 if (previous_hdr.dims().size() != appended_dims.size()) {
@@ -1269,7 +1403,7 @@ namespace oc {
                 last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
-            }
+            }*/
 
             constexpr arrnd_header(arrnd_header&& other) = default;
             constexpr arrnd_header& operator=(arrnd_header&& other) = default;
@@ -1279,22 +1413,22 @@ namespace oc {
 
             virtual constexpr ~arrnd_header() = default;
 
-            [[nodiscard]] constexpr std::int64_t count() const noexcept
+            [[nodiscard]] constexpr value_type count() const noexcept
             {
                 return count_;
             }
 
-            [[nodiscard]] constexpr std::span<const std::int64_t> dims() const noexcept
+            [[nodiscard]] constexpr std::span<const value_type> dims() const noexcept
             {
-                return std::span<const std::int64_t>(dims_.data(), dims_.size());
+                return std::span<const value_type>(dims_.data(), dims_.size());
             }
 
-            [[nodiscard]] constexpr std::span<const std::int64_t> strides() const noexcept
+            [[nodiscard]] constexpr std::span<const value_type> strides() const noexcept
             {
-                return std::span<const std::int64_t>(strides_.data(), strides_.size());
+                return std::span<const value_type>(strides_.data(), strides_.size());
             }
 
-            [[nodiscard]] constexpr std::int64_t offset() const noexcept
+            [[nodiscard]] constexpr value_type offset() const noexcept
             {
                 return offset_;
             }
@@ -1309,7 +1443,7 @@ namespace oc {
                 return dims_.empty();
             }
 
-            [[nodiscard]] constexpr std::int64_t last_index() const noexcept
+            [[nodiscard]] constexpr value_type last_index() const noexcept
             {
                 return last_index_;
             }
@@ -1317,9 +1451,9 @@ namespace oc {
         private:
             storage_type dims_{};
             storage_type strides_{};
-            std::int64_t count_{ 0 };
-            std::int64_t offset_{ 0 };
-            std::int64_t last_index_{ 0 };
+            value_type count_{ 0 };
+            value_type offset_{ 0 };
+            value_type last_index_{ 0 };
             bool is_subarray_{ false };
         };
 
@@ -2334,7 +2468,6 @@ namespace oc {
             {
                 ++current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2355,7 +2488,6 @@ namespace oc {
                 if (current_index_ >= last_index_) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2370,7 +2502,6 @@ namespace oc {
             {
                 --current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2391,7 +2522,6 @@ namespace oc {
                 if (current_index_ < 0) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2404,6 +2534,7 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return slice_;
             }
 
@@ -2478,7 +2609,6 @@ namespace oc {
             {
                 ++current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2496,7 +2626,6 @@ namespace oc {
                     current_index_ = last_index_;
                 }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2511,7 +2640,6 @@ namespace oc {
             {
                 --current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2529,7 +2657,6 @@ namespace oc {
                     current_index_ = -1;
                 }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2542,6 +2669,7 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator*() const noexcept
             {
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return slice_;
             }
 
@@ -2618,7 +2746,6 @@ namespace oc {
             {
                 ++current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2639,7 +2766,6 @@ namespace oc {
                 if (current_index_ >= last_index_) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2654,7 +2780,6 @@ namespace oc {
             {
                 --current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2675,7 +2800,6 @@ namespace oc {
                 if (current_index_ < 0) {
                     return *this;
                 }
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2688,6 +2812,7 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return slice_;
             }
 
@@ -2762,7 +2887,6 @@ namespace oc {
             {
                 ++current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2780,7 +2904,6 @@ namespace oc {
                     current_index_ = last_index_;
                 }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2795,7 +2918,6 @@ namespace oc {
             {
                 --current_index_;
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2813,7 +2935,6 @@ namespace oc {
                     current_index_ = -1;
                 }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return *this;
             }
 
@@ -2826,6 +2947,7 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator*() const noexcept
             {
+                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
                 return slice_;
             }
 
@@ -3147,7 +3269,7 @@ namespace oc {
                 }
 
                 this_type slice{};
-                slice.hdr_ = header_type{ hdr_, ranges };
+                slice.hdr_ = hdr_.subheader(ranges.begin(), ranges.end());
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
@@ -3163,7 +3285,7 @@ namespace oc {
                 }
 
                 this_type slice{};
-                slice.hdr_ = header_type{ hdr_, range };
+                slice.hdr_ = hdr_.subheader(range);
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
@@ -3416,7 +3538,7 @@ namespace oc {
                     return *this;
                 }
 
-                header_type new_header(header(), arr.header().dims(), axis);
+                header_type new_header(header().subheader(arr.header().dims()[axis], axis));
                 if (new_header.empty()) {
                     return this_type{};
                 }
@@ -3484,7 +3606,7 @@ namespace oc {
                     return *this;
                 }
 
-                header_type new_header(header(), arr.header().dims(), axis);
+                header_type new_header(header().subheader(arr.header().dims()[axis], axis));
                 if (new_header.empty()) {
                     return this_type();
                 }
@@ -3553,7 +3675,7 @@ namespace oc {
                 std::int64_t fixed_ind{ modulo(ind, header().dims()[fixed_axis]) };
                 std::int64_t fixed_count{ fixed_ind + count <= header().dims()[fixed_axis] ? count : (header().dims()[fixed_axis] - fixed_ind) };
 
-                header_type new_header(header(), -fixed_count, fixed_axis);
+                header_type new_header(header().subheader(-fixed_count, fixed_axis));
                 if (new_header.empty()) {
                     return this_type();
                 }
@@ -3726,7 +3848,7 @@ namespace oc {
 
                 const std::int64_t fixed_axis{ modulo(axis, std::ssize(header().dims())) };
 
-                typename replaced_type<U>::header_type new_header(header(), fixed_axis);
+                typename replaced_type<U>::header_type new_header(header().subheader(fixed_axis));
                 if (new_header.empty()) {
                     return replaced_type<U>();
                 }
@@ -3767,7 +3889,7 @@ namespace oc {
                     return replaced_type<U>();
                 }
 
-                typename replaced_type<U>::header_type new_header(header(), axis);
+                typename replaced_type<U>::header_type new_header(header().subheader(axis));
                 if (new_header.empty()) {
                     return replaced_type<U>();
                 }
@@ -3952,7 +4074,7 @@ namespace oc {
                     return this_type();
                 }
 
-                header_type new_header(header(), order);
+                header_type new_header(header().subheader(order.begin(), order.end()));
                 if (new_header.empty()) {
                     return this_type();
                 }
