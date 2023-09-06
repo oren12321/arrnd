@@ -1067,10 +1067,10 @@ namespace oc {
                     std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
             }
 
-            constexpr arrnd_header(std::span<const value_type> dims)
+            /*constexpr arrnd_header(std::span<const value_type> dims)
                 : arrnd_header(dims.begin(), dims.end())
             {
-            }
+            }*/
 
             template <typename InputIt> requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
             [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
@@ -1203,13 +1203,13 @@ namespace oc {
 
                 if (dims_.size() == 1) {
                     new_dims.front() = 1;
-                    return arrnd_header(new_dims);
+                    return arrnd_header(new_dims.cbegin(), new_dims.cend());
                 }
 
                 std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
                 std::copy(std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
 
-                return arrnd_header(new_dims);
+                return arrnd_header(new_dims.cbegin(), new_dims.cend());
             }
 
             //constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
@@ -1261,7 +1261,7 @@ namespace oc {
                     *std::next(new_dims.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 }
 
-                return arrnd_header(new_dims);
+                return arrnd_header(new_dims.cbegin(), new_dims.cend());
             }
 
             /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
@@ -1309,7 +1309,7 @@ namespace oc {
                 storage_type new_dims(dims_);
                 *std::next(new_dims.begin(), axis) += count;
 
-                return arrnd_header(new_dims);
+                return arrnd_header(new_dims.cbegin(), new_dims.cend());
             }
 
             /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t count, std::int64_t axis)
@@ -3378,7 +3378,7 @@ namespace oc {
 
                 if (header().count() == dst.header().count()) {
                     if (header().dims() != dst.header().dims()) {
-                        dst.header() = header_type{ header().dims() };
+                        dst.header() = header_type{ header().dims().begin(), header().dims().end() };
                     }
                     return copy_to(dst);
                 }
@@ -3452,7 +3452,7 @@ namespace oc {
                     return *this;
                 }
 
-                typename this_type::header_type new_header(new_dims);
+                typename this_type::header_type new_header(new_dims.begin(), new_dims.end());
                 if (new_header.empty()) {
                     return this_type();
                 }
