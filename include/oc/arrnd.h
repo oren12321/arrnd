@@ -955,28 +955,28 @@ namespace oc {
         /**
         * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
         */
-        [[nodiscard]] inline constexpr std::int64_t subs2ind(std::int64_t offset, std::span<const std::int64_t> strides, std::span<const std::int64_t> dims, std::span<std::int64_t> subs) noexcept
-        {
-            std::int64_t ind{ offset };
+        //[[nodiscard]] inline constexpr std::int64_t subs2ind(std::int64_t offset, std::span<const std::int64_t> strides, std::span<const std::int64_t> dims, std::span<std::int64_t> subs) noexcept
+        //{
+        //    std::int64_t ind{ offset };
 
-            if (strides.empty() || dims.empty() || subs.empty()) {
-                return ind;
-            }
+        //    if (strides.empty() || dims.empty() || subs.empty()) {
+        //        return ind;
+        //    }
 
-            std::int64_t num_used_subs{ std::ssize(strides) > std::ssize(dims) ? std::ssize(dims) : std::ssize(strides) };
-            num_used_subs = (num_used_subs > std::ssize(subs) ? std::ssize(subs) : num_used_subs);
+        //    std::int64_t num_used_subs{ std::ssize(strides) > std::ssize(dims) ? std::ssize(dims) : std::ssize(strides) };
+        //    num_used_subs = (num_used_subs > std::ssize(subs) ? std::ssize(subs) : num_used_subs);
 
-            std::int64_t num_ignored_subs{ std::ssize(strides) - num_used_subs};
-            if (num_ignored_subs < 0) { // ignore extra subscripts
-                num_ignored_subs = 0;
-            }
+        //    std::int64_t num_ignored_subs{ std::ssize(strides) - num_used_subs};
+        //    if (num_ignored_subs < 0) { // ignore extra subscripts
+        //        num_ignored_subs = 0;
+        //    }
 
-            for (std::int64_t i = num_ignored_subs; i < std::ssize(strides); ++i) {
-                ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
-            }
+        //    for (std::int64_t i = num_ignored_subs; i < std::ssize(strides); ++i) {
+        //        ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
+        //    }
 
-            return ind;
-        }
+        //    return ind;
+        //}
 
         /*
         Example:
@@ -1415,6 +1415,25 @@ namespace oc {
                     [](auto a, auto b) { return a + b; },
                     [](auto a, auto b) { return (a - 1) * b; });
             }*/
+
+            template <typename InputIt> requires std::is_integral_v<iter_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
+            [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
+            {
+                assert(first_sub <= last_sub);
+
+                size_type nsubs = std::distance(first_sub, last_sub);
+                assert(nsubs > 0 && nsubs <= dims_.size());
+
+                auto valid_subs = [&]() {
+                    return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), dims_.size() - nsubs), true,
+                        std::logical_and<>{},
+                        [](auto s, auto d) { return (s >= 0 && s < d); });
+                };
+                assert(valid_subs());
+
+                return offset_ + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), strides_.size() - nsubs),
+                    value_type{ 0 }, std::plus<>{}, std::multiplies<>{});
+            }
 
             constexpr arrnd_header(arrnd_header&& other) = default;
             constexpr arrnd_header& operator=(arrnd_header&& other) = default;
@@ -3267,7 +3286,8 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator[](std::span<std::int64_t> subs) const noexcept
             {
-                return buffsp_->data()[subs2ind(hdr_.offset(), std::span<const std::int64_t>(hdr_.strides().data(), hdr_.strides().size()), std::span<const std::int64_t>(hdr_.dims().data(), hdr_.dims().size()), subs)];
+                return buffsp_->data()[hdr_.subs2ind(subs.begin(), subs.end())];
+                //return buffsp_->data()[subs2ind(hdr_.offset(), std::span<const std::int64_t>(hdr_.strides().data(), hdr_.strides().size()), std::span<const std::int64_t>(hdr_.dims().data(), hdr_.dims().size()), subs)];
             }
             [[nodiscard]] constexpr const_reference operator[](std::initializer_list<std::int64_t> subs) const noexcept
             {
@@ -3276,7 +3296,8 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator[](std::span<std::int64_t> subs) noexcept
             {
-                return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
+                return buffsp_->data()[hdr_.subs2ind(subs.begin(), subs.end())];
+                //return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] constexpr reference operator[](std::initializer_list<std::int64_t> subs) noexcept
             {
