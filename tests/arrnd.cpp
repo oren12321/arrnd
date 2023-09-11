@@ -534,7 +534,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    arrnd_general_indexer gen(hdr, std::span(order, 3));
+    arrnd_general_indexer gen(hdr, order, order + 3);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -801,6 +801,7 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
+    EXPECT_FALSE(ehdr.is_axis_reordered());
     EXPECT_FALSE(earr.data());
 
     const int value{ 0 };
@@ -813,10 +814,14 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_EQ(2, hdr.strides().data()[0]); EXPECT_EQ(2, hdr.strides().data()[1]); EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
+    EXPECT_FALSE(hdr.is_axis_reordered());
     EXPECT_TRUE(arr.data());
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
     }
+
+    auto rhdr = hdr.reorder(1);
+    EXPECT_TRUE(rhdr.is_axis_reordered());
 }
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)

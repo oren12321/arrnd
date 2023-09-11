@@ -1258,21 +1258,59 @@ namespace oc {
             //}
 
             template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>>
-            [[nodiscard]] constexpr arrnd_header subheader(InputIt first_order, InputIt last_order) const
+            [[nodiscard]] constexpr arrnd_header reorder(InputIt first_order, InputIt last_order) const
             {
                 assert(std::distance(first_order, last_order) == dims_.size());
                 assert(std::all_of(first_order, last_order, [&](auto order) { return order >= 0 && order < dims_.size(); }));
 
-                if (empty()) {
+                if (empty() || dims_.size() == 1) {
                     return *this;
                 }
 
-                storage_type new_dims(dims_.size());
+                arrnd_header res(*this);
+
                 for (size_type i = 0; i < dims_.size(); ++i) {
-                    *std::next(new_dims.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
+                    *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
+                    *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
+                }
+                res.is_axis_reordered_ = true;
+
+                return res;
+            }
+
+            [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
+            {
+                assert(main_axis >= 0 && main_axis < dims_.size());
+
+                if (empty() || dims_.size() == 1 || main_axis == 0) {
+                    return *this;
                 }
 
-                return arrnd_header(new_dims.cbegin(), new_dims.cend());
+                arrnd_header res(*this);
+
+                value_type main_dim = *std::next(dims_.cbegin(), main_axis);
+                value_type main_stride = *std::next(strides_.cbegin(), main_axis);
+
+                size_type j = 1;
+
+                for (size_type i = 0; i < main_axis; ++i) {
+                    *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
+                    *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                    ++j;
+                }
+
+                for (size_type i = main_axis + 1; i < dims_.size(); ++i) {
+                    *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
+                    *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                    ++j;
+                }
+
+                res.dims_.front() = main_dim;
+                res.strides_.front() = main_stride;
+
+                res.is_axis_reordered_ = true;
+
+                return res;
             }
 
             /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
@@ -1435,6 +1473,38 @@ namespace oc {
                     value_type{ 0 }, std::plus<>{}, std::multiplies<>{});
             }
 
+            /*[[nodiscard]] constexpr arrnd_header reduce() const
+            {
+                if (empty()) {
+                    return *this;
+                }
+
+                if (!is_subarray_) {
+                    storage_type new_dims(1, &count_);
+                    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+                }
+
+                arrnd_header res(*this);
+
+                size_type one_dims = std::count_if(dims_.cbegin(), dims_.cend(), [](auto d) { return d == 1; });
+                if (one_dims > 0) {
+
+                    res.dims_ = storage_type(one_dims);
+                    res.strides_ = storage_type(one_dims);
+
+                    size_type j = 0;
+                    for (size_type i = 0; i < dims_.size(); ++i) {
+                        if (*std::next(dims_.cbegin(), i) != 1) {
+                            *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
+                            *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                            ++j;
+                        }
+                    }
+                }
+
+                return res;
+            }*/
+
             constexpr arrnd_header(arrnd_header&& other) = default;
             constexpr arrnd_header& operator=(arrnd_header&& other) = default;
 
@@ -1478,6 +1548,11 @@ namespace oc {
                 return is_subarray_;
             }
 
+            [[nodiscard]] constexpr bool is_axis_reordered() const noexcept
+            {
+                return is_axis_reordered_;
+            }
+
             [[nodiscard]] constexpr bool empty() const noexcept
             {
                 return dims_.empty();
@@ -1495,67 +1570,36 @@ namespace oc {
             value_type offset_{ 0 };
             value_type last_index_{ 0 };
             bool is_subarray_{ false };
+            bool is_axis_reordered_{ false };
         };
 
 
-        template <typename Storage = simple_dynamic_vector<std::int64_t>, typename Header = arrnd_header<>>
+        template </*typename Storage = simple_dynamic_vector<std::int64_t>, */typename Header = arrnd_header<>>
         class arrnd_general_indexer final
         {
         public:
-            using storage_type = Storage;
+            using storage_type = Header::storage_type;
             using header_type = Header;
+            using size_type = Header::size_type;
+            using value_type = Header::value_type;
 
             constexpr arrnd_general_indexer(const header_type& hdr, bool backward = false)
-                : arrnd_general_indexer(hdr, std::span<const std::int64_t>{}, backward)
+                : hdr_(hdr/*.reduce()*/)
             {
+                setup(backward);
             }
 
-            constexpr arrnd_general_indexer(const header_type& hdr, std::int64_t axis, bool backward = false)
-                : arrnd_general_indexer(hdr, order_from_major_axis(hdr.dims().size(), axis), backward)
+            constexpr arrnd_general_indexer(const header_type& hdr, size_type axis, bool backward = false)
+                : hdr_(/*axis == 0 ? */hdr.reorder(axis)/*.reduce()*//* : hdr.reorder(axis)*/)
             {
+                setup(backward);
             }
 
-            constexpr arrnd_general_indexer(const header_type& hdr, std::span<const std::int64_t> order, bool backward = false)
-                : dims_(hdr.dims().cbegin(), hdr.dims().cend()), strides_(hdr.strides().cbegin(), hdr.strides().cend())
+            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>>
+            constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order, bool backward = false)
+                : hdr_(/*std::is_sorted(order.begin(), order.end()) ? */hdr.reorder(first_order, last_order)/*.reduce()*//* : hdr.reorder(order.begin(), order.end())*/)
             {
-                if (!order.empty()) {
-                    dims_ = reorder(dims_, order);
-                    strides_ = reorder(strides_, order);
-                }
-                std::tie(dims_, strides_) = reduce_dimensions(dims_, strides_);
-
-                first_index_ = hdr.offset();
-                last_index_ = hdr.last_index();
-                last_first_diff_ = static_cast<std::uint64_t>(last_index_ - first_index_);
-
-                ndims_ = dims_.size();
-
-                if (ndims_ > 0) {
-                    first_dim_ = dims_[ndims_ - 1];
-                    first_stride_ = strides_[ndims_ - 1];
-                    first_ind_ = backward ? first_dim_ - 1 : 0;
-                }
-
-                if (ndims_ > 1) {
-                    second_dim_ = dims_[ndims_ - 2];
-                    second_stride_ = strides_[ndims_ - 2];
-                    second_ind_ = backward ? second_dim_ - 1 : 0;
-                }
-
-                if (ndims_ > 2) {
-                    third_dim_ = dims_[ndims_ - 3];
-                    third_stride_ = strides_[ndims_ - 3];
-                    third_ind_ = backward ? third_dim_ - 1 : 0;
-                }
-
-                if (ndims_ > 3) {
-                    indices_.resize(ndims_ - 3);
-                    for (std::int64_t i = 0; i < indices_.size(); ++i) {
-                        indices_[i] = backward ? dims_[i] - 1 : 0;
-                    }
-                }
-
-                current_index_ = backward ? last_index_ : first_index_;
+                setup(backward);
             }
 
             constexpr arrnd_general_indexer() = default;
@@ -1570,12 +1614,12 @@ namespace oc {
 
             constexpr arrnd_general_indexer& operator++() noexcept
             {
-                if (current_index_ < first_index_) {
-                    current_index_ = first_index_;
+                if (current_index_ < hdr_.offset()) {
+                    current_index_ = hdr_.offset();
                     return *this;
                 }
-                if (current_index_ >= last_index_) {
-                    current_index_ = last_index_ + 1;
+                if (current_index_ >= hdr_.last_index()) {
+                    current_index_ = hdr_.last_index() + 1;
                     return *this;
                 }
                 ++first_ind_;
@@ -1585,7 +1629,7 @@ namespace oc {
                 }
                 current_index_ -= first_ind_ * first_stride_;
                 first_ind_ = 0;
-                if (ndims_ > 1) {
+                if (hdr_.dims().size() > 1) {
                     ++second_ind_;
                     current_index_ += second_stride_;
                     if (second_ind_ < second_dim_) {
@@ -1594,7 +1638,7 @@ namespace oc {
                     current_index_ -= second_ind_ * second_stride_;
                     second_ind_ = 0;
                 }
-                if (ndims_ > 2) {
+                if (hdr_.dims().size() > 2) {
                     ++third_ind_;
                     current_index_ += third_stride_;
                     if (third_ind_ < third_dim_) {
@@ -1603,48 +1647,48 @@ namespace oc {
                     current_index_ -= third_ind_ * third_stride_;
                     third_ind_ = 0;
                 }
-                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
-                    ++indices_[i];
-                    current_index_ += strides_[i];
-                    if (indices_[i] < dims_[i]) {
+                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
+                    ++(*std::next(indices_.begin(), i));
+                    current_index_ += *std::next(hdr_.strides().cbegin(), i);
+                    if (*std::next(indices_.cbegin(), i) < *std::next(hdr_.dims().cbegin(), i)) {
                         return *this;
                     }
-                    current_index_ -= indices_[i] * strides_[i];
-                    indices_[i] = 0;
+                    current_index_ -= *std::next(indices_.cbegin(), i) * *std::next(hdr_.strides().cbegin(), i);
+                    *std::next(indices_.begin(), i) = 0;
                 }
                 return *this;
             }
 
             constexpr arrnd_general_indexer operator++(int) noexcept
             {
-                arrnd_general_indexer<storage_type, header_type> temp{ *this };
+                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr arrnd_general_indexer& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer& operator+=(size_type count) noexcept
             {
-                for (std::int64_t i = 0; i < count; ++i) {
+                for (size_type i = 0; i < count; ++i) {
                     ++(*this);
                 }
                 return *this;
             }
 
-            arrnd_general_indexer operator+(std::int64_t count) noexcept
+            arrnd_general_indexer operator+(size_type count) noexcept
             {
-                arrnd_general_indexer<storage_type, header_type> temp{ *this };
+                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
                 temp += count;
                 return temp;
             }
 
             constexpr arrnd_general_indexer& operator--() noexcept
             {
-                if (current_index_ <= first_index_) {
-                    current_index_ = first_index_ - 1;
+                if (current_index_ <= hdr_.offset()) {
+                    current_index_ = hdr_.offset() - 1;
                     return *this;
                 }
-                if (current_index_ == last_index_ + 1) {
-                    current_index_ = last_index_;
+                if (current_index_ == hdr_.last_index() + 1) {
+                    current_index_ = hdr_.last_index();
                     return *this;
                 }
                 --first_ind_;
@@ -1654,7 +1698,7 @@ namespace oc {
                 }
                 first_ind_ = first_dim_ - 1;
                 current_index_ += (first_ind_ + 1) * first_stride_;
-                if (ndims_ > 1) {
+                if (hdr_.dims().size() > 1) {
                     --second_ind_;
                     current_index_ -= second_stride_;
                     if (second_ind_ > -1) {
@@ -1663,7 +1707,7 @@ namespace oc {
                     second_ind_ = second_dim_ - 1;
                     current_index_ += (second_ind_ + 1) * second_stride_;
                 }
-                if (ndims_ > 2) {
+                if (hdr_.dims().size() > 2) {
                     --third_ind_;
                     current_index_ -= third_stride_;
                     if (third_ind_ > -1) {
@@ -1672,134 +1716,101 @@ namespace oc {
                     third_ind_ = third_dim_ - 1;
                     current_index_ += (third_ind_ + 1) * third_stride_;
                 }
-                for (std::int64_t i = ndims_ - 4; i >= 0; --i) {
-                    --indices_[i];
-                    current_index_ -= strides_[i];
-                    if (indices_[i] > -1) {
+                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
+                    --(*std::next(indices_.begin(), i));
+                    current_index_ -= *std::next(hdr_.strides().cbegin(), i);
+                    if (*std::next(indices_.cbegin(), i) > -1) {
                         return *this;
                     }
-                    indices_[i] = dims_[i] - 1;
-                    current_index_ += (indices_[i] + 1) * strides_[i];
+                    *std::next(indices_.begin(), i) = *std::next(hdr_.dims().cbegin(), i) - 1;
+                    current_index_ += (*std::next(indices_.cbegin(), i) + 1) * *std::next(hdr_.strides().cbegin(), i);
                 }
                 return *this;
             }
 
             constexpr arrnd_general_indexer operator--(int) noexcept
             {
-                arrnd_general_indexer<storage_type, header_type> temp{ *this };
+                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr arrnd_general_indexer& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer& operator-=(size_type count) noexcept
             {
-                for (std::int64_t i = 0; i < count; ++i) {
+                for (size_type i = 0; i < count; ++i) {
                     --(*this);
                 }
                 return *this;
             }
 
-            constexpr arrnd_general_indexer operator-(std::int64_t count) noexcept
+            constexpr arrnd_general_indexer operator-(size_type count) noexcept
             {
-                arrnd_general_indexer<storage_type, header_type> temp{ *this };
+                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
                 temp -= count;
                 return temp;
             }
 
             [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return static_cast<std::uint64_t>(current_index_ - first_index_) <= last_first_diff_;
+                return static_cast<std::make_unsigned_t<value_type>>(current_index_ - hdr_.offset()) <= last_first_diff_;
             }
 
-            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
+            [[nodiscard]] constexpr value_type operator*() const noexcept
             {
                 return current_index_;
             }
 
         private:
-            constexpr static storage_type order_from_major_axis(std::int64_t order_size, std::int64_t axis)
+            constexpr void setup(bool backward)
             {
-                storage_type new_ordered_indices(order_size);
-                std::iota(new_ordered_indices.begin(), new_ordered_indices.end(), static_cast<std::int64_t>(0));
-                new_ordered_indices[0] = axis;
-                std::int64_t pos = 1;
-                for (std::int64_t i = 0; i < order_size; ++i) {
-                    if (i != axis) {
-                        new_ordered_indices[pos++] = i;
-                    }
+                last_first_diff_ = static_cast<std::make_unsigned_t<value_type>>(hdr_.last_index() - hdr_.offset());
+
+                if (hdr_.dims().size() > 0) {
+                    first_dim_ = hdr_.dims().back();
+                    first_stride_ = hdr_.strides().back();
+                    first_ind_ = backward ? first_dim_ - 1 : 0;
                 }
-                return new_ordered_indices;
-            }
 
-            constexpr static storage_type reorder(std::span<const std::int64_t> vec, std::span<const std::int64_t> indices)
-            {
-                std::int64_t size = std::min(std::ssize(vec), std::ssize(indices));
-                storage_type res(size);
-                for (std::int64_t i = 0; i < size; ++i) {
-                    res[i] = vec[indices[i]];
+                if (hdr_.dims().size() > 1) {
+                    second_dim_ = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2);
+                    second_stride_ = *std::next(hdr_.strides().cbegin(), hdr_.dims().size() - 2);
+                    second_ind_ = backward ? second_dim_ - 1 : 0;
                 }
-                return res;
-            }
 
-            constexpr static std::tuple<
-                storage_type, storage_type>
-                reduce_dimensions(std::span<const std::int64_t> dims, std::span<const std::int64_t> strides)
-            {
-                std::tuple<
-                    storage_type,
-                    storage_type> reds(dims.size(), dims.size());
+                if (hdr_.dims().size() > 2) {
+                    third_dim_ = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 3);
+                    third_stride_ = *std::next(hdr_.strides().cbegin(), hdr_.dims().size() - 3);
+                    third_ind_ = backward ? third_dim_ - 1 : 0;
+                }
 
-                auto& [rdims, rstrides] = reds;
-
-                std::int64_t rndims = 0;
-
-                std::int64_t ri = 0;
-                for (std::int64_t i = 0; i < std::ssize(dims); ++i) {
-                    if (dims[i] > 1) {
-                        rdims[ri] = dims[i];
-                        rstrides[ri] = strides[i];
-                        ++ri;
-                        ++rndims;
+                if (hdr_.dims().size() > 3) {
+                    indices_.resize(hdr_.dims().size() - 3);
+                    for (size_type i = 0; i < indices_.size(); ++i) {
+                        *std::next(indices_.begin(), i) = backward ? *std::next(hdr_.dims().cbegin(), i) - 1 : 0;
                     }
                 }
 
-                for (std::int64_t i = rndims - 1; i >= 1; --i) {
-                    if (rdims[i] == rstrides[i - 1]) {
-                        rdims[i - 1] *= rdims[i];
-                        rstrides[i - 1] = rstrides[i];
-                        --rndims;
-                    }
-                }
-
-                if (rndims != std::ssize(dims)) {
-                    rdims.resize(rndims);
-                    rstrides.resize(rndims);
-                }
-
-                return reds;
+                current_index_ = backward ? hdr_.last_index() : hdr_.offset();
             }
 
-            storage_type dims_;
-            storage_type strides_;
-            std::int64_t first_index_;
-            std::int64_t last_index_;
-            std::uint64_t last_first_diff_;
-            std::int64_t ndims_;
+            header_type hdr_;
 
-            std::int64_t first_stride_;
-            std::int64_t first_dim_;
-            std::int64_t first_ind_;
+            std::make_unsigned_t<value_type> last_first_diff_;
 
-            std::int64_t second_stride_;
-            std::int64_t second_dim_;
-            std::int64_t second_ind_;
+            value_type first_stride_;
+            value_type first_dim_;
+            value_type first_ind_;
 
-            std::int64_t third_stride_;
-            std::int64_t third_dim_;
-            std::int64_t third_ind_;
+            value_type second_stride_;
+            value_type second_dim_;
+            value_type second_ind_;
+
+            value_type third_stride_;
+            value_type third_dim_;
+            value_type third_ind_;
 
             storage_type indices_;
-            std::int64_t current_index_;
+            value_type current_index_;
         };
 
 
@@ -1810,24 +1821,29 @@ namespace oc {
         {
         public:
             using header_type = Header;
+            using size_type = Header::size_type;
+            using value_type = Header::value_type;
 
             constexpr arrnd_fast_indexer(const header_type& hdr, bool backward = false)
                 : arrnd_fast_indexer(hdr, 0, backward)
             {
             }
 
-            constexpr arrnd_fast_indexer(const header_type& hdr, std::int64_t axis, bool backward = false)
+            constexpr arrnd_fast_indexer(const header_type& hdr, size_type axis, bool backward = false)
             {
+                assert(!hdr.is_subarray() && !hdr.is_axis_reordered());
+                assert(axis >= 0 && axis < hdr.dims().size());
+
                 // data
 
                 last_index_ = hdr.last_index();
 
-                num_super_groups_ = hdr.dims()[axis];
-                step_size_between_super_groups_ = hdr.strides()[axis];
+                num_super_groups_ = *std::next(hdr.dims().cbegin(), axis);
+                step_size_between_super_groups_ = *std::next(hdr.strides().cbegin(), axis);
 
                 num_groups_in_super_group_ =
-                    std::accumulate(hdr.dims().cbegin(), hdr.dims().cbegin() + axis + 1, std::int64_t{ 1 }, std::multiplies<>{}) / num_super_groups_;
-                group_size_ = hdr.strides()[axis];
+                    std::accumulate(hdr.dims().cbegin(), std::next(hdr.dims().cbegin(), axis + 1), value_type{ 1 }, std::multiplies<>{}) / num_super_groups_;
+                group_size_ = *std::next(hdr.strides().cbegin(), axis);
                 step_size_inside_group_ = hdr.strides().back();
                 step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
 
@@ -1933,15 +1949,15 @@ namespace oc {
                 return temp;
             }
 
-            constexpr arrnd_fast_indexer& operator+=(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer& operator+=(size_type count) noexcept
             {
-                for (std::int64_t i = 0; i < count; ++i) {
+                for (size_type i = 0; i < count; ++i) {
                     ++(*this);
                 }
                 return *this;
             }
 
-            constexpr arrnd_fast_indexer operator+(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer operator+(size_type count) noexcept
             {
                 arrnd_fast_indexer<header_type> temp{ *this };
                 temp += count;
@@ -2015,15 +2031,15 @@ namespace oc {
                 return temp;
             }
 
-            constexpr arrnd_fast_indexer& operator-=(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer& operator-=(size_type count) noexcept
             {
-                for (std::int64_t i = 0; i < count; ++i) {
+                for (size_type i = 0; i < count; ++i) {
                     --(*this);
                 }
                 return *this;
             }
 
-            constexpr arrnd_fast_indexer operator-(std::int64_t count) noexcept
+            constexpr arrnd_fast_indexer operator-(size_type count) noexcept
             {
                 arrnd_fast_indexer<header_type> temp{ *this };
                 temp -= count;
@@ -2032,39 +2048,39 @@ namespace oc {
 
             [[nodiscard]] explicit constexpr operator bool() const noexcept
             {
-                return static_cast<std::uint64_t>(current_index_) <= static_cast<std::uint64_t>(last_index_);
+                return static_cast<std::make_unsigned_t<value_type>>(current_index_) <= static_cast<std::make_unsigned_t<value_type>>(last_index_);
             }
 
-            [[nodiscard]] constexpr std::int64_t operator*() const noexcept
+            [[nodiscard]] constexpr value_type operator*() const noexcept
             {
                 return current_index_;
             }
 
         private:
-            std::int64_t current_index_ = 0;
+            value_type current_index_ = 0;
 
             // data
 
-            std::int64_t last_index_ = 0;
+            value_type last_index_ = 0;
 
-            std::int64_t num_super_groups_ = 0;
-            std::int64_t step_size_between_super_groups_ = 0;
+            size_type num_super_groups_ = 0;
+            value_type step_size_between_super_groups_ = 0;
 
-            std::int64_t num_groups_in_super_group_ = 0;
-            std::int64_t group_size_ = 0;
-            std::int64_t step_size_inside_group_ = 0;
-            std::int64_t step_size_between_groups_ = 0;
+            size_type num_groups_in_super_group_ = 0;
+            size_type group_size_ = 0;
+            value_type step_size_inside_group_ = 0;
+            value_type step_size_between_groups_ = 0;
             
             // counters
 
-            std::int64_t super_groups_counter_ = 0;
+            size_type super_groups_counter_ = 0;
 
-            std::int64_t group_indices_counter_ = 0;
-            std::int64_t groups_counter_ = 0;
+            size_type group_indices_counter_ = 0;
+            size_type groups_counter_ = 0;
 
-            std::int64_t super_group_start_index_ = 0;
+            value_type super_group_start_index_ = 0;
 
-            std::int64_t group_start_index_ = 0;
+            value_type group_start_index_ = 0;
         };
 
         template <typename Arrnd>
@@ -2072,7 +2088,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
             using reference = Arrnd::value_type&;
@@ -2169,7 +2185,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
             using reference = Arrnd::value_type&;
@@ -2265,7 +2281,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
             using reference = Arrnd::value_type&;
@@ -2362,7 +2378,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
             using reference = Arrnd::value_type&;
@@ -2457,7 +2473,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
 
@@ -2598,7 +2614,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
@@ -2735,7 +2751,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
 
@@ -2876,7 +2892,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using difference_type = std::int64_t;
+            using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
@@ -4116,7 +4132,7 @@ namespace oc {
                     return this_type();
                 }
 
-                header_type new_header(header().subheader(order.begin(), order.end()));
+                header_type new_header(header().reorder(order.begin(), order.end()));
                 if (new_header.empty()) {
                     return this_type();
                 }
@@ -4124,7 +4140,7 @@ namespace oc {
                 this_type res({ header().count() });
                 res.header() = std::move(new_header);
 
-                indexer_type gen(header(), order);
+                indexer_type gen(header(), order.begin(), order.end());
                 indexer_type res_gen(res.header());
 
                 while (gen && res_gen) {
@@ -4375,33 +4391,33 @@ namespace oc {
 
             constexpr auto cbegin(std::span<const std::int64_t> order) const
             {
-                return const_iterator(buffsp_->data(), indexer_type(hdr_, order));
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end()));
             }
 
             constexpr auto cend(std::span<const std::int64_t> order) const
             {
-                return const_iterator(buffsp_->data(), indexer_type(hdr_, order, true) + 1);
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end(), true) + 1);
             }
 
 
             constexpr auto rbegin(std::span<const std::int64_t> order)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order, true));
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end(), true));
             }
 
             constexpr auto rend(std::span<const std::int64_t> order)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order) - 1);
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end()) - 1);
             }
 
             constexpr auto crbegin(std::span<const std::int64_t> order) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order, true));
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end(), true));
             }
 
             constexpr auto crend(std::span<const std::int64_t> order) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order) - 1);
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, order.begin(), order.end()) - 1);
             }
 
 
