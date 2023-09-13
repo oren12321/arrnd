@@ -2468,6 +2468,139 @@ namespace oc {
         };
 
 
+        template <typename Header = arrnd_header<>>
+        class arrnd_fixed_axis_ranger final
+        {
+        public:
+            using header_type = Header;
+            using size_type = Header::size_type;
+            using value_type = Header::value_type;
+
+            using storage_type = Header::storage_type::template replaced_type<interval<value_type>>;
+
+            constexpr arrnd_fixed_axis_ranger(const header_type& hdr, size_type fixed_axis = 0, bool backward = false)
+                : fixed_axis_(fixed_axis)
+            {
+                assert(fixed_axis >= 0 && fixed_axis < hdr.dims().size());
+
+                current_index_ = backward ? *std::next(hdr.dims().cbegin(), fixed_axis) - 1 : 0;
+
+                last_index_ = *std::next(hdr.dims().cbegin(), fixed_axis);
+
+                ranges_ = storage_type(hdr.dims().size());
+                for (size_type i = 0; i < hdr.dims().size(); ++i) {
+                    ranges_[i] = { 0, *std::next(hdr.dims().cbegin(), i) - 1 };
+                }
+                ranges_[fixed_axis_] = { current_index_, current_index_ };
+            }
+
+            constexpr arrnd_fixed_axis_ranger() = default;
+
+            constexpr arrnd_fixed_axis_ranger(const arrnd_fixed_axis_ranger& other) = default;
+            constexpr arrnd_fixed_axis_ranger& operator=(const arrnd_fixed_axis_ranger& other) = default;
+
+            constexpr arrnd_fixed_axis_ranger(arrnd_fixed_axis_ranger&& other) noexcept = default;
+            constexpr arrnd_fixed_axis_ranger& operator=(arrnd_fixed_axis_ranger&& other) noexcept = default;
+
+            constexpr ~arrnd_fixed_axis_ranger() = default;
+
+            constexpr arrnd_fixed_axis_ranger& operator++() noexcept
+            {
+                ++current_index_;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
+                return *this;
+            }
+
+            constexpr arrnd_fixed_axis_ranger operator++(int) noexcept
+            {
+                arrnd_fixed_axis_ranger<header_type> temp{ *this };
+                ++(*this);
+                return temp;
+            }
+
+            constexpr arrnd_fixed_axis_ranger& operator+=(size_type count) noexcept
+            {
+                current_index_ += count;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
+                ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
+                if (current_index_ >= last_index_) {
+                    return *this;
+                }
+                return *this;
+            }
+
+            constexpr arrnd_fixed_axis_ranger operator+(size_type count) noexcept
+            {
+                arrnd_fixed_axis_ranger<header_type> temp{ *this };
+                temp += count;
+                return temp;
+            }
+
+            constexpr arrnd_fixed_axis_ranger& operator--() noexcept
+            {
+                --current_index_;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
+                return *this;
+            }
+
+            constexpr arrnd_fixed_axis_ranger operator--(int) noexcept
+            {
+                arrnd_fixed_axis_ranger<header_type> temp{ *this };
+                --(*this);
+                return temp;
+            }
+
+            constexpr arrnd_fixed_axis_ranger& operator-=(size_type count) noexcept
+            {
+                current_index_ -= count;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
+                ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
+                if (current_index_ < 0) {
+                    return *this;
+                }
+                return *this;
+            }
+
+            constexpr arrnd_fixed_axis_ranger operator-(size_type count) noexcept
+            {
+                arrnd_fixed_axis_ranger<header_type> temp{ *this };
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] explicit constexpr operator bool() const noexcept
+            {
+                return current_index_ >= 0 && current_index_ < last_index_;
+            }
+
+            [[nodiscard]] constexpr const storage_type& operator*() const noexcept
+            {
+                return ranges_;
+            }
+
+            [[nodiscard]] constexpr bool operator==(const arrnd_fixed_axis_ranger& far) const noexcept
+            {
+                return current_index_ == far.current_index_;
+            }
+
+        private:
+            size_type fixed_axis_;
+            value_type current_index_;
+            value_type last_index_;
+            storage_type ranges_;
+        };
+
+
         template <typename Arrnd>
         class arrnd_axis_iterator final
         {
@@ -2477,36 +2610,13 @@ namespace oc {
             using value_type = Arrnd;
             using reference = Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
+            using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-            constexpr arrnd_axis_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
-                : arrnd_ref_(arrnd_ref)
+            constexpr arrnd_axis_iterator(const value_type& arrnd_ref, const ranger_type& far)
+                : arrnd_ref_(arrnd_ref), far_(far)
             {
-                fixed_axis_ = fixed_axis;
-                if (fixed_axis < 0) {
-                    fixed_axis_ = 0;
-                }
-                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
-                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
-                }
-
-                current_index_ = start_index;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
-                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
-                }
-
-                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
-
-                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
-                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
-                }
-                ranges_[fixed_axis_] = { current_index_, current_index_ };
-                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                if (far) {
+                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 }
             }
 
@@ -2522,11 +2632,7 @@ namespace oc {
 
             constexpr arrnd_axis_iterator& operator++()
             {
-                ++current_index_;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                ++far_;
                 return *this;
             }
 
@@ -2539,14 +2645,7 @@ namespace oc {
 
             constexpr arrnd_axis_iterator& operator+=(difference_type count)
             {
-                current_index_ += count;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                if (current_index_ >= last_index_) {
-                    return *this;
-                }
+                far_ += count;
                 return *this;
             }
 
@@ -2559,11 +2658,7 @@ namespace oc {
 
             constexpr arrnd_axis_iterator& operator--()
             {
-                --current_index_;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                --far_;
                 return *this;
             }
 
@@ -2576,14 +2671,7 @@ namespace oc {
 
             constexpr arrnd_axis_iterator& operator-=(difference_type count)
             {
-                current_index_ -= count;
-                if (current_index_ < 0) {
-                    current_index_  = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                if (current_index_ < 0) {
-                    return *this;
-                }
+                far_ -= count;
                 return *this;
             }
 
@@ -2596,21 +2684,18 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 return slice_;
             }
 
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_iterator& iter) const noexcept
             {
-                return current_index_ == iter.current_index_;
+                return far_ == iter.far_;
             }
 
         private:
             value_type arrnd_ref_;
-            std::int64_t fixed_axis_;
-            std::int64_t current_index_;
-            std::int64_t last_index_;
-            storage_type ranges_;
+            ranger_type far_;
 
             value_type slice_;
         };
@@ -2624,36 +2709,13 @@ namespace oc {
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
+            using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-            constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
-                : arrnd_ref_(arrnd_ref)
+            constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+                : arrnd_ref_(arrnd_ref), far_(far)
             {
-                fixed_axis_ = fixed_axis;
-                if (fixed_axis < 0) {
-                    fixed_axis_ = 0;
-                }
-                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
-                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
-                }
-
-                current_index_ = start_index;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
-                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
-                }
-
-                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
-
-                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
-                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
-                }
-                ranges_[fixed_axis_] = { current_index_, current_index_ };
-                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                if (far) {
+                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 }
             }
 
@@ -2669,11 +2731,7 @@ namespace oc {
 
             constexpr arrnd_axis_const_iterator& operator++()
             {
-                ++current_index_;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                ++far_;
                 return *this;
             }
 
@@ -2686,11 +2744,7 @@ namespace oc {
 
             constexpr arrnd_axis_const_iterator& operator+=(difference_type count)
             {
-                current_index_ += count;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                far_ += count;
                 return *this;
             }
 
@@ -2703,11 +2757,7 @@ namespace oc {
 
             constexpr arrnd_axis_const_iterator& operator--()
             {
-                --current_index_;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                --far_;
                 return *this;
             }
 
@@ -2720,11 +2770,7 @@ namespace oc {
 
             constexpr arrnd_axis_const_iterator& operator-=(difference_type count)
             {
-                current_index_ -= count;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                far_ -= count;
                 return *this;
             }
 
@@ -2735,23 +2781,20 @@ namespace oc {
                 return temp;
             }
 
-            [[nodiscard]] constexpr const_reference operator*() const noexcept
+            [[nodiscard]] constexpr const_reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 return slice_;
             }
 
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_const_iterator& iter) const noexcept
             {
-                return current_index_ == iter.current_index_;
+                return far_ == iter.far_;
             }
 
         private:
             value_type arrnd_ref_;
-            std::int64_t fixed_axis_;
-            std::int64_t current_index_;
-            std::int64_t last_index_;
-            storage_type ranges_;
+            ranger_type far_;
 
             value_type slice_;
         };
@@ -2767,36 +2810,13 @@ namespace oc {
             using value_type = Arrnd;
             using reference = Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
+            using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-            constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
-                : arrnd_ref_(arrnd_ref)
+            constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
+                : arrnd_ref_(arrnd_ref), far_(far)
             {
-                fixed_axis_ = fixed_axis;
-                if (fixed_axis < 0) {
-                    fixed_axis_ = 0;
-                }
-                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
-                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
-                }
-
-                current_index_ = start_index;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
-                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
-                }
-
-                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
-
-                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
-                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
-                }
-                ranges_[fixed_axis_] = { current_index_, current_index_ };
-                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                if (far) {
+                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 }
             }
 
@@ -2812,11 +2832,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_iterator& operator--()
             {
-                ++current_index_;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                ++far_;
                 return *this;
             }
 
@@ -2829,14 +2845,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_iterator& operator-=(difference_type count)
             {
-                current_index_ += count;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                if (current_index_ >= last_index_) {
-                    return *this;
-                }
+                far_ += count;
                 return *this;
             }
 
@@ -2849,11 +2858,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_iterator& operator++()
             {
-                --current_index_;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                --far_;
                 return *this;
             }
 
@@ -2866,14 +2871,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_iterator& operator+=(difference_type count)
             {
-                current_index_ -= count;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
-                if (current_index_ < 0) {
-                    return *this;
-                }
+                far_ -= count;
                 return *this;
             }
 
@@ -2886,21 +2884,18 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 return slice_;
             }
 
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_iterator& iter) const noexcept
             {
-                return current_index_ == iter.current_index_;
+                return far_ == iter.far_;
             }
 
         private:
             value_type arrnd_ref_;
-            std::int64_t fixed_axis_;
-            std::int64_t current_index_;
-            std::int64_t last_index_;
-            storage_type ranges_;
+            ranger_type far_;
 
             value_type slice_;
         };
@@ -2914,36 +2909,13 @@ namespace oc {
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
-            using storage_type = Arrnd::header_type::storage_type::template replaced_type<interval<std::int64_t>>;
+            using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-            constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, std::int64_t fixed_axis, std::int64_t start_index)
-                : arrnd_ref_(arrnd_ref)
+            constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+                : arrnd_ref_(arrnd_ref), far_(far)
             {
-                fixed_axis_ = fixed_axis;
-                if (fixed_axis < 0) {
-                    fixed_axis_ = 0;
-                }
-                else if (fixed_axis >= std::ssize(arrnd_ref.header().dims())) {
-                    fixed_axis_ = std::ssize(arrnd_ref.header().dims()) - 1;
-                }
-
-                current_index_ = start_index;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                else if (current_index_ > arrnd_ref.header().dims()[fixed_axis_]) {
-                    current_index_ = arrnd_ref.header().dims()[fixed_axis_];
-                }
-
-                last_index_ = arrnd_ref.header().dims()[fixed_axis_];
-
-                ranges_ = storage_type(std::ssize(arrnd_ref.header().dims()));
-                for (std::int64_t i = 0; i < std::ssize(arrnd_ref.header().dims()); ++i) {
-                    ranges_[i] = { 0, arrnd_ref.header().dims()[i] - 1 };
-                }
-                ranges_[fixed_axis_] = { current_index_, current_index_ };
-                if (current_index_ >= 0 && current_index_ < arrnd_ref.header().dims()[fixed_axis_]) {
-                    slice_ = arrnd_ref[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                if (far) {
+                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 }
             }
 
@@ -2959,11 +2931,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_const_iterator& operator--()
             {
-                ++current_index_;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                ++far_;
                 return *this;
             }
 
@@ -2976,11 +2944,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_const_iterator& operator-=(difference_type count)
             {
-                current_index_ += count;
-                if (current_index_ > last_index_) {
-                    current_index_ = last_index_;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                far_ += count;
                 return *this;
             }
 
@@ -2993,11 +2957,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_const_iterator& operator++()
             {
-                --current_index_;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                --far_;
                 return *this;
             }
 
@@ -3010,11 +2970,7 @@ namespace oc {
 
             constexpr arrnd_axis_reverse_const_iterator& operator+=(difference_type count)
             {
-                current_index_ -= count;
-                if (current_index_ < 0) {
-                    current_index_ = -1;
-                }
-                ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
+                far_ -= count;
                 return *this;
             }
 
@@ -3025,23 +2981,20 @@ namespace oc {
                 return temp;
             }
 
-            [[nodiscard]] constexpr const_reference operator*() const noexcept
+            [[nodiscard]] constexpr const_reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<std::int64_t>>(ranges_.data(), ranges_.size())];
+                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
                 return slice_;
             }
 
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_const_iterator& iter) const noexcept
             {
-                return current_index_ == iter.current_index_;
+                return far_ == iter.far_;
             }
 
         private:
             value_type arrnd_ref_;
-            std::int64_t fixed_axis_;
-            std::int64_t current_index_;
-            std::int64_t last_index_;
-            storage_type ranges_;
+            ranger_type far_;
 
             value_type slice_;
         };
@@ -3066,6 +3019,7 @@ namespace oc {
             using shared_ref_allocator_type = SharedRefAllocator<T>;
             using header_type = Header;
             using indexer_type = Indexer;
+            using ranger_type = arrnd_fixed_axis_ranger<Header>;
 
             using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer>;
             template <typename U>
@@ -4492,44 +4446,44 @@ namespace oc {
 
             constexpr auto begin_subarray(std::int64_t fixed_axis = 0)
             {
-                return subarray_iterator(*this, fixed_axis, 0);
+                return subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
             }
 
             constexpr auto end_subarray(std::int64_t fixed_axis = 0)
             {
-                return subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis]);
+                return subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
             }
 
 
             constexpr auto cbegin_subarray(std::int64_t fixed_axis = 0) const
             {
-                return const_subarray_iterator(*this, fixed_axis, 0);
+                return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
             }
 
             constexpr auto cend_subarray(std::int64_t fixed_axis = 0) const
             {
-                return const_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis]);
+                return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
             }
 
 
             constexpr auto rbegin_subarray(std::int64_t fixed_axis = 0)
             {
-                return reverse_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis] - 1);
+                return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
             }
 
             constexpr auto rend_subarray(std::int64_t fixed_axis = 0)
             {
-                return reverse_subarray_iterator(*this, fixed_axis, -1);
+                return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
             }
 
             constexpr auto crbegin_subarray(std::int64_t fixed_axis = 0) const
             {
-                return const_reverse_subarray_iterator(*this, fixed_axis, hdr_.dims()[fixed_axis] - 1);
+                return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
             }
 
             constexpr auto crend_subarray(std::int64_t fixed_axis = 0) const
             {
-                return const_reverse_subarray_iterator(*this, fixed_axis, -1);
+                return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
             }
 
 
