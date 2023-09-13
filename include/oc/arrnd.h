@@ -2523,6 +2523,9 @@ namespace oc {
             constexpr arrnd_axis_iterator& operator++()
             {
                 ++current_index_;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2557,6 +2560,9 @@ namespace oc {
             constexpr arrnd_axis_iterator& operator--()
             {
                 --current_index_;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2664,6 +2670,9 @@ namespace oc {
             constexpr arrnd_axis_const_iterator& operator++()
             {
                 ++current_index_;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2695,6 +2704,9 @@ namespace oc {
             constexpr arrnd_axis_const_iterator& operator--()
             {
                 --current_index_;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2801,6 +2813,9 @@ namespace oc {
             constexpr arrnd_axis_reverse_iterator& operator--()
             {
                 ++current_index_;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2835,6 +2850,9 @@ namespace oc {
             constexpr arrnd_axis_reverse_iterator& operator++()
             {
                 --current_index_;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2942,6 +2960,9 @@ namespace oc {
             constexpr arrnd_axis_reverse_const_iterator& operator--()
             {
                 ++current_index_;
+                if (current_index_ > last_index_) {
+                    current_index_ = last_index_;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2973,6 +2994,9 @@ namespace oc {
             constexpr arrnd_axis_reverse_const_iterator& operator++()
             {
                 --current_index_;
+                if (current_index_ < 0) {
+                    current_index_ = -1;
+                }
                 ranges_[fixed_axis_] = interval<std::int64_t>{ current_index_ , current_index_ };
                 return *this;
             }
