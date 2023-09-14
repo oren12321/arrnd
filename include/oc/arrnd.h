@@ -745,10 +745,10 @@ namespace oc {
 
     namespace details {
 
-        template <typename T, typename U>
+        /*template <typename T, typename U>
         [[nodiscard]] inline constexpr bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
             return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-        }
+        }*/
 
         /*
         * N-dimensional array definitions:
@@ -1078,10 +1078,15 @@ namespace oc {
                     std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
             }
 
-            /*constexpr arrnd_header(std::span<const value_type> dims)
+            constexpr arrnd_header(std::span<value_type> dims)
                 : arrnd_header(dims.begin(), dims.end())
             {
-            }*/
+            }
+
+            constexpr arrnd_header(std::initializer_list<value_type> dims)
+                : arrnd_header(dims.begin(), dims.end())
+            {
+            }
 
             template <typename InputIt> requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
             [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
@@ -1133,6 +1138,16 @@ namespace oc {
                 res.is_subarray_ = true;
 
                 return res;
+            }
+
+            [[nodiscard]] constexpr arrnd_header subheader(std::span<interval<value_type>> ranges) const
+            {
+                return subheader(ranges.begin(), ranges.end());
+            }
+
+            [[nodiscard]] constexpr arrnd_header subheader(std::initializer_list<interval<value_type>> ranges) const
+            {
+                return subheader(ranges.begin(), ranges.end());
             }
 
             //constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const interval<std::int64_t>> ranges)
@@ -1276,6 +1291,16 @@ namespace oc {
                 res.is_axis_reordered_ = true;
 
                 return res;
+            }
+
+            [[nodiscard]] constexpr arrnd_header reorder(std::span<size_type> order) const
+            {
+                return reorder(order.begin(), order.end());
+            }
+
+            [[nodiscard]] constexpr arrnd_header reorder(std::initializer_list<size_type> order) const
+            {
+                return reorder(order.begin(), order.end());
             }
 
             [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
@@ -1454,7 +1479,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }*/
 
-            template <typename InputIt> requires std::is_integral_v<iter_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
             [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
             {
                 assert(first_sub <= last_sub);
@@ -1471,6 +1496,16 @@ namespace oc {
 
                 return offset_ + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), strides_.size() - nsubs),
                     value_type{ 0 }, std::plus<>{}, std::multiplies<>{});
+            }
+
+            [[nodiscard]] constexpr value_type subs2ind(std::span<value_type> subs) const
+            {
+                return sub2ind(subs.begin(), subs.end());
+            }
+
+            [[nodiscard]] constexpr value_type subs2ind(std::initializer_list<value_type> subs) const
+            {
+                return sub2ind(subs.begin(), subs.end());
             }
 
             /*[[nodiscard]] constexpr arrnd_header reduce() const
@@ -1600,6 +1635,16 @@ namespace oc {
                 : hdr_(/*std::is_sorted(order.begin(), order.end()) ? */hdr.reorder(first_order, last_order)/*.reduce()*//* : hdr.reorder(order.begin(), order.end())*/)
             {
                 setup(backward);
+            }
+
+            constexpr arrnd_general_indexer(const header_type& hdr, std::span<size_type> order, bool backward = false)
+                : arrnd_general_indexer(hdr, order.begin(), order.end(), backward)
+            {
+            }
+
+            constexpr arrnd_general_indexer(const header_type& hdr, std::initializer_list<size_type> order, bool backward = false)
+                : arrnd_general_indexer(hdr, order.begin(), order.end(), backward)
+            {
             }
 
             constexpr arrnd_general_indexer() = default;
@@ -5669,15 +5714,15 @@ namespace oc {
     using details::arrnd_general_indexer;
     using details::arrnd_fast_indexer;
 
-    using details::arrnd_iterator;
-    using details::arrnd_const_iterator;
-    using details::arrnd_reverse_iterator;
-    using details::arrnd_const_reverse_iterator;
+    //using details::arrnd_iterator;
+    //using details::arrnd_const_iterator;
+    //using details::arrnd_reverse_iterator;
+    //using details::arrnd_const_reverse_iterator;
 
-    using details::arrnd_axis_iterator;
-    using details::arrnd_axis_const_iterator;
-    using details::arrnd_axis_reverse_iterator;
-    using details::arrnd_axis_reverse_const_iterator;
+    //using details::arrnd_axis_iterator;
+    //using details::arrnd_axis_const_iterator;
+    //using details::arrnd_axis_reverse_iterator;
+    //using details::arrnd_axis_reverse_const_iterator;
 
     using details::copy;
     using details::clone;
