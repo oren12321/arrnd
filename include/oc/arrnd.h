@@ -3090,7 +3090,7 @@ namespace oc {
             constexpr arrnd(arrnd&& other) = default;
             template<arrnd_complient ArCo>
             constexpr arrnd(ArCo&& other)
-                : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
+                : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
             {
                 copy_from(other);
 
@@ -3110,7 +3110,7 @@ namespace oc {
             template<arrnd_complient ArCo>
             constexpr arrnd& operator=(ArCo&& other)&
             {
-                *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
                 copy_from(other);
                 ArCo dummy{ std::move(other) };
                 return *this;
@@ -3126,7 +3126,7 @@ namespace oc {
             constexpr arrnd(const arrnd& other) = default;
             template<arrnd_complient ArCo>
             constexpr arrnd(const ArCo& other)
-                : arrnd(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()))
+                : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
             {
                 copy_from(other);
             }
@@ -3143,7 +3143,7 @@ namespace oc {
             template<arrnd_complient ArCo>
             constexpr arrnd& operator=(const ArCo& other)&
             {
-                *this = this_type(std::span<const std::int64_t>(other.header().dims().data(), other.header().dims().size()));
+                *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
                 copy_from(other);
                 return *this;
             }
@@ -3176,7 +3176,8 @@ namespace oc {
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
                 : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                std::copy(first_data, first_data + hdr_.count(), buffsp_->data());
+                //std::copy(first_data, first_data + hdr_.count(), buffsp_->data());
+                std::copy(first_data, std::next(first_data, hdr_.count()), buffsp_->data());
             }
             template <typename InputDataIt>
             requires std::input_iterator<InputDataIt>
