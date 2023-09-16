@@ -435,7 +435,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations)
     using namespace oc;
 
     const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[6]{
         0, 1,
@@ -933,7 +933,7 @@ TEST(arrnd_test, have_read_write_access_to_slice)
         31, 32, 33,
         34, 35, 36 };
     const std::int64_t dims[]{ 2, 2, 3, 3 };
-    Integer_array arr{ {dims, 4}, data };
+    Integer_array arr{ dims, data };
 
     const int rdata[] = {
         11,
@@ -943,7 +943,7 @@ TEST(arrnd_test, have_read_write_access_to_slice)
         32
     };
     const std::int64_t rdims[]{ 2, 2, 1 };
-    Integer_array rarr{ {rdims, 3}, rdata };
+    Integer_array rarr{ rdims, rdata };
 
     Integer_array sarr{ arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}] };
 
@@ -966,13 +966,13 @@ TEST(arrnd_test, element_wise_transformation)
         1, 2,
         3, 4,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     const double odata[]{
         0.5, 1.0,
         1.5, 2.0,
         2.5, 3.0 };
-    oc::arrnd oarr{ {dims, 3}, odata };
+    oc::arrnd oarr{ dims, odata };
 
     EXPECT_TRUE(oc::all_equal(oarr, oc::transform(iarr, [](int n) {return n * 0.5; })));
 }
@@ -1003,15 +1003,15 @@ TEST(arrnd_test, element_wise_transform_operation)
         1, 2,
         3, 4,
         5, 6 };
-    oc::arrnd iarr1{ {dims, 3}, idata1 };
+    oc::arrnd iarr1{ dims, idata1 };
 
     const double idata2[]{
         0.5, 1.0,
         1.5, 2.0,
         2.5, 3.0 };
-    oc::arrnd iarr2{ {dims, 3}, idata2 };
+    oc::arrnd iarr2{ dims, idata2 };
 
-    oc::arrnd oarr1{ {dims, 3}, 0.5 };
+    oc::arrnd oarr1{ dims, 0.5 };
 
     EXPECT_TRUE(oc::all_equal(oarr1, oc::transform(iarr1, iarr2, [](int a, double b) { return b / a; })));
 
@@ -1019,7 +1019,7 @@ TEST(arrnd_test, element_wise_transform_operation)
         0, 1,
         2, 3,
         4, 5 };
-    oc::arrnd oarr2{ {dims, 3}, odata2 };
+    oc::arrnd oarr2{ dims, odata2 };
 
     EXPECT_TRUE(oc::all_equal(oarr2, oc::transform(iarr1, 1, [](int a, int b) { return a - b; })));
 
@@ -1027,7 +1027,7 @@ TEST(arrnd_test, element_wise_transform_operation)
         0, -1,
         -2, -3,
         -4, -5 };
-    oc::arrnd oarr3{ {dims, 3}, odata3 };
+    oc::arrnd oarr3{ dims, odata3 };
 
     EXPECT_TRUE(oc::all_equal(oarr3, oc::transform(1, iarr1, [](int a, int b) { return a - b; })));
 }
@@ -1040,7 +1040,7 @@ TEST(arrnd_test, reduce_elements)
         1, 2,
         3, 4,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), oc::reduce(iarr, [](double a, int b) {return a / b; }));
 
@@ -1050,7 +1050,7 @@ TEST(arrnd_test, reduce_elements)
         7.0,
         11.0
     };
-    oc::arrnd rarr2{ {dims2, 2}, rdata2 };
+    oc::arrnd rarr2{ dims2, rdata2 };
     EXPECT_TRUE(oc::all_equal(rarr2, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 2)));
 
     std::int64_t dims1[]{ 3, 2 };
@@ -1058,13 +1058,13 @@ TEST(arrnd_test, reduce_elements)
         1.0, 2.0,
         3.0, 4.0,
         5.0, 6.0 };
-    oc::arrnd rarr1{ {dims1, 2}, rdata1 };
+    oc::arrnd rarr1{ dims1, rdata1 };
     EXPECT_TRUE(oc::all_equal(rarr1, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 1)));
 
     std::int64_t dims0[]{ 1, 2 };
     const double rdata0[]{
         9.0, 12.0 };
-    oc::arrnd rarr0{ {dims0, 2}, rdata0 };
+    oc::arrnd rarr0{ dims0, rdata0 };
     EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 0)));
 
     oc::arrnd iarr1d{ {6}, idata };
@@ -1141,7 +1141,7 @@ TEST(arrnd_test, filter_elements_by_condition)
         1, 2,
         3, 0,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     const int rdata0[]{ 1, 2, 3, 0, 5, 6 };
     oc::arrnd rarr0{ {6}, rdata0 };
@@ -1167,7 +1167,7 @@ TEST(arrnd_test, filter_elements_by_maks)
         1, 2,
         3, 4,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     EXPECT_TRUE(oc::empty(oc::filter(iarr, oc::arrnd<int>{})));
 
@@ -1175,7 +1175,7 @@ TEST(arrnd_test, filter_elements_by_maks)
         1, 0,
         0, 1,
         0, 1 };
-    oc::arrnd imask0{ {dims, 3}, imask_data0 };
+    oc::arrnd imask0{ dims, imask_data0 };
     const int rdata0[]{ 1, 4, 6 };
     oc::arrnd rarr0{ {3}, rdata0 };
     EXPECT_TRUE(oc::all_equal(rarr0, oc::filter(iarr, imask0)));
@@ -1184,14 +1184,14 @@ TEST(arrnd_test, filter_elements_by_maks)
         0, 0,
         0, 0,
         0, 0 };
-    oc::arrnd imask1{ {dims, 3}, imask_data1 };
+    oc::arrnd imask1{ dims, imask_data1 };
     EXPECT_TRUE(oc::all_equal(oc::arrnd<int>{}, oc::filter(iarr, imask1)));
 
     const int imask_data2[]{
         1, 1,
         1, 1,
         1, 1 };
-    oc::arrnd imask2{ {dims, 3}, imask_data2 };
+    oc::arrnd imask2{ dims, imask_data2 };
     const int rdata2[]{ 1, 2, 3, 4, 5, 6 };
     oc::arrnd rarr2{ {6}, rdata2 };
     EXPECT_TRUE(oc::all_equal(rarr2, oc::filter(iarr, imask2)));
@@ -1207,7 +1207,7 @@ TEST(arrnd_test, select_elements_indices_by_condition)
         1, 2,
         3, 0,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     const std::int64_t rdata0[]{ 0, 1, 2, 3, 4, 5 };
     oc::arrnd rarr0{ {6}, rdata0 };
@@ -1256,7 +1256,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         1, 2,
         3, 4,
         5, 6 };
-    oc::arrnd iarr{ {dims, 3}, idata };
+    oc::arrnd iarr{ dims, idata };
 
     EXPECT_TRUE(oc::empty(oc::find(iarr, oc::arrnd<int>{})));
 
@@ -1264,7 +1264,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         1, 0,
         0, 1,
         0, 1 };
-    oc::arrnd imask0{ {dims, 3}, imask_data0 };
+    oc::arrnd imask0{ dims, imask_data0 };
     const std::int64_t rdata0[]{ 0, 3, 5 };
     oc::arrnd rarr0{ {3}, rdata0 };
     EXPECT_TRUE(oc::all_equal(rarr0, oc::find(iarr, imask0)));
@@ -1273,14 +1273,14 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         0, 0,
         0, 0,
         0, 0 };
-    oc::arrnd imask1{ {dims, 3}, imask_data1 };
+    oc::arrnd imask1{ dims, imask_data1 };
     EXPECT_TRUE(oc::all_equal(oc::arrnd<std::int64_t>{}, oc::find(iarr, imask1)));
 
     const int imask_data2[]{
         1, 1,
         1, 1,
         1, 1 };
-    oc::arrnd imask2{ {dims, 3}, imask_data2 };
+    oc::arrnd imask2{ dims, imask_data2 };
     const std::int64_t rdata2[]{ 0, 1, 2, 3, 4, 5 };
     oc::arrnd rarr2{ {6}, rdata2 };
     EXPECT_TRUE(oc::all_equal(rarr2, oc::find(iarr, imask2)));
@@ -1346,7 +1346,7 @@ TEST(arrnd_test, transpose)
         43, 44,
         45, 46,
         47, 48 };
-    oc::arrnd iarr{ {idims, 4}, idata };
+    oc::arrnd iarr{ idims, idata };
 
     const std::int64_t rdims[]{ 3, 4, 2, 2 };
     const double rdata[]{
@@ -1387,7 +1387,7 @@ TEST(arrnd_test, transpose)
 
         41.0, 42.0,
         47.0, 48.0 };
-    oc::arrnd rarr{ {rdims, 4}, rdata };
+    oc::arrnd rarr{ rdims, rdata };
 
     EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3 })));
 
@@ -2265,13 +2265,13 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         3, 4,
         5, 6 };
     std::int64_t dims1[]{ 3, 1, 2 };
-    Integer_array arr1{ {dims1, 3}, data1 };
-    Integer_array arr2{ {dims1, 3}, data1 };
+    Integer_array arr1{ dims1, data1 };
+    Integer_array arr2{ dims1, data1 };
 
     EXPECT_TRUE(oc::all_match(arr1, arr2, [](int a, int b) { return a / b == 1; }));
 
     std::int64_t dims2[]{ 3, 2 };
-    Integer_array arr3{ {dims2, 2}, data1 };
+    Integer_array arr3{ dims2, data1 };
 
     EXPECT_FALSE(oc::all_match(arr1, arr3, [](int, int) {return true; }));
 
@@ -2279,8 +2279,8 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         1, 2,
         3, 4,
         5, 5 };
-    Integer_array arr4{ {dims1, 3}, data2 };
-    Integer_array arr5{ {dims2, 2}, data2 };
+    Integer_array arr4{ dims1, data2 };
+    Integer_array arr5{ dims2, data2 };
 
     EXPECT_FALSE(oc::all_match(arr1, arr4, [](int a, int b) {return a == b; }));
     EXPECT_FALSE(oc::all_match(arr1, arr5, [](int a, int b) {return a == b; }));
@@ -2305,7 +2305,7 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
             31, 32, 33,
             34, 35, 36 };
         const std::int64_t dims[]{ 2, 2, 3, 3 };
-        Integer_array arr{ {dims, 4}, data };
+        Integer_array arr{ dims, data };
 
         const int rdata[] = {
             11,
@@ -2315,7 +2315,7 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
             32
         };
         const std::int64_t rdims[]{ 2, 1, 2, 1 };
-        Integer_array rarr{ {rdims, 4}, rdata };
+        Integer_array rarr{ rdims, rdata };
 
         Integer_array sarr{ arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}] };
         EXPECT_TRUE(oc::all_equal(rarr, sarr));
@@ -2329,7 +2329,7 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
             3.0, 4.0,
             5.0, 6.0 };
         std::int64_t dims1d[]{ 3, 1, 2 };
-        oc::arrnd<double> arr1d{ {dims1d, 3}, data1d };
+        oc::arrnd<double> arr1d{ dims1d, data1d };
 
         EXPECT_TRUE(oc::all_equal(arr1, arr1d));
         EXPECT_TRUE(oc::all_match(arr1, arr1d, [](int a, int b) { return a == b; }));
@@ -2362,13 +2362,13 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         3, 4,
         5, 6 };
     std::int64_t dims1[]{ 3, 1, 2 };
-    Integer_array arr1{ {dims1, 3}, data1 };
-    Integer_array arr2{ {dims1, 3}, data1 };
+    Integer_array arr1{ dims1, data1 };
+    Integer_array arr2{ dims1, data1 };
 
     EXPECT_TRUE(oc::any_match(arr1, arr2, [](int a, int b) { return a / b == 1; }));
 
     std::int64_t dims2[]{ 3, 2 };
-    Integer_array arr3{ {dims2, 2}, data1 };
+    Integer_array arr3{ dims2, data1 };
 
     EXPECT_FALSE(oc::any_match(arr1, arr3, [](int, int) {return true; }));
 
@@ -2376,8 +2376,8 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         1, 2,
         3, 4,
         5, 5 };
-    Integer_array arr4{ {dims1, 3}, data2 };
-    Integer_array arr5{ {dims2, 2}, data2 };
+    Integer_array arr4{ dims1, data2 };
+    Integer_array arr5{ dims2, data2 };
 
     EXPECT_TRUE(oc::any_match(arr1, arr4, [](int a, int b) {return a == b; }));
     EXPECT_FALSE(oc::any_match(arr1, arr5, [](int a, int b) {return a == b; }));
@@ -2402,7 +2402,7 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
             31, 32, 33,
             34, 35, 36 };
         const std::int64_t dims[]{ 2, 2, 3, 3 };
-        Integer_array arr{ {dims, 4}, data };
+        Integer_array arr{ dims, data };
 
         const int rdata[] = {
             11,
@@ -2412,7 +2412,7 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
             32
         };
         const std::int64_t rdims[]{ 2, 1, 2, 1 };
-        Integer_array rarr{ {rdims, 4}, rdata };
+        Integer_array rarr{ rdims, rdata };
 
         Integer_array sarr{ arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}] };
         EXPECT_FALSE(oc::all_equal(rarr, sarr));
@@ -2426,7 +2426,7 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
             3.0, 4.0,
             5.0, 6.0 };
         std::int64_t dims1d[]{ 3, 1, 2 };
-        oc::arrnd<double> arr1d{ {dims1d, 3}, data1d };
+        oc::arrnd<double> arr1d{ dims1d, data1d };
 
         EXPECT_TRUE(oc::all_equal(arr1, arr1d));
         EXPECT_TRUE(oc::any_match(arr1, arr1d, [](int a, int b) { return a == b; }));
@@ -2459,13 +2459,13 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
         3, 4,
         5, 6 };
     std::int64_t dims1[]{ 3, 1, 2 };
-    Integer_array arr1{ {dims1, 3}, data1 };
-    Integer_array arr2{ {dims1, 3}, data1 };
+    Integer_array arr1{ dims1, data1 };
+    Integer_array arr2{ dims1, data1 };
 
     EXPECT_TRUE(oc::all_equal(arr1, arr2));
 
     std::int64_t dims2[]{ 3, 2 };
-    Integer_array arr3{ {dims2, 2}, data1 };
+    Integer_array arr3{ dims2, data1 };
 
     EXPECT_FALSE(oc::all_equal(arr1, arr3));
 
@@ -2473,8 +2473,8 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
         1, 2,
         3, 4,
         5, 5 };
-    Integer_array arr4{ {dims1, 3}, data2 };
-    Integer_array arr5{ {dims2, 2}, data2 };
+    Integer_array arr4{ dims1, data2 };
+    Integer_array arr5{ dims2, data2 };
 
     EXPECT_FALSE(oc::all_equal(arr1, arr4));
     EXPECT_FALSE(oc::all_equal(arr1, arr5));
@@ -2499,7 +2499,7 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
             31, 32, 33,
             34, 35, 36 };
         const std::int64_t dims[]{ 2, 2, 3, 3 };
-        Integer_array arr{ {dims, 4}, data };
+        Integer_array arr{ dims, data };
 
         const int rdata[] = {
             11,
@@ -2509,7 +2509,7 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
             32
         };
         const std::int64_t rdims[]{ 2, 1, 2, 1 };
-        Integer_array rarr{ {rdims, 4}, rdata };
+        Integer_array rarr{ rdims, rdata };
 
         Integer_array sarr{ arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}] };
         EXPECT_TRUE(oc::all_equal(rarr, sarr));
@@ -2522,7 +2522,7 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
             3.0, 4.0,
             5.0, 6.0 };
         std::int64_t dims1d[]{ 3, 1, 2 };
-        oc::arrnd<double> arr1d{ {dims1d, 3}, data1d };
+        oc::arrnd<double> arr1d{ dims1d, data1d };
 
         EXPECT_TRUE(oc::all_equal(arr1, arr1d));
         
@@ -2553,13 +2553,13 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
         3, 4,
         5, 6 };
     std::int64_t dims1[]{ 3, 1, 2 };
-    Integer_array arr1{ {dims1, 3}, data1 };
-    Integer_array arr2{ {dims1, 3}, data1 };
+    Integer_array arr1{ dims1, data1 };
+    Integer_array arr2{ dims1, data1 };
 
     EXPECT_TRUE(oc::all_close(arr1, arr2));
 
     std::int64_t dims2[]{ 3, 2 };
-    Integer_array arr3{ {dims2, 2}, data1 };
+    Integer_array arr3{ dims2, data1 };
 
     EXPECT_FALSE(oc::all_close(arr1, arr3, 1));
 
@@ -2567,8 +2567,8 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
         1, 2,
         3, 4,
         5, 5 };
-    Integer_array arr4{ {dims1, 3}, data2 };
-    Integer_array arr5{ {dims2, 2}, data2 };
+    Integer_array arr4{ dims1, data2 };
+    Integer_array arr5{ dims2, data2 };
 
     EXPECT_TRUE(oc::all_close(arr1, arr4, 1));
     EXPECT_FALSE(oc::all_close(arr1, arr5, 1));
@@ -2593,7 +2593,7 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
             31, 32, 33,
             34, 35, 36 };
         const std::int64_t dims[]{ 2, 2, 3, 3 };
-        Integer_array arr{ {dims, 4}, data };
+        Integer_array arr{ dims, data };
 
         const int rdata[] = {
             10,
@@ -2603,7 +2603,7 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
             32
         };
         const std::int64_t rdims[]{ 2, 1, 2, 1 };
-        Integer_array rarr{ {rdims, 4}, rdata };
+        Integer_array rarr{ rdims, rdata };
 
         Integer_array sarr{ arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}] };
         EXPECT_TRUE(oc::all_close(rarr, sarr, 1));
@@ -2616,7 +2616,7 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
             3.0, 4.0,
             5.0, 6.0 };
         std::int64_t dims1d[]{ 3, 1, 2 };
-        oc::arrnd<double> arr1d{ {dims1d, 3}, data1d };
+        oc::arrnd<double> arr1d{ dims1d, data1d };
 
         EXPECT_TRUE(oc::all_close(arr1, arr1d));
 
@@ -2647,7 +2647,7 @@ TEST(arrnd_test, can_return_slice)
         3, 4,
         5, 6};
     const std::int64_t dims[] = { 3, 1, 2 };
-    Integer_array arr{ {dims, 3}, data };
+    Integer_array arr{ dims, data };
 
     // empty ranges
     {
@@ -2676,7 +2676,7 @@ TEST(arrnd_test, can_return_slice)
             1,
             5 };
         const std::int64_t tdims1[] = { 2, 1, 1 };
-        Integer_array tarr1{ {tdims1, 3}, tdata1 };
+        Integer_array tarr1{ tdims1, tdata1 };
         Integer_array sarr1{ arr[{{0, 2,2}, {0}, {0}}] };
         EXPECT_TRUE(oc::all_equal(tarr1, sarr1));
         EXPECT_EQ(arr.data(), sarr1.data());
@@ -2685,7 +2685,7 @@ TEST(arrnd_test, can_return_slice)
         const int tdata2[] = {
             3, 4 };
         const std::int64_t tdims2[] = { 1, 1, 2 };
-        Integer_array tarr2{ {tdims2, 3}, tdata2 };
+        Integer_array tarr2{ tdims2, tdata2 };
         Integer_array sarr2{ arr[{{1, 2, 2}}] };
         EXPECT_TRUE(oc::all_equal(tarr2, sarr2));
         EXPECT_EQ(arr.data(), sarr2.data());
@@ -2720,13 +2720,13 @@ TEST(arrnd_test, can_be_assigned_with_value)
             3, 4,
             5, 6 };
         const std::int64_t dims[]{ 3, 1, 2 };
-        Integer_array arr{ {dims, 3}, data };
+        Integer_array arr{ dims, data };
 
         const int tdata[] = {
             100, 100,
             100, 100,
             100, 100 };
-        Integer_array tarr{ {dims, 3}, tdata };
+        Integer_array tarr{ dims, tdata };
 
         arr = 100;
         EXPECT_TRUE(oc::all_equal(tarr, arr));
@@ -2739,13 +2739,13 @@ TEST(arrnd_test, can_be_assigned_with_value)
             3, 4,
             5, 6 };
         const std::int64_t dims[]{ 3, 1, 2 };
-        Integer_array arr{ {dims, 3}, data };
+        Integer_array arr{ dims, data };
 
         const int tdata[] = {
             1, 50,
             3, 100,
             5, 100 };
-        Integer_array tarr{ {dims, 3}, tdata };
+        Integer_array tarr{ dims, tdata };
 
         arr[{ {1,2}, {0}, {1} }] = 100;
         // assignment of different type
@@ -2763,7 +2763,7 @@ TEST(arrnd_test, copy_by_reference)
         3, 4,
         5, 6 };
     const std::int64_t dims[]{ 3, 1, 2 };
-    Integer_array arr{ {dims, 3}, data };
+    Integer_array arr{ dims, data };
 
     Integer_array carr1{ arr };
     carr1[{ 2, 0, 0 }] = 0;
@@ -2771,7 +2771,7 @@ TEST(arrnd_test, copy_by_reference)
         1, 2,
         3, 4,
         0, 6 };
-    Integer_array rarr1{ {dims, 3}, rdata1 };
+    Integer_array rarr1{ dims, rdata1 };
     EXPECT_TRUE(oc::all_equal(rarr1, carr1));
 
     Integer_array carr2{};
@@ -2781,7 +2781,7 @@ TEST(arrnd_test, copy_by_reference)
         0, 2,
         3, 4,
         0, 6 };
-    Integer_array rarr2{ {dims, 3}, rdata2 };
+    Integer_array rarr2{ dims, rdata2 };
     EXPECT_TRUE(oc::all_equal(rarr2, carr2));
 
     carr2[{ {0, 1}, {0, 0}, {0, 1} }] = carr1;
@@ -2823,13 +2823,13 @@ TEST(arrnd_test, copy_by_reference)
             3, 4,
             5, 6 };
         const std::int64_t dims[]{ 3, 1, 2 };
-        Integer_array iarr{ {dims, 3}, idata };
+        Integer_array iarr{ dims, idata };
 
         const double ddata[] = {
             1.1, 2.1,
             3.1, 4.1,
             5.1, 6.1 };
-        oc::arrnd<double> darr{ {dims, 3}, ddata };
+        oc::arrnd<double> darr{ dims, ddata };
 
         Integer_array cdarr1{ darr };
         EXPECT_TRUE(oc::all_equal(iarr, cdarr1));
@@ -2892,9 +2892,9 @@ TEST(arrnd_test, move_by_reference)
         3, 4,
         5, 6 };
     const std::int64_t dims[]{ 3, 1, 2 };
-    Integer_array sarr{ {dims, 3}, data };
+    Integer_array sarr{ dims, data };
 
-    Integer_array arr{ {dims, 3}, data };
+    Integer_array arr{ dims, data };
     Integer_array carr1{ std::move(arr) };
     EXPECT_TRUE(oc::all_equal(sarr, carr1));
     EXPECT_TRUE(empty(arr));
@@ -2904,7 +2904,7 @@ TEST(arrnd_test, move_by_reference)
     EXPECT_TRUE(oc::all_equal(sarr, carr2));
     EXPECT_TRUE(empty(carr1));
 
-    Integer_array sarr2{ {dims, 3}, data };
+    Integer_array sarr2{ dims, data };
     carr2[{ {0, 1}, {0, 0}, {0, 1} }] = std::move(sarr2);
     EXPECT_TRUE(empty(sarr2));
     EXPECT_TRUE(oc::all_equal(sarr, carr2));
@@ -2945,13 +2945,13 @@ TEST(arrnd_test, move_by_reference)
             3, 4,
             5, 6 };
         const std::int64_t dims[]{ 3, 1, 2 };
-        Integer_array iarr{ {dims, 3}, idata };
+        Integer_array iarr{ dims, idata };
 
         const double ddata[] = {
             1.1, 2.1,
             3.1, 4.1,
             5.1, 6.1 };
-        oc::arrnd<double> darr{ {dims, 3}, ddata };
+        oc::arrnd<double> darr{ dims, ddata };
 
         Integer_array cdarr1{ std::move(darr) };
         EXPECT_TRUE(oc::all_equal(iarr, cdarr1));
@@ -2959,7 +2959,7 @@ TEST(arrnd_test, move_by_reference)
 
         oc::arrnd<double> cdarr2{};
         cdarr2 = std::move(cdarr1);
-        EXPECT_TRUE(oc::all_equal((Integer_array{ {dims, 3}, idata }), cdarr2));
+        EXPECT_TRUE(oc::all_equal((Integer_array{ dims, idata }), cdarr2));
         EXPECT_TRUE(empty(cdarr1));
     }
 
@@ -3020,7 +3020,7 @@ TEST(arrnd_test, clone)
         3, 4,
         5, 6 };
     const std::int64_t dims[]{ 3, 1, 2 };
-    Integer_array sarr{ {dims, 3}, data };
+    Integer_array sarr{ dims, data };
 
     Integer_array carr{ oc::clone(sarr) };
     EXPECT_TRUE(oc::all_equal(carr, sarr));
@@ -3409,7 +3409,7 @@ TEST(arrnd_test, reshape)
         3, 4,
         5, 6 };
     const std::int64_t dims[]{ 3, 1, 2 };
-    Integer_array arr{ {dims, 3}, data };
+    Integer_array arr{ dims, data };
 
     {
         EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(arr, {})));
@@ -3423,7 +3423,7 @@ TEST(arrnd_test, reshape)
     {
         const int tdata[] = { 1, 2, 3, 4, 5, 6 };
         const std::int64_t tdims[]{ 6 };
-        Integer_array tarr{ {tdims, 1}, tdata };
+        Integer_array tarr{ tdims, tdata };
 
         Integer_array rarr{ oc::reshape(arr, { 6 }) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
@@ -3439,7 +3439,7 @@ TEST(arrnd_test, reshape)
     {
         const int tdata[] = { 1, 5 };
         const std::int64_t tdims[]{ 1, 2 };
-        Integer_array tarr{ {tdims, 2}, tdata };
+        Integer_array tarr{ tdims, tdata };
         Integer_array x = arr[{ {0, 2, 2}, {}, {} }];
         Integer_array rarr{ oc::reshape(x, {1, 2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
@@ -3453,7 +3453,7 @@ TEST(arrnd_test, resize)
 
     const int data[] = { 1, 2, 3, 4, 5, 6 };
     const std::int64_t dims[]{ 6 };
-    Integer_array arr{ {dims, 1}, data };
+    Integer_array arr{ dims, data };
 
     {
         EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::resize(arr, {})));
@@ -3477,7 +3477,7 @@ TEST(arrnd_test, resize)
     {
         const int tdata[] = { 1, 2 };
         const std::int64_t tdims[]{ 2 };
-        Integer_array tarr{ {tdims, 1}, tdata };
+        Integer_array tarr{ tdims, tdata };
 
         Integer_array rarr{ oc::resize(arr, {2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
@@ -3490,7 +3490,7 @@ TEST(arrnd_test, resize)
             3, 4,
             5, 6};
         const std::int64_t tdims[]{ 3, 1, 2 };
-        Integer_array tarr{ {tdims, 3}, tdata };
+        Integer_array tarr{ tdims, tdata };
 
         Integer_array rarr{ oc::resize(arr, {3, 1, 2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
@@ -3812,17 +3812,17 @@ TEST(arrnd_test, complex_array)
         {67, 68, 69},
         {70, 71, 72}}}}};
     const std::int64_t dims[]{ 2, 2, 2, 3, 3 };
-    Integer_array arr{ {dims, 5}, reinterpret_cast<const int*>(data) };
+    Integer_array arr{ dims, reinterpret_cast<const int*>(data) };
 
     const int sdata1[2][1][1][2][1]{ { {{{11},{17}}} }, { {{{47},{53}}} } };
     const std::int64_t sdims1[]{ 2, 1, 1, 2, 1 };
-    Integer_array sarr1{ {sdims1, 5}, reinterpret_cast<const int*>(sdata1) };
+    Integer_array sarr1{ sdims1, reinterpret_cast<const int*>(sdata1) };
 
     EXPECT_TRUE(oc::all_equal(sarr1, (arr[{ {0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2} }])));
 
     const int sdata2[1][1][1][1][1]{ { {{{17}}} } };
     const std::int64_t sdims2[]{ 1, 1, 1, 1, 1 };
-    Integer_array sarr2{ {sdims2, 5}, reinterpret_cast<const int*>(sdata2) };
+    Integer_array sarr2{ sdims2, reinterpret_cast<const int*>(sdata2) };
 
     EXPECT_TRUE(oc::all_equal(sarr2, (sarr1[{ {0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0} }])));
 

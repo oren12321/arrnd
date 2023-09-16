@@ -1043,7 +1043,20 @@ namespace oc {
         */
 
         template <typename Iter>
-        using iter_value_type = typename std::iterator_traits<Iter>::value_type;
+        using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
+
+        template <typename Cont, typename T>
+        concept iterable_of_type = requires(const Cont & c) {
+            std::begin(c);
+            std::end(c);
+            { std::remove_cvref_t<decltype(*std::begin(c))>() } -> std::same_as<T>;
+        };
+
+        /*template <iterable Cont>
+        using iterable_value_type = decltype(*std::begin(std::declval<Cont>()));
+
+        template <typename Cont, typename T>
+        concept iterable_of_type = iterable<Cont> && std::is_same_v<T, std::remove_cvref_t<iterable_value_type<Cont>>>;*/
 
         template <typename Storage = simple_dynamic_vector<std::int64_t>>
         class arrnd_header {
@@ -1054,7 +1067,7 @@ namespace oc {
 
             constexpr arrnd_header() = default;
 
-            template <typename InputIt>
+            template <typename InputIt> requires std::is_same_v<value_type, iterator_value_type<InputIt>>
             constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
             {
                 assert(first_dim <= last_dim);
@@ -1064,7 +1077,7 @@ namespace oc {
                     return;
                 }
 
-                count_ = std::reduce(first_dim, last_dim, iter_value_type<InputIt>{1}, std::multiplies<>{});
+                count_ = std::reduce(first_dim, last_dim, iterator_value_type<InputIt>{1}, std::multiplies<>{});
                 if (count_ == 0) {
                     return;
                 }
@@ -1078,9 +1091,12 @@ namespace oc {
                     std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
             }
 
-            constexpr arrnd_header(std::span<value_type> dims)
-                : arrnd_header(dims.begin(), dims.end())
+            template <iterable_of_type<value_type> Cont> //requires std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(std::declval<Cont>()))>>
+            constexpr arrnd_header(const Cont& dims)
+                : arrnd_header(std::begin(dims), std::end(dims))
             {
+                //static_assert(std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(dims))>>);
+                //static_assert(std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(dims))>>);
             }
 
             constexpr arrnd_header(std::initializer_list<value_type> dims)
@@ -1088,7 +1104,7 @@ namespace oc {
             {
             }
 
-            template <typename InputIt> requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<interval<value_type>, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
             {
                 assert(first_range <= last_range);
@@ -1140,9 +1156,10 @@ namespace oc {
                 return res;
             }
 
-            [[nodiscard]] constexpr arrnd_header subheader(std::span<interval<value_type>> ranges) const
+            template <iterable_of_type<interval<value_type>> Cont>
+            [[nodiscard]] constexpr arrnd_header subheader(const Cont& ranges) const
             {
-                return subheader(ranges.begin(), ranges.end());
+                return subheader(std::begin(ranges), std::end(ranges));
             }
 
             [[nodiscard]] constexpr arrnd_header subheader(std::initializer_list<interval<value_type>> ranges) const
@@ -1272,7 +1289,7 @@ namespace oc {
             //        [](auto a, auto b) { return (a - 1) * b; });
             //}
 
-            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr arrnd_header reorder(InputIt first_order, InputIt last_order) const
             {
                 assert(std::distance(first_order, last_order) == dims_.size());
@@ -1293,9 +1310,10 @@ namespace oc {
                 return res;
             }
 
-            [[nodiscard]] constexpr arrnd_header reorder(std::span<size_type> order) const
+            template <iterable_of_type<size_type> Cont>
+            [[nodiscard]] constexpr arrnd_header reorder(const Cont& order) const
             {
-                return reorder(order.begin(), order.end());
+                return reorder(std::begin(order), std::end(order));
             }
 
             [[nodiscard]] constexpr arrnd_header reorder(std::initializer_list<size_type> order) const
@@ -1414,7 +1432,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }*/
 
-            /*template <typename InputIt> requires std::is_same_v<typename storage_type::value_type, iter_value_type<InputIt>>
+            /*template <typename InputIt> requires std::is_same_v<typename storage_type::value_type, iterator_value_type<InputIt>>
             constexpr arrnd_header subheader(InputIt first_appended_dim, InputIt last_appended_dim, typename storage_type::value_type axis) const
             {
                 assert(std::distance(first_appended_dim, last_appended_dim) == dims_.size());
@@ -1479,7 +1497,7 @@ namespace oc {
                     [](auto a, auto b) { return (a - 1) * b; });
             }*/
 
-            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iter_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
             {
                 assert(first_sub <= last_sub);
@@ -1498,9 +1516,10 @@ namespace oc {
                     value_type{ 0 }, std::plus<>{}, std::multiplies<>{});
             }
 
-            [[nodiscard]] constexpr value_type subs2ind(std::span<value_type> subs) const
+            template <iterable_of_type<value_type> Cont>
+            [[nodiscard]] constexpr value_type subs2ind(const Cont& subs) const
             {
-                return sub2ind(subs.begin(), subs.end());
+                return sub2ind(std::begin(subs), std::end(subs));
             }
 
             [[nodiscard]] constexpr value_type subs2ind(std::initializer_list<value_type> subs) const
@@ -1630,15 +1649,16 @@ namespace oc {
                 setup(backward);
             }
 
-            template <typename InputIt> requires std::is_same_v<size_type, iter_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order, bool backward = false)
                 : hdr_(/*std::is_sorted(order.begin(), order.end()) ? */hdr.reorder(first_order, last_order)/*.reduce()*//* : hdr.reorder(order.begin(), order.end())*/)
             {
                 setup(backward);
             }
 
-            constexpr arrnd_general_indexer(const header_type& hdr, std::span<size_type> order, bool backward = false)
-                : arrnd_general_indexer(hdr, order.begin(), order.end(), backward)
+            template <iterable_of_type<size_type> Cont>
+            constexpr arrnd_general_indexer(const header_type& hdr, const Cont& order, bool backward = false)
+                : arrnd_general_indexer(hdr, std::begin(order), std::end(order), backward)
             {
             }
 
@@ -3179,10 +3199,10 @@ namespace oc {
                 //std::copy(first_data, first_data + hdr_.count(), buffsp_->data());
                 std::copy(first_data, std::next(first_data, hdr_.count()), buffsp_->data());
             }
-            template <typename InputDataIt>
+            template <iterable_of_type<size_type> Cont, typename InputDataIt>
             requires std::input_iterator<InputDataIt>
-            explicit constexpr arrnd(std::span<const size_type> dims, InputDataIt first_data)
-                : arrnd(dims.begin(), dims.end(), first_data)
+            explicit constexpr arrnd(const Cont& dims, InputDataIt first_data)
+                : arrnd(std::begin(dims), std::end(dims), first_data)
             {
             }
             template <typename InputDataIt>
@@ -3197,10 +3217,10 @@ namespace oc {
                 : arrnd(first_dim, last_dim, data.begin())
             {
             }
-            template <typename U>
+            template <iterable_of_type<size_type> Cont, typename U>
             requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
-            explicit constexpr arrnd(std::span<const size_type> dims, std::initializer_list<U> data)
-                : arrnd(dims.begin(), dims.end(), data.begin())
+            explicit constexpr arrnd(const Cont& dims, std::initializer_list<U> data)
+                : arrnd(std::begin(dims), std::end(dims), data.begin())
             {
             }
             template <typename U>
@@ -3216,8 +3236,9 @@ namespace oc {
                 : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count(), first_data))
             {
             }
-            explicit constexpr arrnd(std::span<const size_type> dims, const_pointer first_data)
-                : arrnd(dims.begin(), dims.end(), first_data)
+            template <iterable_of_type<size_type> Cont>
+            explicit constexpr arrnd(const Cont& dims, const_pointer first_data)
+                : arrnd(std::begin(dims), std::end(dims), first_data)
             {
             }
             explicit constexpr arrnd(std::initializer_list<size_type> dims, const_pointer first_data)
@@ -3230,8 +3251,9 @@ namespace oc {
                 : arrnd(first_dim, last_dim, data.begin())
             {
             }
-            explicit constexpr arrnd(std::span<const size_type> dims, std::initializer_list<T> data)
-                : arrnd(dims.begin(), dims.end(), data.begin())
+            template <iterable_of_type<size_type> Cont>
+            explicit constexpr arrnd(const Cont& dims, std::initializer_list<T> data)
+                : arrnd(std::begin(dims), std::end(dims), data.begin())
             {
             }
             explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<T> data)
@@ -3245,8 +3267,9 @@ namespace oc {
                 : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
             }
-            explicit constexpr arrnd(std::span<const size_type> dims)
-                : arrnd(dims.begin(), dims.end())
+            template <iterable_of_type<size_type> Cont>
+            explicit constexpr arrnd(const Cont& dims)
+                : arrnd(std::begin(dims), std::end(dims))
             {
             }
             explicit constexpr arrnd(std::initializer_list<size_type> dims)
@@ -3261,10 +3284,10 @@ namespace oc {
             {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
             }
-            template <typename U>
+            template <iterable_of_type<size_type> Cont, typename U>
             requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
-            explicit constexpr arrnd(std::span<const size_type> dims, const U& value)
-                : arrnd(dims.begin(), dims.end(), value)
+            explicit constexpr arrnd(const Cont& dims, const U& value)
+                : arrnd(std::begin(dims), std::end(dims), value)
             {
             }
             template <typename U>
@@ -3281,8 +3304,9 @@ namespace oc {
             {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
             }
-            explicit constexpr arrnd(std::span<const size_type> dims, const_reference value)
-                : arrnd(dims.begin(), dims.end(), value)
+            template <iterable_of_type<size_type> Cont>
+            explicit constexpr arrnd(const Cont& dims, const_reference value)
+                : arrnd(std::begin(dims), std::end(dims), value)
             {
             }
             explicit constexpr arrnd(std::initializer_list<size_type> dims, const_reference value)
