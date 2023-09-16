@@ -3339,57 +3339,69 @@ namespace oc {
                 return hdr_.dims();
             }
 
-            [[nodiscard]] constexpr const_reference operator[](std::int64_t index) const noexcept
+            [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
             {
-                return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
+                assert(index >= hdr_.offset() && index <= hdr_.last_index());
+                return buffsp_->data()[index];
             }
-            [[nodiscard]] constexpr reference operator[](std::int64_t index) noexcept
+            [[nodiscard]] constexpr reference operator[](size_type index) noexcept
             {
-                return buffsp_->data()[modulo(index, hdr_.last_index() + 1)];
+                assert(index >= hdr_.offset() && index <= hdr_.last_index());
+                return buffsp_->data()[index];
             }
 
-            [[nodiscard]] constexpr const_reference operator[](std::span<std::int64_t> subs) const noexcept
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+            [[nodiscard]] constexpr const_reference operator[](std::pair<InputIt, InputIt> subs) const noexcept
             {
-                return buffsp_->data()[hdr_.subs2ind(subs.begin(), subs.end())];
+                return buffsp_->data()[hdr_.subs2ind(subs.first, subs.second)];
+            }
+            template <iterable_of_type<size_type> Cont>
+            [[nodiscard]] constexpr const_reference operator[](const Cont& subs) const noexcept
+            {
+                return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
                 //return buffsp_->data()[subs2ind(hdr_.offset(), std::span<const std::int64_t>(hdr_.strides().data(), hdr_.strides().size()), std::span<const std::int64_t>(hdr_.dims().data(), hdr_.dims().size()), subs)];
             }
-            [[nodiscard]] constexpr const_reference operator[](std::initializer_list<std::int64_t> subs) const noexcept
+            [[nodiscard]] constexpr const_reference operator[](std::initializer_list<size_type> subs) const noexcept
             {
-                return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
+                return (*this)[std::make_pair(subs.begin(), subs.end())];
             }
 
-            [[nodiscard]] constexpr reference operator[](std::span<std::int64_t> subs) noexcept
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+            [[nodiscard]] constexpr reference operator[](std::pair<InputIt, InputIt> subs) noexcept
             {
-                return buffsp_->data()[hdr_.subs2ind(subs.begin(), subs.end())];
+                return buffsp_->data()[hdr_.subs2ind(subs.first, subs.second)];
+            }
+            template <iterable_of_type<size_type> Cont>
+            [[nodiscard]] constexpr reference operator[](const Cont& subs) noexcept
+            {
+                return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
                 //return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
-            [[nodiscard]] constexpr reference operator[](std::initializer_list<std::int64_t> subs) noexcept
+            [[nodiscard]] constexpr reference operator[](std::initializer_list<size_type> subs) noexcept
             {
-                return (*this)[std::span<std::int64_t>{ const_cast<std::int64_t*>(subs.begin()), subs.size() }];
+                return (*this)[std::make_pair(subs.begin(), subs.end())];
             }
 
-            [[nodiscard]] constexpr shared_ref<this_type> operator[](std::span<const interval<std::int64_t>> ranges) const
+            template <typename InputIt> requires std::is_same_v<interval<size_type>, iterator_value_type<InputIt>>
+            [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const
             {
-                if (ranges.empty() || empty()) {
-                    return *this;
-                }
-
                 this_type slice{};
-                slice.hdr_ = hdr_.subheader(ranges.begin(), ranges.end());
+                slice.hdr_ = hdr_.subheader(ranges.first, ranges.second);
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
                 return slice;
             }
-            [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval<std::int64_t>> ranges) const
+            template <iterable_of_type<interval<size_type>> Cont>
+            [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const
             {
-                return (*this)[std::span<const interval<std::int64_t>>{ranges.begin(), ranges.size()}];
+                return (*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+            }
+            [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval<size_type>> ranges) const
+            {
+                return (*this)[std::make_pair(ranges.begin(), ranges.end())];
             }
 
-            [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<std::int64_t> range) const
+            [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const
             {
-                if (empty() || std::ssize(header().dims()) == 1) {
-                    return *this;
-                }
-
                 this_type slice{};
                 slice.hdr_ = hdr_.subheader(range);
                 slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
