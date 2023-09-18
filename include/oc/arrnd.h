@@ -5,7 +5,6 @@
 #include <memory>
 #include <initializer_list>
 #include <stdexcept>
-#include <span>
 #include <limits>
 #include <algorithm>
 #include <numeric>
@@ -744,12 +743,6 @@ namespace oc {
 
 
     namespace details {
-
-        /*template <typename T, typename U>
-        [[nodiscard]] inline constexpr bool operator==(const std::span<T>& lhs, const std::span<U>& rhs) {
-            return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
-        }*/
-
         /*
         * N-dimensional array definitions:
         * ================================
@@ -829,155 +822,6 @@ namespace oc {
         * are_legal - f(R) = Rt(1)>0 and Rt(2)>0 and ... and Rt(N)>0
         */
 
-        /**
-        * @note If dimensions contain zero or negative dimension value than the number of elements will be 0.
-        */
-        /*[[nodiscard]] inline constexpr std::int64_t numel(std::span<const std::int64_t> dims) noexcept
-        {
-            if (dims.empty()) {
-                return 0;
-            }
-
-            std::int64_t res{ 1 };
-            for (std::int64_t i = 0; i < std::ssize(dims); ++i) {
-                if (dims[i] <= 0) {
-                    return 0;
-                }
-                res *= dims[i];
-            }
-            return res;
-        }*/
-
-        /**
-        * @param[out] strides An already allocated memory for computed strides.
-        * @return Number of computed strides
-        */
-        /*inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> dims, std::span<std::int64_t> strides) noexcept
-        {
-            std::int64_t num_strides{ std::ssize(dims) > std::ssize(strides) ? std::ssize(strides) : std::ssize(dims) };
-            if (num_strides <= 0) {
-                return 0;
-            }
-
-            strides[num_strides - 1] = 1;
-            for (std::int64_t i = num_strides - 2; i >= 0; --i) {
-                strides[i] = strides[i + 1] * dims[i + 1];
-            }
-            return num_strides;
-        }*/
-
-        /**
-        * @param[out] strides An already allocated memory for computed strides.
-        * @return Number of computed strides
-        * @note When number of ranges is smaller than number of strides, the other strides computed from previous dimensions.
-        */
-        //inline constexpr std::int64_t compute_strides(std::span<const std::int64_t> previous_dims, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> strides) noexcept
-        //{
-        //    std::int64_t nstrides{ std::ssize(previous_strides) > std::ssize(strides) ? std::ssize(strides) : std::ssize(previous_strides) };
-        //    if (nstrides <= 0) {
-        //        return 0;
-        //    }
-
-        //    std::int64_t ncomp_from_ranges{ nstrides > std::ssize(ranges) ? std::ssize(ranges) : nstrides };
-
-        //    // compute strides with range step
-        //    for (std::int64_t i = 0; i < ncomp_from_ranges; ++i) {
-        //        strides[i] = previous_strides[i] * forward(ranges[i]).step;
-        //    }
-
-        //    // set strides from previous strides
-        //    if (std::ssize(previous_strides) > ncomp_from_ranges) {
-        //        for (std::int64_t i = ncomp_from_ranges; i < std::ssize(previous_strides); ++i) {
-        //            strides[i] = previous_strides[i];
-        //        }
-        //    }
-
-        //    std::int64_t nstrides_calc =
-        //        (std::ssize(previous_strides) > ncomp_from_ranges ? std::ssize(previous_strides) : ncomp_from_ranges);
-
-        //    // compute strides from previous dimensions
-        //    if (nstrides_calc < std::ssize(previous_dims) && nstrides >= std::ssize(previous_dims)) {
-        //        strides[std::ssize(previous_dims) - 1] = 1;
-        //        for (std::int64_t i = std::ssize(previous_dims) - 2; i >= nstrides_calc - 1; --i) {
-        //            strides[i] = strides[i + 1] * previous_dims[i + 1];
-        //        }
-        //    }
-
-        //    return nstrides;
-        //}
-
-        /**
-        * @param[out] dims An already allocated memory for computed dimensions.
-        * @return Number of computed dimensions
-        * @note Previous dimensions are used in case of small number of ranges.
-        */
-        /*inline constexpr std::int64_t compute_dims(std::span<const std::int64_t> previous_dims, std::span<const interval<std::int64_t>> ranges, std::span<std::int64_t> dims) noexcept
-        {
-            std::int64_t ndims{ std::ssize(previous_dims) > std::ssize(dims) ? std::ssize(dims) : std::ssize(previous_dims) };
-            if (ndims <= 0) {
-                return 0;
-            }
-
-            std::int64_t num_computed_dims{ ndims > std::ssize(ranges) ? std::ssize(ranges) : ndims };
-
-            for (std::int64_t i = 0; i < num_computed_dims; ++i) {
-                interval<std::int64_t> range{ forward(modulo(ranges[i], previous_dims[i])) };
-                if (range.start > range.stop || range.step <= 0) {
-                    return 0;
-                }
-                dims[i] = static_cast<std::int64_t>(std::ceil((range.stop - range.start + 1.0) / range.step));
-            }
-
-            for (std::int64_t i = num_computed_dims; i < ndims; ++i) {
-                dims[i] = previous_dims[i];
-            }
-
-            return ndims;
-        }*/
-
-        /*[[nodiscard]] inline constexpr std::int64_t compute_offset(std::span<const std::int64_t> previous_dims, std::int64_t previous_offset, std::span<const std::int64_t> previous_strides, std::span<const interval<std::int64_t>> ranges) noexcept
-        {
-            std::int64_t offset{ previous_offset };
-
-            if (previous_dims.empty() || previous_strides.empty() || ranges.empty()) {
-                return offset;
-            }
-
-            std::int64_t num_computations{ std::ssize(previous_dims) > std::ssize(previous_strides) ? std::ssize(previous_strides) : std::ssize(previous_dims) };
-            num_computations = (num_computations > std::ssize(ranges) ? std::ssize(ranges) : num_computations);
-
-            for (std::int64_t i = 0; i < num_computations; ++i) {
-                offset += previous_strides[i] * forward(modulo(ranges[i], previous_dims[i])).start;
-            }
-            return offset;
-        }*/
-
-        /**
-        * @note Extra subscripts are ignored. If number of subscripts are less than number of strides/dimensions, they are considered as the less significant subscripts.
-        */
-        //[[nodiscard]] inline constexpr std::int64_t subs2ind(std::int64_t offset, std::span<const std::int64_t> strides, std::span<const std::int64_t> dims, std::span<std::int64_t> subs) noexcept
-        //{
-        //    std::int64_t ind{ offset };
-
-        //    if (strides.empty() || dims.empty() || subs.empty()) {
-        //        return ind;
-        //    }
-
-        //    std::int64_t num_used_subs{ std::ssize(strides) > std::ssize(dims) ? std::ssize(dims) : std::ssize(strides) };
-        //    num_used_subs = (num_used_subs > std::ssize(subs) ? std::ssize(subs) : num_used_subs);
-
-        //    std::int64_t num_ignored_subs{ std::ssize(strides) - num_used_subs};
-        //    if (num_ignored_subs < 0) { // ignore extra subscripts
-        //        num_ignored_subs = 0;
-        //    }
-
-        //    for (std::int64_t i = num_ignored_subs; i < std::ssize(strides); ++i) {
-        //        ind += strides[i] * modulo(subs[i - num_ignored_subs], dims[i]);
-        //    }
-
-        //    return ind;
-        //}
-
         /*
         Example:
         ========
@@ -1052,12 +896,6 @@ namespace oc {
             { std::remove_cvref_t<decltype(*std::begin(c))>() } -> std::same_as<T>;
         };
 
-        /*template <iterable Cont>
-        using iterable_value_type = decltype(*std::begin(std::declval<Cont>()));
-
-        template <typename Cont, typename T>
-        concept iterable_of_type = iterable<Cont> && std::is_same_v<T, std::remove_cvref_t<iterable_value_type<Cont>>>;*/
-
         template <typename Storage = simple_dynamic_vector<std::int64_t>>
         class arrnd_header {
         public:
@@ -1091,12 +929,10 @@ namespace oc {
                     std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
             }
 
-            template <iterable_of_type<value_type> Cont> //requires std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(std::declval<Cont>()))>>
+            template <iterable_of_type<value_type> Cont>
             constexpr arrnd_header(const Cont& dims)
                 : arrnd_header(std::begin(dims), std::end(dims))
             {
-                //static_assert(std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(dims))>>);
-                //static_assert(std::is_integral_v<std::remove_cvref_t<decltype(*std::begin(dims))>>);
             }
 
             constexpr arrnd_header(std::initializer_list<value_type> dims)
@@ -1167,34 +1003,6 @@ namespace oc {
                 return subheader(ranges.begin(), ranges.end());
             }
 
-            //constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const interval<std::int64_t>> ranges)
-            //{
-            //    if (numel(previous_hdr.dims()) <= 0) {
-            //        return;
-            //    }
-
-            //    storage_type dims = storage_type(previous_hdr.dims().size());
-
-            //    if (compute_dims(previous_hdr.dims(), ranges, dims) <= 0) {
-            //        return;
-            //    }
-
-            //    dims_ = std::move(dims);
-            //    
-            //    count_ = numel(dims_);
-
-            //    strides_ = storage_type(previous_hdr.dims().size());
-            //    compute_strides(previous_hdr.dims(), previous_hdr.strides(), ranges, strides_);
-
-            //    offset_ = compute_offset(previous_hdr.dims(), previous_hdr.offset(), previous_hdr.strides(), ranges);
-
-            //    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-            //        [](auto a, auto b) { return a + b; },
-            //        [](auto a, auto b) { return (a - 1) * b; });
-
-            //    is_subarray_ = previous_hdr.is_subarray() || !std::equal(previous_hdr.dims().begin(), previous_hdr.dims().end(), dims_.begin());
-            //}
-
             [[nodiscard]] constexpr arrnd_header subheader(interval<value_type> range) const
             {
                 std::initializer_list<interval<value_type>> ranges = { range };
@@ -1204,7 +1012,6 @@ namespace oc {
                     return res;
                 }
 
-                //res.offset_ += range.start * res.strides_.front();
                 res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
                 res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
                 res.last_index_ = res.offset_ + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), value_type{ 0 },
@@ -1213,26 +1020,6 @@ namespace oc {
 
                 return res;
             }
-
-            //constexpr arrnd_header(const arrnd_header& previous_hdr, interval<std::int64_t> range)
-            //    : arrnd_header(previous_hdr, std::span<interval<std::int64_t>>(&range, 1))
-            //{
-            //    if (empty()) {
-            //        return;
-            //    }
-
-            //    auto fixed_ival = modulo(range, dims_[0]);
-
-            //    if (dims_[0] == 1) {
-            //        offset_ += fixed_ival.start * strides_[0];
-            //        dims_ = storage_type(dims_.cbegin() + 1, dims_.cend());
-            //        strides_ = storage_type(strides_.cbegin() + 1, strides_.cend());
-            //        last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-            //            [](auto a, auto b) { return a + b; },
-            //            [](auto a, auto b) { return (a - 1) * b; });
-            //        is_subarray_ = true;
-            //    }
-            //}
 
             [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
             {
@@ -1255,39 +1042,20 @@ namespace oc {
                 return arrnd_header(new_dims.cbegin(), new_dims.cend());
             }
 
-            //constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t omitted_axis)
-            //    : is_subarray_(previous_hdr.is_subarray())
-            //{
-            //    if (numel(previous_hdr.dims()) <= 0) {
-            //        return;
-            //    }
+            [[nodiscard]] constexpr arrnd_header subheader(value_type count, size_type axis) const
+            {
+                assert(axis >= 0 && axis < dims_.size());
+                assert(count >= -*std::next(dims_.cbegin(), axis));
 
-            //    std::int64_t axis{ modulo(omitted_axis, std::ssize(previous_hdr.dims())) };
-            //    std::int64_t ndims{ std::ssize(previous_hdr.dims()) > 1 ? std::ssize(previous_hdr.dims()) - 1 : 1 };
+                if (empty()) {
+                    return *this;
+                }
 
-            //    dims_ = storage_type(ndims);
+                storage_type new_dims(dims_);
+                *std::next(new_dims.begin(), axis) += count;
 
-            //    if (previous_hdr.dims().size() > 1) {
-            //        for (std::int64_t i = 0; i < axis; ++i) {
-            //            dims_[i] = previous_hdr.dims()[i];
-            //        }
-            //        for (std::int64_t i = axis + 1; i < std::ssize(previous_hdr.dims()); ++i) {
-            //            dims_[i - 1] = previous_hdr.dims()[i];
-            //        }
-            //    }
-            //    else {
-            //        dims_[0] = 1;
-            //    }
-
-            //    strides_ = storage_type(ndims);
-            //    compute_strides(dims_, strides_);
-
-            //    count_ = numel(dims_);
-
-            //    last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-            //        [](auto a, auto b) { return a + b; },
-            //        [](auto a, auto b) { return (a - 1) * b; });
-            //}
+                return arrnd_header(new_dims.cbegin(), new_dims.cend());
+            }
 
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr arrnd_header reorder(InputIt first_order, InputIt last_order) const
@@ -1356,147 +1124,6 @@ namespace oc {
                 return res;
             }
 
-            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> new_order)
-                : is_subarray_(previous_hdr.is_subarray())
-            {
-                if (numel(previous_hdr.dims()) <= 0) {
-                    return;
-                }
-
-                if (new_order.empty()) {
-                    return;
-                }
-
-                storage_type dims = storage_type(previous_hdr.dims().size());
-
-                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
-                    dims[i] = previous_hdr.dims()[modulo(new_order[i], std::ssize(previous_hdr.dims()))];
-                }
-
-                if (numel(previous_hdr.dims()) != numel(dims)) {
-                    return;
-                }
-
-                dims_ = std::move(dims);
-
-                strides_ = storage_type(previous_hdr.dims().size());
-                compute_strides(dims_, strides_);
-
-                count_ = numel(dims_);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
-            }*/
-
-            [[nodiscard]] constexpr arrnd_header subheader(value_type count, size_type axis) const
-            {
-                assert(axis >= 0 && axis < dims_.size());
-                assert(count >= -*std::next(dims_.cbegin(), axis));
-
-                if (empty()) {
-                    return *this;
-                }
-
-                storage_type new_dims(dims_);
-                *std::next(new_dims.begin(), axis) += count;
-
-                return arrnd_header(new_dims.cbegin(), new_dims.cend());
-            }
-
-            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::int64_t count, std::int64_t axis)
-                : is_subarray_(previous_hdr.is_subarray())
-            {
-                if (numel(previous_hdr.dims()) <= 0) {
-                    return;
-                }
-
-                storage_type dims = storage_type(previous_hdr.dims().size());
-
-                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
-                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
-                    dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + count;
-                }
-                
-                if ((count_ = numel(dims)) <= 0) {
-                    return;
-                }
-
-                dims_ = std::move(dims);
-
-                strides_ = storage_type(previous_hdr.dims().size());
-                compute_strides(dims_, strides_);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
-            }*/
-
-            /*template <typename InputIt> requires std::is_same_v<typename storage_type::value_type, iterator_value_type<InputIt>>
-            constexpr arrnd_header subheader(InputIt first_appended_dim, InputIt last_appended_dim, typename storage_type::value_type axis) const
-            {
-                assert(std::distance(first_appended_dim, last_appended_dim) == dims_.size());
-                assert(std::all_of(first_appended_dim, last_appended_dim, [&](auto d) { return d >= 0; }));
-
-                if (empty()) {
-                    return *this;
-                }
-
-                storage_type new_dims(dims_.size());
-                for (typename storage_type::size_type i = 0; i < dims_.size(); ++i) {
-                    *std::next(new_dims.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
-                }
-
-                return arrnd_header(new_dims);
-            }*/
-
-            /*constexpr arrnd_header(const arrnd_header& previous_hdr, std::span<const std::int64_t> appended_dims, std::int64_t axis)
-                : is_subarray_(previous_hdr.is_subarray())
-            {
-                if (previous_hdr.dims().size() != appended_dims.size()) {
-                    return;
-                }
-
-                if (numel(previous_hdr.dims()) <= 0) {
-                    return;
-                }
-
-                if (numel(appended_dims) <= 0) {
-                    return;
-                }
-
-                std::int64_t fixed_axis{ modulo(axis, std::ssize(previous_hdr.dims())) };
-
-                bool are_dims_valid_for_append{ true };
-                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
-                    if (i != fixed_axis && previous_hdr.dims()[i] != appended_dims[i]) {
-                        are_dims_valid_for_append = false;
-                    }
-                }
-                if (!are_dims_valid_for_append) {
-                    return;
-                }
-
-                storage_type dims = storage_type(previous_hdr.dims().size());
-
-                for (std::int64_t i = 0; i < std::ssize(previous_hdr.dims()); ++i) {
-                    dims[i] = (i != fixed_axis) ? previous_hdr.dims()[i] : previous_hdr.dims()[i] + appended_dims[fixed_axis];
-                }
-
-                if ((count_ = numel(dims)) <= 0) {
-                    return;
-                }
-
-                dims_ = std::move(dims);
-
-                strides_ = storage_type(previous_hdr.dims().size());
-                compute_strides(dims_, strides_);
-
-                last_index_ = offset_ + std::inner_product(dims_.begin(), dims_.end(), strides_.begin(), std::int64_t{ 0 },
-                    [](auto a, auto b) { return a + b; },
-                    [](auto a, auto b) { return (a - 1) * b; });
-            }*/
-
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
             {
@@ -1526,38 +1153,6 @@ namespace oc {
             {
                 return sub2ind(subs.begin(), subs.end());
             }
-
-            /*[[nodiscard]] constexpr arrnd_header reduce() const
-            {
-                if (empty()) {
-                    return *this;
-                }
-
-                if (!is_subarray_) {
-                    storage_type new_dims(1, &count_);
-                    return arrnd_header(new_dims.cbegin(), new_dims.cend());
-                }
-
-                arrnd_header res(*this);
-
-                size_type one_dims = std::count_if(dims_.cbegin(), dims_.cend(), [](auto d) { return d == 1; });
-                if (one_dims > 0) {
-
-                    res.dims_ = storage_type(one_dims);
-                    res.strides_ = storage_type(one_dims);
-
-                    size_type j = 0;
-                    for (size_type i = 0; i < dims_.size(); ++i) {
-                        if (*std::next(dims_.cbegin(), i) != 1) {
-                            *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
-                            *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
-                            ++j;
-                        }
-                    }
-                }
-
-                return res;
-            }*/
 
             constexpr arrnd_header(arrnd_header&& other) = default;
             constexpr arrnd_header& operator=(arrnd_header&& other) = default;
@@ -1628,7 +1223,7 @@ namespace oc {
         };
 
 
-        template </*typename Storage = simple_dynamic_vector<std::int64_t>, */typename Header = arrnd_header<>>
+        template <typename Header = arrnd_header<>>
         class arrnd_general_indexer final
         {
         public:
@@ -1638,20 +1233,20 @@ namespace oc {
             using value_type = Header::value_type;
 
             constexpr arrnd_general_indexer(const header_type& hdr, bool backward = false)
-                : hdr_(hdr/*.reduce()*/)
+                : hdr_(hdr)
             {
                 setup(backward);
             }
 
             constexpr arrnd_general_indexer(const header_type& hdr, size_type axis, bool backward = false)
-                : hdr_(/*axis == 0 ? */hdr.reorder(axis)/*.reduce()*//* : hdr.reorder(axis)*/)
+                : hdr_(hdr.reorder(axis))
             {
                 setup(backward);
             }
 
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order, bool backward = false)
-                : hdr_(/*std::is_sorted(order.begin(), order.end()) ? */hdr.reorder(first_order, last_order)/*.reduce()*//* : hdr.reorder(order.begin(), order.end())*/)
+                : hdr_(hdr.reorder(first_order, last_order))
             {
                 setup(backward);
             }
@@ -1726,7 +1321,7 @@ namespace oc {
 
             constexpr arrnd_general_indexer operator++(int) noexcept
             {
-                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
+                arrnd_general_indexer<header_type> temp{ *this };
                 ++(*this);
                 return temp;
             }
@@ -1741,7 +1336,7 @@ namespace oc {
 
             arrnd_general_indexer operator+(size_type count) noexcept
             {
-                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
+                arrnd_general_indexer<header_type> temp{ *this };
                 temp += count;
                 return temp;
             }
@@ -1795,7 +1390,7 @@ namespace oc {
 
             constexpr arrnd_general_indexer operator--(int) noexcept
             {
-                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
+                arrnd_general_indexer<header_type> temp{ *this };
                 --(*this);
                 return temp;
             }
@@ -1810,7 +1405,7 @@ namespace oc {
 
             constexpr arrnd_general_indexer operator-(size_type count) noexcept
             {
-                arrnd_general_indexer</*storage_type, */header_type> temp{ *this };
+                arrnd_general_indexer<header_type> temp{ *this };
                 temp -= count;
                 return temp;
             }
@@ -3197,7 +2792,6 @@ namespace oc {
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
                 : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                //std::copy(first_data, first_data + hdr_.count(), buffsp_->data());
                 std::copy(first_data, std::next(first_data, hdr_.count()), buffsp_->data());
             }
             template <iterable_of_type<size_type> Cont, typename InputDataIt>
@@ -3335,7 +2929,7 @@ namespace oc {
                 return hdr_.size();
             }
 
-            [[nodiscard]] constexpr auto dims() const noexcept
+            [[nodiscard]] constexpr const auto& dims() const noexcept
             {
                 return hdr_.dims();
             }
@@ -3360,7 +2954,6 @@ namespace oc {
             [[nodiscard]] constexpr const_reference operator[](const Cont& subs) const noexcept
             {
                 return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
-                //return buffsp_->data()[subs2ind(hdr_.offset(), std::span<const std::int64_t>(hdr_.strides().data(), hdr_.strides().size()), std::span<const std::int64_t>(hdr_.dims().data(), hdr_.dims().size()), subs)];
             }
             [[nodiscard]] constexpr const_reference operator[](std::initializer_list<size_type> subs) const noexcept
             {
@@ -3376,7 +2969,6 @@ namespace oc {
             [[nodiscard]] constexpr reference operator[](const Cont& subs) noexcept
             {
                 return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
-                //return buffsp_->data()[subs2ind(hdr_.offset(), hdr_.strides(), hdr_.dims(), subs)];
             }
             [[nodiscard]] constexpr reference operator[](std::initializer_list<size_type> subs) noexcept
             {
@@ -4007,7 +3599,7 @@ namespace oc {
             }
 
             template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
-            [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, typename ArCo::value_type, T>> reduce(const ArCo& init_values, Binary_op&& op, std::int64_t axis) const
+            [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, typename ArCo::value_type, T>> reduce(const ArCo& init_values, Binary_op&& op, size_type axis) const
             {
                 using U = std::invoke_result_t<Binary_op, typename ArCo::value_type, T>;
 
@@ -4353,7 +3945,7 @@ namespace oc {
                 return all_match([](const value_type& value) { return static_cast<bool>(value); });
             }
 
-            [[nodiscard]] constexpr replaced_type<bool> all(std::int64_t axis) const
+            [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
             {
                 return reduce([](const value_type& a, const value_type& b) { return a && b; }, axis);
             }
@@ -4363,7 +3955,7 @@ namespace oc {
                 return any_match([](const value_type& value) { return static_cast<bool>(value); });
             }
 
-            [[nodiscard]] constexpr replaced_type<bool> any(std::int64_t axis) const
+            [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
             {
                 return reduce([](const value_type& a, const value_type& b) { return a || b; }, axis);
             }
@@ -4819,19 +4411,19 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type axis)
         {
             return lhs.append(rhs, axis);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind)
+        [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
         {
             return lhs.insert(rhs, ind);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, std::int64_t ind, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis)
         {
             return lhs.insert(rhs, ind, axis);
         }
@@ -4840,7 +4432,7 @@ namespace oc {
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto remove(const ArCo& arr, std::int64_t ind, std::int64_t count)
+        [[nodiscard]] inline constexpr auto remove(const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
         {
             return arr.remove(ind, count);
         }
@@ -4849,7 +4441,7 @@ namespace oc {
         * @note All elements starting from ind are being removed in case that count value is too big.
         */
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto remove(const ArCo& arr, std::int64_t ind, std::int64_t count, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto remove(const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
         {
             return arr.remove(ind, count, axis);
         }
@@ -4885,13 +4477,13 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
-        [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op, typename ArCo::size_type axis)
         {
             return arr.reduce(op, axis);
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op> requires std::is_invocable_v<Binary_op, typename ArCo2::value_type, typename ArCo1::value_type>
-        [[nodiscard]] inline constexpr auto reduce(const ArCo1& arr, const ArCo2& init_values, Binary_op&& op, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto reduce(const ArCo1& arr, const ArCo2& init_values, Binary_op&& op, typename ArCo1::size_type axis)
         {
             return arr.reduce(init_values, op, axis);
         }
@@ -4903,7 +4495,7 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto all(const ArCo& arr, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
         {
             return arr.all(axis);
         }
@@ -4915,7 +4507,7 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto any(const ArCo& arr, std::int64_t axis)
+        [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
         {
             return arr.any(axis);
         }
@@ -5742,7 +5334,7 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo>
-        std::ostream& ostream_operator_recursive(std::ostream& os, const ArCo& arco, std::int64_t nvectical_spaces)
+        std::ostream& ostream_operator_recursive(std::ostream& os, const ArCo& arco, typename ArCo::size_type nvectical_spaces)
         {
             if (empty(arco)) {
                 os << "[]";
@@ -5751,13 +5343,13 @@ namespace oc {
 
             if (std::ssize(arco.header().dims()) > 1) {
                 os << '[';
-                for (std::int64_t i = 0; i < arco.header().dims()[0]; ++i) {
+                for (typename ArCo::size_type i = 0; i < arco.header().dims()[0]; ++i) {
                     if (i > 0) {
-                        for (std::int64_t i = 0; i < nvectical_spaces - (std::ssize(arco.header().dims()) - 1) + 1; ++i) {
+                        for (typename ArCo::size_type i = 0; i < nvectical_spaces - (std::ssize(arco.header().dims()) - 1) + 1; ++i) {
                             os << ' ';
                         }
                     }
-                    ostream_operator_recursive(os, arco[interval<std::int64_t>{i, i}], nvectical_spaces);
+                    ostream_operator_recursive(os, arco[interval<typename ArCo::size_type>{i, i}], nvectical_spaces);
                     if (i < arco.header().dims()[0] - 1) {
                         os << '\n';
                     }
@@ -5780,7 +5372,7 @@ namespace oc {
         template <arrnd_complient ArCo>
         inline constexpr std::ostream& operator<<(std::ostream& os, const ArCo& arco)
         {
-            std::int64_t nvectical_spaces = std::ssize(arco.header().dims()) - 1;
+            typename ArCo::size_type nvectical_spaces = std::ssize(arco.header().dims()) - 1;
             return ostream_operator_recursive(os, arco, nvectical_spaces);
         }
     }
@@ -5793,16 +5385,6 @@ namespace oc {
     
     using details::arrnd_general_indexer;
     using details::arrnd_fast_indexer;
-
-    //using details::arrnd_iterator;
-    //using details::arrnd_const_iterator;
-    //using details::arrnd_reverse_iterator;
-    //using details::arrnd_const_reverse_iterator;
-
-    //using details::arrnd_axis_iterator;
-    //using details::arrnd_axis_const_iterator;
-    //using details::arrnd_axis_reverse_iterator;
-    //using details::arrnd_axis_reverse_const_iterator;
 
     using details::copy;
     using details::clone;
