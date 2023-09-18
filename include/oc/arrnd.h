@@ -326,22 +326,22 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
                 {
                     return std::make_reverse_iterator(end());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
                 {
                     return std::make_reverse_iterator(begin());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
                 {
                     return std::make_reverse_iterator(cend());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
                 {
                     return std::make_reverse_iterator(cbegin());
                 }
@@ -548,22 +548,22 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
                 {
                     return std::make_reverse_iterator(end());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
                 {
                     return std::make_reverse_iterator(begin());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
                 {
                     return std::make_reverse_iterator(cend());
                 }
 
-                [[nodsicard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
                 {
                     return std::make_reverse_iterator(cbegin());
                 }
@@ -689,7 +689,7 @@ namespace oc {
             T stop{ 0 };
             T step{ 1 };
 
-            [[nodicsard]] static constexpr interval full() noexcept {
+            [[nodiscard]] static constexpr interval full() noexcept {
                 return interval{ std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
             }
 
@@ -697,11 +697,11 @@ namespace oc {
                 return interval{ nstart, std::numeric_limits<T>::max() };
             }
 
-            [[nodicsard]] static constexpr interval to(T nstop) noexcept {
+            [[nodiscard]] static constexpr interval to(T nstop) noexcept {
                 return interval{ std::numeric_limits<T>::min(), nstop };
             }
 
-            [[nodicsard]] static constexpr interval at(T npos) noexcept {
+            [[nodiscard]] static constexpr interval at(T npos) noexcept {
                 return interval{ npos, npos };
             }
 
