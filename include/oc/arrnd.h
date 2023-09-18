@@ -1124,7 +1124,7 @@ namespace oc {
                 return res;
             }
 
-            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>> //requires std::is_same_v<interval<value_type>, iterator_value_type<InputIt>>
+            template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
             {
                 assert(first_sub <= last_sub);
