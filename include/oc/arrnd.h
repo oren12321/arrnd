@@ -3848,7 +3848,7 @@ namespace oc {
                     return replaced_type<U>();
                 }
 
-                replaced_type<U> res(std::span<const std::int64_t>(header().dims().data(), header().dims().size()));
+                replaced_type<U> res(header().dims().cbegin(), header().dims().cend());
 
                 for (indexer_type gen(header()); gen; ++gen) {
                     res[*gen] = op((*this)[*gen]);
@@ -4728,25 +4728,35 @@ namespace oc {
             return dst.copy_from(src, indices);
         }
 
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, std::span<const interval<std::int64_t>> ranges)
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename InputIt> requires std::is_same_v<interval<typename ArCo1::size_type>, iterator_value_type<InputIt>>
+        inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, InputIt first_range, InputIt last_range)
         {
-            return dst.copy_from(src, ranges);
+            return dst.copy_from(src, first_range, last_range);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename InputIt> requires std::is_same_v<interval<typename ArCo1::size_type>, iterator_value_type<InputIt>>
+        inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, InputIt first_range, InputIt last_range)
+        {
+            return dst.copy_from(src, first_range, last_range);
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, iterable_of_type<interval<typename ArCo1::size_type>> Cont>
+        inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, const Cont& ranges)
+        {
+            return copy(src, dst, std::begin(ranges), std::end(ranges));
+        }
+        template <arrnd_complient ArCo1, arrnd_complient ArCo2, iterable_of_type<interval<typename ArCo1::size_type>> Cont>
+        inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& ranges)
+        {
+            return copy(src, dst, std::begin(ranges), std::end(ranges));
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::span<const interval<std::int64_t>> ranges)
+        inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, std::initializer_list<interval<typename ArCo1::size_type>> ranges)
         {
-            return dst.copy_from(src, ranges);
+            return copy(src, dst, ranges.begin(), ranges.end());
         }
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, std::initializer_list<interval<std::int64_t>> ranges)
+        inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<interval<typename ArCo1::size_type>> ranges)
         {
-            return dst.copy_from(src, ranges);
-        }
-        template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<interval<std::int64_t>> ranges)
-        {
-            return dst.copy_from(src, ranges);
+            return copy(src, dst, ranges.begin(), ranges.end());
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4770,26 +4780,36 @@ namespace oc {
         /**
         * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
         */
-        template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, std::span<const std::int64_t> new_dims)
+        template <arrnd_complient ArCo, typename InputIt> requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+        [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
         {
-            return arr.reshape(new_dims);
+            return arr.reshape(first_new_dim, last_new_dim);
+        }
+        template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+        [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
+        {
+            return reshape(arr, std::begin(new_dims), std::end(new_dims));
         }
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, std::initializer_list<std::int64_t> new_dims)
+        [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
         {
-            return arr.reshape(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return reshape(arr, new_dims.begin(), new_dims.end());
         }
 
-        template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto resize(const ArCo& arr, std::span<const std::int64_t> new_dims)
+        template <arrnd_complient ArCo, typename InputIt> requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+        [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
         {
-            return arr.resize(new_dims);
+            return arr.resize(first_new_dim, last_new_dim);
+        }
+        template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+        [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
+        {
+            return resize(arr, std::begin(new_dims), std::end(new_dims));
         }
         template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto resize(const ArCo& arr, std::initializer_list<std::int64_t> new_dims)
+        [[nodiscard]] inline constexpr auto resize(const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
         {
-            return arr.resize(std::span<const std::int64_t>(new_dims.begin(), new_dims.size()));
+            return resize(arr, new_dims.begin(), new_dims.end());
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -4972,16 +4992,20 @@ namespace oc {
             return arr.find(mask);
         }
 
-        template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, std::span<const std::int64_t> order)
+        template <arrnd_complient ArCo, typename InputIt> requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+        [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
         {
-            return arr.transpose(order);
+            return arr.transpose(first_order, last_order);
         }
-
-        template <arrnd_complient ArCo>
-        [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, std::initializer_list<std::int64_t> order)
+        template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+        [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
         {
-            return arr.transpose(order);
+            return transpose(arr, std::begin(order), std::end(order));
+        }
+        template <arrnd_complient ArCo>
+        [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+        {
+            return transpose(arr, order.begin(), order.end());
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
