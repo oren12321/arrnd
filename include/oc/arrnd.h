@@ -2682,7 +2682,7 @@ namespace oc {
                 : arrnd_ref_(arrnd_ref), far_(far)
             {
                 if (far) {
-                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                    slice_ = arrnd_ref[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 }
             }
 
@@ -2750,7 +2750,7 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 return slice_;
             }
 
@@ -2781,7 +2781,7 @@ namespace oc {
                 : arrnd_ref_(arrnd_ref), far_(far)
             {
                 if (far) {
-                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                    slice_ = arrnd_ref[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 }
             }
 
@@ -2849,7 +2849,7 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 return slice_;
             }
 
@@ -2882,7 +2882,7 @@ namespace oc {
                 : arrnd_ref_(arrnd_ref), far_(far)
             {
                 if (far) {
-                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                    slice_ = arrnd_ref[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 }
             }
 
@@ -2950,7 +2950,7 @@ namespace oc {
 
             [[nodiscard]] constexpr reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 return slice_;
             }
 
@@ -2981,7 +2981,7 @@ namespace oc {
                 : arrnd_ref_(arrnd_ref), far_(far)
             {
                 if (far) {
-                    slice_ = arrnd_ref[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                    slice_ = arrnd_ref[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 }
             }
 
@@ -3049,7 +3049,7 @@ namespace oc {
 
             [[nodiscard]] constexpr const_reference operator*() noexcept
             {
-                slice_ = arrnd_ref_[std::span<interval<difference_type>>((*far_).data(), (*far_).size())];
+                slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
                 return slice_;
             }
 
