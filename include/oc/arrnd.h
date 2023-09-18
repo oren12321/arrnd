@@ -2819,7 +2819,7 @@ namespace oc {
             {
             }
             template <typename U>
-            requires !(std::is_pointer_v<U> || std::is_array_v<U>)
+            requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
             explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<U> data)
                 : arrnd(dims.begin(), dims.end(), data.begin())
             {
@@ -2886,7 +2886,7 @@ namespace oc {
             {
             }
             template <typename U>
-            requires !(std::is_pointer_v<U> || std::is_array_v<U>)
+            requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
             explicit constexpr arrnd(std::initializer_list<size_type> dims, const U& value)
                 : arrnd(dims.begin(), dims.end(), value)
             {
