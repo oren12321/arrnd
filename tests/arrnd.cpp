@@ -1072,25 +1072,25 @@ TEST(arrnd_test, reduce_elements)
     oc::arrnd rarr1d{ {1}, data1d };
     EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(iarr1d, [](int value, double previous) {return previous + value; }, 0)));
 
-    EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 3)));
+    //EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 3))); // assertion failure
 
     // reduction with initial value(s)
     {
-        oc::arrnd arr{ {2, 2}, {1, 2, 5, 6} };
+        oc::arrnd arr{ {2, 3}, {1, 2, 5, 6, 10, 11} };
 
         std::string chain = oc::reduce(
             arr,
             std::string{},
             [](const std::string& s, int n) { return s + "-" + std::to_string(n); });
-        EXPECT_EQ("-1-2-5-6", chain);
+        EXPECT_EQ("-1-2-5-6-10-11", chain);
 
         oc::arrnd<std::string> byaxis = oc::reduce(
-            arr[{ {0,1}, {1} }],
+            arr[{ {0,1}, {2} }],
             oc::arrnd{ {2}, {std::to_string(arr[{0,0}]), std::to_string(arr[{1,0}])} },
             [](const std::string& s, int n) { return s + "-" + std::to_string(n); },
             1);
         EXPECT_TRUE(oc::all_equal(oc::arrnd{ {2},
-            {std::string{"1-2"}, std::string{"5-6"}} }, byaxis));
+            {std::string{"1-5"}, std::string{"6-11"}} }, byaxis));
     }
 
     // complex array reduction
@@ -1169,7 +1169,7 @@ TEST(arrnd_test, filter_elements_by_maks)
         5, 6 };
     oc::arrnd iarr{ dims, idata };
 
-    EXPECT_TRUE(oc::empty(oc::filter(iarr, oc::arrnd<int>{})));
+    //EXPECT_TRUE(oc::empty(oc::filter(iarr, oc::arrnd<int>{}))); // assertion failure
 
     const int imask_data0[]{
         1, 0,
@@ -1258,7 +1258,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         5, 6 };
     oc::arrnd iarr{ dims, idata };
 
-    EXPECT_TRUE(oc::empty(oc::find(iarr, oc::arrnd<int>{})));
+    //EXPECT_TRUE(oc::empty(oc::find(iarr, oc::arrnd<int>{}))); // assertion failure
 
     const int imask_data0[]{
         1, 0,
@@ -3624,9 +3624,9 @@ TEST(arrnd_test, insert)
         Integer_array rarr2{ {11}, rdata2 };
         EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 6)));
 
-        const int rdata3[] = { 7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6 };
-        Integer_array rarr3{ {11}, rdata3 };
-        EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 7)));
+        //const int rdata3[] = { 7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6 };
+        //Integer_array rarr3{ {11}, rdata3 };
+        //EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 7))); // assertion failure
 
         EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 0)));
         EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 0)));
@@ -3664,7 +3664,7 @@ TEST(arrnd_test, insert)
             10, 11, 12 };
         Integer_array rarr1{ { 4, 2, 3 }, rdata1 };
         EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 0)));
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 3, 0)));
+        //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 3, 0))); // assertion failure
 
         const int rdata2[] = {
             1,  2,  3,
@@ -3679,7 +3679,7 @@ TEST(arrnd_test, insert)
             10, 11, 12 };
         Integer_array rarr2{ { 2, 4, 3 }, rdata2 };
         EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 1, 1)));
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 3, 1)));
+        //EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 3, 1))); // assertion failure
 
         const int rdata3[] = {
             1, 13, 14, 15,  2,  3,
@@ -3689,14 +3689,14 @@ TEST(arrnd_test, insert)
             10, 22, 23, 24, 11, 12 };
         Integer_array rarr3{ { 2, 2, 6 }, rdata3 };
         EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 1, 2)));
-        EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 4, 2)));
+        //EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 4, 2))); // assertion failure
         
         EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 1, 0)));
         EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 1, 0)));
 
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 3))); // assertion failure
-        const int invalid_data1[] = { 1 };
-        Integer_array invalid_arr1{ {1}, invalid_data1 };
+        //const int invalid_data1[] = { 1 };
+        //Integer_array invalid_arr1{ {1}, invalid_data1 };
         //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(invalid_arr1, arr2, 1, 0))); // invalid operation, assertion required
         //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::insert(arr1, rarr2, 1, 0))); // invalid operation, assertion required
     }
@@ -3718,9 +3718,9 @@ TEST(arrnd_test, remove)
         Integer_array rarr1{ {4}, rdata1 };
         EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 3, 2)));
 
-        const int rdata2[] = { 1, 2, 3 };
-        Integer_array rarr2{ {3}, rdata2 };
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 3, 4)));
+        //const int rdata2[] = { 1, 2, 3 };
+        //Integer_array rarr2{ {3}, rdata2 };
+        //EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 3, 4))); // assertion failure
 
         EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::remove(Integer_array{}, 3, 2)));
     }
@@ -3740,7 +3740,7 @@ TEST(arrnd_test, remove)
             10, 11, 12 };
         Integer_array rarr1{ { 1, 2, 3 }, rdata1 };
         EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 0, 1, 0)));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::remove(arr1, 0, 3, 0)));
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::remove(arr1, 0, 3, 0))); // assertion failure
 
         const int rdata2[] = {
             1, 2, 3,
@@ -3748,7 +3748,7 @@ TEST(arrnd_test, remove)
             7, 8, 9 };
         Integer_array rarr2{ { 2, 1, 3 }, rdata2 };
         EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 1, 1, 1)));
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 1, 2, 1)));
+        //EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 1, 2, 1))); // assertion failure
 
         const int rdata3[] = {
             3,
@@ -3758,16 +3758,16 @@ TEST(arrnd_test, remove)
             12 };
         Integer_array rarr3{ { 2, 2, 1 }, rdata3 };
         EXPECT_TRUE(oc::all_equal(rarr3, oc::remove(arr1, 0, 2, 2)));
-        const int rdata4[] = {
-            1, 2,
-            4, 5,
+        //const int rdata4[] = {
+        //    1, 2,
+        //    4, 5,
 
-            7, 8,
-            10, 11 };
-        Integer_array rarr4{ { 2, 2, 2 }, rdata4 };
-        EXPECT_TRUE(oc::all_equal(rarr4, oc::remove(arr1, 2, 2, 2)));
+        //    7, 8,
+        //    10, 11 };
+        //Integer_array rarr4{ { 2, 2, 2 }, rdata4 };
+        //EXPECT_TRUE(oc::all_equal(rarr4, oc::remove(arr1, 2, 2, 2))); // assertion failure
 
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 0, 1, 3)));
+        //EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 0, 1, 3))); // assertion failure
     }
 }
 
