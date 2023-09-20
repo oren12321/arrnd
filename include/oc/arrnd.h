@@ -2662,7 +2662,7 @@ namespace oc {
 
 
 
-        template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, typename Indexer = arrnd_general_indexer<>>
+        template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
         public:
             using value_type = T;
@@ -2679,7 +2679,7 @@ namespace oc {
             template <typename U>
             using shared_ref_allocator_type = SharedRefAllocator<T>;
             using header_type = Header;
-            using indexer_type = Indexer;
+            using indexer_type = Indexer<Header>;
             using ranger_type = arrnd_fixed_axis_ranger<Header>;
 
             using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer>;
