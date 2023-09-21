@@ -925,8 +925,7 @@ namespace oc {
                 strides_ = storage_type(dims_.size());
                 std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), value_type{ 1 }, std::multiplies<>{});
 
-                last_index_ = std::inner_product(dims_.cbegin(), dims_.cend(), strides_.cbegin(), value_type{ 0 },
-                    std::plus<>{}, [](auto d, auto s) { return (d - 1) * s; });
+                last_index_ = count_ - 1;
             }
 
             template <iterable_of_type<value_type> Cont>
