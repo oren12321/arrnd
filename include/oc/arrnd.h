@@ -730,6 +730,12 @@ namespace oc {
         {
             return i.step < T{ 0 } ? reverse(i) : i;
         }
+
+        template <std::integral T>
+        [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
+        {
+            return lhs.start == rhs.start && lhs.stop == rhs.stop && lhs.step == rhs.step;
+        }
     }
 
     using details::interval;
@@ -2214,10 +2220,10 @@ namespace oc {
 
             constexpr arrnd_fixed_axis_ranger& operator++() noexcept
             {
-                ++current_index_;
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
+                ++current_index_;
                 ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2231,10 +2237,10 @@ namespace oc {
 
             constexpr arrnd_fixed_axis_ranger& operator+=(size_type count) noexcept
             {
-                current_index_ += count;
                 if (current_index_ > last_index_) {
                     current_index_ = last_index_;
                 }
+                current_index_ += count;
                 ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
                 if (current_index_ >= last_index_) {
                     return *this;
@@ -2251,10 +2257,10 @@ namespace oc {
 
             constexpr arrnd_fixed_axis_ranger& operator--() noexcept
             {
-                --current_index_;
                 if (current_index_ < 0) {
                     current_index_ = -1;
                 }
+                --current_index_;
                 ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
                 return *this;
             }
@@ -2268,10 +2274,10 @@ namespace oc {
 
             constexpr arrnd_fixed_axis_ranger& operator-=(size_type count) noexcept
             {
-                current_index_ -= count;
                 if (current_index_ < 0) {
                     current_index_ = -1;
                 }
+                current_index_ -= count;
                 ranges_[fixed_axis_] = interval<value_type>{ current_index_ , current_index_ };
                 if (current_index_ < 0) {
                     return *this;
@@ -2293,6 +2299,20 @@ namespace oc {
 
             [[nodiscard]] constexpr const storage_type& operator*() const noexcept
             {
+                return ranges_;
+            }
+
+            [[nodiscard]] constexpr const storage_type& operator[](size_type index) noexcept
+            {
+                assert(index >= 0 && index <= last_index_);
+
+                size_type advance_count = index - current_index_;
+                if (advance_count > 0) {
+                    (*this) += advance_count;
+                }
+                else if (advance_count < 0) {
+                    (*this) -= (-advance_count);
+                }
                 return ranges_;
             }
 
