@@ -952,6 +952,7 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_FALSE(ehdr.is_subarray());
     EXPECT_FALSE(ehdr.is_axis_reordered());
     EXPECT_FALSE(earr.data());
+    EXPECT_FALSE(earr.storage());
 
     const int value{ 0 };
     Integer_array arr{ {3, 1, 2}, value };
@@ -965,8 +966,10 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_FALSE(hdr.is_subarray());
     EXPECT_FALSE(hdr.is_axis_reordered());
     EXPECT_TRUE(arr.data());
+    const auto& storage = *arr.storage();
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
         EXPECT_EQ(0, arr.data()[i]);
+        EXPECT_EQ(0, storage[i]);
     }
 
     auto rhdr = hdr.reorder(1);

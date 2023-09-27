@@ -3034,6 +3034,16 @@ namespace oc {
                 return buffsp_ ? buffsp_->data() : nullptr;
             }
 
+            [[nodiscard]] constexpr const auto& storage() const noexcept
+            {
+                return buffsp_;
+            }
+
+            [[nodiscard]] constexpr auto& storage() noexcept
+            {
+                return buffsp_;
+            }
+
             [[nodiscard]] constexpr auto size() const noexcept
             {
                 return hdr_.size();
