@@ -1340,7 +1340,7 @@ namespace oc {
                 return *this;
             }
 
-            arrnd_general_indexer operator+(size_type count) noexcept
+            arrnd_general_indexer operator+(size_type count) const noexcept
             {
                 arrnd_general_indexer<header_type> temp{ *this };
                 temp += count;
@@ -1410,7 +1410,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_general_indexer operator-(size_type count) noexcept
+            constexpr arrnd_general_indexer operator-(size_type count) const noexcept
             {
                 arrnd_general_indexer<header_type> temp{ *this };
                 temp -= count;
@@ -1428,16 +1428,16 @@ namespace oc {
                 return current_index_;
             }
 
-            [[nodiscard]] constexpr value_type operator[](size_type index) noexcept
+            [[nodiscard]] constexpr value_type operator[](size_type index) const noexcept
             {
                 assert(index >= 0 && index < hdr_.count());
 
                 size_type advance_count = index - rel_pos_;
                 if (advance_count > 0) {
-                    (*this) += advance_count;
+                    return ((*this) + advance_count).current_index_;
                 }
                 else if (advance_count < 0) {
-                    (*this) -= (-advance_count);
+                    return ((*this) - (-advance_count)).current_index_;
                 }
                 return current_index_;
             }
@@ -1651,7 +1651,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_fast_indexer operator+(size_type count) noexcept
+            constexpr arrnd_fast_indexer operator+(size_type count) const noexcept
             {
                 arrnd_fast_indexer<header_type> temp{ *this };
                 temp += count;
@@ -1737,7 +1737,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_fast_indexer operator-(size_type count) noexcept
+            constexpr arrnd_fast_indexer operator-(size_type count) const noexcept
             {
                 arrnd_fast_indexer<header_type> temp{ *this };
                 temp -= count;
@@ -1754,16 +1754,16 @@ namespace oc {
                 return current_index_;
             }
 
-            [[nodiscard]] constexpr value_type operator[](size_type index) noexcept
+            [[nodiscard]] constexpr value_type operator[](size_type index) const noexcept
             {
                 assert(index >= 0 && index < num_super_groups_* num_groups_in_super_group_* group_size_);
 
                 size_type advance_count = index - rel_pos_;
                 if (advance_count > 0) {
-                    (*this) += advance_count;
+                    return ((*this) + advance_count).current_index_;
                 }
                 else if (advance_count < 0) {
-                    (*this) -= (-advance_count);
+                    return ((*this) - (-advance_count)).current_index_;
                 }
                 return current_index_;
             }
@@ -1801,7 +1801,7 @@ namespace oc {
         class arrnd_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
@@ -1843,7 +1843,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_iterator operator+(difference_type count) noexcept
+            constexpr arrnd_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_iterator temp{ *this };
                 temp += count;
@@ -1869,7 +1869,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_iterator operator-(difference_type count) noexcept
+            constexpr arrnd_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_iterator temp{ *this };
                 temp -= count;
@@ -1886,6 +1886,16 @@ namespace oc {
                 return *gen_ == *(iter.gen_);
             }
 
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                return data_[gen_[index]];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_iterator& other) const noexcept
+            {
+                return other.data_ - data_;
+            }
+
         private:
             indexer_type gen_;
             pointer data_ = nullptr;
@@ -1898,7 +1908,7 @@ namespace oc {
         class arrnd_const_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
@@ -1940,7 +1950,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_const_iterator operator+(difference_type count) noexcept
+            constexpr arrnd_const_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_const_iterator temp{ *this };
                 temp += count;
@@ -1966,7 +1976,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_const_iterator operator-(difference_type count) noexcept
+            constexpr arrnd_const_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_const_iterator temp{ *this };
                 temp -= count;
@@ -1983,6 +1993,16 @@ namespace oc {
                 return *gen_ == *(iter.gen_);
             }
 
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                return data_[gen_[index]];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_const_iterator& other) const noexcept
+            {
+                return other.data_ - data_;
+            }
+
         private:
             indexer_type gen_;
             pointer data_ = nullptr;
@@ -1994,7 +2014,7 @@ namespace oc {
         class arrnd_reverse_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
@@ -2036,7 +2056,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_reverse_iterator operator+(difference_type count) noexcept
+            constexpr arrnd_reverse_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_reverse_iterator temp{ *this };
                 temp += count;
@@ -2062,7 +2082,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_reverse_iterator operator-(difference_type count) noexcept
+            constexpr arrnd_reverse_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2079,6 +2099,16 @@ namespace oc {
                 return *gen_ == *(iter.gen_);
             }
 
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                return data_[gen_[index]];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_reverse_iterator& other) const noexcept
+            {
+                return other.data_ - data_;
+            }
+
         private:
             indexer_type gen_;
             pointer data_ = nullptr;
@@ -2091,7 +2121,7 @@ namespace oc {
         class arrnd_const_reverse_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd::value_type;
             using pointer = Arrnd::value_type*;
@@ -2133,7 +2163,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_const_reverse_iterator operator+(difference_type count) noexcept
+            constexpr arrnd_const_reverse_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_const_reverse_iterator temp{ *this };
                 temp += count;
@@ -2159,7 +2189,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_const_reverse_iterator operator-(difference_type count) noexcept
+            constexpr arrnd_const_reverse_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_const_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2174,6 +2204,16 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const
             {
                 return *gen_ == *(iter.gen_);
+            }
+
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                return data_[gen_[index]];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_const_reverse_iterator& other) const noexcept
+            {
+                return other.data_ - data_;
             }
 
         private:
@@ -2248,7 +2288,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_fixed_axis_ranger operator+(size_type count) noexcept
+            constexpr arrnd_fixed_axis_ranger operator+(size_type count) const noexcept
             {
                 arrnd_fixed_axis_ranger<header_type> temp{ *this };
                 temp += count;
@@ -2285,7 +2325,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_fixed_axis_ranger operator-(size_type count) noexcept
+            constexpr arrnd_fixed_axis_ranger operator-(size_type count) const noexcept
             {
                 arrnd_fixed_axis_ranger<header_type> temp{ *this };
                 temp -= count;
@@ -2302,16 +2342,16 @@ namespace oc {
                 return ranges_;
             }
 
-            [[nodiscard]] constexpr const storage_type& operator[](size_type index) noexcept
+            [[nodiscard]] constexpr const storage_type operator[](size_type index) const noexcept
             {
                 assert(index >= 0 && index <= last_index_);
 
                 size_type advance_count = index - current_index_;
                 if (advance_count > 0) {
-                    (*this) += advance_count;
+                    return ((*this) + advance_count).ranges_;
                 }
                 else if (advance_count < 0) {
-                    (*this) -= (-advance_count);
+                    return ((*this) - (-advance_count)).ranges_;
                 }
                 return ranges_;
             }
@@ -2333,7 +2373,7 @@ namespace oc {
         class arrnd_axis_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
@@ -2377,7 +2417,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_iterator operator+(difference_type count)
+            constexpr arrnd_axis_iterator operator+(difference_type count) const
             {
                 arrnd_axis_iterator temp{ *this };
                 temp += count;
@@ -2403,7 +2443,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_iterator operator-(difference_type count)
+            constexpr arrnd_axis_iterator operator-(difference_type count) const
             {
                 arrnd_axis_iterator temp{ *this };
                 temp -= count;
@@ -2432,7 +2472,7 @@ namespace oc {
         class arrnd_axis_const_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
@@ -2476,7 +2516,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator+(difference_type count)
+            constexpr arrnd_axis_const_iterator operator+(difference_type count) const
             {
                 arrnd_axis_const_iterator temp{ *this };
                 temp += count;
@@ -2502,7 +2542,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator-(difference_type count)
+            constexpr arrnd_axis_const_iterator operator-(difference_type count) const
             {
                 arrnd_axis_const_iterator temp{ *this };
                 temp -= count;
@@ -2533,7 +2573,7 @@ namespace oc {
         class arrnd_axis_reverse_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
@@ -2577,7 +2617,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_iterator operator-(difference_type count)
+            constexpr arrnd_axis_reverse_iterator operator-(difference_type count) const
             {
                 arrnd_axis_reverse_iterator temp{ *this };
                 temp += count;
@@ -2603,7 +2643,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_iterator operator+(difference_type count)
+            constexpr arrnd_axis_reverse_iterator operator+(difference_type count) const
             {
                 arrnd_axis_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2632,7 +2672,7 @@ namespace oc {
         class arrnd_axis_reverse_const_iterator final
         {
         public:
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::random_access_iterator_tag;
             using difference_type = Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
@@ -2676,7 +2716,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator-(difference_type count)
+            constexpr arrnd_axis_reverse_const_iterator operator-(difference_type count) const
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 temp += count;
@@ -2702,7 +2742,7 @@ namespace oc {
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator+(difference_type count)
+            constexpr arrnd_axis_reverse_const_iterator operator+(difference_type count) const
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 temp -= count;
