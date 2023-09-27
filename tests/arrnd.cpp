@@ -951,7 +951,6 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_subarray());
     EXPECT_FALSE(ehdr.is_axis_reordered());
-    EXPECT_FALSE(earr.data());
     EXPECT_FALSE(earr.storage());
 
     const int value{ 0 };
@@ -965,10 +964,8 @@ TEST(arrnd_test, can_return_its_header_and_data)
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_subarray());
     EXPECT_FALSE(hdr.is_axis_reordered());
-    EXPECT_TRUE(arr.data());
     const auto& storage = *arr.storage();
     for (std::int64_t i = 0; i < hdr.count(); ++i) {
-        EXPECT_EQ(0, arr.data()[i]);
         EXPECT_EQ(0, storage[i]);
     }
 
@@ -2806,7 +2803,7 @@ TEST(arrnd_test, can_return_slice)
         std::initializer_list<oc::interval<std::int64_t>> ranges{};
         Integer_array rarr{ arr[ranges] };
         EXPECT_TRUE(oc::all_equal(arr, rarr));
-        EXPECT_EQ(arr.data(), rarr.data());
+        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
 
     // illegal ranges
@@ -2831,7 +2828,7 @@ TEST(arrnd_test, can_return_slice)
         Integer_array tarr1{ tdims1, tdata1 };
         Integer_array sarr1{ arr[{{0, 2,2}, {0}, {0}}] };
         EXPECT_TRUE(oc::all_equal(tarr1, sarr1));
-        EXPECT_EQ(arr.data(), sarr1.data());
+        EXPECT_EQ(arr.storage()->data(), sarr1.storage()->data());
 
         // nranges < ndims
         const int tdata2[] = {
@@ -2840,12 +2837,12 @@ TEST(arrnd_test, can_return_slice)
         Integer_array tarr2{ tdims2, tdata2 };
         Integer_array sarr2{ arr[{{1, 2, 2}}] };
         EXPECT_TRUE(oc::all_equal(tarr2, sarr2));
-        EXPECT_EQ(arr.data(), sarr2.data());
+        EXPECT_EQ(arr.storage()->data(), sarr2.storage()->data());
 
         // nranges > ndims - ignore extra ranges
         Integer_array sarr3{ arr[{{0, 2, 2}, {0}, {0}, {100, 100, 5}}] };
         EXPECT_TRUE(oc::all_equal(sarr1, sarr3));
-        EXPECT_EQ(arr.data(), sarr3.data());
+        EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
 
         // out of range and negative indices
         //Integer_array sarr4{ arr[{{-1, 3, -2}, {1}, {-2}}] }; // assertion failure
@@ -3579,13 +3576,13 @@ TEST(arrnd_test, reshape)
 
         Integer_array rarr{ oc::reshape(arr, { 6 }) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
-        EXPECT_EQ(arr.data(), rarr.data());
+        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
 
     {
         Integer_array rarr{ oc::reshape(arr, { 3, 1, 2 }) };
         EXPECT_TRUE(oc::all_equal(arr, rarr));
-        EXPECT_EQ(arr.data(), rarr.data());
+        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
 
     {
@@ -3595,7 +3592,7 @@ TEST(arrnd_test, reshape)
         Integer_array x = arr[{ {0, 2, 2}, {}, {} }];
         Integer_array rarr{ oc::reshape(x, {1, 2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
     }
 }
 
@@ -3617,13 +3614,13 @@ TEST(arrnd_test, resize)
         //EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
         EXPECT_EQ(6, rarr.header().dims().data()[0]);
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
     }
 
     {
         Integer_array rarr{ oc::resize(arr, {6}) };
         EXPECT_TRUE(oc::all_equal(arr, rarr));
-        EXPECT_EQ(arr.data(), rarr.data());
+        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
 
     {
@@ -3633,7 +3630,7 @@ TEST(arrnd_test, resize)
 
         Integer_array rarr{ oc::resize(arr, {2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.data(), rarr.data());
+        EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
     }
 
     {
@@ -3646,14 +3643,14 @@ TEST(arrnd_test, resize)
 
         Integer_array rarr{ oc::resize(arr, {3, 1, 2}) };
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.data(), rarr.data());
+        EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
     }
 
     {
         Integer_array rarr{ oc::resize(arr, {10}) };
         EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_TRUE(oc::all_equal(arr, (rarr[{ {0, 5} }])));
-        EXPECT_NE(arr.data(), rarr.data());
+        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
     }
 }
 

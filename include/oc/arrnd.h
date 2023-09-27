@@ -3029,11 +3029,6 @@ namespace oc {
                 return hdr_;
             }
 
-            [[nodiscard]] constexpr pointer data() const noexcept
-            {
-                return buffsp_ ? buffsp_->data() : nullptr;
-            }
-
             [[nodiscard]] constexpr const auto& storage() const noexcept
             {
                 return buffsp_;
@@ -3042,16 +3037,6 @@ namespace oc {
             [[nodiscard]] constexpr auto& storage() noexcept
             {
                 return buffsp_;
-            }
-
-            [[nodiscard]] constexpr auto size() const noexcept
-            {
-                return hdr_.size();
-            }
-
-            [[nodiscard]] constexpr const auto& dims() const noexcept
-            {
-                return hdr_.dims();
             }
 
             [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
@@ -3138,7 +3123,7 @@ namespace oc {
 
             [[nodiscard]] constexpr bool empty() const noexcept
             {
-                return !data() && header().empty();
+                return (!buffsp_ || buffsp_->empty()) && header().empty();
             }
 
             /**
@@ -3399,11 +3384,15 @@ namespace oc {
                 typename ArCo::indexer_type arr_gen(arr.header(), axis);
                 indexer_type res_gen(res.header(), axis);
 
+                auto ptr = storage()->data();
+                auto res_ptr = res.storage()->data();
+                auto arr_ptr = arr.storage()->data();
+
                 for (; gen && res_gen; ++gen, ++res_gen) {
-                    res.data()[*res_gen] = data()[*gen];
+                    res_ptr[*res_gen] = ptr[*gen];
                 }
                 for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
-                    res.data()[*res_gen] = arr.data()[*arr_gen];
+                    res_ptr[*res_gen] = arr_ptr[*arr_gen];
                 }
 
                 return res;
@@ -3470,14 +3459,18 @@ namespace oc {
                 size_type cycle = ind *
                     (std::accumulate(res.header().dims().begin(), res.header().dims().end(), size_type{ 1 }, std::multiplies<>{}) / res.header().dims()[axis]);
 
+                auto ptr = storage()->data();
+                auto res_ptr = res.storage()->data();
+                auto arr_ptr = arr.storage()->data();
+
                 for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
-                    res.data()[*res_gen] = data()[*gen];
+                    res_ptr[*res_gen] = ptr[*gen];
                 }
                 for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
-                    res.data()[*res_gen] = arr.data()[*arr_gen];
+                    res_ptr[*res_gen] = arr_ptr[*arr_gen];
                 }
                 for (; gen && res_gen; ++gen, ++res_gen) {
-                    res.data()[*res_gen] = data()[*gen];
+                    res_ptr[*res_gen] = ptr[*gen];
                 }
 
                 return res;
@@ -3537,14 +3530,17 @@ namespace oc {
 
                 size_type removals = header().count() - res.header().count();
 
+                auto ptr = storage()->data();
+                auto res_ptr = res.storage()->data();
+
                 for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
-                    res.data()[*res_gen] = data()[*gen];
+                    res_ptr[*res_gen] = ptr[*gen];
                 }
                 for (; gen && removals; --removals, ++gen) {
-                    //data()[*gen] = arr.data()[*arr_gen];
+                    //ptr[*gen] = arr_ptr[*arr_gen];
                 }
                 for (; gen && res_gen; ++gen, ++res_gen) {
-                    res.data()[*res_gen] = data()[*gen];
+                    res_ptr[*res_gen] = ptr[*gen];
                 }
 
                 return res;
