@@ -589,7 +589,28 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
     }
 }
 
+TEST(arrnd_general_indexer, random_access)
+{
+    using namespace oc;
 
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    arrnd_header hdr(dims, dims + 3);
+
+    const std::int64_t expected_inds_list[6]{
+        0, 5,
+        4, 1,
+        2, 3 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    arrnd_general_indexer gen(hdr, true);
+
+    EXPECT_EQ(expected_inds_list[0], gen[0]);
+    EXPECT_EQ(expected_inds_list[1], gen[5]);
+    EXPECT_EQ(expected_inds_list[2], gen[4]);
+    EXPECT_EQ(expected_inds_list[3], gen[1]);
+    EXPECT_EQ(expected_inds_list[4], gen[2]);
+    EXPECT_EQ(expected_inds_list[5], gen[3]);
+}
 
 
 TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
@@ -721,7 +742,28 @@ TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
     }
 }
 
+TEST(arrnd_fast_indexer, random_access)
+{
+    using namespace oc;
 
+    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
+    arrnd_header hdr(dims, dims + 3);
+
+    const std::int64_t expected_inds_list[6]{
+        0, 5,
+        4, 1,
+        2, 3 };
+
+    std::int64_t generated_subs_counter{ 0 };
+    arrnd_fast_indexer gen(hdr, true);
+
+    EXPECT_EQ(expected_inds_list[0], gen[0]);
+    EXPECT_EQ(expected_inds_list[1], gen[5]);
+    EXPECT_EQ(expected_inds_list[2], gen[4]);
+    EXPECT_EQ(expected_inds_list[3], gen[1]);
+    EXPECT_EQ(expected_inds_list[4], gen[2]);
+    EXPECT_EQ(expected_inds_list[5], gen[3]);
+}
 
 
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)

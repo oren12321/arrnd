@@ -1281,6 +1281,7 @@ namespace oc {
                     current_index_ = hdr_.last_index() + 1;
                     return *this;
                 }
+                ++rel_pos_;
                 ++first_ind_;
                 current_index_ += first_stride_;
                 if (first_ind_ < first_dim_) {
@@ -1350,6 +1351,7 @@ namespace oc {
                     current_index_ = hdr_.last_index();
                     return *this;
                 }
+                --rel_pos_;
                 --first_ind_;
                 current_index_ -= first_stride_;
                 if (first_ind_ > -1) {
@@ -1420,6 +1422,20 @@ namespace oc {
                 return current_index_;
             }
 
+            [[nodiscard]] constexpr value_type operator[](size_type index) noexcept
+            {
+                assert(index >= 0 && index < hdr_.count());
+
+                size_type advance_count = index - rel_pos_;
+                if (advance_count > 0) {
+                    (*this) += advance_count;
+                }
+                else if (advance_count < 0) {
+                    (*this) -= (-advance_count);
+                }
+                return current_index_;
+            }
+
         private:
             constexpr void setup(bool backward)
             {
@@ -1451,6 +1467,8 @@ namespace oc {
                 }
 
                 current_index_ = backward ? hdr_.last_index() : hdr_.offset();
+
+                rel_pos_ = backward ? hdr_.count() - 1 : 0;
             }
 
             header_type hdr_;
@@ -1471,6 +1489,8 @@ namespace oc {
 
             storage_type indices_;
             value_type current_index_;
+
+            size_type rel_pos_ = 0;
         };
 
 
@@ -1519,6 +1539,8 @@ namespace oc {
                     super_group_start_index_ = 0;
 
                     group_start_index_ = 0;
+
+                    rel_pos_ = 0;
                 }
                 else {
                     group_indices_counter_ = group_size_ - 1;
@@ -1529,6 +1551,8 @@ namespace oc {
                     group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
                     current_index_ = last_index_;
+
+                    rel_pos_ = hdr.count() - 1;
                 }
             }
 
@@ -1559,6 +1583,7 @@ namespace oc {
                 current_index_ += step_size_inside_group_;
 
                 if (group_indices_counter_ < group_size_) {
+                    ++rel_pos_;
                     return *this;
                 }
 
@@ -1572,6 +1597,7 @@ namespace oc {
                 current_index_ = group_start_index_;
 
                 if (groups_counter_ < num_groups_in_super_group_) {
+                    ++rel_pos_;
                     return *this;
                 }
 
@@ -1587,6 +1613,7 @@ namespace oc {
                 current_index_ = group_start_index_;
 
                 if (super_groups_counter_ < num_super_groups_) {
+                    ++rel_pos_;
                     return *this;
                 }
 
@@ -1599,6 +1626,7 @@ namespace oc {
 
                 current_index_ = last_index_ + 1;
 
+                ++rel_pos_;
                 return *this;
             }
 
@@ -1641,6 +1669,7 @@ namespace oc {
                 current_index_ -= step_size_inside_group_;
 
                 if (group_indices_counter_ >= 0) {
+                    --rel_pos_;
                     return *this;
                 }
 
@@ -1654,6 +1683,7 @@ namespace oc {
                 current_index_ = group_start_index_ + (group_size_-1) * step_size_inside_group_;
 
                 if (groups_counter_ >= 0) {
+                    --rel_pos_;
                     return *this;
                 }
 
@@ -1669,6 +1699,7 @@ namespace oc {
                 current_index_ = group_start_index_ + (group_size_-1) * step_size_inside_group_;
 
                 if (super_groups_counter_ >= 0) {
+                    --rel_pos_;
                     return *this;
                 }
 
@@ -1681,6 +1712,7 @@ namespace oc {
 
                 current_index_ = -1;
 
+                --rel_pos_;
                 return *this;
             }
 
@@ -1716,6 +1748,20 @@ namespace oc {
                 return current_index_;
             }
 
+            [[nodiscard]] constexpr value_type operator[](size_type index) noexcept
+            {
+                assert(index >= 0 && index < num_super_groups_* num_groups_in_super_group_* group_size_);
+
+                size_type advance_count = index - rel_pos_;
+                if (advance_count > 0) {
+                    (*this) += advance_count;
+                }
+                else if (advance_count < 0) {
+                    (*this) -= (-advance_count);
+                }
+                return current_index_;
+            }
+
         private:
             value_type current_index_ = 0;
 
@@ -1741,6 +1787,8 @@ namespace oc {
             value_type super_group_start_index_ = 0;
 
             value_type group_start_index_ = 0;
+
+            size_type rel_pos_ = 0;
         };
 
         template <typename Arrnd>
