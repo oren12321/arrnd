@@ -902,7 +902,10 @@ namespace oc {
             { std::remove_cvref_t<decltype(*std::begin(c))>() } -> std::same_as<T>;
         };
 
-        template <typename Storage = simple_dynamic_vector<std::int64_t>>
+        template <typename T>
+        concept random_access_type = std::random_access_iterator<typename T::iterator>;
+
+        template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
         class arrnd_header {
         public:
             using storage_type = Storage;
@@ -2769,7 +2772,7 @@ namespace oc {
 
 
 
-        template <typename T, typename Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
+        template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
         public:
             using value_type = T;
