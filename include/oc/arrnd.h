@@ -142,6 +142,7 @@ namespace oc {
 
                     other.data_ptr_ = nullptr;
                     other.size_ = 0;
+                    other.capacity_ = 0;
                 }
 
                 constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
@@ -165,6 +166,7 @@ namespace oc {
 
                     other.data_ptr_ = nullptr;
                     other.size_ = 0;
+                    other.capacity_ = 0;
 
                     return *this;
                 }
@@ -2900,7 +2902,7 @@ namespace oc {
             template <typename InputDimsIt, typename InputDataIt>
             requires (std::input_iterator<InputDimsIt> && std::input_iterator<InputDataIt>)
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
-                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+                : hdr_(first_dim, last_dim), buffsp_(hdr_.empty() ? nullptr : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
                 std::copy(first_data, std::next(first_data, hdr_.count()), buffsp_->data());
             }
@@ -2938,7 +2940,7 @@ namespace oc {
             template <typename InputDimsIt>
             requires std::input_iterator<InputDimsIt>
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_pointer first_data)
-                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count(), first_data))
+                : hdr_(first_dim, last_dim), buffsp_(hdr_.empty() ? nullptr : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count(), first_data))
             {
             }
             template <iterable_of_type<size_type> Cont>
@@ -2969,7 +2971,7 @@ namespace oc {
             template <typename InputDimsIt>
             requires std::input_iterator<InputDimsIt>
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim)
-                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+                : hdr_(first_dim, last_dim), buffsp_(hdr_.empty() ? nullptr : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
             }
             template <iterable_of_type<size_type> Cont>
@@ -2985,9 +2987,11 @@ namespace oc {
             template <typename InputDimsIt, typename U>
             requires (std::input_iterator<InputDimsIt> && !(std::is_pointer_v<U> || std::is_array_v<U>))
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
-                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+                : hdr_(first_dim, last_dim), buffsp_(hdr_.empty() ? nullptr : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                std::fill(buffsp_->begin(), buffsp_->end(), value);
+                if (buffsp_) {
+                    std::fill(buffsp_->begin(), buffsp_->end(), value);
+                }
             }
             template <iterable_of_type<size_type> Cont, typename U>
             requires (!(std::is_pointer_v<U> || std::is_array_v<U>))
@@ -3005,9 +3009,11 @@ namespace oc {
             template <typename InputDimsIt>
             requires std::input_iterator<InputDimsIt>
             explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_reference value)
-                : hdr_(first_dim, last_dim), buffsp_(std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
+                : hdr_(first_dim, last_dim), buffsp_(hdr_.empty() ? nullptr : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.count()))
             {
-                std::fill(buffsp_->begin(), buffsp_->end(), value);
+                if (buffsp_) {
+                    std::fill(buffsp_->begin(), buffsp_->end(), value);
+                }
             }
             template <iterable_of_type<size_type> Cont>
             explicit constexpr arrnd(const Cont& dims, const_reference value)
@@ -3085,7 +3091,7 @@ namespace oc {
             {
                 this_type slice{};
                 slice.hdr_ = hdr_.subheader(ranges.first, ranges.second);
-                slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
+                slice.buffsp_ = buffsp_;
                 return slice;
             }
             template <iterable_of_type<interval<size_type>> Cont>
@@ -3102,7 +3108,7 @@ namespace oc {
             {
                 this_type slice{};
                 slice.hdr_ = hdr_.subheader(range);
-                slice.buffsp_ = slice.hdr_.empty() ? nullptr : buffsp_;
+                slice.buffsp_ = buffsp_;
                 return slice;
             }
 
@@ -3123,7 +3129,7 @@ namespace oc {
 
             [[nodiscard]] constexpr bool empty() const noexcept
             {
-                return (!buffsp_ || buffsp_->empty()) && header().empty();
+                return hdr_.empty() && (hdr_.is_subarray() || !buffsp_);
             }
 
             /**
