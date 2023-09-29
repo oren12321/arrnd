@@ -601,7 +601,6 @@ TEST(arrnd_general_indexer, random_access)
         4, 1,
         2, 3 };
 
-    std::int64_t generated_subs_counter{ 0 };
     arrnd_general_indexer gen(hdr, true);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
@@ -754,7 +753,6 @@ TEST(arrnd_fast_indexer, random_access)
         4, 1,
         2, 3 };
 
-    std::int64_t generated_subs_counter{ 0 };
     arrnd_fast_indexer gen(hdr, true);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
@@ -864,7 +862,6 @@ TEST(arrnd_fixed_axis_ranger, random_access)
     const interval<> expected_inds_list[3]{
         interval<>{0}, interval<>{2}, interval<>{1} };
 
-    std::int64_t generated_subs_counter{ 0 };
     arrnd_fixed_axis_ranger gen(hdr, 2);
 
     EXPECT_EQ(expected_inds_list[0], gen[0][2]);
