@@ -3613,8 +3613,11 @@ namespace oc {
 
                 replaced_type<U> res(header().dims().cbegin(), header().dims().cend());
 
-                for (indexer_type gen(header()); gen; ++gen) {
-                    res[*gen] = op((*this)[*gen]);
+                indexer_type gen(header());
+                typename replaced_type<U>::indexer_type res_gen(res.header());
+
+                for (; gen && res_gen; ++gen, ++res_gen) {
+                    res[*res_gen] = op((*this)[*gen]);
                 }
 
                 return res;
@@ -3633,9 +3636,10 @@ namespace oc {
 
                 indexer_type gen(header());
                 typename replaced_type<U>::indexer_type arr_gen(arr.header());
+                typename replaced_type<U>::indexer_type res_gen(res.header());
 
-                for (; gen && arr_gen; ++gen, ++arr_gen) {
-                    res[*gen] = op((*this)[*gen], arr[*arr_gen]);
+                for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
+                    res[*res_gen] = op((*this)[*gen], arr[*arr_gen]);
                 }
 
                 return res;
@@ -3646,8 +3650,11 @@ namespace oc {
             {
                 replaced_type<std::invoke_result_t<Binary_op, T, V>> res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
-                for (indexer_type gen(header()); gen; ++gen) {
-                    res[*gen] = op((*this)[*gen], value);
+                indexer_type gen(header());
+                typename replaced_type<std::invoke_result_t<Binary_op, T, V>>::indexer_type res_gen(res.header());
+
+                for (; gen && res_gen; ++gen, ++res_gen) {
+                    res[*res_gen] = op((*this)[*gen], value);
                 }
 
                 return res;
