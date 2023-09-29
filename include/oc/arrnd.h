@@ -2479,7 +2479,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_iterator& other) const noexcept
             {
-                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
+                return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
             }
 
         private:
@@ -2589,7 +2589,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_const_iterator& other) const noexcept
             {
-                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
+                return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
             }
 
         private:
@@ -2701,7 +2701,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_iterator& other) const noexcept
             {
-                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
+                return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
             }
 
         private:
@@ -2811,7 +2811,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_const_iterator& other) const noexcept
             {
-                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
+                return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
             }
 
         private:
