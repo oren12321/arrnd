@@ -1898,7 +1898,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_iterator& other) const noexcept
             {
-                return data_ - other.data_;
+                return *gen_ - *(other.gen_);
             }
 
         private:
@@ -2005,7 +2005,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_const_iterator& other) const noexcept
             {
-                return data_ - other.data_;
+                return *gen_ - *(other.gen_);
             }
 
         private:
@@ -2111,7 +2111,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_reverse_iterator& other) const noexcept
             {
-                return data_ - other.data_;
+                return *gen_ - *(other.gen_);
             }
 
         private:
@@ -2218,7 +2218,7 @@ namespace oc {
 
             [[nodiscard]] constexpr difference_type operator-(const arrnd_const_reverse_iterator& other) const noexcept
             {
-                return data_ - other.data_;
+                return *gen_ - *(other.gen_);
             }
 
         private:
