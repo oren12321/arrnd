@@ -2347,7 +2347,7 @@ namespace oc {
                 return ranges_;
             }
 
-            [[nodiscard]] constexpr const storage_type operator[](size_type index) const noexcept
+            [[nodiscard]] constexpr storage_type operator[](size_type index) const noexcept
             {
                 assert(index >= 0 && index <= last_index_);
 
@@ -2364,6 +2364,11 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_fixed_axis_ranger& far) const noexcept
             {
                 return current_index_ == far.current_index_;
+            }
+
+            [[nodiscard]] constexpr size_type fixed_axis() const noexcept
+            {
+                return fixed_axis_;
             }
 
         private:
@@ -2403,7 +2408,7 @@ namespace oc {
 
             constexpr ~arrnd_axis_iterator() = default;
 
-            constexpr arrnd_axis_iterator& operator++()
+            constexpr arrnd_axis_iterator& operator++() noexcept
             {
                 ++far_;
                 return *this;
@@ -2416,7 +2421,7 @@ namespace oc {
                 return temp;
             }
 
-            constexpr arrnd_axis_iterator& operator+=(difference_type count)
+            constexpr arrnd_axis_iterator& operator+=(difference_type count) noexcept
             {
                 far_ += count;
                 return *this;
@@ -2429,26 +2434,26 @@ namespace oc {
                 return temp;
             }
 
-            constexpr arrnd_axis_iterator& operator--()
+            constexpr arrnd_axis_iterator& operator--() noexcept
             {
                 --far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_iterator operator--(int)
+            constexpr arrnd_axis_iterator operator--(int) noexcept
             {
                 arrnd_axis_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_iterator& operator-=(difference_type count)
+            constexpr arrnd_axis_iterator& operator-=(difference_type count) noexcept
             {
                 far_ -= count;
                 return *this;
             }
 
-            constexpr arrnd_axis_iterator operator-(difference_type count) const
+            constexpr arrnd_axis_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_axis_iterator temp{ *this };
                 temp -= count;
@@ -2464,6 +2469,17 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_iterator& iter) const noexcept
             {
                 return far_ == iter.far_;
+            }
+
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                auto ranges = far_[index];
+                return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_iterator& other) const noexcept
+            {
+                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
             }
 
         private:
@@ -2502,52 +2518,52 @@ namespace oc {
 
             constexpr ~arrnd_axis_const_iterator() = default;
 
-            constexpr arrnd_axis_const_iterator& operator++()
+            constexpr arrnd_axis_const_iterator& operator++() noexcept
             {
                 ++far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator++(int)
+            constexpr arrnd_axis_const_iterator operator++(int) noexcept
             {
                 arrnd_axis_const_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_const_iterator& operator+=(difference_type count)
+            constexpr arrnd_axis_const_iterator& operator+=(difference_type count) noexcept
             {
                 far_ += count;
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator+(difference_type count) const
+            constexpr arrnd_axis_const_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_axis_const_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr arrnd_axis_const_iterator& operator--()
+            constexpr arrnd_axis_const_iterator& operator--() noexcept
             {
                 --far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator--(int)
+            constexpr arrnd_axis_const_iterator operator--(int) noexcept
             {
                 arrnd_axis_const_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_const_iterator& operator-=(difference_type count)
+            constexpr arrnd_axis_const_iterator& operator-=(difference_type count) noexcept
             {
                 far_ -= count;
                 return *this;
             }
 
-            constexpr arrnd_axis_const_iterator operator-(difference_type count) const
+            constexpr arrnd_axis_const_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_axis_const_iterator temp{ *this };
                 temp -= count;
@@ -2563,6 +2579,17 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_const_iterator& iter) const noexcept
             {
                 return far_ == iter.far_;
+            }
+
+            [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
+            {
+                auto ranges = far_[index];
+                return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_const_iterator& other) const noexcept
+            {
+                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
             }
 
         private:
@@ -2603,7 +2630,7 @@ namespace oc {
 
             constexpr ~arrnd_axis_reverse_iterator() = default;
 
-            constexpr arrnd_axis_reverse_iterator& operator--()
+            constexpr arrnd_axis_reverse_iterator& operator--() noexcept
             {
                 ++far_;
                 return *this;
@@ -2616,39 +2643,39 @@ namespace oc {
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_iterator& operator-=(difference_type count)
+            constexpr arrnd_axis_reverse_iterator& operator-=(difference_type count) noexcept
             {
                 far_ += count;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_iterator operator-(difference_type count) const
+            constexpr arrnd_axis_reverse_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_axis_reverse_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_iterator& operator++()
+            constexpr arrnd_axis_reverse_iterator& operator++() noexcept
             {
                 --far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_iterator operator++(int)
+            constexpr arrnd_axis_reverse_iterator operator++(int) noexcept
             {
                 arrnd_axis_reverse_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_iterator& operator+=(difference_type count)
+            constexpr arrnd_axis_reverse_iterator& operator+=(difference_type count) noexcept
             {
                 far_ -= count;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_iterator operator+(difference_type count) const
+            constexpr arrnd_axis_reverse_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_axis_reverse_iterator temp{ *this };
                 temp -= count;
@@ -2664,6 +2691,17 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_iterator& iter) const noexcept
             {
                 return far_ == iter.far_;
+            }
+
+            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            {
+                auto ranges = far_[index];
+                return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_iterator& other) const noexcept
+            {
+                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
             }
 
         private:
@@ -2702,52 +2740,52 @@ namespace oc {
 
             constexpr ~arrnd_axis_reverse_const_iterator() = default;
 
-            constexpr arrnd_axis_reverse_const_iterator& operator--()
+            constexpr arrnd_axis_reverse_const_iterator& operator--() noexcept
             {
                 ++far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator--(int)
+            constexpr arrnd_axis_reverse_const_iterator operator--(int) noexcept
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 ++(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator& operator-=(difference_type count)
+            constexpr arrnd_axis_reverse_const_iterator& operator-=(difference_type count) noexcept
             {
                 far_ += count;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator-(difference_type count) const
+            constexpr arrnd_axis_reverse_const_iterator operator-(difference_type count) const noexcept
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 temp += count;
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator& operator++()
+            constexpr arrnd_axis_reverse_const_iterator& operator++() noexcept
             {
                 --far_;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator++(int)
+            constexpr arrnd_axis_reverse_const_iterator operator++(int) noexcept
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 --(*this);
                 return temp;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator& operator+=(difference_type count)
+            constexpr arrnd_axis_reverse_const_iterator& operator+=(difference_type count) noexcept
             {
                 far_ -= count;
                 return *this;
             }
 
-            constexpr arrnd_axis_reverse_const_iterator operator+(difference_type count) const
+            constexpr arrnd_axis_reverse_const_iterator operator+(difference_type count) const noexcept
             {
                 arrnd_axis_reverse_const_iterator temp{ *this };
                 temp -= count;
@@ -2763,6 +2801,17 @@ namespace oc {
             [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_const_iterator& iter) const noexcept
             {
                 return far_ == iter.far_;
+            }
+
+            [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
+            {
+                auto ranges = far_[index];
+                return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
+            }
+
+            [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_const_iterator& other) const noexcept
+            {
+                return (*far_)[far_.fixed_axis()] - (*other.far_)[far_.fixed_axis()];
             }
 
         private:
