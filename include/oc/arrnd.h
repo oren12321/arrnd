@@ -1857,7 +1857,7 @@ namespace oc {
 
             constexpr arrnd_iterator& operator--() noexcept
             {
-                gen_--;
+                --gen_;
                 return *this;
             }
 
@@ -1886,7 +1886,7 @@ namespace oc {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] constexpr bool operator==(const arrnd_iterator& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_iterator& iter) const noexcept
             {
                 return *gen_ == *(iter.gen_);
             }
@@ -1993,12 +1993,12 @@ namespace oc {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] constexpr bool operator==(const arrnd_const_iterator& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_const_iterator& iter) const noexcept
             {
                 return *gen_ == *(iter.gen_);
             }
 
-            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
             {
                 return data_[gen_[index]];
             }
@@ -2094,12 +2094,12 @@ namespace oc {
                 return temp;
             }
 
-            [[nodiscard]] constexpr reference operator*() const noexcept
+            [[nodiscard]] constexpr reference operator*() noexcept
             {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] constexpr bool operator==(const arrnd_reverse_iterator& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_reverse_iterator& iter) const noexcept
             {
                 return *gen_ == *(iter.gen_);
             }
@@ -2201,17 +2201,17 @@ namespace oc {
                 return temp;
             }
 
-            [[nodiscard]] constexpr const reference operator*() const noexcept
+            [[nodiscard]] constexpr const reference operator*() noexcept
             {
                 return data_[*gen_];
             }
 
-            [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const
+            [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const noexcept
             {
                 return *gen_ == *(iter.gen_);
             }
 
-            [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+            [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
             {
                 return data_[gen_[index]];
             }
