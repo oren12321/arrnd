@@ -2823,6 +2823,206 @@ namespace oc {
 
 
 
+        template <typename Arrnd>
+        class arrnd_back_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_back_insert_iterator() noexcept = default;
+
+            explicit arrnd_back_insert_iterator(Arrnd& cont) noexcept
+                : cont_(std::addressof(cont))
+            {
+            }
+
+            arrnd_back_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->append(cont);
+                return *this;
+            }
+
+            arrnd_back_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->append(std::move(cont));
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_back_insert_iterator& operator*() noexcept
+            {
+                return *this;
+            }
+
+            arrnd_back_insert_iterator& operator++() noexcept
+            {
+                return *this;
+            }
+
+            arrnd_back_insert_iterator operator++(int) noexcept
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_back_insert_iterator<Arrnd> arrnd_back_inserter(Arrnd& cont) noexcept
+        {
+            return arrnd_back_insert_iterator<Arrnd>(cont);
+        }
+
+        template <typename Arrnd>
+        class arrnd_front_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_front_insert_iterator() noexcept = default;
+
+            explicit arrnd_front_insert_iterator(Arrnd& cont)
+                : cont_(std::addressof(cont))
+            {
+            }
+
+            arrnd_front_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->insert(cont, 0);
+                return *this;
+            }
+
+            arrnd_front_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->insert(std::move(cont), 0);
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_front_insert_iterator& operator*()
+            {
+                return *this;
+            }
+
+            arrnd_front_insert_iterator& operator++()
+            {
+                return *this;
+            }
+
+            arrnd_front_insert_iterator operator++(int)
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_front_insert_iterator<Arrnd> arrnd_front_inserter(Arrnd& cont)
+        {
+            return arrnd_front_insert_iterator<Arrnd>(cont);
+        }
+
+
+        template <typename Arrnd>
+        class arrnd_axis_back_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_axis_back_insert_iterator() noexcept = default;
+
+            explicit arrnd_axis_back_insert_iterator(Arrnd& cont, typename Arrnd::size_type axis = 0) noexcept
+                : cont_(std::addressof(cont)), axis_(axis)
+            {
+            }
+
+            arrnd_axis_back_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->append(cont, axis_);
+                return *this;
+            }
+
+            arrnd_axis_back_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->append(std::move(cont), axis_);
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_axis_back_insert_iterator& operator*() noexcept
+            {
+                return *this;
+            }
+
+            arrnd_axis_back_insert_iterator& operator++() noexcept
+            {
+                return *this;
+            }
+
+            arrnd_axis_back_insert_iterator operator++(int) noexcept
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+            typename Arrnd::size_type axis_;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_axis_back_insert_iterator<Arrnd> arrnd_axis_back_inserter(Arrnd& cont, typename Arrnd::size_type axis = 0) noexcept
+        {
+            return arrnd_axis_back_insert_iterator<Arrnd>(cont, axis);
+        }
+
+        template <typename Arrnd>
+        class arrnd_axis_front_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_axis_front_insert_iterator() noexcept = default;
+
+            explicit arrnd_axis_front_insert_iterator(Arrnd& cont, typename Arrnd::size_type axis = 0)
+                : cont_(std::addressof(cont)), axis_(axis)
+            {
+            }
+
+            arrnd_axis_front_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->insert(cont, 0, axis_);
+                return *this;
+            }
+
+            arrnd_axis_front_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->insert(std::move(cont), 0, axis_);
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_axis_front_insert_iterator& operator*()
+            {
+                return *this;
+            }
+
+            arrnd_axis_front_insert_iterator& operator++()
+            {
+                return *this;
+            }
+
+            arrnd_axis_front_insert_iterator operator++(int)
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+            typename Arrnd::size_type axis_;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_axis_front_insert_iterator<Arrnd> arrnd_axis_front_inserter(Arrnd& cont, typename Arrnd::size_type axis = 0)
+        {
+            return arrnd_axis_front_insert_iterator<Arrnd>(cont, axis);
+        }
+
+
         template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
         public:
@@ -3406,10 +3606,12 @@ namespace oc {
 
                 this_type res(resize({ header().count() + arr.header().count() }));
 
-                ArCo rarr(arr.reshape({ arr.header().count() }));
+                indexer_type res_gen(res.header());
+                typename ArCo::indexer_type arr_gen(arr.header());
 
-                for (size_type i = header().count(); i < res.header().count(); ++i) {
-                    res[{ i }] = arr[{ i - header().count() }];
+                res_gen += hdr_.count();
+                for (; res_gen && arr_gen; ++res_gen, ++arr_gen) {
+                    res[*res_gen] = arr[*arr_gen];
                 }
 
                 return res;
@@ -3469,17 +3671,18 @@ namespace oc {
 
                 this_type res({ header().count() + arr.header().count() });
 
-                this_type rlhs(reshape({ header().count() }));
-                ArCo rarr(arr.reshape({ arr.header().count() }));
+                indexer_type gen(header());
+                indexer_type res_gen(res.header());
+                typename ArCo::indexer_type arr_gen(arr.header());
 
-                for (size_type i = 0; i < ind; ++i) {
-                    res[{ i }] = rlhs[{ i }];
+                for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+                    res[*res_gen] = (*this)[*gen];
                 }
-                for (size_type i = 0; i < arr.header().count(); ++i) {
-                    res[{ ind + i }] = rarr[{ i }];
+                for (size_type i = 0; i < arr.header().count() && arr_gen && res_gen; ++i, ++arr_gen, ++res_gen) {
+                    res[*res_gen] = arr[*arr_gen];
                 }
-                for (size_type i = 0; i < header().count() - ind; ++i) {
-                    res[{ ind + arr.header().count() + i }] = rlhs[{ ind + i }];
+                for (size_type i = 0; i < header().count() - ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+                    res[*res_gen] = (*this)[*gen];
                 }
 
                 return res;
@@ -3544,13 +3747,16 @@ namespace oc {
                 assert(ind + count <= hdr_.count());
 
                 this_type res({ header().count() - count });
-                this_type rarr(reshape({ header().count() }));
 
-                for (size_type i = 0; i < ind; ++i) {
-                    res[{ i }] = rarr[{ i }];
+                indexer_type gen(header());
+                indexer_type res_gen(res.header());
+
+                for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+                    res[*res_gen] = (*this)[*gen];
                 }
-                for (size_type i = ind + count; i < header().count(); ++i) {
-                    res[{ i - count }] = rarr[{ i }];
+                gen += count;
+                for (size_type i = ind + count; i < header().count() && gen && res_gen; ++i, ++gen, ++res_gen) {
+                    res[*res_gen] = (*this)[*gen];
                 }
 
                 return res;
@@ -5556,6 +5762,12 @@ namespace oc {
     }
 
     using details::arrnd_complient;
+
+    using details::arrnd_back_inserter;
+    using details::arrnd_front_inserter;
+
+    using details::arrnd_axis_back_inserter;
+    using details::arrnd_axis_front_inserter;
 
     using details::arrnd;
 
