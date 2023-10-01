@@ -2921,6 +2921,58 @@ namespace oc {
             return arrnd_front_insert_iterator<Arrnd>(cont);
         }
 
+        template <typename Arrnd>
+        class arrnd_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_insert_iterator() noexcept = default;
+
+            explicit arrnd_insert_iterator(Arrnd& cont, typename Arrnd::size_type ind = 0)
+                : cont_(std::addressof(cont)), ind_(ind)
+            {
+            }
+
+            arrnd_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->insert(cont, ind_);
+                ind_ += cont.header().count();
+                return *this;
+            }
+
+            arrnd_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->insert(std::move(cont), ind_);
+                ind_ += cont.header().count();
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_insert_iterator& operator*()
+            {
+                return *this;
+            }
+
+            arrnd_insert_iterator& operator++()
+            {
+                return *this;
+            }
+
+            arrnd_insert_iterator operator++(int)
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+            typename Arrnd::size_type ind_;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_insert_iterator<Arrnd> arrnd_inserter(Arrnd& cont, typename Arrnd::size_type ind = 0)
+        {
+            return arrnd_insert_iterator<Arrnd>(cont, ind);
+        }
+
 
         template <typename Arrnd>
         class arrnd_axis_back_insert_iterator {
@@ -3020,6 +3072,59 @@ namespace oc {
         [[nodiscard]] inline constexpr arrnd_axis_front_insert_iterator<Arrnd> arrnd_axis_front_inserter(Arrnd& cont, typename Arrnd::size_type axis = 0)
         {
             return arrnd_axis_front_insert_iterator<Arrnd>(cont, axis);
+        }
+
+        template <typename Arrnd>
+        class arrnd_axis_insert_iterator {
+        public:
+            using iterator_category = std::output_iterator_tag;
+
+            constexpr arrnd_axis_insert_iterator() noexcept = default;
+
+            explicit arrnd_axis_insert_iterator(Arrnd& cont, typename Arrnd::size_type ind = 0, typename Arrnd::size_type axis = 0)
+                : cont_(std::addressof(cont)), ind_(ind), axis_(axis)
+            {
+            }
+
+            arrnd_axis_insert_iterator& operator=(const Arrnd& cont)
+            {
+                *cont_ = cont_->insert(cont, ind_, axis_);
+                ind_ += cont.header().dims()[axis_];
+                return *this;
+            }
+
+            arrnd_axis_insert_iterator& operator=(Arrnd&& cont)
+            {
+                *cont_ = cont_->insert(std::move(cont), ind_, axis_);
+                ind_ += cont.header().dims()[axis_];
+                return *this;
+            }
+
+            [[nodiscard]] arrnd_axis_insert_iterator& operator*()
+            {
+                return *this;
+            }
+
+            arrnd_axis_insert_iterator& operator++()
+            {
+                return *this;
+            }
+
+            arrnd_axis_insert_iterator operator++(int)
+            {
+                return *this;
+            }
+
+        protected:
+            Arrnd* cont_ = nullptr;
+            typename Arrnd::size_type ind_;
+            typename Arrnd::size_type axis_;
+        };
+
+        template <typename Arrnd>
+        [[nodiscard]] inline constexpr arrnd_axis_insert_iterator<Arrnd> arrnd_axis_inserter(Arrnd& cont, typename Arrnd::size_type ind = 0, typename Arrnd::size_type axis = 0)
+        {
+            return arrnd_axis_insert_iterator<Arrnd>(cont, ind, axis);
         }
 
 
@@ -5765,9 +5870,11 @@ namespace oc {
 
     using details::arrnd_back_inserter;
     using details::arrnd_front_inserter;
+    using details::arrnd_inserter;
 
     using details::arrnd_axis_back_inserter;
     using details::arrnd_axis_front_inserter;
+    using details::arrnd_axis_inserter;
 
     using details::arrnd;
 
