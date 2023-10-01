@@ -672,13 +672,13 @@ namespace oc {
     namespace details {
         template <std::integral T = std::int64_t>
         struct interval {
-            constexpr interval(const T& nstart, const T& nstop, const T& nstep) noexcept
+            constexpr interval(T nstart, T nstop, T nstep) noexcept
                 : start(nstart), stop(nstop), step(nstep) {}
 
-            constexpr interval(const T& nstart, const T& nstop) noexcept
+            constexpr interval(T nstart, T nstop) noexcept
                 : interval(nstart, nstop, 1) {}
 
-            constexpr interval(const T& nstart) noexcept
+            constexpr interval(T nstart) noexcept
                 : interval(nstart, nstart, 1) {}
 
             constexpr interval() = default;
@@ -691,16 +691,16 @@ namespace oc {
             T stop{ 0 };
             T step{ 1 };
 
-            [[nodiscard]] static constexpr interval full() noexcept {
-                return interval{ std::numeric_limits<T>::min(), std::numeric_limits<T>::max() };
+            [[nodiscard]] static constexpr interval full(T nsize) noexcept {
+                return interval{ 0, nsize - 1 };
             }
 
-            [[nodiscard]] static constexpr interval from(T nstart) {
-                return interval{ nstart, std::numeric_limits<T>::max() };
+            [[nodiscard]] static constexpr interval from(T nstart, T ncount) {
+                return interval{ nstart, nstart + ncount };
             }
 
             [[nodiscard]] static constexpr interval to(T nstop) noexcept {
-                return interval{ std::numeric_limits<T>::min(), nstop };
+                return interval{ 0, nstop };
             }
 
             [[nodiscard]] static constexpr interval at(T npos) noexcept {

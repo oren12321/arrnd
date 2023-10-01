@@ -104,18 +104,18 @@ TEST(interval_test, presets)
     EXPECT_EQ(5, i1.stop);
     EXPECT_EQ(1, i1.step);
 
-    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full();
-    EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i2.start);
-    EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i2.stop);
+    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5);
+    EXPECT_EQ(0, i2.start);
+    EXPECT_EQ(4, i2.stop);
     EXPECT_EQ(1, i2.step);
 
-    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5);
+    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5);
     EXPECT_EQ(5, i3.start);
-    EXPECT_EQ(std::numeric_limits<std::int64_t>::max(), i3.stop);
+    EXPECT_EQ(10, i3.stop);
     EXPECT_EQ(1, i3.step);
 
     oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5);
-    EXPECT_EQ(std::numeric_limits<std::int64_t>::min(), i4.start);
+    EXPECT_EQ(0, i4.start);
     EXPECT_EQ(5, i4.stop);
     EXPECT_EQ(1, i4.step);
 
@@ -4062,6 +4062,22 @@ TEST(arrnd_test, ostream_operator)
             "   [4 5 6]]]\n"
             " [[[7 8 9]\n"
             "   [10 11 12]]]]",
+            ss.str());
+    }
+
+    // subarray
+    {
+        std::stringstream ss;
+        oc::arrnd<int> arr{ {2, 1, 2, 3}, {
+            1, 2, 3,
+            4, 5, 6,
+
+            7, 8, 9,
+            10, 11, 12 }};
+        ss << arr[{ oc::interval<>::at(1), oc::interval<>::full(1), oc::interval<>::full(2), oc::interval<>::between(0, 2, 2) }];
+        EXPECT_EQ(
+            "[[[[7 9]\n"
+            "   [10 12]]]]",
             ss.str());
     }
 }
