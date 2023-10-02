@@ -911,8 +911,8 @@ namespace oc {
         class arrnd_header {
         public:
             using storage_type = Storage;
-            using value_type = Storage::value_type;
-            using size_type = Storage::size_type;
+            using value_type = typename Storage::value_type;
+            using size_type = typename Storage::size_type;
 
             constexpr arrnd_header() = default;
 
@@ -1237,10 +1237,10 @@ namespace oc {
         class arrnd_general_indexer final
         {
         public:
-            using storage_type = Header::storage_type;
+            using storage_type = typename Header::storage_type;
             using header_type = Header;
-            using size_type = Header::size_type;
-            using value_type = Header::value_type;
+            using size_type = typename Header::size_type;
+            using value_type = typename Header::value_type;
 
             constexpr arrnd_general_indexer(const header_type& hdr, bool backward = false)
                 : hdr_(hdr)
@@ -1512,8 +1512,8 @@ namespace oc {
         {
         public:
             using header_type = Header;
-            using size_type = Header::size_type;
-            using value_type = Header::value_type;
+            using size_type = typename Header::size_type;
+            using value_type = typename Header::value_type;
 
             constexpr arrnd_fast_indexer(const header_type& hdr, bool backward = false)
                 : arrnd_fast_indexer(hdr, 0, backward)
@@ -1807,12 +1807,12 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
-            using value_type = Arrnd::value_type;
-            using pointer = Arrnd::value_type*;
-            using reference = Arrnd::value_type&;
+            using difference_type = typename Arrnd::size_type;
+            using value_type = typename Arrnd::value_type;
+            using pointer = typename Arrnd::value_type*;
+            using reference = typename Arrnd::value_type&;
 
-            using indexer_type = Arrnd::indexer_type;
+            using indexer_type = typename Arrnd::indexer_type;
 
             constexpr arrnd_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -1914,12 +1914,12 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
-            using value_type = Arrnd::value_type;
-            using pointer = Arrnd::value_type*;
-            using reference = Arrnd::value_type&;
+            using difference_type = typename Arrnd::size_type;
+            using value_type = typename Arrnd::value_type;
+            using pointer = typename Arrnd::value_type*;
+            using reference = typename Arrnd::value_type&;
 
-            using indexer_type = Arrnd::indexer_type;
+            using indexer_type = typename Arrnd::indexer_type;
 
             constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2020,12 +2020,12 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
-            using value_type = Arrnd::value_type;
-            using pointer = Arrnd::value_type*;
-            using reference = Arrnd::value_type&;
+            using difference_type = typename Arrnd::size_type;
+            using value_type = typename Arrnd::value_type;
+            using pointer = typename Arrnd::value_type*;
+            using reference = typename Arrnd::value_type&;
 
-            using indexer_type = Arrnd::indexer_type;
+            using indexer_type = typename Arrnd::indexer_type;
 
             constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2127,12 +2127,12 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
-            using value_type = Arrnd::value_type;
-            using pointer = Arrnd::value_type*;
-            using reference = Arrnd::value_type&;
+            using difference_type = typename Arrnd::size_type;
+            using value_type = typename Arrnd::value_type;
+            using pointer = typename Arrnd::value_type*;
+            using reference = typename Arrnd::value_type&;
 
-            using indexer_type = Arrnd::indexer_type;
+            using indexer_type = typename Arrnd::indexer_type;
 
             constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
                 : gen_(gen), data_(data)
@@ -2232,10 +2232,10 @@ namespace oc {
         {
         public:
             using header_type = Header;
-            using size_type = Header::size_type;
-            using value_type = Header::value_type;
+            using size_type = typename Header::size_type;
+            using value_type = typename Header::value_type;
 
-            using storage_type = Header::storage_type::template replaced_type<interval<value_type>>;
+            using storage_type = typename Header::storage_type::template replaced_type<interval<value_type>>;
 
             constexpr arrnd_fixed_axis_ranger(const header_type& hdr, size_type fixed_axis = 0, bool backward = false)
                 : fixed_axis_(fixed_axis)
@@ -2384,7 +2384,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
+            using difference_type = typename Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
 
@@ -2494,7 +2494,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
+            using difference_type = typename Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
@@ -2606,7 +2606,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
+            using difference_type = typename Arrnd::size_type;
             using value_type = Arrnd;
             using reference = Arrnd&;
 
@@ -2716,7 +2716,7 @@ namespace oc {
         {
         public:
             using iterator_category = std::random_access_iterator_tag;
-            using difference_type = Arrnd::size_type;
+            using difference_type = typename Arrnd::size_type;
             using value_type = Arrnd;
             using const_reference = const Arrnd&;
 
