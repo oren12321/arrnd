@@ -721,10 +721,7 @@ namespace oc {
         template <std::integral T>
         [[nodiscard]] inline constexpr interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
         {
-            T nstart = i.start == std::numeric_limits<T>::min() ? 0 : i.start;
-            T nstop = i.stop == std::numeric_limits<T>::max() ? modulus - 1 : i.stop;
-
-            return { modulo(nstart, modulus), modulo(nstop, modulus), i.step };
+            return { modulo(i.start, modulus), modulo(i.stop, modulus), i.step };
         }
 
         template <std::integral T>
