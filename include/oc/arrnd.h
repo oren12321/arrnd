@@ -2773,10 +2773,11 @@ namespace oc {
         class arrnd_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
+            using size_type = typename Arrnd::size_type;
 
             constexpr arrnd_insert_iterator() noexcept = default;
 
-            explicit arrnd_insert_iterator(Arrnd& cont, typename Arrnd::size_type ind = 0)
+            explicit arrnd_insert_iterator(Arrnd& cont, size_type ind = 0)
                 : cont_(std::addressof(cont)), ind_(ind)
             {
             }
@@ -2812,7 +2813,7 @@ namespace oc {
 
         protected:
             Arrnd* cont_ = nullptr;
-            typename Arrnd::size_type ind_;
+            size_type ind_;
         };
 
         template <arrnd_complient Arrnd>
@@ -2826,10 +2827,11 @@ namespace oc {
         class arrnd_axis_back_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
+            using size_type = typename Arrnd::size_type;
 
             constexpr arrnd_axis_back_insert_iterator() noexcept = default;
 
-            explicit arrnd_axis_back_insert_iterator(Arrnd& cont, typename Arrnd::size_type axis = 0) noexcept
+            explicit arrnd_axis_back_insert_iterator(Arrnd& cont, size_type axis = 0) noexcept
                 : cont_(std::addressof(cont)), axis_(axis)
             {
             }
@@ -2863,7 +2865,7 @@ namespace oc {
 
         protected:
             Arrnd* cont_ = nullptr;
-            typename Arrnd::size_type axis_;
+            size_type axis_;
         };
 
         template <arrnd_complient Arrnd>
@@ -2876,10 +2878,11 @@ namespace oc {
         class arrnd_axis_front_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
+            using size_type = typename Arrnd::size_type;
 
             constexpr arrnd_axis_front_insert_iterator() noexcept = default;
 
-            explicit arrnd_axis_front_insert_iterator(Arrnd& cont, typename Arrnd::size_type axis = 0)
+            explicit arrnd_axis_front_insert_iterator(Arrnd& cont, size_type axis = 0)
                 : cont_(std::addressof(cont)), axis_(axis)
             {
             }
@@ -2913,7 +2916,7 @@ namespace oc {
 
         protected:
             Arrnd* cont_ = nullptr;
-            typename Arrnd::size_type axis_;
+            size_type axis_;
         };
 
         template <arrnd_complient Arrnd>
@@ -2926,10 +2929,11 @@ namespace oc {
         class arrnd_axis_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
+            using size_type = typename Arrnd::size_type;
 
             constexpr arrnd_axis_insert_iterator() noexcept = default;
 
-            explicit arrnd_axis_insert_iterator(Arrnd& cont, typename Arrnd::size_type ind = 0, typename Arrnd::size_type axis = 0)
+            explicit arrnd_axis_insert_iterator(Arrnd& cont, size_type ind = 0, size_type axis = 0)
                 : cont_(std::addressof(cont)), ind_(ind), axis_(axis)
             {
             }
@@ -2965,8 +2969,8 @@ namespace oc {
 
         protected:
             Arrnd* cont_ = nullptr;
-            typename Arrnd::size_type ind_;
-            typename Arrnd::size_type axis_;
+            size_type ind_;
+            size_type axis_;
         };
 
         template <arrnd_complient Arrnd>
@@ -4334,183 +4338,183 @@ namespace oc {
                 return all_match(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
             }
 
-            constexpr auto begin(size_type axis = 0)
+            [[nodiscard]] constexpr auto begin(size_type axis = 0)
             {
                 return iterator(buffsp_->data(), indexer_type(hdr_, axis));
             }
-            constexpr auto end(size_type axis = 0)
+            [[nodiscard]] constexpr auto end(size_type axis = 0)
             {
                 return iterator(buffsp_->data(), indexer_type(hdr_, axis, true) + 1);
             }
-            constexpr auto cbegin(size_type axis = 0) const
+            [[nodiscard]] constexpr auto cbegin(size_type axis = 0) const
             {
                 return const_iterator(buffsp_->data(), indexer_type(hdr_, axis));
             }
-            constexpr auto cend(size_type axis = 0) const
+            [[nodiscard]] constexpr auto cend(size_type axis = 0) const
             {
                 return const_iterator(buffsp_->data() , indexer_type(hdr_, axis, true) + 1);
             }
-            constexpr auto rbegin(size_type axis = 0)
+            [[nodiscard]] constexpr auto rbegin(size_type axis = 0)
             {
                 return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
             }
-            constexpr auto rend(size_type axis = 0)
+            [[nodiscard]] constexpr auto rend(size_type axis = 0)
             {
                 return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
             }
-            constexpr auto crbegin(size_type axis = 0) const
+            [[nodiscard]] constexpr auto crbegin(size_type axis = 0) const
             {
                 return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
             }
-            constexpr auto crend(size_type axis = 0) const
+            [[nodiscard]] constexpr auto crend(size_type axis = 0) const
             {
                 return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
             }
 
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto begin(InputIt first_order, InputIt last_order)
+            [[nodiscard]] constexpr auto begin(InputIt first_order, InputIt last_order)
             {
                 return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto end(InputIt first_order, InputIt last_order)
+            [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order)
             {
                 return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true) + 1);
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto cbegin(InputIt first_order, InputIt last_order) const
+            [[nodiscard]] constexpr auto cbegin(InputIt first_order, InputIt last_order) const
             {
                 return const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto cend(InputIt first_order, InputIt last_order) const
+            [[nodiscard]] constexpr auto cend(InputIt first_order, InputIt last_order) const
             {
                 return const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true) + 1);
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto rbegin(InputIt first_order, InputIt last_order)
+            [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order)
             {
                 return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto rend(InputIt first_order, InputIt last_order)
+            [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order)
             {
                 return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order) - 1);
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto crbegin(InputIt first_order, InputIt last_order) const
+            [[nodiscard]] constexpr auto crbegin(InputIt first_order, InputIt last_order) const
             {
                 return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr auto crend(InputIt first_order, InputIt last_order) const
+            [[nodiscard]] constexpr auto crend(InputIt first_order, InputIt last_order) const
             {
                 return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order) - 1);
             }
 
-            constexpr auto begin(std::initializer_list<size_type> order)
+            [[nodiscard]] constexpr auto begin(std::initializer_list<size_type> order)
             {
                 return begin(order.begin(), order.end());
             }
-            constexpr auto end(std::initializer_list<size_type> order)
+            [[nodiscard]] constexpr auto end(std::initializer_list<size_type> order)
             {
                 return end(order.begin(), order.end());
             }
-            constexpr auto cbegin(std::initializer_list<size_type> order) const
+            [[nodiscard]] constexpr auto cbegin(std::initializer_list<size_type> order) const
             {
                 return cbegin(order.begin(), order.end());
             }
-            constexpr auto cend(std::initializer_list<size_type> order) const
+            [[nodiscard]] constexpr auto cend(std::initializer_list<size_type> order) const
             {
                 return cend(order.begin(), order.end());
             }
-            constexpr auto rbegin(std::initializer_list<size_type> order)
+            [[nodiscard]] constexpr auto rbegin(std::initializer_list<size_type> order)
             {
                 return rbegin(order.begin(), order.end());
             }
-            constexpr auto rend(std::initializer_list<size_type> order)
+            [[nodiscard]] constexpr auto rend(std::initializer_list<size_type> order)
             {
                 return rend(order.begin(), order.end());
             }
-            constexpr auto crbegin(std::initializer_list<size_type> order) const
+            [[nodiscard]] constexpr auto crbegin(std::initializer_list<size_type> order) const
             {
                 return crbegin(order.begin(), order.end());
             }
-            constexpr auto crend(std::initializer_list<size_type> order) const
+            [[nodiscard]] constexpr auto crend(std::initializer_list<size_type> order) const
             {
                 return crend(order.begin(), order.end());
             }
 
             template <iterable_of_type<size_type> Cont>
-            constexpr auto begin(const Cont& order)
+            [[nodiscard]] constexpr auto begin(const Cont& order)
             {
                 return begin(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto end(const Cont& order)
+            [[nodiscard]] constexpr auto end(const Cont& order)
             {
                 return end(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto cbegin(const Cont& order) const
+            [[nodiscard]] constexpr auto cbegin(const Cont& order) const
             {
                 return cbegin(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto cend(const Cont& order) const
+            [[nodiscard]] constexpr auto cend(const Cont& order) const
             {
                 return cend(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto rbegin(const Cont& order)
+            [[nodiscard]] constexpr auto rbegin(const Cont& order)
             {
                 return rbegin(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto rend(const Cont& order)
+            [[nodiscard]] constexpr auto rend(const Cont& order)
             {
                 return rend(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto crbegin(const Cont& order) const
+            [[nodiscard]] constexpr auto crbegin(const Cont& order) const
             {
                 return crbegin(std::begin(order), std::end(order));
             }
             template <iterable_of_type<size_type> Cont>
-            constexpr auto crend(const Cont& order) const
+            [[nodiscard]] constexpr auto crend(const Cont& order) const
             {
                 return crend(std::begin(order), std::end(order));
             }
 
-            constexpr auto begin_subarray(size_type fixed_axis = 0)
+            [[nodiscard]] constexpr auto begin_subarray(size_type fixed_axis = 0)
             {
                 return subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
             }
-            constexpr auto end_subarray(size_type fixed_axis = 0)
+            [[nodiscard]] constexpr auto end_subarray(size_type fixed_axis = 0)
             {
                 return subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
             }
-            constexpr auto cbegin_subarray(size_type fixed_axis = 0) const
+            [[nodiscard]] constexpr auto cbegin_subarray(size_type fixed_axis = 0) const
             {
                 return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
             }
-            constexpr auto cend_subarray(size_type fixed_axis = 0) const
+            [[nodiscard]] constexpr auto cend_subarray(size_type fixed_axis = 0) const
             {
                 return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
             }
-            constexpr auto rbegin_subarray(size_type fixed_axis = 0)
+            [[nodiscard]] constexpr auto rbegin_subarray(size_type fixed_axis = 0)
             {
                 return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
             }
-            constexpr auto rend_subarray(size_type fixed_axis = 0)
+            [[nodiscard]] constexpr auto rend_subarray(size_type fixed_axis = 0)
             {
                 return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
             }
-            constexpr auto crbegin_subarray(size_type fixed_axis = 0) const
+            [[nodiscard]] constexpr auto crbegin_subarray(size_type fixed_axis = 0) const
             {
                 return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
             }
-            constexpr auto crend_subarray(size_type fixed_axis = 0) const
+            [[nodiscard]] constexpr auto crend_subarray(size_type fixed_axis = 0) const
             {
                 return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
             }
@@ -5183,7 +5187,7 @@ namespace oc {
         }
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-        inline constexpr auto operator%(const ArCo1& lhs, const ArCo2& rhs)
+        [[nodiscard]] inline constexpr auto operator%(const ArCo1& lhs, const ArCo2& rhs)
         {
             return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) { return a % b; });
         }
