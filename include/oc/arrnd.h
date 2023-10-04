@@ -495,7 +495,7 @@ namespace oc {
             return T{ 1e-5 };
         }
 
-        template <typename T1, typename T2> requires (!arrnd_complient<T1> && !arrnd_complient<T2>)
+        template <typename T1, typename T2>
         [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ()) noexcept
         {
             const decltype(a - b) reps{ rtol * (abs(a) > abs(b) ? abs(a) : abs(b)) };
