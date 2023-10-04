@@ -452,13 +452,6 @@ namespace oc {
     }
 
     namespace details {
-        struct arrnd_tag {};
-
-        template <typename T>
-        concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
-    }
-
-    namespace details {
         template <typename T>
         [[nodiscard]] inline constexpr T default_atol() noexcept
         {
@@ -752,12 +745,22 @@ namespace oc {
         template <typename T>
         concept random_access_type = std::random_access_iterator<typename T::iterator>;
 
+        struct arrnd_header_tag {};
+        template <typename T>
+        concept arrnd_header_complient = std::is_same_v<typename T::tag, arrnd_header_tag>;
+
+        struct arrnd_tag {};
+        template <typename T>
+        concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
+
         template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
         class arrnd_header {
         public:
             using storage_type = Storage;
             using value_type = typename Storage::value_type;
             using size_type = typename Storage::size_type;
+
+            using tag = arrnd_header_tag;
 
             constexpr arrnd_header() = default;
 
@@ -1078,7 +1081,7 @@ namespace oc {
         };
 
 
-        template <typename Header = arrnd_header<>>
+        template <arrnd_header_complient Header = arrnd_header<>>
         class arrnd_general_indexer final
         {
         public:
@@ -1352,7 +1355,7 @@ namespace oc {
 
 
 
-        template <typename Header = arrnd_header<>>
+        template <arrnd_header_complient Header = arrnd_header<>>
         class arrnd_fast_indexer final
         {
         public:
@@ -1647,7 +1650,7 @@ namespace oc {
             size_type rel_pos_ = 0;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_iterator final
         {
         public:
@@ -1754,7 +1757,7 @@ namespace oc {
 
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_const_iterator final
         {
         public:
@@ -1860,7 +1863,7 @@ namespace oc {
 
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_reverse_iterator final
         {
         public:
@@ -1967,7 +1970,7 @@ namespace oc {
 
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_const_reverse_iterator final
         {
         public:
@@ -2072,7 +2075,7 @@ namespace oc {
         };
 
 
-        template <typename Header = arrnd_header<>>
+        template <arrnd_header_complient Header = arrnd_header<>>
         class arrnd_fixed_axis_ranger final
         {
         public:
@@ -2224,7 +2227,7 @@ namespace oc {
         };
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_iterator final
         {
         public:
@@ -2334,7 +2337,7 @@ namespace oc {
             value_type slice_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_const_iterator final
         {
         public:
@@ -2446,7 +2449,7 @@ namespace oc {
 
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_reverse_iterator final
         {
         public:
@@ -2556,7 +2559,7 @@ namespace oc {
             value_type slice_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_reverse_const_iterator final
         {
         public:
@@ -2668,7 +2671,7 @@ namespace oc {
 
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_back_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2711,13 +2714,13 @@ namespace oc {
             Arrnd* cont_ = nullptr;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_back_insert_iterator<Arrnd> arrnd_back_inserter(Arrnd& cont) noexcept
         {
             return arrnd_back_insert_iterator<Arrnd>(cont);
         }
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_front_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2760,13 +2763,13 @@ namespace oc {
             Arrnd* cont_ = nullptr;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_front_insert_iterator<Arrnd> arrnd_front_inserter(Arrnd& cont)
         {
             return arrnd_front_insert_iterator<Arrnd>(cont);
         }
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2812,14 +2815,14 @@ namespace oc {
             typename Arrnd::size_type ind_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_insert_iterator<Arrnd> arrnd_inserter(Arrnd& cont, typename Arrnd::size_type ind = 0)
         {
             return arrnd_insert_iterator<Arrnd>(cont, ind);
         }
 
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_back_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2863,13 +2866,13 @@ namespace oc {
             typename Arrnd::size_type axis_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_axis_back_insert_iterator<Arrnd> arrnd_axis_back_inserter(Arrnd& cont, typename Arrnd::size_type axis = 0) noexcept
         {
             return arrnd_axis_back_insert_iterator<Arrnd>(cont, axis);
         }
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_front_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2913,13 +2916,13 @@ namespace oc {
             typename Arrnd::size_type axis_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_axis_front_insert_iterator<Arrnd> arrnd_axis_front_inserter(Arrnd& cont, typename Arrnd::size_type axis = 0)
         {
             return arrnd_axis_front_insert_iterator<Arrnd>(cont, axis);
         }
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         class arrnd_axis_insert_iterator {
         public:
             using iterator_category = std::output_iterator_tag;
@@ -2966,14 +2969,13 @@ namespace oc {
             typename Arrnd::size_type axis_;
         };
 
-        template <typename Arrnd>
+        template <arrnd_complient Arrnd>
         [[nodiscard]] inline constexpr arrnd_axis_insert_iterator<Arrnd> arrnd_axis_inserter(Arrnd& cont, typename Arrnd::size_type ind = 0, typename Arrnd::size_type axis = 0)
         {
             return arrnd_axis_insert_iterator<Arrnd>(cont, ind, axis);
         }
 
-
-        template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, typename Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
+        template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, arrnd_header_complient Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
         public:
             using value_type = T;
