@@ -44,7 +44,7 @@ namespace oc {
 
                 [[nodiscard]] constexpr pointer allocate(size_type n)
                 {
-                    assert(n > 0 && "non positive allocation size");
+                    assert(n > 0);
                     auto p = reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
                     if (!p) {
                         throw std::bad_alloc{};
@@ -54,8 +54,7 @@ namespace oc {
 
                 constexpr void deallocate(pointer p, size_type n) noexcept
                 {
-                    assert(p && "nullptr deallocation");
-                    assert(n > 0 && "non positive size deallocation");
+                    assert(p && n > 0);
                     operator delete[](p, n * sizeof(value_type));
                 }
         };
@@ -81,16 +80,16 @@ namespace oc {
                 using replaced_type = simple_dynamic_vector<U, Allocator>;
 
                 constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
-                    : size_(size), capacity_(size)
+                    : size_(size)
                 {
-                    assert(size_ >= 0 && "negative vector size");
+                    assert(size >= 0);
                     if (size > 0) {
-                        data_ptr_ = alloc_.allocate(capacity_);
+                        data_ptr_ = alloc_.allocate(size);
                         if (data) {
-                            std::uninitialized_copy_n(data, size_, data_ptr_);
+                            std::uninitialized_copy_n(data, size, data_ptr_);
                         }
                         else if constexpr (!std::is_fundamental_v<T>) {
-                            std::uninitialized_default_construct_n(data_ptr_, size_);
+                            std::uninitialized_default_construct_n(data_ptr_, size);
                         }
                     }
                 }
@@ -100,10 +99,10 @@ namespace oc {
                     : simple_dynamic_vector(std::distance(first, last), &(*first)) {}
 
                 constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
-                    : alloc_(other.alloc_), size_(other.size_), capacity_(other.capacity_)
+                    : alloc_(other.alloc_), size_(other.size_)
                 {
                     if (!other.empty()) {
-                        data_ptr_ = alloc_.allocate(capacity_);
+                        data_ptr_ = alloc_.allocate(size_);
                         std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
                     }
                 }
@@ -118,15 +117,14 @@ namespace oc {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::destroy_n(data_ptr_, size_);
                         }
-                        alloc_.deallocate(data_ptr_, capacity_);
+                        alloc_.deallocate(data_ptr_, size_);
                     }
 
                     alloc_ = other.alloc_;
                     size_ = other.size_;
-                    capacity_ = other.capacity_;
 
                     if (!other.empty()) {
-                        data_ptr_ = alloc_.allocate(capacity_);
+                        data_ptr_ = alloc_.allocate(size_);
                         if (data_ptr_) {
                             std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
                         }
@@ -136,13 +134,12 @@ namespace oc {
                 }
 
                 constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
-                    : alloc_(std::move(other.alloc_)), size_(other.size_), capacity_(other.capacity_)
+                    : alloc_(std::move(other.alloc_)), size_(other.size_)
                 {
                     data_ptr_ = other.data_ptr_;
 
                     other.data_ptr_ = nullptr;
                     other.size_ = 0;
-                    other.capacity_ = 0;
                 }
 
                 constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
@@ -155,18 +152,16 @@ namespace oc {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::destroy_n(data_ptr_, size_);
                         }
-                        alloc_.deallocate(data_ptr_, capacity_);
+                        alloc_.deallocate(data_ptr_, size_);
                     }
 
                     alloc_ = std::move(other.alloc_);
                     size_ = other.size_;
-                    capacity_ = other.capacity_;
 
                     data_ptr_ = other.data_ptr_;
 
                     other.data_ptr_ = nullptr;
                     other.size_ = 0;
-                    other.capacity_ = 0;
 
                     return *this;
                 }
@@ -177,23 +172,18 @@ namespace oc {
                         if constexpr (!std::is_fundamental_v<T>) {
                             std::destroy_n(data_ptr_, size_);
                         }
-                        alloc_.deallocate(data_ptr_, capacity_);
+                        alloc_.deallocate(data_ptr_, size_);
                     }
                 }
 
                 [[nodiscard]] constexpr bool empty() const noexcept
                 {
-                    return size_ == 0 || !data_ptr_;
+                    return size_ == 0 && !data_ptr_;
                 }
 
                 [[nodiscard]] constexpr size_type size() const noexcept
                 {
                     return size_;
-                }
-
-                [[nodiscard]] constexpr size_type capacity() const noexcept
-                {
-                    return capacity_;
                 }
 
                 [[nodiscard]] constexpr pointer data() const noexcept
@@ -203,109 +193,14 @@ namespace oc {
 
                 [[nodiscard]] constexpr reference operator[](size_type index) noexcept
                 {
-                    assert(index >= 0 && index < size_ && "invalid index");
+                    assert(index >= 0 && index < size_);
                     return data_ptr_[index];
                 }
 
                 [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
                 {
-                    assert(index >= 0 && index < size_ && "invalid index");
+                    assert(index >= 0 && index < size_);
                     return data_ptr_[index];
-                }
-
-                constexpr void resize(size_type new_size)
-                {
-                    assert(new_size >= 0 && "negative resize");
-                    if (new_size < size_) {
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::destroy_n(data_ptr_ + new_size, size_ - new_size);
-                        }
-                        size_ = new_size;
-                    }
-                    //else if (new_size == size_) { /* do nothing */ }
-                    else if (new_size > size_) {
-                        size_type new_capacity = new_size;
-                        pointer new_data_ptr = alloc_.allocate(new_capacity);
-                        if (new_data_ptr) {
-                            std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
-                            std::uninitialized_default_construct_n(new_data_ptr + size_, new_size - size_);
-                        }
-
-                        if (!empty()) {
-                            if constexpr (!std::is_fundamental_v<T>) {
-                                std::destroy_n(data_ptr_, size_);
-                            }
-                            alloc_.deallocate(data_ptr_, capacity_);
-                        }
-
-                        data_ptr_ = new_data_ptr;
-                        size_ = new_size;
-                        capacity_ = new_capacity;
-                    }
-                }
-
-                constexpr void reserve(size_type new_capacity)
-                {
-                    assert(new_capacity >= 0 && "negative reserve");
-                    // if (new_capacity <= capacity_) do nothing
-                    if (new_capacity > capacity_) {
-                        pointer new_data_ptr = alloc_.allocate(new_capacity);
-                        if (new_data_ptr) {
-                            std::uninitialized_move_n(data_ptr_, size_, new_data_ptr);
-                        }
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = new_data_ptr;
-                        capacity_ = new_capacity;
-                    }
-                }
-
-                constexpr void expand(size_type count)
-                {
-                    assert(count >= 0 && "negative expand size");
-                    if (size_ + count < capacity_) {
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::uninitialized_default_construct_n(data_ptr_ + size_, count);
-                        }
-                        size_ += count;
-                    }
-                    else if (size_ + count >= capacity_) {
-                        size_type new_capacity = static_cast<size_type>(1.5 * (size_ + count));
-                        size_type new_size = size_ + count;
-                        pointer data_ptr = alloc_.allocate(new_capacity);
-                        if (data_ptr) {
-                            std::uninitialized_move_n(data_ptr_, size_, data_ptr);
-                            std::uninitialized_default_construct_n(data_ptr + size_, count);
-                        }
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
-                        capacity_ = new_capacity;
-                        size_ = new_size;
-                    }
-                }
-
-                constexpr void shrink(size_type count)
-                {
-                    assert(count <= size_ && "shrink input bigger than vector size");
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(data_ptr_ + size_ - count, count);
-                    }
-                    size_ -= count;
-                }
-
-                constexpr void shrink_to_fit()
-                {
-                    if (capacity_ > size_) {
-                        pointer data_ptr = alloc_.allocate(size_);
-                        if (data_ptr) {
-                            std::uninitialized_move_n(data_ptr_, size_, data_ptr);
-                        }
-
-                        alloc_.deallocate(data_ptr_, capacity_);
-                        data_ptr_ = data_ptr;
-                        capacity_ = size_;
-                    }
                 }
 
                 [[nodiscard]] constexpr pointer begin() noexcept
@@ -328,24 +223,24 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
                 {
-                    return std::make_reverse_iterator(end());
+                    return reverse_iterator(end());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                [[nodiscard]] constexpr reverse_iterator rend() noexcept
                 {
-                    return std::make_reverse_iterator(begin());
+                    return reverse_iterator(begin());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
                 {
-                    return std::make_reverse_iterator(cend());
+                    return const_reverse_iterator(cend());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
                 {
-                    return std::make_reverse_iterator(cbegin());
+                    return const_reverse_iterator(cbegin());
                 }
 
                 [[nodiscard]] constexpr const_reference back() const noexcept
@@ -372,8 +267,6 @@ namespace oc {
                 allocator_type alloc_;
 
                 size_type size_ = 0;
-                size_type capacity_ = 0;
-
                 pointer data_ptr_ = nullptr;
         };
 
@@ -384,9 +277,10 @@ namespace oc {
         }
 
 
-        template <typename T, std::int64_t Capacity>
+        template <typename T, std::int64_t Size>
         requires (std::is_copy_constructible_v<T>&& std::is_copy_assignable_v<T>)
             class simple_static_vector final {
+            static_assert(Size >= 0);
             public:
                 using value_type = T;
                 using size_type = std::int64_t;
@@ -401,14 +295,14 @@ namespace oc {
                 using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
                 template <typename U>
-                using replaced_type = simple_static_vector<U, Capacity>;
+                using replaced_type = simple_static_vector<U, Size>;
 
                 constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
                     : size_(size)
                 {
-                    assert(size_ <= Capacity && "invalid vector size");
+                    assert(size_ >= 0 && size_ <= Size);
                     if (data) {
-                        std::copy(data, std::next(data, size), data_ptr_);
+                        std::copy(data, std::next(data, size_), data_ptr_);
                     }
                 }
 
@@ -468,11 +362,6 @@ namespace oc {
                     return size_;
                 }
 
-                [[nodiscard]] constexpr size_type capacity() const noexcept
-                {
-                    return Capacity;
-                }
-
                 [[nodiscard]] constexpr pointer data() const noexcept
                 {
                     return const_cast<pointer>(data_ptr_);
@@ -480,54 +369,14 @@ namespace oc {
 
                 [[nodiscard]] constexpr reference operator[](size_type index) noexcept
                 {
-                    assert(index >= 0 && index < size_ && "invalid index");
+                    assert(index >= 0 && index < size_);
                     return data_ptr_[index];
                 }
 
                 [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
                 {
-                    assert(index >= 0 && index < size_ && "invalid index");
+                    assert(index >= 0 && index < size_);
                     return data_ptr_[index];
-                }
-
-                constexpr void resize(size_type new_size)
-                {
-                    assert(new_size <= Capacity && "invalid resize input");
-                    if (new_size < size_) {
-                        if constexpr (!std::is_fundamental_v<T>) {
-                            std::destroy_n(data_ptr_ + new_size, size_ - new_size);
-                        }
-                        size_ = new_size;
-                    }
-                    //else if (new_size == size_) { /* do nothing */ }
-                    else if (new_size > size_) {
-                        size_ = new_size;
-                    }
-                }
-
-                constexpr void reserve(size_type new_capacity)
-                {
-                    // noop
-                }
-
-                constexpr void expand(size_type count)
-                {
-                    assert(size_ + count <= Capacity && "invalid exapnd size");
-                    size_ += count;
-                }
-
-                constexpr void shrink(size_type count)
-                {
-                    assert(count <= size_ && "invalid shrink size");
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(data_ptr_ + size_ - count, count);
-                    }
-                    size_ -= count;
-                }
-
-                constexpr void shrink_to_fit()
-                {
-                    // noop
                 }
 
                 [[nodiscard]] constexpr pointer begin() noexcept
@@ -550,24 +399,24 @@ namespace oc {
                     return data_ptr_ + size_;
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+                [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
                 {
-                    return std::make_reverse_iterator(end());
+                    return reverse_iterator(end());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+                [[nodiscard]] constexpr reverse_iterator rend() noexcept
                 {
-                    return std::make_reverse_iterator(begin());
+                    return reverse_iterator(begin());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+                [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
                 {
-                    return std::make_reverse_iterator(cend());
+                    return const_reverse_iterator(cend());
                 }
 
-                [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+                [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
                 {
-                    return std::make_reverse_iterator(cbegin());
+                    return const_reverse_iterator(cbegin());
                 }
 
                 [[nodiscard]] constexpr const_reference back() const noexcept
@@ -591,13 +440,12 @@ namespace oc {
                 }
 
             private:
-                value_type data_ptr_[Capacity];
-
                 size_type size_ = 0;
+                value_type data_ptr_[Size];
         };
 
-        template <typename T, std::int64_t Capacity>
-        [[nodiscard]] inline constexpr bool operator==(const simple_static_vector<T, Capacity>& lhs, const simple_static_vector<T, Capacity>& rhs)
+        template <typename T, std::int64_t Size>
+        [[nodiscard]] inline constexpr bool operator==(const simple_static_vector<T, Size>& lhs, const simple_static_vector<T, Size>& rhs)
         {
             return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
         }
@@ -1468,7 +1316,7 @@ namespace oc {
                 }
 
                 if (hdr_.dims().size() > 3) {
-                    indices_.resize(hdr_.dims().size() - 3);
+                    indices_ = storage_type(hdr_.dims().size() - 3);
                     for (size_type i = 0; i < indices_.size(); ++i) {
                         *std::next(indices_.begin(), i) = backward ? *std::next(hdr_.dims().cbegin(), i) - 1 : 0;
                     }
