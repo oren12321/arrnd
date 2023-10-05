@@ -474,7 +474,7 @@ TEST(arrnd_general_indexer, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    arrnd_general_indexer gen(hdr, true);
+    arrnd_general_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -601,7 +601,7 @@ TEST(arrnd_general_indexer, random_access)
         4, 1,
         2, 3 };
 
-    arrnd_general_indexer gen(hdr, true);
+    arrnd_general_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
     EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -616,14 +616,13 @@ TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
 {
     using namespace oc;
 
-    const std::int64_t dims[]{ 3, 1, 2 }; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    const std::int64_t dims[]{ 2, 3, 4, 2 }; // strides = {2, 2, 1}
+    arrnd_header hdr(dims, dims + 4);
 
-    const std::int64_t expected_inds_list[6]{
-        0, 1,
-        2, 3,
-        4, 5 };
-    const std::int64_t expected_generated_subs{ 6 };
+    const std::int64_t expected_inds_list[48]{
+        0, 1,2, 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47 };
+    const std::int64_t expected_generated_subs{ 48 };
 
     std::int64_t generated_subs_counter{ 0 };
     arrnd_fast_indexer gen(hdr);
@@ -656,7 +655,7 @@ TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{ 6 };
 
     std::int64_t generated_subs_counter{ 0 };
-    arrnd_fast_indexer gen(hdr, true);
+    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -753,7 +752,7 @@ TEST(arrnd_fast_indexer, random_access)
         4, 1,
         2, 3 };
 
-    arrnd_fast_indexer gen(hdr, true);
+    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
     EXPECT_EQ(expected_inds_list[1], gen[5]);

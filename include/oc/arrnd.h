@@ -1080,6 +1080,10 @@ namespace oc {
             bool is_axis_reordered_{ false };
         };
 
+        enum class arrnd_indexer_position
+        {
+            begin, end, rbegin, rend
+        };
 
         template <arrnd_header_complient Header = arrnd_header<>>
         class arrnd_general_indexer final
@@ -1090,33 +1094,33 @@ namespace oc {
             using size_type = typename Header::size_type;
             using value_type = typename Header::value_type;
 
-            constexpr arrnd_general_indexer(const header_type& hdr, bool backward = false)
+            constexpr arrnd_general_indexer(const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
                 : hdr_(hdr)
             {
-                setup(backward);
+                setup(pos);
             }
 
-            constexpr arrnd_general_indexer(const header_type& hdr, size_type axis, bool backward = false)
+            constexpr arrnd_general_indexer(const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
                 : hdr_(hdr.reorder(axis))
             {
-                setup(backward);
+                setup(pos);
             }
 
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-            constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order, bool backward = false)
+            constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order, arrnd_indexer_position pos = arrnd_indexer_position::begin)
                 : hdr_(hdr.reorder(first_order, last_order))
             {
-                setup(backward);
+                setup(pos);
             }
 
             template <iterable_of_type<size_type> Cont>
-            constexpr arrnd_general_indexer(const header_type& hdr, const Cont& order, bool backward = false)
-                : arrnd_general_indexer(hdr, std::begin(order), std::end(order), backward)
+            constexpr arrnd_general_indexer(const header_type& hdr, const Cont& order, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+                : arrnd_general_indexer(hdr, std::begin(order), std::end(order), pos)
             {
             }
 
-            constexpr arrnd_general_indexer(const header_type& hdr, std::initializer_list<size_type> order, bool backward = false)
-                : arrnd_general_indexer(hdr, order.begin(), order.end(), backward)
+            constexpr arrnd_general_indexer(const header_type& hdr, std::initializer_list<size_type> order, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+                : arrnd_general_indexer(hdr, order.begin(), order.end(), pos)
             {
             }
 
@@ -1140,41 +1144,29 @@ namespace oc {
                     current_index_ = hdr_.last_index() + 1;
                     return *this;
                 }
+
                 ++rel_pos_;
-                ++first_ind_;
-                current_index_ += first_stride_;
-                if (first_ind_ < first_dim_) {
-                    return *this;
-                }
-                current_index_ -= first_ind_ * first_stride_;
-                first_ind_ = 0;
-                if (hdr_.dims().size() > 1) {
-                    ++second_ind_;
-                    current_index_ += second_stride_;
-                    if (second_ind_ < second_dim_) {
+
+                for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+                    ++firsts_[i].index;
+                    current_index_ += firsts_[i].stride;
+                    if (firsts_[i].index < firsts_[i].dim) {
                         return *this;
                     }
-                    current_index_ -= second_ind_ * second_stride_;
-                    second_ind_ = 0;
+                    current_index_ -= firsts_[i].index * firsts_[i].stride;
+                    firsts_[i].index = 0;
                 }
-                if (hdr_.dims().size() > 2) {
-                    ++third_ind_;
-                    current_index_ += third_stride_;
-                    if (third_ind_ < third_dim_) {
+
+                for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+                    ++indices_[hdr_.dims().size() - 1 - i];
+                    current_index_ += hdr_.strides()[hdr_.dims().size() - 1 - i];
+                    if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
                         return *this;
                     }
-                    current_index_ -= third_ind_ * third_stride_;
-                    third_ind_ = 0;
+                    current_index_ -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
+                    indices_[hdr_.dims().size() - 1 - i] = 0;
                 }
-                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
-                    ++(*std::next(indices_.begin(), i));
-                    current_index_ += *std::next(hdr_.strides().cbegin(), i);
-                    if (*std::next(indices_.cbegin(), i) < *std::next(hdr_.dims().cbegin(), i)) {
-                        return *this;
-                    }
-                    current_index_ -= *std::next(indices_.cbegin(), i) * *std::next(hdr_.strides().cbegin(), i);
-                    *std::next(indices_.begin(), i) = 0;
-                }
+
                 return *this;
             }
 
@@ -1210,41 +1202,29 @@ namespace oc {
                     current_index_ = hdr_.last_index();
                     return *this;
                 }
+
                 --rel_pos_;
-                --first_ind_;
-                current_index_ -= first_stride_;
-                if (first_ind_ > -1) {
-                    return *this;
-                }
-                first_ind_ = first_dim_ - 1;
-                current_index_ += (first_ind_ + 1) * first_stride_;
-                if (hdr_.dims().size() > 1) {
-                    --second_ind_;
-                    current_index_ -= second_stride_;
-                    if (second_ind_ > -1) {
+
+                for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+                    --firsts_[i].index;
+                    current_index_ -= firsts_[i].stride;
+                    if (firsts_[i].index > -1) {
                         return *this;
                     }
-                    second_ind_ = second_dim_ - 1;
-                    current_index_ += (second_ind_ + 1) * second_stride_;
+                    firsts_[i].index = firsts_[i].dim - 1;
+                    current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
                 }
-                if (hdr_.dims().size() > 2) {
-                    --third_ind_;
-                    current_index_ -= third_stride_;
-                    if (third_ind_ > -1) {
+
+                for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+                    --indices_[hdr_.dims().size() - 1 - i];
+                    current_index_ -= hdr_.strides()[hdr_.dims().size() - 1 - i];
+                    if (indices_[hdr_.dims().size() - 1 - i] > -1) {
                         return *this;
                     }
-                    third_ind_ = third_dim_ - 1;
-                    current_index_ += (third_ind_ + 1) * third_stride_;
+                    indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[i] - 1;
+                    current_index_ += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
                 }
-                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
-                    --(*std::next(indices_.begin(), i));
-                    current_index_ -= *std::next(hdr_.strides().cbegin(), i);
-                    if (*std::next(indices_.cbegin(), i) > -1) {
-                        return *this;
-                    }
-                    *std::next(indices_.begin(), i) = *std::next(hdr_.dims().cbegin(), i) - 1;
-                    current_index_ += (*std::next(indices_.cbegin(), i) + 1) * *std::next(hdr_.strides().cbegin(), i);
-                }
+
                 return *this;
             }
 
@@ -1289,62 +1269,53 @@ namespace oc {
                 if (advance_count > 0) {
                     return ((*this) + advance_count).current_index_;
                 }
-                else if (advance_count < 0) {
+                if (advance_count < 0) {
                     return ((*this) - (-advance_count)).current_index_;
                 }
                 return current_index_;
             }
 
         private:
-            constexpr void setup(bool backward)
+            constexpr void setup(arrnd_indexer_position pos)
             {
                 last_first_diff_ = static_cast<std::make_unsigned_t<value_type>>(hdr_.last_index() - hdr_.offset());
 
-                if (hdr_.dims().size() > 0) {
-                    first_dim_ = hdr_.dims().back();
-                    first_stride_ = hdr_.strides().back();
-                    first_ind_ = backward ? first_dim_ - 1 : 0;
+                bool backward = (pos == arrnd_indexer_position::rbegin || pos == arrnd_indexer_position::end);
+
+                for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+                    firsts_[i].dim = hdr_.dims()[hdr_.dims().size() - i - 1];
+                    firsts_[i].stride = hdr_.strides()[hdr_.dims().size() - i - 1];
+                    firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
                 }
 
-                if (hdr_.dims().size() > 1) {
-                    second_dim_ = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2);
-                    second_stride_ = *std::next(hdr_.strides().cbegin(), hdr_.dims().size() - 2);
-                    second_ind_ = backward ? second_dim_ - 1 : 0;
-                }
-
-                if (hdr_.dims().size() > 2) {
-                    third_dim_ = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 3);
-                    third_stride_ = *std::next(hdr_.strides().cbegin(), hdr_.dims().size() - 3);
-                    third_ind_ = backward ? third_dim_ - 1 : 0;
-                }
-
-                if (hdr_.dims().size() > 3) {
-                    indices_ = storage_type(hdr_.dims().size() - 3);
-                    for (size_type i = 0; i < indices_.size(); ++i) {
-                        *std::next(indices_.begin(), i) = backward ? *std::next(hdr_.dims().cbegin(), i) - 1 : 0;
-                    }
+                indices_ = storage_type(hdr_.dims().size());
+                for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+                    indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
                 }
 
                 current_index_ = backward ? hdr_.last_index() : hdr_.offset();
 
                 rel_pos_ = backward ? hdr_.count() - 1 : 0;
+
+                if (pos == arrnd_indexer_position::end) {
+                    ++(*this);
+                }
+                else if (pos == arrnd_indexer_position::rend) {
+                    --(*this);
+                }
             }
 
             header_type hdr_;
 
             std::make_unsigned_t<value_type> last_first_diff_;
 
-            value_type first_stride_;
-            value_type first_dim_;
-            value_type first_ind_;
+            struct data_package {
+                value_type dim;
+                value_type stride;
+                value_type index;
+            };
 
-            value_type second_stride_;
-            value_type second_dim_;
-            value_type second_ind_;
-
-            value_type third_stride_;
-            value_type third_dim_;
-            value_type third_ind_;
+            data_package firsts_[3];
 
             storage_type indices_;
             value_type current_index_;
@@ -1363,17 +1334,15 @@ namespace oc {
             using size_type = typename Header::size_type;
             using value_type = typename Header::value_type;
 
-            constexpr arrnd_fast_indexer(const header_type& hdr, bool backward = false)
-                : arrnd_fast_indexer(hdr, 0, backward)
+            constexpr arrnd_fast_indexer(const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+                : arrnd_fast_indexer(hdr, 0, pos)
             {
             }
 
-            constexpr arrnd_fast_indexer(const header_type& hdr, size_type axis, bool backward = false)
+            constexpr arrnd_fast_indexer(const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             {
                 assert(!hdr.is_subarray() && !hdr.is_axis_reordered());
                 assert(axis >= 0 && axis < hdr.dims().size());
-
-                // data
 
                 last_index_ = hdr.last_index();
 
@@ -1386,19 +1355,17 @@ namespace oc {
                 step_size_inside_group_ = hdr.strides().back();
                 step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
 
-                // accumulators
+                bool backward = (pos == arrnd_indexer_position::rbegin || pos == arrnd_indexer_position::end);
+
                 if (!backward) {
-                    current_index_ = 0;
-
-                    super_groups_counter_ = 0;
-
                     group_indices_counter_ = 0;
                     groups_counter_ = 0;
+                    super_groups_counter_ = 0;
 
                     super_group_start_index_ = 0;
-
                     group_start_index_ = 0;
 
+                    current_index_ = 0;
                     rel_pos_ = 0;
                 }
                 else {
@@ -1410,8 +1377,14 @@ namespace oc {
                     group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
                     current_index_ = last_index_;
-
                     rel_pos_ = hdr.count() - 1;
+                }
+
+                if (pos == arrnd_indexer_position::end) {
+                    ++(*this);
+                }
+                else if (pos == arrnd_indexer_position::rend) {
+                    --(*this);
                 }
             }
 
@@ -1427,18 +1400,12 @@ namespace oc {
 
             constexpr arrnd_fast_indexer& operator++() noexcept
             {
-                // the algorithm is done by three functions composition:
-                // - index
-                // - group
-                // - super group
-
-                // index function
-
                 if (current_index_ > last_index_) {
                     return *this;
                 }
 
                 ++group_indices_counter_;
+
                 current_index_ += step_size_inside_group_;
 
                 if (group_indices_counter_ < group_size_) {
@@ -1446,10 +1413,7 @@ namespace oc {
                     return *this;
                 }
 
-                // group function
-
                 group_indices_counter_ = 0;
-
                 ++groups_counter_;
                 group_start_index_ += step_size_between_groups_;
 
@@ -1460,13 +1424,9 @@ namespace oc {
                     return *this;
                 }
 
-                // super group function
-
                 groups_counter_ = 0;
-
                 ++super_groups_counter_;
                 super_group_start_index_ += step_size_between_super_groups_;
-
                 group_start_index_ = super_group_start_index_;
 
                 current_index_ = group_start_index_;
@@ -1479,7 +1439,6 @@ namespace oc {
                 group_indices_counter_ = group_size_;
                 groups_counter_ = num_groups_in_super_group_ - 1;
                 super_groups_counter_ = num_super_groups_ - 1;
-
                 super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
                 group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
@@ -1513,18 +1472,12 @@ namespace oc {
 
             constexpr arrnd_fast_indexer& operator--() noexcept
             {
-                // the algorithm is done by inverese of three functions composition:
-                // - super group
-                // - group
-                // - index
-
                 if (current_index_ < 0) {
                     return *this;
                 }
 
-                // index function
-
                 --group_indices_counter_;
+
                 current_index_ -= step_size_inside_group_;
 
                 if (group_indices_counter_ >= 0) {
@@ -1532,10 +1485,7 @@ namespace oc {
                     return *this;
                 }
 
-                // group function
-
                 group_indices_counter_ = group_size_ - 1;
-
                 --groups_counter_;
                 group_start_index_ -= step_size_between_groups_;
 
@@ -1546,13 +1496,9 @@ namespace oc {
                     return *this;
                 }
 
-                // super group function
-
                 groups_counter_ = num_groups_in_super_group_ - 1;
-
                 --super_groups_counter_;
                 super_group_start_index_ -= step_size_between_super_groups_;
-
                 group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
                 current_index_ = group_start_index_ + (group_size_-1) * step_size_inside_group_;
@@ -1565,7 +1511,6 @@ namespace oc {
                 group_indices_counter_ = -1;
                 groups_counter_ = 0;
                 super_groups_counter_ = 0;
-
                 super_group_start_index_ = 0;
                 group_start_index_ = 0;
 
@@ -1615,7 +1560,7 @@ namespace oc {
                 if (advance_count > 0) {
                     return ((*this) + advance_count).current_index_;
                 }
-                else if (advance_count < 0) {
+                if (advance_count < 0) {
                     return ((*this) - (-advance_count)).current_index_;
                 }
                 return current_index_;
@@ -2203,7 +2148,7 @@ namespace oc {
                 if (advance_count > 0) {
                     return ((*this) + advance_count).ranges_;
                 }
-                else if (advance_count < 0) {
+                if (advance_count < 0) {
                     return ((*this) - (-advance_count)).ranges_;
                 }
                 return ranges_;
@@ -4344,7 +4289,7 @@ namespace oc {
             }
             [[nodiscard]] constexpr auto end(size_type axis = 0)
             {
-                return iterator(buffsp_->data(), indexer_type(hdr_, axis, true) + 1);
+                return iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
             }
             [[nodiscard]] constexpr auto cbegin(size_type axis = 0) const
             {
@@ -4352,23 +4297,23 @@ namespace oc {
             }
             [[nodiscard]] constexpr auto cend(size_type axis = 0) const
             {
-                return const_iterator(buffsp_->data() , indexer_type(hdr_, axis, true) + 1);
+                return const_iterator(buffsp_->data() , indexer_type(hdr_, axis, arrnd_indexer_position::end));
             }
             [[nodiscard]] constexpr auto rbegin(size_type axis = 0)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
             }
             [[nodiscard]] constexpr auto rend(size_type axis = 0)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
             }
             [[nodiscard]] constexpr auto crbegin(size_type axis = 0) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, true));
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
             }
             [[nodiscard]] constexpr auto crend(size_type axis = 0) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis) - 1);
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
             }
 
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
@@ -4379,7 +4324,7 @@ namespace oc {
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order)
             {
-                return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true) + 1);
+                return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto cbegin(InputIt first_order, InputIt last_order) const
@@ -4389,27 +4334,27 @@ namespace oc {
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto cend(InputIt first_order, InputIt last_order) const
             {
-                return const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true) + 1);
+                return const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true));
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order)
             {
-                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order) - 1);
+                return reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rend));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto crbegin(InputIt first_order, InputIt last_order) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, true));
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
             }
             template <typename InputIt> requires std::is_same_v<size_type, iterator_value_type<InputIt>>
             [[nodiscard]] constexpr auto crend(InputIt first_order, InputIt last_order) const
             {
-                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order) - 1);
+                return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rend));
             }
 
             [[nodiscard]] constexpr auto begin(std::initializer_list<size_type> order)
@@ -5731,6 +5676,8 @@ namespace oc {
 
     using details::arrnd_header;
     
+    using details::arrnd_indexer_position;
+
     using details::arrnd_general_indexer;
     using details::arrnd_fast_indexer;
 
