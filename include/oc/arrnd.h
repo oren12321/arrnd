@@ -452,12 +452,6 @@ namespace oc {
     }
 
     namespace details {
-        template <typename T>
-        [[nodiscard]] inline constexpr T default_atol() noexcept
-        {
-            return T{};
-        }
-
         template <std::integral T>
         [[nodiscard]] inline constexpr T default_atol() noexcept
         {
@@ -468,12 +462,6 @@ namespace oc {
         [[nodiscard]] inline constexpr T default_atol() noexcept
         {
             return T{ 1e-8 };
-        }
-
-        template <typename T>
-        [[nodiscard]] inline constexpr T default_rtol() noexcept
-        {
-            return T{};
         }
 
         template <std::integral T>
@@ -488,7 +476,7 @@ namespace oc {
             return T{ 1e-5 };
         }
 
-        template <typename T1, typename T2>
+        template <typename T1, typename T2> requires (std::is_arithmetic_v<T1> && std::is_arithmetic_v<T2>)
         [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b, const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{}) > (), const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{}) > ()) noexcept
         {
             const decltype(a - b) reps{ rtol * (abs(a) > abs(b) ? abs(a) : abs(b)) };
@@ -4249,13 +4237,13 @@ namespace oc {
             template <arrnd_complient ArCo>
             [[nodiscard]] constexpr replaced_type<bool> close(const ArCo& arr, const decltype(value_type{} - typename ArCo::value_type{})& atol = default_atol<decltype(value_type{} - typename ArCo::value_type{}) > (), const decltype(value_type{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(value_type{} - typename ArCo::value_type{}) > ()) const
             {
-                return transform(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::details::close(a, b, atol, rtol); });
+                return transform(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::close(a, b, atol, rtol); });
             }
 
             template <typename U> requires (!arrnd_complient<U>)
             [[nodiscard]] constexpr replaced_type<bool> close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
             {
-                return transform(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
+                return transform(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::close(a, b, atol, rtol); });
             }
 
 
@@ -4274,13 +4262,13 @@ namespace oc {
             template <arrnd_complient ArCo>
             [[nodiscard]] constexpr bool all_close(const ArCo& arr, const decltype(value_type{} - typename ArCo::value_type{})& atol = default_atol<decltype(value_type{} - typename ArCo::value_type{}) > (), const decltype(value_type{} - typename ArCo::value_type{})& rtol = default_rtol<decltype(value_type{} - typename ArCo::value_type{}) > ()) const
             {
-                return all_match(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::details::close(a, b, atol, rtol); });
+                return all_match(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) { return oc::close(a, b, atol, rtol); });
             }
 
             template <typename U> requires (!arrnd_complient<U>)
             [[nodiscard]] constexpr bool all_close(const U& value, const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{}) > (), const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{}) > ()) const
             {
-                return all_match(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::details::close(a, b, atol, rtol); });
+                return all_match(value, [&atol, &rtol](const value_type& a, const U& b) { return oc::close(a, b, atol, rtol); });
             }
 
             [[nodiscard]] constexpr auto begin(size_type axis = 0)
