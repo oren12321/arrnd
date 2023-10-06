@@ -941,12 +941,12 @@ TEST(arrnd_test, can_return_its_header_and_data)
     const Integer_array::header_type& ehdr{ earr.header() };
 
     EXPECT_EQ(0, ehdr.dims().size());
-    EXPECT_EQ(0, ehdr.count());
+    EXPECT_EQ(0, ehdr.numel());
     EXPECT_TRUE(ehdr.dims().empty());
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
-    EXPECT_FALSE(ehdr.is_subarray());
-    EXPECT_FALSE(ehdr.is_axis_reordered());
+    EXPECT_FALSE(ehdr.is_sliced());
+    EXPECT_FALSE(ehdr.is_reordered());
     EXPECT_FALSE(earr.storage());
 
     const int value{ 0 };
@@ -954,19 +954,19 @@ TEST(arrnd_test, can_return_its_header_and_data)
     const Integer_array::header_type& hdr{ arr.header() };
 
     EXPECT_EQ(3, hdr.dims().size());
-    EXPECT_EQ(6, hdr.count());
+    EXPECT_EQ(6, hdr.numel());
     EXPECT_EQ(3, hdr.dims().data()[0]); EXPECT_EQ(1, hdr.dims().data()[1]); EXPECT_EQ(2, hdr.dims().data()[2]);
     EXPECT_EQ(2, hdr.strides().data()[0]); EXPECT_EQ(2, hdr.strides().data()[1]); EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
-    EXPECT_FALSE(hdr.is_subarray());
-    EXPECT_FALSE(hdr.is_axis_reordered());
+    EXPECT_FALSE(hdr.is_sliced());
+    EXPECT_FALSE(hdr.is_reordered());
     const auto& storage = *arr.storage();
-    for (std::int64_t i = 0; i < hdr.count(); ++i) {
+    for (std::int64_t i = 0; i < hdr.numel(); ++i) {
         EXPECT_EQ(0, storage[i]);
     }
 
     auto rhdr = hdr.reorder(1);
-    EXPECT_TRUE(rhdr.is_axis_reordered());
+    EXPECT_TRUE(rhdr.is_reordered());
 }
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)
