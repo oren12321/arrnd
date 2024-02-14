@@ -971,13 +971,13 @@ TEST(arrnd_test, can_return_its_header_and_data)
 
 TEST(arrnd_test, can_have_complie_time_calculated_depth)
 {
-    EXPECT_EQ(0, oc::arrnd<int>::depth);
+    static_assert(0 == oc::arrnd<int>::depth);
     EXPECT_EQ(0, oc::arrnd<int>({ 1, 1 }).depth);
 
-    EXPECT_EQ(1, oc::arrnd<oc::arrnd<int>>::depth);
+    static_assert(1 == oc::arrnd<oc::arrnd<int>>::depth);
     EXPECT_EQ(1, oc::arrnd<oc::arrnd<int>>({ 1, 1 }).depth);
 
-    EXPECT_EQ(2, oc::arrnd<oc::arrnd<oc::arrnd<int>>>::depth);
+    static_assert(2 == oc::arrnd<oc::arrnd<oc::arrnd<int>>>::depth);
     EXPECT_EQ(2, oc::arrnd<oc::arrnd<oc::arrnd<int>>>({ 1, 1 }).depth);
 }
 

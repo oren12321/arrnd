@@ -2912,8 +2912,8 @@ namespace oc {
             return arrnd_axis_insert_iterator<Arrnd>(cont, ind, axis);
         }
 
-        template <typename T>
-        [[nodiscard]] inline constexpr int calc_arrnd_depth() requires arrnd_complient<T>
+        template <typename T> requires arrnd_complient<T>
+        [[nodiscard]] inline constexpr int calc_arrnd_depth()
         {
             return T::depth + 1;
         }
@@ -2923,6 +2923,9 @@ namespace oc {
         {
             return 0;
         }
+
+        template <typename ArrndSrc, typename ArrndDst>
+        concept arrnd_depths_match = arrnd_complient<ArrndSrc> && arrnd_complient<ArrndDst> && (ArrndSrc::depth == ArrndDst::depth);
 
         template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, arrnd_header_complient Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
@@ -2968,7 +2971,7 @@ namespace oc {
             constexpr arrnd() = default;
 
             constexpr arrnd(arrnd&& other) = default;
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd(ArCo&& other)
                 : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
             {
@@ -2987,7 +2990,7 @@ namespace oc {
                 arrnd dummy{ std::move(other) };
                 return *this;
             }
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd& operator=(ArCo&& other)&
             {
                 *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
@@ -2995,7 +2998,7 @@ namespace oc {
                 ArCo dummy{ std::move(other) };
                 return *this;
             }
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd& operator=(ArCo&& other)&&
             {
                 copy_from(other);
@@ -3004,7 +3007,7 @@ namespace oc {
             }
 
             constexpr arrnd(const arrnd& other) = default;
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd(const ArCo& other)
                 : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
             {
@@ -3020,21 +3023,21 @@ namespace oc {
                 copy_from(other);
                 return *this;
             }
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd& operator=(const ArCo& other)&
             {
                 *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
                 copy_from(other);
                 return *this;
             }
-            template<arrnd_complient ArCo>
+            template<arrnd_complient ArCo> requires arrnd_depths_match<arrnd, ArCo>
             constexpr arrnd& operator=(const ArCo& other)&&
             {
                 copy_from(other);
                 return *this;
             }
 
-            template <typename U>
+            template <typename U> requires (!arrnd_complient<U>)
             constexpr arrnd& operator=(const U& value)
             {
                 if (empty()) {
