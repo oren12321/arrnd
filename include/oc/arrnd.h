@@ -2912,6 +2912,18 @@ namespace oc {
             return arrnd_axis_insert_iterator<Arrnd>(cont, ind, axis);
         }
 
+        template <typename T>
+        [[nodiscard]] inline constexpr int calc_arrnd_depth() requires arrnd_complient<T>
+        {
+            return T::depth + 1;
+        }
+
+        template <typename T>
+        [[nodiscard]] inline constexpr int calc_arrnd_depth()
+        {
+            return 0;
+        }
+
         template <typename T, random_access_type Storage = simple_dynamic_vector<T>, template<typename> typename SharedRefAllocator = lightweight_allocator, arrnd_header_complient Header = arrnd_header<>, template<typename> typename Indexer = arrnd_general_indexer>
         class arrnd {
         public:
@@ -2950,6 +2962,8 @@ namespace oc {
             using const_subarray_iterator = arrnd_axis_const_iterator<this_type>;
             using reverse_subarray_iterator = arrnd_axis_reverse_iterator<this_type>;
             using const_reverse_subarray_iterator = arrnd_axis_reverse_const_iterator<this_type>;
+
+            constexpr static int depth = calc_arrnd_depth<T>();
 
             constexpr arrnd() = default;
 
