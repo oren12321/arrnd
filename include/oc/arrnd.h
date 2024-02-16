@@ -2913,13 +2913,13 @@ namespace oc {
         }
 
         template <typename T> requires arrnd_complient<T>
-        [[nodiscard]] inline constexpr int calc_arrnd_depth()
+        [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
         {
             return T::depth + 1;
         }
 
         template <typename T>
-        [[nodiscard]] inline constexpr int calc_arrnd_depth()
+        [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
         {
             return 0;
         }
@@ -2966,7 +2966,7 @@ namespace oc {
             using reverse_subarray_iterator = arrnd_axis_reverse_iterator<this_type>;
             using const_reverse_subarray_iterator = arrnd_axis_reverse_const_iterator<this_type>;
 
-            constexpr static int depth = calc_arrnd_depth<T>();
+            constexpr static std::int64_t depth = calc_arrnd_depth<T>();
 
             constexpr arrnd() = default;
 
