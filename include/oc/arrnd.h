@@ -4766,18 +4766,6 @@ namespace details {
         return arr.empty();
     }
 
-    template <arrnd_complient ArCo>
-    [[nodiscard]] inline constexpr auto size(const ArCo& arr) noexcept
-    {
-        return arr.size();
-    }
-
-    template <arrnd_complient ArCo>
-    [[nodiscard]] inline constexpr auto dims(const ArCo& arr) noexcept
-    {
-        return arr.dims();
-    }
-
     template <arrnd_complient ArCo, typename Binary_op>
         requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
     [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op)
