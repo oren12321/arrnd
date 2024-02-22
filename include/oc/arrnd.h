@@ -14,6 +14,7 @@
 #include <ostream>
 #include <cassert>
 #include <iterator>
+#include <functional>
 
 namespace oc {
 namespace details {
@@ -5902,8 +5903,11 @@ namespace details {
     template <arrnd_complient ArCo>
     inline constexpr std::ostream& operator<<(std::ostream& os, const ArCo& arco)
     {
-        typename ArCo::size_type nvectical_spaces = std::ssize(arco.header().dims()) - 1;
-        return ostream_operator_recursive(os, arco, nvectical_spaces);
+        arrnd<typename ArCo::value_type, typename ArCo::storage_type, typename ArCo::shared_ref_allocator_type,
+            typename ArCo::header_type, arrnd_general_indexer>
+            carco = arco;
+        typename ArCo::size_type nvectical_spaces = std::ssize(carco.header().dims()) - 1;
+        return ostream_operator_recursive(os, carco, nvectical_spaces);
     }
 }
 
