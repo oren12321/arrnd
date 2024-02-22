@@ -7,11 +7,11 @@ Usage example (simple matrices multiplication):
 ```cpp
 oc::arrnd<int> mul(const oc::arrnd<int>& lhs, const oc::arrnd<int>& rhs)
 {
-    assert(oc::dims(lhs).size() == 2);
-    assert(oc::dims(rhs).size() == 2);
-    assert(oc::dims(lhs)[1] == oc::dims(rhs)[0]);
+    assert(lhs.header().dims().size() == 2);
+    assert(rhs.header().dims().size() == 2);
+    assert(lhs.header().dims()[1] == rhs.header().dims()[0]);
 
-    oc::arrnd<int> res({ oc::dims(lhs)[0], oc::dims(rhs)[1] });
+    oc::arrnd<int> res({ lhs.header().dims()[0], rhs.header().dims()[1] });
 
     std::int64_t ind = 0;
     auto trhs = oc::transpose(rhs, { 1, 0 });
