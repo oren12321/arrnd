@@ -5930,8 +5930,6 @@ using details::insert;
 using details::remove;
 
 using details::empty;
-using details::size;
-using details::dims;
 using details::all_match;
 using details::any_match;
 using details::transform;
