@@ -9,6 +9,7 @@
 #include <ranges>
 #include <ostream>
 #include <charconv>
+#include <complex>
 
 #include <oc/arrnd.h>
 
@@ -845,12 +846,52 @@ TEST(arrnd_test, can_have_complie_time_calculated_depth)
 {
     static_assert(0 == oc::arrnd<int>::depth);
     EXPECT_EQ(0, oc::arrnd<int>({1, 1}).depth);
+    static_assert(oc::arrnd<int>::is_flat);
+    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_flat);
 
     static_assert(1 == oc::arrnd<oc::arrnd<int>>::depth);
     EXPECT_EQ(1, oc::arrnd<oc::arrnd<int>>({1, 1}).depth);
+    static_assert(!oc::arrnd<oc::arrnd<int>>::is_flat);
+    EXPECT_FALSE(oc::arrnd<oc::arrnd<int>>({1, 1}).is_flat);
 
     static_assert(2 == oc::arrnd<oc::arrnd<oc::arrnd<int>>>::depth);
     EXPECT_EQ(2, oc::arrnd<oc::arrnd<oc::arrnd<int>>>({1, 1}).depth);
+    static_assert(!oc::arrnd<oc::arrnd<oc::arrnd<int>>>::is_flat);
+    EXPECT_FALSE(oc::arrnd<oc::arrnd<oc::arrnd<int>>>({1, 1}).is_flat);
+}
+
+TEST(linalg_test, can_check_if_array_type_is_arithmetic_complex_or_numeric_at_compile_time)
+{
+    oc::arrnd<double>{}; // required due to MSVC compiler issue
+    oc::arrnd<std::complex<int>>{};
+    oc::arrnd<std::complex<double>>{};
+
+    static_assert(oc::arithmetic_arrnd_complient<oc::arrnd<int>>);
+    static_assert(oc::arithmetic_arrnd_complient<oc::arrnd<double>>);
+    static_assert(!oc::arithmetic_arrnd_complient<oc::arrnd<std::complex<int>>>);
+    static_assert(!oc::arithmetic_arrnd_complient<oc::arrnd<std::complex<double>>>);
+    static_assert(oc::arrnd<int>::is_arithmetic);
+    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_arithmetic);
+    static_assert(!oc::arrnd<std::complex<int>>::is_arithmetic);
+    EXPECT_FALSE(oc::arrnd<std::complex<int>>({1, 1}).is_arithmetic);
+
+    static_assert(oc::complex_arrnd_complient<oc::arrnd<std::complex<int>>>);
+    static_assert(oc::complex_arrnd_complient<oc::arrnd<std::complex<double>>>);
+    static_assert(!oc::complex_arrnd_complient<oc::arrnd<int>>);
+    static_assert(!oc::complex_arrnd_complient<oc::arrnd<double>>);
+    static_assert(!oc::arrnd<int>::is_complex);
+    EXPECT_FALSE(oc::arrnd<int>({1, 1}).is_complex);
+    static_assert(oc::arrnd<std::complex<int>>::is_complex);
+    EXPECT_TRUE(oc::arrnd<std::complex<int>>({1, 1}).is_complex);
+
+    static_assert(oc::numeric_arrnd_complient<oc::arrnd<int>>);
+    static_assert(oc::numeric_arrnd_complient<oc::arrnd<double>>);
+    static_assert(oc::numeric_arrnd_complient<oc::arrnd<std::complex<int>>>);
+    static_assert(oc::numeric_arrnd_complient<oc::arrnd<std::complex<double>>>);
+    static_assert(oc::arrnd<int>::is_numeric);
+    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_numeric);
+    static_assert(oc::arrnd<std::complex<int>>::is_numeric);
+    EXPECT_TRUE(oc::arrnd<std::complex<int>>({1, 1}).is_numeric);
 }
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)

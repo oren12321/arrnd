@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
+#include <complex>
 
 namespace oc {
 namespace details {
@@ -2826,22 +2827,72 @@ namespace details {
         return arrnd_axis_insert_iterator<Arrnd>(cont, ind, axis);
     }
 
-    template <typename T>
-        requires arrnd_complient<T>
+    template <arrnd_complient T>
     [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
     {
         return T::depth + 1;
     }
-
     template <typename T>
     [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
     {
         return 0;
     }
 
+    template <typename T>
+    [[nodiscard]] inline constexpr bool is_arrnd_arithmetic()
+    {
+        return std::is_arithmetic_v<T>;
+    }
+    template <arrnd_complient T>
+    [[nodiscard]] inline constexpr bool is_arrnd_arithmetic()
+    {
+        return is_arrnd_arithmetic<typename T::value_type>();
+    }
+
+    template <template <typename...> typename T, typename... Args>
+    [[nodiscard]] static inline constexpr std::true_type is_template_type_impl(T<Args...>)
+    {
+        return std::true_type;
+    }
+    template <template <typename...> typename T>
+    [[nodiscard]] static inline constexpr std::false_type is_template_type_impl(...)
+    {
+        return std::false_type;
+    }
+    template <template <typename...> typename T, typename U>
+    using is_template_type = decltype(is_template_type_impl<T>(std::declval<typename std::decay_t<U>>()));
+
+    template <typename T>
+    [[nodiscard]] inline constexpr bool is_arrnd_complex()
+    {
+        return is_template_type<std::complex, T>::value;
+    }
+    template <arrnd_complient T>
+    [[nodiscard]] inline constexpr bool is_arrnd_complex()
+    {
+        return is_arrnd_complex<typename T::value_type>();
+    }
+
+    template <arrnd_complient T>
+    [[nodiscard]] inline constexpr bool is_arrnd_numeric()
+    {
+        return is_arrnd_arithmetic<T>() || is_arrnd_complex<T>();
+    }
+
     template <typename ArrndSrc, typename ArrndDst>
     concept arrnd_depths_match
         = arrnd_complient<ArrndSrc> && arrnd_complient<ArrndDst> && (ArrndSrc::depth == ArrndDst::depth);
+
+    template <typename T>
+    concept arithmetic_arrnd_complient = arrnd_complient<T>&& T::is_arithmetic;
+    template <typename T>
+    concept complex_arrnd_complient = arrnd_complient<T> && T::is_complex;
+
+    template <typename T>
+    concept numeric_arrnd_complient = arrnd_complient<T> && T::is_numeric;
+
+    template <typename T>
+    concept flat_arrnd_complient = arrnd_complient<T> && (T::depth == 0);
 
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
@@ -2886,6 +2937,13 @@ namespace details {
         using const_reverse_subarray_iterator = arrnd_axis_reverse_const_iterator<this_type>;
 
         constexpr static std::int64_t depth = calc_arrnd_depth<T>();
+
+        constexpr static bool is_arithmetic = is_arrnd_arithmetic<this_type>();
+        constexpr static bool is_complex = is_arrnd_complex<this_type>();
+
+        constexpr static bool is_numeric = is_arrnd_numeric<this_type>();
+
+        constexpr static bool is_flat = depth == 0;
 
         constexpr arrnd() = default;
 
@@ -5900,6 +5958,9 @@ namespace details {
 }
 
 using details::arrnd_complient;
+using details::arithmetic_arrnd_complient;
+using details::complex_arrnd_complient;
+using details::numeric_arrnd_complient;
 
 using details::arrnd_iterator;
 using details::arrnd_const_iterator;
