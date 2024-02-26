@@ -860,38 +860,24 @@ TEST(arrnd_test, can_have_complie_time_calculated_depth)
     EXPECT_FALSE(oc::arrnd<oc::arrnd<oc::arrnd<int>>>({1, 1}).is_flat);
 }
 
-TEST(linalg_test, can_check_if_array_type_is_arithmetic_complex_or_numeric_at_compile_time)
+TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_type_at_compile_time)
 {
-    oc::arrnd<double>{}; // required due to MSVC compiler issue
-    oc::arrnd<std::complex<int>>{};
-    oc::arrnd<std::complex<double>>{};
+    static_assert(oc::arrnd_complient_of_type<oc::arrnd<int>, int>);
+    static_assert(!oc::arrnd_complient_of_type<oc::arrnd<int>, double>);
+}
 
-    static_assert(oc::arithmetic_arrnd_complient<oc::arrnd<int>>);
-    static_assert(oc::arithmetic_arrnd_complient<oc::arrnd<double>>);
-    static_assert(!oc::arithmetic_arrnd_complient<oc::arrnd<std::complex<int>>>);
-    static_assert(!oc::arithmetic_arrnd_complient<oc::arrnd<std::complex<double>>>);
-    static_assert(oc::arrnd<int>::is_arithmetic);
-    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_arithmetic);
-    static_assert(!oc::arrnd<std::complex<int>>::is_arithmetic);
-    EXPECT_FALSE(oc::arrnd<std::complex<int>>({1, 1}).is_arithmetic);
+TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_template_type_at_compile_time)
+{
+    oc::arrnd<std::complex<int>>{}; // required due to MSVC compiler issue
 
-    static_assert(oc::complex_arrnd_complient<oc::arrnd<std::complex<int>>>);
-    static_assert(oc::complex_arrnd_complient<oc::arrnd<std::complex<double>>>);
-    static_assert(!oc::complex_arrnd_complient<oc::arrnd<int>>);
-    static_assert(!oc::complex_arrnd_complient<oc::arrnd<double>>);
-    static_assert(!oc::arrnd<int>::is_complex);
-    EXPECT_FALSE(oc::arrnd<int>({1, 1}).is_complex);
-    static_assert(oc::arrnd<std::complex<int>>::is_complex);
-    EXPECT_TRUE(oc::arrnd<std::complex<int>>({1, 1}).is_complex);
+    static_assert(oc::arrnd_complient_of_template_type<oc::arrnd<std::complex<int>>, std::complex>);
+    static_assert(!oc::arrnd_complient_of_template_type<oc::arrnd<std::complex<int>>, std::vector>);
+}
 
-    static_assert(oc::numeric_arrnd_complient<oc::arrnd<int>>);
-    static_assert(oc::numeric_arrnd_complient<oc::arrnd<double>>);
-    static_assert(oc::numeric_arrnd_complient<oc::arrnd<std::complex<int>>>);
-    static_assert(oc::numeric_arrnd_complient<oc::arrnd<std::complex<double>>>);
-    static_assert(oc::arrnd<int>::is_numeric);
-    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_numeric);
-    static_assert(oc::arrnd<std::complex<int>>::is_numeric);
-    EXPECT_TRUE(oc::arrnd<std::complex<int>>({1, 1}).is_numeric);
+TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compile_time)
+{
+    static_assert(oc::arrnd_complient_with_trait<oc::arrnd<int>, std::is_integral>);
+    static_assert(!oc::arrnd_complient_with_trait<oc::arrnd<int>, std::is_floating_point>);
 }
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)
