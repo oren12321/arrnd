@@ -222,6 +222,16 @@ namespace details {
             return data_ptr_ + size_;
         }
 
+        [[nodiscard]] constexpr const_pointer begin() const noexcept
+        {
+            return data_ptr_;
+        }
+
+        [[nodiscard]] constexpr const_pointer end() const noexcept
+        {
+            return data_ptr_ + size_;
+        }
+
         [[nodiscard]] constexpr const_pointer cbegin() const noexcept
         {
             return data_ptr_;
@@ -396,6 +406,16 @@ namespace details {
         }
 
         [[nodiscard]] constexpr pointer end() noexcept
+        {
+            return data_ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr const_pointer begin() const noexcept
+        {
+            return data_ptr_;
+        }
+
+        [[nodiscard]] constexpr const_pointer end() const noexcept
         {
             return data_ptr_ + size_;
         }
@@ -4085,7 +4105,7 @@ namespace details {
                 return this_type();
             }
 
-            header_type new_header(hdr_.reorder(first_order, last_order));
+            header_type new_header = header_type(hdr_.dims()).reorder(first_order, last_order);
             if (new_header.empty()) {
                 return this_type();
             }
