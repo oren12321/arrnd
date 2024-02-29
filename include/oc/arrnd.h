@@ -2914,11 +2914,25 @@ namespace details {
     }
 
     template <typename T, template <typename> typename Trait>
-    concept arrnd_complient_with_trait = arrnd_complient<T>&& is_arrnd_with_trait<T, Trait>();
+    concept arrnd_complient_with_trait = arrnd_complient<T> && is_arrnd_with_trait<T, Trait>();
 
     template <typename ArrndSrc, typename ArrndDst>
     concept arrnd_depths_match
         = arrnd_complient<ArrndSrc> && arrnd_complient<ArrndDst> && (ArrndSrc::depth == ArrndDst::depth);
+
+    template <typename T, std::int64_t Depth>
+        requires(Depth >= 0 && Depth <= T::depth)
+    struct arrnd_inner_impl {
+        using type = arrnd_inner_impl<typename T::value_type, Depth - 1>::type;
+    };
+    template <typename T>
+    struct arrnd_inner_impl<T, 0> {
+        using type = T;
+    };
+    template <arrnd_complient ArCo, std::int64_t Level = ArCo::depth>
+    using arrnd_inner = arrnd_inner_impl<ArCo, Level>;
+    template <arrnd_complient ArCo, std::int64_t Level = ArCo::depth>
+    using arrnd_inner_t = arrnd_inner<ArCo, Level>::type;
 
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
@@ -5981,6 +5995,9 @@ using details::arrnd_complient;
 using details::arrnd_complient_of_type;
 using details::arrnd_complient_of_template_type;
 using details::arrnd_complient_with_trait;
+
+using details::arrnd_inner;
+using details::arrnd_inner_t;
 
 using details::arrnd_iterator;
 using details::arrnd_const_iterator;
