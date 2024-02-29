@@ -880,6 +880,23 @@ TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compil
     static_assert(!oc::arrnd_complient_with_trait<oc::arrnd<int>, std::is_floating_point>);
 }
 
+TEST(arrnd_test, check_nested_arrnd_type)
+{
+    using namespace oc;
+
+    using nested_type = arrnd<arrnd<arrnd<arrnd<std::complex<int>>>>>;
+
+    nested_type{}; // required due to MSVC compiler issue
+
+    static_assert(std::is_same_v<nested_type, oc::arrnd_inner_t<nested_type, 0>>);
+    static_assert(std::is_same_v<nested_type::value_type, oc::arrnd_inner_t<nested_type, 1>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type, oc::arrnd_inner_t<nested_type, 2>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd_inner_t<nested_type, 3>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd_inner_t<nested_type>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type::value_type, std::complex<int>>);
+    static_assert(std::is_same_v<oc::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
+}
+
 TEST(arrnd_test, have_read_write_access_to_its_cells)
 {
     using Integer_array = oc::arrnd<int>;
