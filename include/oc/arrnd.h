@@ -2858,12 +2858,12 @@ namespace details {
     template <template <typename...> typename T, typename... Args>
     [[nodiscard]] static inline constexpr std::true_type is_template_type_impl(T<Args...>)
     {
-        return std::true_type;
+        return std::true_type{};
     }
     template <template <typename...> typename T>
     [[nodiscard]] static inline constexpr std::false_type is_template_type_impl(...)
     {
-        return std::false_type;
+        return std::false_type{};
     }
     template <template <typename...> typename T, typename U>
     using is_template_type = decltype(is_template_type_impl<T>(std::declval<typename std::decay_t<U>>()));
