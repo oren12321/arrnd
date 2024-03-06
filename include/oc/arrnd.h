@@ -16,6 +16,7 @@
 #include <iterator>
 #include <functional>
 #include <complex>
+#include <tuple>
 
 namespace oc {
 namespace details {
@@ -2934,6 +2935,64 @@ namespace details {
     template <arrnd_complient ArCo, std::int64_t Level = ArCo::depth>
     using arrnd_inner_t = arrnd_inner<ArCo, Level>::type;
 
+    template <typename T>
+    struct typed {
+        using type = T;
+    };
+
+    template <typename T, typename R, std::int64_t Level>
+    struct last_replaced_inner_types_tuple_impl {
+        using type
+            = std::tuple<T, typename last_replaced_inner_types_tuple_impl<typename T::value_type, R, Level - 1>::type>;
+    };
+    template <typename T, typename R>
+    struct last_replaced_inner_types_tuple_impl<T, R, 0> {
+        using type = typename T::template replaced_type<R>;
+    };
+    template <typename T, typename R, std::int64_t Level>
+    using last_replaced_inner_types_tuple = std::conditional_t<Level == 0,
+        typed<std::tuple<typename T::template replaced_type<R>>>, last_replaced_inner_types_tuple_impl<T, R, Level>>;
+    template <typename T, typename R, std::int64_t Level>
+    using last_replaced_inner_types_tuple_t = typename last_replaced_inner_types_tuple<T, R, Level>::type;
+
+    template <typename T>
+    struct flat_tuple {
+        using type = std::tuple<T>;
+    };
+    template <typename... Args>
+    struct flat_tuple<std::tuple<Args...>> {
+        using type = decltype(std::tuple_cat(typename flat_tuple<Args>::type{}...));
+    };
+    template <typename Tuple>
+    using flat_tuple_t = typename flat_tuple<Tuple>::type;
+
+    template <typename Tuple, std::int64_t Index>
+    struct folded_replaced_type_tuple {
+        static constexpr std::size_t tsi = std::tuple_size_v<Tuple> - 1;
+        using type = typename std::tuple_element_t<tsi - Index,
+            Tuple>::template replaced_type<typename folded_replaced_type_tuple<Tuple, Index - 1>::type>;
+    };
+    template <typename Tuple>
+    struct folded_replaced_type_tuple<Tuple, 1> {
+        static constexpr std::size_t tsi = std::tuple_size_v<Tuple> - 1;
+        using type =
+            typename std::tuple_element_t<tsi - 1, Tuple>::template replaced_type<std::tuple_element_t<tsi - 0, Tuple>>;
+    };
+    template <typename Tuple>
+    struct folded_replaced_type_tuple<Tuple, 0> {
+        static constexpr int tsi = std::tuple_size_v<Tuple> - 1;
+        using type = std::tuple_element_t<tsi - 0, Tuple>;
+    };
+    template <typename Tuple>
+    using folded_replaced_type_tuple_t = folded_replaced_type_tuple<Tuple, std::tuple_size_v<Tuple> - 1>::type;
+
+    template <typename T, typename R, std::int64_t Level>
+    struct replaced_inner_type {
+        using type = folded_replaced_type_tuple_t<flat_tuple_t<last_replaced_inner_types_tuple_t<T, R, Level>>>;
+    };
+    template <typename T, typename R, std::int64_t Level>
+    using replaced_inner_type_t = replaced_inner_type<T, R, Level>::type;
+
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
         arrnd_header_complient Header = arrnd_header<>, template <typename> typename Indexer = arrnd_general_indexer>
@@ -2960,6 +3019,8 @@ namespace details {
         template <typename U>
         using replaced_type
             = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
+        template <typename U, std::int64_t Level>
+        using inner_replaced_type = replaced_inner_type_t<this_type, U, Level>;
 
         template <typename U>
         using shared_ref = U;

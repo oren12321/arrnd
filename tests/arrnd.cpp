@@ -897,6 +897,18 @@ TEST(arrnd_test, check_nested_arrnd_type)
     static_assert(std::is_same_v<oc::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
 }
 
+TEST(arrnd_test, can_replace_arrnd_type_at_specific_depth)
+{
+    using namespace oc;
+
+    using nested_type = arrnd<arrnd<arrnd<arrnd<int>>>>;
+
+    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 0>, arrnd<double>>);
+    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 1>, arrnd<arrnd<double>>>);
+    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 2>, arrnd<arrnd<arrnd<double>>>>);
+    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 3>, arrnd<arrnd<arrnd<arrnd<double>>>>>);
+}
+
 TEST(arrnd_test, have_read_write_access_to_its_cells)
 {
     using Integer_array = oc::arrnd<int>;
