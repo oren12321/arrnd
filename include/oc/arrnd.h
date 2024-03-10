@@ -3046,11 +3046,9 @@ namespace details {
         template <arrnd_complient ArCo>
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd(ArCo&& other)
-            : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
         {
-            copy_from(other);
-
-            ArCo dummy{std::move(other)};
+            set_from(other);
+            (void)ArCo(std::move(other));
         }
         constexpr arrnd& operator=(arrnd&& other) & = default;
         constexpr arrnd& operator=(arrnd&& other) &&
@@ -3060,16 +3058,15 @@ namespace details {
             }
 
             copy_from(other);
-            arrnd dummy{std::move(other)};
+            (void)arrnd(std::move(other));
             return *this;
         }
         template <arrnd_complient ArCo>
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(ArCo&& other) &
         {
-            *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
-            copy_from(other);
-            ArCo dummy{std::move(other)};
+            set_from(other);
+            (void)ArCo(std::move(other));
             return *this;
         }
         template <arrnd_complient ArCo>
@@ -3077,7 +3074,7 @@ namespace details {
         constexpr arrnd& operator=(ArCo&& other) &&
         {
             copy_from(other);
-            ArCo dummy{std::move(other)};
+            (void)ArCo(std::move(other));
             return *this;
         }
 
@@ -3085,9 +3082,8 @@ namespace details {
         template <arrnd_complient ArCo>
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd(const ArCo& other)
-            : arrnd(other.header().dims().cbegin(), other.header().dims().cend())
         {
-            copy_from(other);
+            set_from(other);
         }
         constexpr arrnd& operator=(const arrnd& other) & = default;
         constexpr arrnd& operator=(const arrnd& other) &&
@@ -3103,8 +3099,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(const ArCo& other) &
         {
-            *this = this_type(other.header().dims().cbegin(), other.header().dims().cend());
-            copy_from(other);
+            set_from(other);
             return *this;
         }
         template <arrnd_complient ArCo>
@@ -3368,8 +3363,8 @@ namespace details {
         }
 
         /**
-            * @note copy this array to dst partially or full depending on the arrays size
-            */
+        * @note no reallocation to dst
+        */
         template <arrnd_complient ArCo>
         constexpr const this_type& copy_to(ArCo& dst) const
         {
@@ -3381,7 +3376,11 @@ namespace details {
             typename ArCo::indexer_type dst_gen(dst.header());
 
             for (; gen && dst_gen; ++gen, ++dst_gen) {
-                dst[*dst_gen] = (*this)[*gen];
+                if constexpr (arrnd_complient<value_type>) {
+                    (*this)[*gen].copy_to(dst[*dst_gen]); // deep copying
+                } else {
+                    dst[*dst_gen] = (*this)[*gen];
+                }
             }
 
             return *this;
@@ -3399,7 +3398,11 @@ namespace details {
             typename ArCo2::indexer_type ind_gen(indices.header());
 
             for (; gen && ind_gen; ++gen, ++ind_gen) {
-                dst[indices[*ind_gen]] = (*this)[*gen];
+                if constexpr (arrnd_complient<value_type>) {
+                    (*this)[*gen].copy_to(dst[indices[*ind_gen]]); // deep copying
+                } else {
+                    dst[indices[*ind_gen]] = (*this)[*gen];
+                }
             }
 
             return *this;
@@ -3435,11 +3438,6 @@ namespace details {
                 return *this;
             }
 
-            if (dst.empty()) {
-                dst = ArCo{hdr_.dims().cbegin(), hdr_.dims().cend()};
-                return copy_to(dst);
-            }
-
             if (hdr_.numel() == dst.header().numel()) {
                 if (hdr_.dims() != dst.header().dims()) {
                     dst.header() = header_type{hdr_.dims().cbegin(), hdr_.dims().cend()};
@@ -3448,6 +3446,14 @@ namespace details {
             }
 
             dst = ArCo{hdr_.dims().cbegin(), hdr_.dims().cend()};
+            if constexpr (arrnd_complient<value_type>) {
+                indexer_type gen(hdr_);
+                typename ArCo::indexer_type dst_gen(dst.header());
+
+                for (; gen && dst_gen; ++gen, ++dst_gen) {
+                    (*this)[*gen].set_to(dst[*dst_gen]);
+                }
+            }
             return copy_to(dst);
         }
 
@@ -3493,19 +3499,8 @@ namespace details {
 
         [[nodiscard]] constexpr this_type clone() const
         {
-            if (empty()) {
-                return this_type();
-            }
-
-            this_type clone(hdr_.dims().cbegin(), hdr_.dims().cend());
-
-            indexer_type gen(hdr_);
-            indexer_type clone_gen(clone.hdr_);
-
-            for (; gen && clone_gen; ++gen, ++clone_gen) {
-                clone[*clone_gen] = (*this)[*gen];
-            }
-
+            this_type clone;
+            set_to(clone);
             return clone;
         }
 
@@ -6081,6 +6076,7 @@ using details::arrnd_axis_inserter;
 using details::arrnd;
 
 using details::copy;
+using details::set;
 using details::clone;
 using details::reshape;
 using details::resize;

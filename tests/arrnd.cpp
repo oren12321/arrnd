@@ -2708,6 +2708,28 @@ TEST(arrnd_test, clone)
     EXPECT_TRUE(oc::all_equal((sarr[{{1, 1}, {0, 0}, {0, 0}}]), csubarr));
     csubarr[{0, 0, 0}] = 5;
     EXPECT_FALSE(oc::all_equal((sarr[{{1, 1}, {0, 0}, {0, 0}}]), csubarr));
+
+    // nested array
+    {
+        using namespace oc;
+
+        using arrnd_l2 = arrnd<int>;
+        using arrnd_l1 = arrnd<arrnd_l2>;
+        using arrnd_l0 = arrnd<arrnd_l1>;
+
+        arrnd_l0 arr_with_vals({2},
+            {arrnd_l1({1, 2}, {arrnd_l2({2, 2}, 1), arrnd_l2({2, 1, 3}, {1, 2, 3, 4, 5, 6})}),
+                arrnd_l1({1, 1}, {arrnd_l2({2, 2}, 1)})});
+
+        arrnd_l0 arr_no_vals = clone(arr_with_vals);
+
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}], arr_no_vals[{0}][{0, 1}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], arr_no_vals[{1}][{0, 0}]));
+
+        arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
+        EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
+    }
 }
 
 TEST(arrnd_test, copy_from)
@@ -2843,6 +2865,30 @@ TEST(arrnd_test, copy_from)
         arrnd<int> res{{3, 1, 2}, {6, 1, 4, 2, 2, 3}};
         EXPECT_TRUE(all_equal(res, dst));
     }
+
+    // nested array
+    {
+        using arrnd_l2 = arrnd<int>;
+        using arrnd_l1 = arrnd<arrnd_l2>;
+        using arrnd_l0 = arrnd<arrnd_l1>;
+
+        arrnd_l0 arr_with_vals({2},
+            {arrnd_l1({1, 2}, {arrnd_l2({2, 2}, 1), arrnd_l2({2, 1, 3}, {1, 2, 3, 4, 5, 6})}),
+                arrnd_l1({1, 1}, {arrnd_l2({2, 2}, 1)})});
+
+        arrnd_l0 arr_no_vals(
+            {2}, {arrnd_l1({1, 2}, {arrnd_l2({2, 2}), arrnd_l2({1, 1, 3})}), arrnd_l1({1, 1}, {arrnd_l2({4})})});
+
+        copy(arr_with_vals, arr_no_vals);
+
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}][{interval<>::at(0), interval<>::full(1), interval<>::full(3)}],
+            arr_no_vals[{0}][{0, 1}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], reshape(arr_no_vals[{1}][{0, 0}], {2, 2})));
+
+        arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
+        EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
+    }
 }
 
 TEST(arrnd_test, set_from)
@@ -2965,6 +3011,28 @@ TEST(arrnd_test, set_from)
         arrnd<int> rres{{5}, {2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(sres, dst));
         EXPECT_TRUE(all_equal(rres, ref));
+    }
+
+    // nested array
+    {
+        using arrnd_l2 = arrnd<int>;
+        using arrnd_l1 = arrnd<arrnd_l2>;
+        using arrnd_l0 = arrnd<arrnd_l1>;
+
+        arrnd_l0 arr_with_vals({2},
+            {arrnd_l1({1, 2}, {arrnd_l2({2, 2}, 1), arrnd_l2({2, 1, 3}, {1, 2, 3, 4, 5, 6})}),
+                arrnd_l1({1, 1}, {arrnd_l2({2, 2}, 1)})});
+
+        arrnd_l0 arr_no_vals;
+
+        set(arr_with_vals, arr_no_vals);
+
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}], arr_no_vals[{0}][{0, 1}]));
+        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], arr_no_vals[{1}][{0, 0}]));
+
+        arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
+        EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
     }
 }
 
