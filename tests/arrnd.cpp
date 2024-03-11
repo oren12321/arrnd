@@ -2074,6 +2074,25 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         }));
     }
 
+    // nested array
+    {
+        oc::arrnd<Integer_array> narr1({1}, {arr1});
+        oc::arrnd<Integer_array> narr4({1}, {arr4});
+
+        EXPECT_TRUE(oc::all_match(narr1, narr4, [](int a, int b) {
+            return a >= b;
+        }));
+        EXPECT_FALSE(oc::all_match(narr1, narr4, [](int a, int b) {
+            return a > b;
+        }));
+        EXPECT_TRUE(oc::all_match(narr1, 1, [](int a, int b) {
+            return a >= b;
+        }));
+        EXPECT_FALSE(oc::all_match(1, narr1, [](int a, int b) {
+            return a >= b;
+        }));
+    }
+
     // different ND array types
     {
         const double data1d[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
@@ -2170,6 +2189,25 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_FALSE(oc::all_equal(rarr, sarr));
         EXPECT_TRUE(oc::any_match(rarr, sarr, [](int a, int b) {
             return a == b;
+        }));
+    }
+
+    // nested array
+    {
+        oc::arrnd<Integer_array> narr1({1}, {arr1});
+        oc::arrnd<Integer_array> narr4({1}, {arr4});
+
+        EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
+            return a >= b;
+        }));
+        EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
+            return a > b;
+        }));
+        EXPECT_TRUE(oc::any_match(narr1, 1, [](int a, int b) {
+            return a >= b;
+        }));
+        EXPECT_TRUE(oc::any_match(1, narr1, [](int a, int b) {
+            return a >= b;
         }));
     }
 
@@ -2309,6 +2347,21 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
 
     EXPECT_TRUE(oc::all_close(arr1, arr4, 1));
     EXPECT_FALSE(oc::all_close(arr1, arr5, 1));
+
+    // nested arrays
+    {
+        oc::arrnd<Integer_array> narr1({1, 2}, arr1);
+        oc::arrnd<Integer_array> narr2({1, 2}, arr4);
+
+        EXPECT_FALSE(oc::all_close(narr1, narr2));
+        EXPECT_TRUE(oc::all_close(narr1, narr2, 1));
+
+        EXPECT_FALSE(oc::all_close(narr1, 1));
+        EXPECT_TRUE(oc::all_close(narr1, 1, 5));
+
+        EXPECT_FALSE(oc::all_close(1, narr1));
+        EXPECT_TRUE(oc::all_close(1, narr1, 5));
+    }
 
     {
         using Integer_array = oc::arrnd<int>;
@@ -2723,9 +2776,7 @@ TEST(arrnd_test, clone)
 
         arrnd_l0 arr_no_vals = clone(arr_with_vals);
 
-        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}], arr_no_vals[{0}][{0, 1}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], arr_no_vals[{1}][{0, 0}]));
+        EXPECT_TRUE(all_equal(arr_with_vals, arr_no_vals));
 
         arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
         EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
@@ -3027,9 +3078,7 @@ TEST(arrnd_test, set_from)
 
         set(arr_with_vals, arr_no_vals);
 
-        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}], arr_no_vals[{0}][{0, 1}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], arr_no_vals[{1}][{0, 0}]));
+        EXPECT_TRUE(all_equal(arr_with_vals, arr_no_vals));
 
         arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
         EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
