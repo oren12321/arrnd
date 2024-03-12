@@ -2263,11 +2263,13 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
     Integer_array arr2{dims1, data1};
 
     EXPECT_TRUE(oc::all_equal(arr1, arr2));
+    EXPECT_TRUE(oc::any_equal(arr1, arr2));
 
     std::int64_t dims2[]{3, 2};
     Integer_array arr3{dims2, data1};
 
     EXPECT_FALSE(oc::all_equal(arr1, arr3));
+    EXPECT_FALSE(oc::any_equal(arr1, arr3));
 
     const int data2[] = {1, 2, 3, 4, 5, 5};
     Integer_array arr4{dims1, data2};
@@ -2275,6 +2277,8 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
 
     EXPECT_FALSE(oc::all_equal(arr1, arr4));
     EXPECT_FALSE(oc::all_equal(arr1, arr5));
+    EXPECT_TRUE(oc::any_equal(arr1, arr4));
+    EXPECT_FALSE(oc::any_equal(arr1, arr5));
 
     {
         using Integer_array = oc::arrnd<int>;
@@ -2297,6 +2301,7 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
 
         Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
         EXPECT_TRUE(oc::all_equal(rarr, sarr));
+        EXPECT_TRUE(oc::any_equal(rarr, sarr));
     }
 
     // different ND array types
@@ -2306,9 +2311,11 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
         oc::arrnd<double> arr1d{dims1d, data1d};
 
         EXPECT_TRUE(oc::all_equal(arr1, arr1d));
+        EXPECT_TRUE(oc::any_equal(arr1, arr1d));
 
         arr1d[{0, 0, 0}] = 1.001;
         EXPECT_FALSE(oc::all_equal(arr1, arr1d));
+        EXPECT_TRUE(oc::any_equal(arr1, arr1d));
     }
 
     // empty arrays
@@ -2316,12 +2323,17 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
         EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array({})));
         EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array{}));
+        EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array({})));
+        EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array({}, 0)));
     }
 
     // scalar
     {
         EXPECT_FALSE(oc::all_equal(arr1, 1));
         EXPECT_FALSE(oc::all_equal(2, arr2));
+        EXPECT_TRUE(oc::any_equal(arr1, 1));
+        EXPECT_TRUE(oc::any_equal(2, arr2));
     }
 }
 
@@ -2335,11 +2347,13 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
     Integer_array arr2{dims1, data1};
 
     EXPECT_TRUE(oc::all_close(arr1, arr2));
+    EXPECT_TRUE(oc::any_close(arr1, arr2));
 
     std::int64_t dims2[]{3, 2};
     Integer_array arr3{dims2, data1};
 
     EXPECT_FALSE(oc::all_close(arr1, arr3, 1));
+    EXPECT_FALSE(oc::any_close(arr1, arr3, 1));
 
     const int data2[] = {1, 2, 3, 4, 5, 5};
     Integer_array arr4{dims1, data2};
@@ -2347,6 +2361,8 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
 
     EXPECT_TRUE(oc::all_close(arr1, arr4, 1));
     EXPECT_FALSE(oc::all_close(arr1, arr5, 1));
+    EXPECT_TRUE(oc::any_close(arr1, arr4, 1));
+    EXPECT_FALSE(oc::any_close(arr1, arr5, 1));
 
     // nested arrays
     {
@@ -2355,12 +2371,18 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
 
         EXPECT_FALSE(oc::all_close(narr1, narr2));
         EXPECT_TRUE(oc::all_close(narr1, narr2, 1));
+        EXPECT_TRUE(oc::any_close(narr1, narr2));
+        EXPECT_TRUE(oc::any_close(narr1, narr2, 1));
 
         EXPECT_FALSE(oc::all_close(narr1, 1));
         EXPECT_TRUE(oc::all_close(narr1, 1, 5));
+        EXPECT_TRUE(oc::any_close(narr1, 1));
+        EXPECT_TRUE(oc::any_close(narr1, 1, 5));
 
         EXPECT_FALSE(oc::all_close(1, narr1));
         EXPECT_TRUE(oc::all_close(1, narr1, 5));
+        EXPECT_TRUE(oc::any_close(1, narr1));
+        EXPECT_TRUE(oc::any_close(1, narr1, 5));
     }
 
     {
@@ -2384,6 +2406,7 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
 
         Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
         EXPECT_TRUE(oc::all_close(rarr, sarr, 1));
+        EXPECT_TRUE(oc::any_close(rarr, sarr, 1));
     }
 
     // different ND array types
@@ -2393,9 +2416,11 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
         oc::arrnd<double> arr1d{dims1d, data1d};
 
         EXPECT_TRUE(oc::all_close(arr1, arr1d));
+        EXPECT_TRUE(oc::any_close(arr1, arr1d));
 
         arr1d[{0, 0, 0}] = 1.001;
         EXPECT_FALSE(oc::all_close(arr1, arr1d));
+        EXPECT_TRUE(oc::any_close(arr1, arr1d));
     }
 
     // empty arrays
@@ -2403,12 +2428,17 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
         EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array({})));
         EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array{}));
+        EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array({})));
+        EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array({}, 0)));
     }
 
     // scalar
     {
         EXPECT_TRUE(oc::all_close(arr1, 1, 5));
         EXPECT_FALSE(oc::all_close(1, arr2));
+        EXPECT_TRUE(oc::any_close(arr1, 1, 5));
+        EXPECT_TRUE(oc::any_close(1, arr2));
     }
 }
 
