@@ -1682,7 +1682,7 @@ namespace oc {
 namespace details {
     struct arrnd_tag { };
     template <typename T>
-    concept arrnd_complient = std::is_same_v<typename T::tag, arrnd_tag>;
+    concept arrnd_complient = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
 
     template <arrnd_complient Arrnd>
     class arrnd_iterator final {
@@ -3372,14 +3372,14 @@ namespace details {
         * @note no reallocation to dst
         */
         template <arrnd_complient ArCo>
-        constexpr const this_type& copy_to(ArCo& dst) const
+        constexpr const this_type& copy_to(ArCo&& dst) const
         {
             if (empty() || dst.empty()) {
                 return *this;
             }
 
             indexer_type gen(hdr_);
-            typename ArCo::indexer_type dst_gen(dst.header());
+            typename std::remove_cvref_t<ArCo>::indexer_type dst_gen(dst.header());
 
             for (; gen && dst_gen; ++gen, ++dst_gen) {
                 if constexpr (arrnd_complient<value_type>) {
@@ -3394,7 +3394,7 @@ namespace details {
 
         template <arrnd_complient ArCo1, arrnd_complient ArCo2>
             requires std::is_integral_v<typename ArCo2::value_type>
-        constexpr const this_type& copy_to(ArCo1& dst, const ArCo2& indices) const
+        constexpr const this_type& copy_to(ArCo1&& dst, const ArCo2& indices) const
         {
             if (empty() || dst.empty() || indices.empty()) {
                 return *this;
@@ -3416,26 +3416,22 @@ namespace details {
 
         template <arrnd_complient ArCo, typename InputIt>
             requires std::is_same_v<interval<size_type>, iterator_value_type<InputIt>>
-        constexpr const this_type& copy_to(ArCo& dst, InputIt first_range, InputIt last_range) const
+        constexpr const this_type& copy_to(ArCo&& dst, InputIt first_range, InputIt last_range) const
         {
-            auto slice = dst[std::make_pair(first_range, last_range)];
-            copy_to(slice);
+            copy_to(dst[std::make_pair(first_range, last_range)]);
             return *this;
         }
         template <arrnd_complient ArCo, iterable_of_type<interval<size_type>> Cont>
-        constexpr const this_type& copy_to(ArCo& dst, const Cont& ranges) const
+        constexpr const this_type& copy_to(ArCo&& dst, const Cont& ranges) const
         {
-            return copy_to(dst, std::begin(ranges), std::end(ranges));
+            return copy_to(std::forward<ArCo>(dst), std::begin(ranges), std::end(ranges));
         }
         template <arrnd_complient ArCo>
-        constexpr const this_type& copy_to(ArCo& dst, std::initializer_list<interval<size_type>> ranges) const
+        constexpr const this_type& copy_to(ArCo&& dst, std::initializer_list<interval<size_type>> ranges) const
         {
-            return copy_to(dst, ranges.begin(), ranges.end());
+            return copy_to(std::forward<ArCo>(dst), ranges.begin(), ranges.end());
         }
 
-        /**
-            * @note if buffer reallocation not required use copy_to function
-            */
         template <arrnd_complient ArCo>
         constexpr const this_type& set_to(ArCo& dst) const
         {
@@ -3454,7 +3450,7 @@ namespace details {
             dst = ArCo{hdr_.dims().cbegin(), hdr_.dims().cend()};
             if constexpr (arrnd_complient<value_type>) {
                 indexer_type gen(hdr_);
-                typename ArCo::indexer_type dst_gen(dst.header());
+                typename std::remove_cvref_t<ArCo>::indexer_type dst_gen(dst.header());
 
                 for (; gen && dst_gen; ++gen, ++dst_gen) {
                     (*this)[*gen].set_to(dst[*dst_gen]);
@@ -4932,25 +4928,12 @@ namespace details {
         std::shared_ptr<storage_type> buffsp_{nullptr};
     };
 
-    /**
-        * @note Copy is being performed even if dimensions are not match either partialy or by indices modulus.
-        */
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2& dst)
-    {
-        return dst.copy_from(src);
-    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
     {
         return dst.copy_from(src);
     }
 
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2, arrnd_complient ArCo3>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, const ArCo3& indices)
-    {
-        return dst.copy_from(src, indices);
-    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2, arrnd_complient ArCo3>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const ArCo3& indices)
     {
@@ -4959,20 +4942,9 @@ namespace details {
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename InputIt>
         requires std::is_same_v<interval<typename ArCo1::size_type>, iterator_value_type<InputIt>>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, InputIt first_range, InputIt last_range)
-    {
-        return dst.copy_from(src, first_range, last_range);
-    }
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename InputIt>
-        requires std::is_same_v<interval<typename ArCo1::size_type>, iterator_value_type<InputIt>>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, InputIt first_range, InputIt last_range)
     {
         return dst.copy_from(src, first_range, last_range);
-    }
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2, iterable_of_type<interval<typename ArCo1::size_type>> Cont>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2& dst, const Cont& ranges)
-    {
-        return copy(src, dst, std::begin(ranges), std::end(ranges));
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2, iterable_of_type<interval<typename ArCo1::size_type>> Cont>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& ranges)
@@ -4981,22 +4953,11 @@ namespace details {
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& copy(
-        const ArCo1& src, ArCo2& dst, std::initializer_list<interval<typename ArCo1::size_type>> ranges)
-    {
-        return copy(src, dst, ranges.begin(), ranges.end());
-    }
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-    inline constexpr auto& copy(
         const ArCo1& src, ArCo2&& dst, std::initializer_list<interval<typename ArCo1::size_type>> ranges)
     {
         return copy(src, dst, ranges.begin(), ranges.end());
     }
 
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-    inline constexpr auto& set(const ArCo1& src, ArCo2& dst)
-    {
-        return dst.set_from(src);
-    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& set(const ArCo1& src, ArCo2&& dst)
     {
