@@ -5107,10 +5107,16 @@ namespace details {
         return arr.all(axis);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr bool any(const ArCo& arr)
+    {
+        return arr.any<Level>();
+    }
+
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr bool any(const ArCo& arr)
     {
-        return arr.any();
+        return any<ArCo::depth>(arr);
     }
 
     template <arrnd_complient ArCo>
