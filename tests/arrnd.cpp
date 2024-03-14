@@ -2085,12 +2085,12 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         EXPECT_FALSE(oc::all_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::all_match(narr1, 1, [](int a, int b) {
+        EXPECT_TRUE(oc::all_match(narr1, [](int a, int b) {
             return a >= b;
-        }));
-        EXPECT_FALSE(oc::all_match(1, narr1, [](int a, int b) {
-            return a >= b;
-        }));
+        }, 1));
+        EXPECT_FALSE(oc::all_match(narr1, [](int a, int b) {
+            return a <= b;
+        }, 1));
     }
 
     // different ND array types
@@ -2126,12 +2126,12 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::all_match(arr1, 1, [](int a, int b) {
+        EXPECT_TRUE(oc::all_match(arr1, [](int a, int b) {
             return a * b == a;
-        }));
-        EXPECT_FALSE(oc::all_match(2, arr2, [](int a, int b) {
+        }, 1));
+        EXPECT_FALSE(oc::all_match(arr2, [](int a, int b) {
             return a * b == a;
-        }));
+        }, 2));
     }
 }
 
@@ -2203,12 +2203,12 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::any_match(narr1, 1, [](int a, int b) {
+        EXPECT_TRUE(oc::any_match(narr1, [](int a, int b) {
             return a >= b;
-        }));
-        EXPECT_TRUE(oc::any_match(1, narr1, [](int a, int b) {
-            return a >= b;
-        }));
+        }, 1));
+        EXPECT_TRUE(oc::any_match(narr1, [](int a, int b) {
+            return a <= b;
+        }, 1));
     }
 
     // different ND array types
@@ -2244,12 +2244,12 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::any_match(arr1, 1, [](int a, int b) {
+        EXPECT_TRUE(oc::any_match(arr1, [](int a, int b) {
             return a * b == a;
-        }));
-        EXPECT_TRUE(oc::any_match(2, arr2, [](int a, int b) {
-            return a * b == a;
-        }));
+        }, 1));
+        EXPECT_TRUE(oc::any_match(arr2, [](int a, int b) {
+            return a * b == b;
+        }, 2));
     }
 }
 
