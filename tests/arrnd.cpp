@@ -1052,16 +1052,35 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
     tarr = apply(tarr, arrnd<int>({3, 1, 2}, {1, 0, 1, 0, 1, 0}), [](int val1, int val2) {
         return val1 * val2;
     });
-    tarr = apply(tarr, 2, [](int val1, int val2) {
-        return val1 == 0 ? 0 : val1 + val2;
-    });
-    tarr = apply(2, tarr, [](int val1, int val2) {
-        return val2 == 0 ? 0 : val1 + val2;
-    });
+    tarr = apply(
+        tarr,
+        [](int val1, int val2) {
+            return val1 == 0 ? 0 : val1 + val2;
+        },
+        2);
 
-    arrnd<int> res({3, 1, 2}, {6, 0, 10, 0, 14, 0});
+    arrnd<int> res({3, 1, 2}, {4, 0, 8, 0, 12, 0});
 
     EXPECT_TRUE(all_equal(res, arr));
+
+    // nested array
+    {
+        arrnd<arrnd<int>> narr({1, 4},
+            {arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {1, 2}),
+                arrnd<int>({1, 2}, {1, 2})});
+
+        auto& tnarr = apply(narr, [](int a) {
+            return a * 2;
+        });
+        tnarr = apply<0>(tnarr, [](const arrnd<int> a) {
+            return arrnd<int>({1}, a[{0, 0}]);
+        });
+
+        arrnd<arrnd<int>> nres(
+            {1, 4}, {arrnd<int>({1}, {2}), arrnd<int>({1}, {2}), arrnd<int>({1}, {2}), arrnd<int>({1}, {2})});
+
+        EXPECT_TRUE(all_equal(nres, narr));
+    }
 }
 
 TEST(arrnd_test, element_wise_transform_operation)
@@ -2085,12 +2104,18 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         EXPECT_FALSE(oc::all_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::all_match(narr1, [](int a, int b) {
-            return a >= b;
-        }, 1));
-        EXPECT_FALSE(oc::all_match(narr1, [](int a, int b) {
-            return a <= b;
-        }, 1));
+        EXPECT_TRUE(oc::all_match(
+            narr1,
+            [](int a, int b) {
+                return a >= b;
+            },
+            1));
+        EXPECT_FALSE(oc::all_match(
+            narr1,
+            [](int a, int b) {
+                return a <= b;
+            },
+            1));
     }
 
     // different ND array types
@@ -2126,12 +2151,18 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::all_match(arr1, [](int a, int b) {
-            return a * b == a;
-        }, 1));
-        EXPECT_FALSE(oc::all_match(arr2, [](int a, int b) {
-            return a * b == a;
-        }, 2));
+        EXPECT_TRUE(oc::all_match(
+            arr1,
+            [](int a, int b) {
+                return a * b == a;
+            },
+            1));
+        EXPECT_FALSE(oc::all_match(
+            arr2,
+            [](int a, int b) {
+                return a * b == a;
+            },
+            2));
     }
 }
 
@@ -2203,12 +2234,18 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::any_match(narr1, [](int a, int b) {
-            return a >= b;
-        }, 1));
-        EXPECT_TRUE(oc::any_match(narr1, [](int a, int b) {
-            return a <= b;
-        }, 1));
+        EXPECT_TRUE(oc::any_match(
+            narr1,
+            [](int a, int b) {
+                return a >= b;
+            },
+            1));
+        EXPECT_TRUE(oc::any_match(
+            narr1,
+            [](int a, int b) {
+                return a <= b;
+            },
+            1));
     }
 
     // different ND array types
@@ -2244,12 +2281,18 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::any_match(arr1, [](int a, int b) {
-            return a * b == a;
-        }, 1));
-        EXPECT_TRUE(oc::any_match(arr2, [](int a, int b) {
-            return a * b == b;
-        }, 2));
+        EXPECT_TRUE(oc::any_match(
+            arr1,
+            [](int a, int b) {
+                return a * b == a;
+            },
+            1));
+        EXPECT_TRUE(oc::any_match(
+            arr2,
+            [](int a, int b) {
+                return a * b == b;
+            },
+            2));
     }
 }
 
