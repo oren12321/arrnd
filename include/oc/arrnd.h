@@ -6382,7 +6382,7 @@ namespace details {
 
     template <arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
-    [[nosicard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
+    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
         return all_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
@@ -6396,7 +6396,7 @@ namespace details {
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
-    [[nosicard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
         return lhs.any_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
@@ -6410,7 +6410,7 @@ namespace details {
 
     template <arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
-    [[nosicard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
         return any_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
