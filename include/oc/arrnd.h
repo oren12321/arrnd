@@ -3037,14 +3037,14 @@ namespace details {
         using reverse_subarray_iterator = arrnd_axis_reverse_iterator<this_type>;
         using const_reverse_subarray_iterator = arrnd_axis_reverse_const_iterator<this_type>;
 
+        constexpr static std::int64_t depth = calc_arrnd_depth<T>();
+        constexpr static bool is_flat = depth == 0;
+
         template <typename U, std::int64_t Level = this_type::depth>
         using tol_type = decltype(typename arrnd_inner_t<this_type, Level>::value_type{} - U{});
         template <arrnd_complient ArCo, std::int64_t Level = this_type::depth>
         using complient_tol_type = decltype(typename arrnd_inner_t<this_type, Level>::value_type{} -
             typename arrnd_inner_t<ArCo, Level>::value_type{});
-
-        constexpr static std::int64_t depth = calc_arrnd_depth<T>();
-        constexpr static bool is_flat = depth == 0;
 
         constexpr arrnd() = default;
 
@@ -3796,67 +3796,159 @@ namespace details {
             return res;
         }
 
-        template <typename Unary_op>
-            requires std::is_invocable_v<Unary_op, T>
-        [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Unary_op, T>> transform(Unary_op&& op) const
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(
+                Level > 0 && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>,
+            Level> transform(Func&& func, Args&&... args) const
         {
-            using U = std::invoke_result_t<Unary_op, T>;
+            using transformed_type = inner_replaced_type<
+                std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>, Level>;
 
             if (empty()) {
-                return replaced_type<U>();
+                return transformed_type();
             }
 
-            replaced_type<U> res(hdr_.dims().cbegin(), hdr_.dims().cend());
+            transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
             indexer_type gen(hdr_);
-            typename replaced_type<U>::indexer_type res_gen(res.header());
+            typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = op((*this)[*gen]);
+                res[*res_gen].set_from((*this)[*gen].transform<Level - 1, Func, Args...>(
+                    std::forward<Func>(func), std::forward<Args>(args)...));
             }
 
             return res;
         }
 
-        template <arrnd_complient ArCo, typename Binary_op>
-            requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
-        [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, T, typename ArCo::value_type>> transform(
-            const ArCo& arr, Binary_op&& op) const
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(
+                Level == 0 && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>,
+            Level> transform(Func&& func, Args&&... args) const
         {
-            using U = std::invoke_result_t<Binary_op, T, typename ArCo::value_type>;
+            using transformed_type = inner_replaced_type<
+                std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, Args...>, Level>;
+
+            if (empty()) {
+                return transformed_type();
+            }
+
+            transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            typename transformed_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                if constexpr (arrnd_complient<typename transformed_type::value_type>) {
+                    res[*res_gen].set_from(func((*this)[*gen], std::forward<Args>(args)...));
+                } else {
+                    res[*res_gen] = func((*this)[*gen], std::forward<Args>(args)...);
+                }
+            }
+
+            return res;
+        }
+
+        template <typename Func, typename... Args>
+            requires std::is_invocable_v<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>,
+            this_type::depth>
+        transform(Func&& func, Args&&... args) const
+        {
+            return transform<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+            requires(Level > 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename ArCo::value_type, Args...>)
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, typename ArCo::value_type,
+                Args...>,
+            Level> transform(const ArCo& arr, Func&& func, Args&&... args) const
+        {
+            using transformed_type
+                = inner_replaced_type<std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                                          typename ArCo::value_type, Args...>,
+                    Level>;
+
+            if (empty()) {
+                return transformed_type();
+            }
 
             if (hdr_.dims() != arr.header().dims()) {
-                return replaced_type<U>();
+                return transformed_type();
             }
 
-            replaced_type<U> res(hdr_.dims().cbegin(), hdr_.dims().cend());
+            transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
             indexer_type gen(hdr_);
-            typename replaced_type<U>::indexer_type arr_gen(arr.header());
-            typename replaced_type<U>::indexer_type res_gen(res.header());
+            typename transformed_type::indexer_type res_gen(res.header());
 
-            for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
-                res[*res_gen] = op((*this)[*gen], arr[*arr_gen]);
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].transform<Level - 1, ArCo, Func, Args...>(
+                    arr, std::forward<Func>(func), std::forward<Args>(args)...));
             }
 
             return res;
         }
 
-        template <typename V, typename Binary_op>
-            requires std::is_invocable_v<Binary_op, T, V>
-        [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, T, V>> transform(
-            const V& value, Binary_op&& op) const
+        template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+            requires(Level == 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename ArCo::value_type, Args...>)
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type, typename ArCo::value_type,
+                Args...>,
+            Level> transform(const ArCo& arr, Func&& func, Args&&... args) const
         {
-            replaced_type<std::invoke_result_t<Binary_op, T, V>> res(hdr_.dims().cbegin(), hdr_.dims().cend());
+            using transformed_type
+                = inner_replaced_type<std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                                          typename ArCo::value_type, Args...>,
+                    Level>;
+
+            if (empty()) {
+                return transformed_type();
+            }
+
+            if (hdr_.dims() != arr.header().dims()) {
+                return transformed_type();
+            }
+
+            transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
             indexer_type gen(hdr_);
-            typename replaced_type<std::invoke_result_t<Binary_op, T, V>>::indexer_type res_gen(res.header());
+            typename transformed_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = op((*this)[*gen], value);
+            typename ArCo::indexer_type arr_gen(arr.header());
+
+            for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
+                if constexpr (arrnd_complient<typename transformed_type::value_type>) {
+                    res[*res_gen].set_from(func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...));
+                } else {
+                    res[*res_gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
+                }
             }
 
             return res;
+        }
+
+        template <typename Func, arrnd_complient ArCo, typename... Args>
+            requires std::is_invocable_v<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type,
+                typename ArCo::value_type, Args...>
+        [[nodiscard]] constexpr inner_replaced_type<
+            std::invoke_result_t<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type,
+                typename ArCo::value_type, Args...>,
+            this_type::depth>
+        transform(const ArCo& arr, Func&& func, Args&&... args) const
+        {
+            return transform<this_type::depth, ArCo, Func, Args...>(
+                arr, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
@@ -4503,7 +4595,7 @@ namespace details {
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
         {
             return reduce(
-                [](const value_type& a, const value_type& b) {
+                [](const auto& a, const auto& b) {
                     return a && b;
                 },
                 axis);
@@ -4520,33 +4612,50 @@ namespace details {
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
         {
             return reduce(
-                [](const value_type& a, const value_type& b) {
+                [](const auto& a, const auto& b) {
                     return a || b;
                 },
                 axis);
         }
 
-        template <arrnd_complient ArCo>
+        template <std::int64_t Level, arrnd_complient ArCo>
         [[nodiscard]] constexpr replaced_type<bool> close(const ArCo& arr,
-            const decltype(value_type{} - typename ArCo::value_type{})& atol
-            = default_atol<decltype(value_type{} - typename ArCo::value_type{})>(),
-            const decltype(value_type{} - typename ArCo::value_type{})& rtol
-            = default_rtol<decltype(value_type{} - typename ArCo::value_type{})>()) const
+            const complient_tol_type<ArCo, Level>& atol = default_atol<complient_tol_type<ArCo, Level>>(),
+            const complient_tol_type<ArCo, Level>& rtol = default_rtol<complient_tol_type<ArCo, Level>>()) const
         {
-            return transform(arr, [&atol, &rtol](const value_type& a, const typename ArCo::value_type& b) {
+            return transform<Level>(arr, [&atol, &rtol](const auto& a, const auto& b) {
                 return oc::close(a, b, atol, rtol);
             });
+        }
+
+        template <arrnd_complient ArCo>
+        [[nodiscard]] constexpr replaced_type<bool> close(const ArCo& arr,
+            const complient_tol_type<ArCo>& atol = default_atol<complient_tol_type<ArCo>>(),
+            const complient_tol_type<ArCo>& rtol = default_rtol<complient_tol_type<ArCo>>()) const
+        {
+            return close<this_type::depth>(arr, atol, rtol);
+        }
+
+        template <std::int64_t Level, typename U>
+            requires(!arrnd_complient<U>)
+        [[nodiscard]] constexpr replaced_type<bool> close(const U& value,
+            const tol_type<U, Level>& atol = default_atol<tol_type<U, Level>>(),
+            const tol_type<U, Level>& rtol = default_rtol<tol_type<U, Level>>()) const
+        {
+            return transform<Level>(
+                [&atol, &rtol](const auto& a, const auto& b) {
+                    return oc::close(a, b, atol, rtol);
+                },
+                value);
         }
 
         template <typename U>
             requires(!arrnd_complient<U>)
         [[nodiscard]] constexpr replaced_type<bool> close(const U& value,
-            const decltype(value_type{} - U{})& atol = default_atol<decltype(value_type{} - U{})>(),
-            const decltype(value_type{} - U{})& rtol = default_rtol<decltype(value_type{} - U{})>()) const
+            const tol_type<U>& atol = default_atol<tol_type<U>>(),
+            const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
         {
-            return transform(value, [&atol, &rtol](const value_type& a, const U& b) {
-                return oc::close(a, b, atol, rtol);
-            });
+            return close<this_type::depth>(value, atol, rtol);
         }
 
         template <std::int64_t Level, arrnd_complient ArCo>
@@ -4584,11 +4693,9 @@ namespace details {
             const complient_tol_type<ArCo, Level>& atol = default_atol<complient_tol_type<ArCo, Level>>(),
             const complient_tol_type<ArCo, Level>& rtol = default_rtol<complient_tol_type<ArCo, Level>>()) const
         {
-            return all_match<Level>(arr,
-                [&atol, &rtol](const typename arrnd_inner_t<this_type, Level>::value_type& a,
-                    const typename arrnd_inner_t<ArCo, Level>::value_type& b) {
-                    return oc::close(a, b, atol, rtol);
-                });
+            return all_match<Level>(arr, [&atol, &rtol](const auto& a, const auto& b) {
+                return oc::close(a, b, atol, rtol);
+            });
         }
 
         template <arrnd_complient ArCo>
@@ -4600,18 +4707,20 @@ namespace details {
         }
 
         template <std::int64_t Level, typename U>
+            requires(!arrnd_complient<U>)
         [[nodiscard]] constexpr bool all_close(const U& u,
             const tol_type<U, Level>& atol = default_atol<tol_type<U, Level>>(),
             const tol_type<U, Level>& rtol = default_rtol<tol_type<U, Level>>()) const
         {
             return all_match<Level>(
-                [&atol, &rtol](const typename arrnd_inner_t<this_type, Level>::value_type& a, const U& b) {
+                [&atol, &rtol](const auto& a, const auto& b) {
                     return oc::close(a, b, atol, rtol);
                 },
                 u);
         }
 
         template <typename U>
+            requires(!arrnd_complient<U>)
         [[nodiscard]] constexpr bool all_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
             const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
         {
@@ -4653,11 +4762,9 @@ namespace details {
             const complient_tol_type<ArCo, Level>& atol = default_atol<complient_tol_type<ArCo, Level>>(),
             const complient_tol_type<ArCo, Level>& rtol = default_rtol<complient_tol_type<ArCo, Level>>()) const
         {
-            return any_match<Level>(arr,
-                [&atol, &rtol](const typename arrnd_inner_t<this_type, Level>::value_type& a,
-                    const typename arrnd_inner_t<ArCo, Level>::value_type& b) {
-                    return oc::close(a, b, atol, rtol);
-                });
+            return any_match<Level>(arr, [&atol, &rtol](const auto& a, const auto& b) {
+                return oc::close(a, b, atol, rtol);
+            });
         }
 
         template <arrnd_complient ArCo>
@@ -4669,18 +4776,20 @@ namespace details {
         }
 
         template <std::int64_t Level, typename U>
+            requires(!arrnd_complient<U>)
         [[nodiscard]] constexpr bool any_close(const U& u,
             const tol_type<U, Level>& atol = default_atol<tol_type<U, Level>>(),
             const tol_type<U, Level>& rtol = default_rtol<tol_type<U, Level>>()) const
         {
             return any_match<Level>(
-                [&atol, &rtol](const typename arrnd_inner_t<this_type, Level>::value_type& a, const U& b) {
+                [&atol, &rtol](const auto& a, const auto& b) {
                     return oc::close(a, b, atol, rtol);
                 },
                 u);
         }
 
         template <typename U>
+            requires(!arrnd_complient<U>)
         [[nodiscard]] constexpr bool any_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
             const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
         {
@@ -4883,126 +4992,126 @@ namespace details {
 
         [[nodiscard]] constexpr auto abs()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::abs(a);
             });
         }
 
         [[nodiscard]] constexpr auto acos()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::acos(a);
             });
         }
 
         [[nodiscard]] constexpr auto acosh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::acosh(a);
             });
         }
 
         [[nodiscard]] constexpr auto asin()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::asin(a);
             });
         }
 
         [[nodiscard]] constexpr auto asinh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::asinh(a);
             });
         }
 
         [[nodiscard]] constexpr auto atan()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::atan(a);
             });
         }
 
         [[nodiscard]] constexpr auto atanh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::atanh(a);
             });
         }
 
         [[nodiscard]] constexpr auto cos()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::cos(a);
             });
         }
 
         [[nodiscard]] constexpr auto cosh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::cosh(a);
             });
         }
 
         [[nodiscard]] constexpr auto exp()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::exp(a);
             });
         }
 
         [[nodiscard]] constexpr auto log()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::log(a);
             });
         }
 
         [[nodiscard]] constexpr auto log10()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::log10(a);
             });
         }
 
         [[nodiscard]] constexpr auto pow()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::pow(a);
             });
         }
 
         [[nodiscard]] constexpr auto sin()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::sin(a);
             });
         }
 
         [[nodiscard]] constexpr auto sinh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::sinh(a);
             });
         }
 
         [[nodiscard]] constexpr auto sqrt()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::sqrt(a);
             });
         }
 
         [[nodiscard]] constexpr auto tan()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::tan(a);
             });
         }
 
         [[nodiscard]] constexpr auto tanh()
         {
-            return transform([](const value_type& a) {
+            return transform([](const auto& a) {
                 return ::tanh(a);
             });
         }
@@ -5209,34 +5318,32 @@ namespace details {
         return arr.any(axis);
     }
 
-    template <arrnd_complient ArCo, typename Unary_op>
-        requires std::is_invocable_v<Unary_op, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Unary_op&& op)
+    template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+        requires std::is_invocable_v<Func, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args)
     {
-        return arr.transform(op);
+        return arr.transform<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo1::value_type, typename ArCo2::value_type>
-    [[nodiscard]] inline constexpr auto transform(const ArCo1& lhs, const ArCo2& rhs, Binary_op&& op)
+    template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Func, typename... Args>
+        requires arrnd_complient<U>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func, Args&&... args)
     {
-        return lhs.transform(rhs, op);
+        return lhs.transform<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <arrnd_complient ArCo, typename T, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const T& rhs, Binary_op&& op)
+    template <arrnd_complient ArCo, typename Func, typename... Args>
+        requires std::is_invocable_v<Func, typename arrnd_inner_t<ArCo, ArCo::depth>::value_type, Args...>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args)
     {
-        return lhs.transform(rhs, op);
+        return transform<ArCo::depth>(arr, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <typename T, arrnd_complient ArCo, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto transform(const T& lhs, const ArCo& rhs, Binary_op&& op)
+    template <arrnd_complient ArCo, typename U, typename Func, typename... Args>
+        requires arrnd_complient<U>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func, Args&&... args)
     {
-        return rhs.transform([&lhs, &op](const typename ArCo::value_type& value) {
-            return op(lhs, value);
-        });
+        return transform<ArCo::depth>(lhs, rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
@@ -5344,7 +5451,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator==(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a == b;
         });
     }
@@ -5352,7 +5459,7 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator==(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a == b;
         });
     }
@@ -5360,7 +5467,7 @@ namespace details {
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator==(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
+        return rhs.transform(lhs, [](const auto& b, const auto& a) {
             return a == b;
         });
     }
@@ -5368,7 +5475,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator!=(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a != b;
         });
     }
@@ -5376,7 +5483,7 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator!=(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a != b;
         });
     }
@@ -5384,47 +5491,43 @@ namespace details {
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator!=(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
+        return rhs.transform(lhs, [](const auto& b, const auto& a) {
             return a != b;
         });
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto close(const ArCo1& lhs, const ArCo2& rhs,
-        const decltype(typename ArCo1::value_type{} - typename ArCo2::value_type{})& atol
-        = default_atol<decltype(typename ArCo1::value_type{} - typename ArCo2::value_type{})>(),
-        const decltype(typename ArCo1::value_type{} - typename ArCo2::value_type{})& rtol
-        = default_rtol<decltype(typename ArCo1::value_type{} - typename ArCo2::value_type{})>())
+        const typename ArCo1::template complient_tol_type<ArCo2>& atol
+        = default_atol<typename ArCo1::template complient_tol_type<ArCo2>>(),
+        const typename ArCo1::template complient_tol_type<ArCo2>& rtol
+        = default_rtol<typename ArCo1::template complient_tol_type<ArCo2>>())
     {
-        return lhs.close(rhs, atol, rtol);
+        return lhs.close<ArCo1::depth>(rhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo, typename T>
         requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr auto close(const ArCo& lhs, const T& rhs,
-        const decltype(typename ArCo::value_type{} - T{})& atol
-        = default_atol<decltype(typename ArCo::value_type{} - T{})>(),
-        const decltype(typename ArCo::value_type{} - T{})& rtol
-        = default_rtol<decltype(typename ArCo::value_type{} - T{})>())
+        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return lhs.close(rhs, atol, rtol);
+        return lhs.close<ArCo::depth>(rhs, atol, rtol);
     }
 
     template <typename T, arrnd_complient ArCo>
         requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr auto close(const T& lhs, const ArCo& rhs,
-        const decltype(T{} - typename ArCo::value_type{})& atol
-        = default_atol<decltype(T{} - typename ArCo::value_type{})>(),
-        const decltype(T{} - typename ArCo::value_type{})& rtol
-        = default_rtol<decltype(T{} - typename ArCo::value_type{})>())
+        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return rhs.close(lhs, atol, rtol);
+        return rhs.close<ArCo::depth>(lhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator>(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a > b;
         });
     }
@@ -5432,23 +5535,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator>(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a > b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a > b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator>(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a > b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a > b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator>=(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a >= b;
         });
     }
@@ -5456,23 +5563,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator>=(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a >= b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a >= b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator>=(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a >= b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a >= b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator<(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a < b;
         });
     }
@@ -5480,23 +5591,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator<(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a < b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a < b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator<(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a < b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a < b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator<=(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a <= b;
         });
     }
@@ -5504,23 +5619,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator<=(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a <= b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a <= b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator<=(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a <= b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a <= b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator+(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a + b;
         });
     }
@@ -5528,23 +5647,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator+(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a + b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a + b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator+(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a + b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a + b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator+=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a + b;
         });
     }
@@ -5553,7 +5676,7 @@ namespace details {
     inline constexpr auto& operator+=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a + b;
             },
             rhs);
@@ -5562,7 +5685,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator-(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a - b;
         });
     }
@@ -5570,23 +5693,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator-(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a - b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a - b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator-(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a - b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a - b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator-=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a - b;
         });
     }
@@ -5595,7 +5722,7 @@ namespace details {
     inline constexpr auto& operator-=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a - b;
             },
             rhs);
@@ -5604,7 +5731,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator*(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a * b;
         });
     }
@@ -5612,23 +5739,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator*(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a * b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a * b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator*(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a * b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a * b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator*=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a * b;
         });
     }
@@ -5637,7 +5768,7 @@ namespace details {
     inline constexpr auto& operator*=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a * b;
             },
             rhs);
@@ -5646,7 +5777,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator/(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a / b;
         });
     }
@@ -5654,23 +5785,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator/(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a / b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a / b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator/(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a / b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a / b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator/=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a / b;
         });
     }
@@ -5679,7 +5814,7 @@ namespace details {
     inline constexpr auto& operator/=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a / b;
             },
             rhs);
@@ -5688,7 +5823,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator%(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a % b;
         });
     }
@@ -5696,23 +5831,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator%(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a % b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a % b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator%(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a % b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a % b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator%=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a % b;
         });
     }
@@ -5721,7 +5860,7 @@ namespace details {
     inline constexpr auto& operator%=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a % b;
             },
             rhs);
@@ -5730,7 +5869,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator^(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a ^ b;
         });
     }
@@ -5738,23 +5877,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator^(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a ^ b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a ^ b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator^(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a ^ b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a ^ b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator^=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a ^ b;
         });
     }
@@ -5763,7 +5906,7 @@ namespace details {
     inline constexpr auto& operator^=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a ^ b;
             },
             rhs);
@@ -5772,7 +5915,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator&(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a & b;
         });
     }
@@ -5780,23 +5923,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator&(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a & b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a & b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator&(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a & b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a & b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator&=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a & b;
         });
     }
@@ -5805,7 +5952,7 @@ namespace details {
     inline constexpr auto& operator&=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a & b;
             },
             rhs);
@@ -5814,7 +5961,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator|(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a | b;
         });
     }
@@ -5822,23 +5969,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator|(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a | b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a | b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator|(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a | b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a | b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator|=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a | b;
         });
     }
@@ -5847,7 +5998,7 @@ namespace details {
     inline constexpr auto& operator|=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a | b;
             },
             rhs);
@@ -5856,7 +6007,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator<<(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a << b;
         });
     }
@@ -5864,24 +6015,28 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator<<(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a << b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a << b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
         requires(!std::derived_from<T, std::ios_base> && !arrnd_complient<T>)
     [[nodiscard]] inline constexpr auto operator<<(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a << b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a << b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator<<=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a << b;
         });
     }
@@ -5890,7 +6045,7 @@ namespace details {
     inline constexpr auto& operator<<=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a << b;
             },
             rhs);
@@ -5899,7 +6054,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator>>(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a >> b;
         });
     }
@@ -5907,23 +6062,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator>>(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a >> b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a >> b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator>>(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a >> b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a >> b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& operator>>=(ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.apply(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a >> b;
         });
     }
@@ -5932,7 +6091,7 @@ namespace details {
     inline constexpr auto& operator>>=(ArCo& lhs, const T& rhs)
     {
         return lhs.apply(
-            [](const typename ArCo::value_type& a, const T& b) {
+            [](const auto& a, const auto& b) {
                 return a >> b;
             },
             rhs);
@@ -5941,7 +6100,7 @@ namespace details {
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator~(const ArCo& arr)
     {
-        return arr.transform([](const typename ArCo::value_type& a) {
+        return arr.transform([](const auto& a) {
             return ~a;
         });
     }
@@ -5949,7 +6108,7 @@ namespace details {
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator!(const ArCo& arr)
     {
-        return arr.transform([](const typename ArCo::value_type& a) {
+        return arr.transform([](const auto& a) {
             return !a;
         });
     }
@@ -5957,7 +6116,7 @@ namespace details {
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator+(const ArCo& arr)
     {
-        return arr.transform([](const typename ArCo::value_type& a) {
+        return arr.transform([](const auto& a) {
             return +a;
         });
     }
@@ -5965,7 +6124,7 @@ namespace details {
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator-(const ArCo& arr)
     {
-        return arr.transform([](const typename ArCo::value_type& a) {
+        return arr.transform([](const auto& a) {
             return -a;
         });
     }
@@ -6081,7 +6240,7 @@ namespace details {
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator&&(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a && b;
         });
     }
@@ -6089,23 +6248,27 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator&&(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a && b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a && b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator&&(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a && b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a && b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto operator||(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo1::value_type& a, const typename ArCo2::value_type& b) {
+        return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a || b;
         });
     }
@@ -6113,17 +6276,21 @@ namespace details {
     template <arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator||(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const typename ArCo::value_type& a, const T& b) {
-            return a || b;
-        });
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a || b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto operator||(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const typename ArCo::value_type& b, const T& a) {
-            return a || b;
-        });
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a || b;
+            },
+            lhs);
     }
 
     template <arrnd_complient ArCo>
@@ -6201,7 +6368,7 @@ namespace details {
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
-    [[nosicard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
+    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
         return lhs.all_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
@@ -6276,26 +6443,32 @@ namespace details {
 
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr bool all_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template complient_tol_type<ArCo2>& atol
-        = default_atol<typename ArCo1::template complient_tol_type<ArCo2>>(),
-        const typename ArCo1::template complient_tol_type<ArCo2>& rtol
-        = default_rtol<typename ArCo1::template complient_tol_type<ArCo2>>())
+        const typename ArCo1::template complient_tol_type<ArCo2, Level>& atol
+        = default_atol<typename ArCo1::template complient_tol_type<ArCo2, Level>>(),
+        const typename ArCo1::template complient_tol_type<ArCo2, Level>& rtol
+        = default_rtol<typename ArCo1::template complient_tol_type<ArCo2, Level>>())
     {
         return lhs.all_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+        const typename ArCo::template tol_type<T, Level>& atol
+        = default_atol<typename ArCo::template tol_type<T, Level>>(),
+        const typename ArCo::template tol_type<T, Level>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
         return lhs.all_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+        const typename ArCo::template tol_type<T, Level>& atol
+        = default_atol<typename ArCo::template tol_type<T, Level>>(),
+        const typename ArCo::template tol_type<T, Level>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
         return rhs.all_close<Level>(lhs, atol, rtol);
     }
@@ -6311,6 +6484,7 @@ namespace details {
     }
 
     template <arrnd_complient ArCo, typename T>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
@@ -6319,6 +6493,7 @@ namespace details {
     }
 
     template <typename T, arrnd_complient ArCo>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
@@ -6354,26 +6529,30 @@ namespace details {
 
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr bool any_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template complient_tol_type<ArCo2>& atol
-        = default_atol<typename ArCo1::template complient_tol_type<ArCo2>>(),
-        const typename ArCo1::template complient_tol_type<ArCo2>& rtol
-        = default_rtol<typename ArCo1::template complient_tol_type<ArCo2>>())
+        const typename ArCo1::template complient_tol_type<ArCo2, Level>& atol
+        = default_atol<typename ArCo1::template complient_tol_type<ArCo2, Level>>(),
+        const typename ArCo1::template complient_tol_type<ArCo2, Level>& rtol
+        = default_rtol<typename ArCo1::template complient_tol_type<ArCo2, Level>>())
     {
         return lhs.any_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+        const typename ArCo::template tol_type<T, Level>& atol
+        = default_atol<typename ArCo::template tol_type<T, Level>>(),
+        const typename ArCo::template tol_type<T, Level>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
         return lhs.any_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+        const typename ArCo::template tol_type<T, Level>& atol
+        = default_atol<typename ArCo::template tol_type<T, Level>>(),
+        const typename ArCo::template tol_type<T, Level>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
         return rhs.any_close<Level>(lhs, atol, rtol);
     }

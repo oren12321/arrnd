@@ -1038,6 +1038,19 @@ TEST(arrnd_test, element_wise_transformation)
     EXPECT_TRUE(oc::all_equal(oarr, oc::transform(iarr, [](int n) {
         return n * 0.5;
     })));
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> narr(
+            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+
+        auto rnarr = oc::transform<0>(narr, [](const auto& arr) {
+            return 0.5 * std::reduce(arr.cbegin(), arr.cend(), 0, std::plus<>{});
+        });
+
+        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
+        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {7.5, 20})));
+    }
 }
 
 TEST(arrnd_test, apply_transformation_on_array_elements)
@@ -1106,16 +1119,41 @@ TEST(arrnd_test, element_wise_transform_operation)
     const int odata2[] = {0, 1, 2, 3, 4, 5};
     oc::arrnd oarr2{dims, odata2};
 
-    EXPECT_TRUE(oc::all_equal(oarr2, oc::transform(iarr1, 1, [](int a, int b) {
-        return a - b;
-    })));
+    EXPECT_TRUE(oc::all_equal(oarr2,
+        oc::transform(
+            iarr1,
+            [](int a, int b) {
+                return a - b;
+            },
+            1)));
 
     const int odata3[] = {0, -1, -2, -3, -4, -5};
     oc::arrnd oarr3{dims, odata3};
 
-    EXPECT_TRUE(oc::all_equal(oarr3, oc::transform(1, iarr1, [](int a, int b) {
-        return a - b;
-    })));
+    EXPECT_TRUE(oc::all_equal(oarr3,
+        oc::transform(
+            iarr1,
+            [](int a, int b) {
+                return -a + b;
+            },
+            1)));
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> narr(
+            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+
+        auto rnarr = oc::transform<0>(narr, inarr, [](const auto& lhs, const auto& rhs) {
+            return 0.5 * std::reduce(lhs.cbegin(), lhs.cend(), 0, std::plus<>{})
+                + std::reduce(rhs.cbegin(), rhs.cend(), 0, std::plus<>{});
+        });
+
+        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
+        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {22.5, 60})));
+    }
 }
 
 TEST(arrnd_test, reduce_elements)
