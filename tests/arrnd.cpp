@@ -3694,6 +3694,23 @@ TEST(arrnd_test, remove)
 
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 0, 1, 3))); // assertion failure
     }
+
+    // nested array
+    {
+        oc::arrnd<Integer_array> inarr2({1, 2},
+            {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+                Integer_array({2, 2, 3}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
+
+        auto rnarr3 = oc::remove(inarr2, 0, 1, 0);
+        EXPECT_TRUE(oc::all_equal(rnarr3,
+            oc::arrnd<Integer_array>({1, 2},
+                {Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}),
+                    Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})})));
+
+        auto rnarr4 = oc::remove<0>(inarr2, 1, 1, 1);
+        EXPECT_TRUE(oc::all_equal(rnarr4,
+            oc::arrnd<Integer_array>({1, 1}, {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
+    }
 }
 
 TEST(arrnd_test, complex_array)

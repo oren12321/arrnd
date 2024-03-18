@@ -3734,6 +3734,8 @@ namespace details {
             return res;
         }
 
+        template <std::int64_t Level>
+            requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
         {
             if (empty()) {
@@ -3758,7 +3760,32 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level>
+            requires(Level > 0)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
+        {
+            if (empty()) {
+                return *this;
+            }
 
+            this_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].remove<Level - 1>(ind, count);
+            }
+
+            return res;
+        }
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
+        {
+            return remove<this_type::depth>(ind, count);
+        }
+
+        template <std::int64_t Level>
+            requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
         {
             if (empty()) {
@@ -3800,6 +3827,29 @@ namespace details {
             }
 
             return res;
+        }
+        template <std::int64_t Level>
+            requires(Level > 0)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
+        {
+            if (empty()) {
+                return *this;
+            }
+
+            this_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].remove<Level - 1>(ind, count, axis);
+            }
+
+            return res;
+        }
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
+        {
+            return remove<this_type::depth>(ind, count, axis);
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
@@ -5264,24 +5314,30 @@ namespace details {
         return lhs.insert(rhs, ind, axis);
     }
 
-    /**
-        * @note All elements starting from ind are being removed in case that count value is too big.
-        */
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto remove(
+        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
+    {
+        return arr.remove<Level>(ind, count);
+    }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto remove(
         const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
     {
-        return arr.remove(ind, count);
+        return remove<ArCo::depth>(arr, ind, count);
     }
 
-    /**
-        * @note All elements starting from ind are being removed in case that count value is too big.
-        */
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto remove(
+        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
+    {
+        return arr.remove<Level>(ind, count, axis);
+    }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto remove(
         const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
     {
-        return arr.remove(ind, count, axis);
+        return remove<ArCo::depth>(arr, ind, count, axis);
     }
 
     template <arrnd_complient ArCo>
