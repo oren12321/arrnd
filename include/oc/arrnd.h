@@ -3506,24 +3506,19 @@ namespace details {
             return clone;
         }
 
-        /**
-            * @note Returning a reference to the input array and no allocation performed. If empty array, subarray, or different dimensions resizing.
-            */
-        template <typename InputIt>
-            requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+        template <std::int64_t Level, typename InputIt>
+            requires(Level == 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
         {
+            typename this_type::header_type new_header(first_new_dim, last_new_dim);
+            assert(hdr_.numel() == new_header.numel());
+
+            if (hdr_.dims() == new_header.dims()) {
+                return *this;
+            }
+
             if (hdr_.is_sliced()) {
                 return resize(first_new_dim, last_new_dim);
-            }
-
-            typename this_type::header_type new_header(first_new_dim, last_new_dim);
-            if (hdr_.numel() != new_header.numel()) {
-                return resize(first_new_dim, last_new_dim);
-            }
-
-            if (std::equal(hdr_.dims().cbegin(), hdr_.dims().cend(), first_new_dim, last_new_dim)) {
-                return *this;
             }
 
             this_type res(*this);
@@ -3531,21 +3526,53 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level, typename InputIt>
+            requires(Level > 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
+        {
+            if (empty()) {
+                return *this;
+            }
+
+            this_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].reshape<Level - 1, InputIt>(first_new_dim, last_new_dim);
+            }
+
+            return res;
+        }
+        template <typename InputIt>
+            requires(std::is_same_v<size_type, iterator_value_type<InputIt>>)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
+        {
+            return reshape<this_type::depth>(first_new_dim, last_new_dim);
+        }
+        template <std::int64_t Level, iterable_of_type<size_type> Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
+        {
+            return reshape<Level>(std::begin(new_dims), std::end(new_dims));
+        }
         template <iterable_of_type<size_type> Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
         {
-            return reshape(std::begin(new_dims), std::end(new_dims));
+            return reshape<this_type::depth, Cont>(std::begin(new_dims), std::end(new_dims));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
+        {
+            return reshape<Level>(new_dims.begin(), new_dims.end());
         }
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
         {
-            return reshape(new_dims.begin(), new_dims.end());
+            return reshape<this_type::depth>(new_dims.begin(), new_dims.end());
         }
 
-        /*
-            * @note Other references to this array buffer are not modified. Resize is not performed if dims and new_dims are equal.
-            */
-        template <typename InputIt>
-            requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+        template <std::int64_t Level, typename InputIt>
+            requires(Level == 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
         {
             if (std::equal(hdr_.dims().cbegin(), hdr_.dims().cend(), first_new_dim, last_new_dim)) {
@@ -3569,14 +3596,49 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level, typename InputIt>
+            requires(Level > 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
+        {
+            if (empty()) {
+                return *this;
+            }
+
+            this_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].resize<Level - 1, InputIt>(first_new_dim, last_new_dim);
+            }
+
+            return res;
+        }
+        template <typename InputIt>
+            requires(std::is_same_v<size_type, iterator_value_type<InputIt>>)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
+        {
+            return resize<this_type::depth>(first_new_dim, last_new_dim);
+        }
+        template <std::int64_t Level, iterable_of_type<size_type> Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
+        {
+            return resize<Level>(std::begin(new_dims), std::end(new_dims));
+        }
         template <iterable_of_type<size_type> Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
         {
-            return resize(std::begin(new_dims), std::end(new_dims));
+            return resize<this_type::depth, Cont>(std::begin(new_dims), std::end(new_dims));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
+        {
+            return resize<Level>(new_dims.begin(), new_dims.end());
         }
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
         {
-            return resize(new_dims.begin(), new_dims.end());
+            return resize<this_type::depth>(new_dims.begin(), new_dims.end());
         }
 
         template <arrnd_complient ArCo>
@@ -5163,43 +5225,74 @@ namespace details {
         return arr.clone();
     }
 
-    /**
-        * @note Returning a reference to the input array, except in case of resulted empty array or an input subarray.
-        */
+    template <std::int64_t Level, arrnd_complient ArCo, typename InputIt>
+        requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    {
+        return arr.reshape<Level>(first_new_dim, last_new_dim);
+    }
+    template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
+    {
+        return reshape<Level>(arr, std::begin(new_dims), std::end(new_dims));
+    }
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto reshape(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    {
+        return reshape<Level>(arr, new_dims.begin(), new_dims.end());
+    }
     template <arrnd_complient ArCo, typename InputIt>
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.reshape(first_new_dim, last_new_dim);
+        return arr.reshape<ArCo::depth>(first_new_dim, last_new_dim);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
     {
-        return reshape(arr, std::begin(new_dims), std::end(new_dims));
+        return reshape<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
     }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto reshape(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
     {
-        return reshape(arr, new_dims.begin(), new_dims.end());
+        return reshape<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo, typename InputIt>
+        requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    {
+        return arr.resize<Level>(first_new_dim, last_new_dim);
+    }
+    template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
+    {
+        return resize<Level>(arr, std::begin(new_dims), std::end(new_dims));
+    }
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto resize(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    {
+        return resize<Level>(arr, new_dims.begin(), new_dims.end());
+    }
     template <arrnd_complient ArCo, typename InputIt>
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.resize(first_new_dim, last_new_dim);
+        return arr.resize<ArCo::depth>(first_new_dim, last_new_dim);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
     {
-        return resize(arr, std::begin(new_dims), std::end(new_dims));
+        return resize<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
     }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto resize(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
     {
-        return resize(arr, new_dims.begin(), new_dims.end());
+        return resize<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
