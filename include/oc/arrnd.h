@@ -3644,64 +3644,14 @@ namespace details {
         template <arrnd_complient ArCo>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr) const
         {
-            if (empty()) {
-                this_type res(arr);
-                return res.clone();
-            }
-
-            if (arr.empty()) {
-                return *this;
-            }
-
-            this_type res(resize({hdr_.numel() + arr.header().numel()}));
-
-            indexer_type res_gen(res.hdr_);
-            typename ArCo::indexer_type arr_gen(arr.header());
-
-            res_gen += hdr_.numel();
-            for (; res_gen && arr_gen; ++res_gen, ++arr_gen) {
-                res[*res_gen] = arr[*arr_gen];
-            }
-
-            return res;
+            return insert(arr, hdr_.numel());
         }
 
         template <arrnd_complient ArCo>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, size_type axis) const
         {
-            if (empty()) {
-                this_type res(arr);
-                return res.clone();
-            }
-
-            if (arr.empty()) {
-                return *this;
-            }
-
-            header_type new_header(hdr_.subheader(arr.header().dims()[axis], axis));
-            if (new_header.empty()) {
-                return this_type{};
-            }
-
-            this_type res({hdr_.numel() + arr.header().numel()});
-            res.hdr_ = std::move(new_header);
-
-            indexer_type gen(hdr_, axis);
-            typename ArCo::indexer_type arr_gen(arr.header(), axis);
-            indexer_type res_gen(res.hdr_, axis);
-
-            auto ptr = storage()->data();
-            auto res_ptr = res.storage()->data();
-            auto arr_ptr = arr.storage()->data();
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res_ptr[*res_gen] = ptr[*gen];
-            }
-            for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
-                res_ptr[*res_gen] = arr_ptr[*arr_gen];
-            }
-
-            return res;
+            size_type ind = empty() ? size_type{0} : hdr_.dims()[axis];
+            return insert(arr, ind, axis);
         }
 
         template <arrnd_complient ArCo>
@@ -3754,7 +3704,7 @@ namespace details {
                 return this_type();
             }
 
-            assert(ind >= 0 && ind < hdr_.dims()[axis]);
+            assert(ind >= 0 && ind <= hdr_.dims()[axis]);
 
             this_type res({hdr_.numel() + arr.header().numel()});
             res.hdr_ = std::move(new_header);
@@ -3784,9 +3734,6 @@ namespace details {
             return res;
         }
 
-        /**
-            * @note All elements starting from ind are being removed in case that count value is too big.
-            */
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
         {
             if (empty()) {
@@ -3812,9 +3759,6 @@ namespace details {
             return res;
         }
 
-        /**
-            * @note All elements starting from ind are being removed in case that count value is too big.
-            */
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
         {
             if (empty()) {
