@@ -4152,27 +4152,64 @@ namespace details {
                 arr, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
-        template <typename Binary_op>
-            requires std::is_invocable_v<Binary_op, T, T>
-        [[nodiscard]] constexpr std::invoke_result_t<Binary_op, T, T> reduce(Binary_op&& op) const
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level == 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(Func&& func, Args&&... args) const
         {
-            using U = std::invoke_result_t<Binary_op, T, T>;
+            using reduced_type = std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                typename arrnd_inner_t<this_type, Level>::value_type, Args...>;
 
             if (empty()) {
-                return U{};
+                return reduced_type();
             }
 
-            indexer_type gen{hdr_};
+            indexer_type gen(hdr_);
 
-            U res{static_cast<U>((*this)[*gen])};
+            reduced_type res(static_cast<reduced_type>((*this)[*gen]));
             ++gen;
 
             while (gen) {
-                res = op(res, (*this)[*gen]);
+                res = func(std::forward<reduced_type>(res), (*this)[*gen], std::forward<Args>(args)...);
                 ++gen;
             }
 
             return res;
+        }
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level > 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(Func&& func, Args&&... args) const
+        {
+            using reduced_type
+                = inner_replaced_type<std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                                          typename arrnd_inner_t<this_type, Level>::value_type, Args...>,
+                    Level - 1>;
+
+            if (empty()) {
+                return reduced_type();
+            }
+
+            reduced_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].reduce<Level - 1, Func, Args...>(
+                    std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type,
+                typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(Func&& func, Args&&... args) const
+        {
+            return reduce<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
         template <typename U, typename Binary_op>
@@ -4191,23 +4228,26 @@ namespace details {
             return res;
         }
 
-        template <typename Binary_op>
-            requires std::is_invocable_v<Binary_op, T, T>
-        [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, T, T>> reduce(
-            Binary_op&& op, size_type axis) const
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level == 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func, Args&&... args) const
         {
-            using U = std::invoke_result_t<Binary_op, T, T>;
+            using reduced_type
+                = replaced_type<std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>>;
 
             if (empty()) {
-                return replaced_type<U>();
+                return reduced_type();
             }
 
-            typename replaced_type<U>::header_type new_header(hdr_.subheader(axis));
+            typename reduced_type::header_type new_header(hdr_.subheader(axis));
             if (new_header.empty()) {
-                return replaced_type<U>();
+                return reduced_type();
             }
 
-            replaced_type<U> res({new_header.numel()});
+            reduced_type res({new_header.numel()});
             res.header() = std::move(new_header);
 
             indexer_type gen(hdr_, std::ssize(hdr_.dims()) - axis - 1);
@@ -4216,10 +4256,12 @@ namespace details {
             const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
 
             while (gen && res_gen) {
-                U res_element{static_cast<U>((*this)[*gen])};
+                typename reduced_type::value_type res_element(
+                    static_cast<typename reduced_type::value_type>((*this)[*gen]));
                 ++gen;
                 for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
-                    res_element = op(res_element, (*this)[*gen]);
+                    res_element = func(std::forward<typename reduced_type::value_type>(res_element), (*this)[*gen],
+                        std::forward<Args>(args)...);
                 }
                 res[*res_gen] = res_element;
                 ++res_gen;
@@ -4227,6 +4269,77 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level > 0
+                && std::is_invocable_v<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func, Args&&... args) const
+        {
+            using reduced_type = inner_replaced_type<
+                replaced_type<std::invoke_result_t<Func, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>>,
+                Level - 1>;
+
+            if (empty()) {
+                return reduced_type();
+            }
+
+            reduced_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].reduce<Level - 1, Func, Args...>(
+                    axis, std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, typename arrnd_inner_t<this_type, this_type::depth>::value_type,
+                typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>)
+        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func, Args&&... args) const
+        {
+            return reduce<this_type::depth, Func, Args...>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
+        //template <typename Binary_op>
+        //    requires std::is_invocable_v<Binary_op, T, T>
+        //[[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, T, T>> reduce(
+        //    Binary_op&& op, size_type axis) const
+        //{
+        //    using U = std::invoke_result_t<Binary_op, T, T>;
+
+        //    if (empty()) {
+        //        return replaced_type<U>();
+        //    }
+
+        //    typename replaced_type<U>::header_type new_header(hdr_.subheader(axis));
+        //    if (new_header.empty()) {
+        //        return replaced_type<U>();
+        //    }
+
+        //    replaced_type<U> res({new_header.numel()});
+        //    res.header() = std::move(new_header);
+
+        //    indexer_type gen(hdr_, std::ssize(hdr_.dims()) - axis - 1);
+        //    indexer_type res_gen(res.header());
+
+        //    const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
+
+        //    while (gen && res_gen) {
+        //        U res_element{static_cast<U>((*this)[*gen])};
+        //        ++gen;
+        //        for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
+        //            res_element = op(res_element, (*this)[*gen]);
+        //        }
+        //        res[*res_gen] = res_element;
+        //        ++res_gen;
+        //    }
+
+        //    return res;
+        //}
 
         template <arrnd_complient ArCo, typename Binary_op>
             requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
@@ -4693,11 +4806,9 @@ namespace details {
 
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
         {
-            return reduce(
-                [](const auto& a, const auto& b) {
-                    return a && b;
-                },
-                axis);
+            return reduce(axis, [](const auto& a, const auto& b) {
+                return a && b;
+            });
         }
 
         template <std::int64_t Level = this_type::depth>
@@ -4710,11 +4821,9 @@ namespace details {
 
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
         {
-            return reduce(
-                [](const auto& a, const auto& b) {
-                    return a || b;
-                },
-                axis);
+            return reduce(axis, [](const auto& a, const auto& b) {
+                return a || b;
+            });
         }
 
         template <std::int64_t Level, arrnd_complient ArCo>
@@ -5400,12 +5509,23 @@ namespace details {
         return arr.empty();
     }
 
-    template <arrnd_complient ArCo, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op)
+    template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func, Args&&... args)
     {
-        return arr.reduce(op);
+        return arr.reduce<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
+    template <arrnd_complient ArCo, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func, Args&&... args)
+    {
+        return reduce<ArCo::depth>(arr, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+
+    //template <arrnd_complient ArCo, typename Binary_op>
+    //    requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
+    //[[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op)
+    //{
+    //    return arr.reduce(op);
+    //}
 
     template <arrnd_complient ArCo, typename T, typename Binary_op>
         requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
@@ -5414,12 +5534,25 @@ namespace details {
         return arr.reduce(init_value, op);
     }
 
-    template <arrnd_complient ArCo, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op, typename ArCo::size_type axis)
+    template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto reduce(
+        const ArCo& arr, typename ArCo::size_type axis, Func&& func, Args&&... args)
     {
-        return arr.reduce(op, axis);
+        return arr.reduce<Level>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
     }
+    template <arrnd_complient ArCo, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto reduce(
+        const ArCo& arr, typename ArCo::size_type axis, Func&& func, Args&&... args)
+    {
+        return reduce<ArCo::depth>(arr, axis, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+
+    //template <arrnd_complient ArCo, typename Binary_op>
+    //    requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
+    //[[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op, typename ArCo::size_type axis)
+    //{
+    //    return arr.reduce(op, axis);
+    //}
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op>
         requires std::is_invocable_v<Binary_op, typename ArCo2::value_type, typename ArCo1::value_type>
