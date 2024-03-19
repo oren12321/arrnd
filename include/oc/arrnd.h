@@ -3654,12 +3654,12 @@ namespace details {
             return insert(arr, ind, axis);
         }
 
-        template <arrnd_complient ArCo>
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
         {
             if (empty()) {
-                this_type res(arr);
-                return res.clone();
+                return arr.reshape({arr.header().numel()}).clone();
             }
 
             if (arr.empty()) {
@@ -3686,8 +3686,30 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level > 0)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
+        {
+            this_type res(empty() ? arr.header().dims() : hdr_.dims());
 
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+            typename ArCo::indexer_type arr_gen(arr.header());
+
+            for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
+                res[*res_gen] = (*this)[*gen].insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind);
+            }
+
+            return res;
+        }
         template <arrnd_complient ArCo>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
+        {
+            return insert<this_type::depth, ArCo>(arr, ind);
+        }
+
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis) const
         {
             if (empty()) {
@@ -3732,6 +3754,27 @@ namespace details {
             }
 
             return res;
+        }
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level > 0)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis) const
+        {
+            this_type res(empty() ? arr.header().dims() : hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.hdr_);
+            typename ArCo::indexer_type arr_gen(arr.header());
+
+            for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
+                res[*res_gen] = (*this)[*gen].insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind, axis);
+            }
+
+            return res;
+        }
+        template <arrnd_complient ArCo>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis) const
+        {
+            return insert<this_type::depth, ArCo>(arr, ind, axis);
         }
 
         template <std::int64_t Level>
@@ -5301,17 +5344,28 @@ namespace details {
         return lhs.append(rhs, axis);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
+    [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
+    {
+        return lhs.insert<Level>(rhs, ind);
+    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     {
-        return lhs.insert(rhs, ind);
+        return insert<ArCo1::depth>(lhs, rhs, ind);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
+    [[nodiscard]] inline constexpr auto insert(
+        const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis)
+    {
+        return lhs.insert<Level>(rhs, ind, axis);
+    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto insert(
         const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis)
     {
-        return lhs.insert(rhs, ind, axis);
+        return insert<ArCo1::depth>(lhs, rhs, ind, axis);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo>
