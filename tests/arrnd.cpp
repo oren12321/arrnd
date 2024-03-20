@@ -1433,6 +1433,23 @@ TEST(arrnd_test, select_elements_indices_by_condition)
         oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
         EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
     }
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({2, 2}, {7, 8, 9, 10})});
+
+        auto r1 = oc::find(inarr, [](int a) {
+            return a % 2 == 0;
+        });
+        EXPECT_TRUE(oc::all_equal(
+            r1, oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({3}, {1, 3, 5}), oc::arrnd<int>({2}, {1, 3})})));
+
+        auto r2 = oc::find<0>(inarr, [](const auto& a) {
+            return std::reduce(a.cbegin(), a.cend(), 0, std::plus<>{}) > 25;
+        });
+        EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<int>({1}, {1})));
+    }
 }
 
 TEST(arrnd_test, select_elements_indices_by_maks)
@@ -1475,6 +1492,19 @@ TEST(arrnd_test, select_elements_indices_by_maks)
 
         oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
         EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
+    }
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
+
+        auto r1 = oc::find(inarr, oc::arrnd<int>({3, 1, 2}, {0, 0, 1, 0, 0, 1}));
+        EXPECT_TRUE(oc::all_equal(
+            r1, oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({2}, {2, 5}), oc::arrnd<int>({2}, {2, 5})})));
+
+        auto r2 = oc::find<0>(inarr, oc::arrnd<int>({1, 2}, {1, 0}));
+        EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<int>({1}, {0})));
     }
 }
 

@@ -4546,23 +4546,26 @@ namespace details {
             return filter<this_type::depth, ArCo>(mask);
         }
 
-        template <typename Unary_pred>
-            requires std::is_invocable_v<Unary_pred, T>
-        [[nodiscard]] constexpr replaced_type<size_type> find(Unary_pred pred) const
+        template <std::int64_t Level, typename Pred, typename... Args>
+            requires(
+                Level == 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto find(Pred&& pred, Args&&... args) const
         {
+            using found_type = inner_replaced_type<size_type, Level>;
+
             if (empty()) {
-                return replaced_type<size_type>();
+                return found_type();
             }
 
-            replaced_type<size_type> res({hdr_.numel()});
+            found_type res({hdr_.numel()});
 
             indexer_type gen(hdr_);
-            typename replaced_type<size_type>::indexer_type res_gen(res.header());
+            typename found_type::indexer_type res_gen(res.header());
 
             size_type res_count{0};
 
             while (gen && res_gen) {
-                if (pred((*this)[*gen])) {
+                if (pred((*this)[*gen], std::forward<Args>(args)...)) {
                     res[*res_gen] = *gen;
                     ++res_count;
                     ++res_gen;
@@ -4571,31 +4574,63 @@ namespace details {
             }
 
             if (res_count == 0) {
-                return replaced_type<size_type>();
+                return found_type();
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize({res_count});
+                return res.resize<Level>({res_count});
             }
 
             return res;
         }
-
-        template <arrnd_complient ArCo>
-        [[nodiscard]] constexpr replaced_type<size_type> find(const ArCo& mask) const
+        template <std::int64_t Level, typename Pred, typename... Args>
+            requires(
+                Level > 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto find(Pred&& pred, Args&&... args) const
         {
+            using found_type = inner_replaced_type<size_type, Level>;
+
             if (empty()) {
-                return replaced_type<size_type>();
+                return found_type();
+            }
+
+            found_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].find<Level - 1, Pred, Args...>(
+                    std::forward<Pred>(pred), std::forward<Args>(args)...));
+            }
+
+            return res;
+        }
+        template <typename Pred, typename... Args>
+            requires std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>
+        [[nodiscard]] constexpr auto find(Pred&& pred, Args&&... args) const
+        {
+            return find<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto find(const ArCo& mask) const
+        {
+            using found_type = inner_replaced_type<size_type, Level>;
+
+            if (empty()) {
+                return found_type();
             }
 
             assert(hdr_.dims() == mask.header().dims());
 
-            replaced_type<size_type> res({hdr_.numel()});
+            found_type res({hdr_.numel()});
 
             indexer_type gen(hdr_);
             typename ArCo::indexer_type mask_gen(mask.header());
 
-            typename replaced_type<size_type>::indexer_type res_gen(res.header());
+            typename found_type::indexer_type res_gen(res.header());
 
             size_type res_count{0};
 
@@ -4610,14 +4645,40 @@ namespace details {
             }
 
             if (res_count == 0) {
-                return replaced_type<size_type>();
+                return found_type();
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize({res_count});
+                return res.resize<Level>({res_count});
             }
 
             return res;
+        }
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto find(const ArCo& mask) const
+        {
+            using found_type = inner_replaced_type<size_type, Level>;
+
+            if (empty()) {
+                return found_type();
+            }
+
+            found_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].find<Level - 1, ArCo>(mask));
+            }
+
+            return res;
+        }
+        template <arrnd_complient ArCo>
+        [[nodiscard]] constexpr auto find(const ArCo& mask) const
+        {
+            return find<this_type::depth, ArCo>(mask);
         }
 
         template <typename InputIt>
@@ -5796,27 +5857,38 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
-    [[nodiscard]] inline constexpr ArCo1 filter(const ArCo1& arr, const ArCo2& mask)
+    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
     {
         return arr.filter<Level>(mask);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
-    [[nodiscard]] inline constexpr ArCo1 filter(const ArCo1& arr, const ArCo2& mask)
+    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
     {
         return filter<ArCo1::depth>(arr, mask);
     }
 
-    template <arrnd_complient ArCo, typename Unary_pred>
-        requires std::is_invocable_v<Unary_pred, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Unary_pred pred)
+    template <std::int64_t Level, arrnd_complient ArCo, typename Pred, typename... Args>
+        requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>)
+    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.find(pred);
+        return arr.find<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo, typename Pred, typename... Args>
+        requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, ArCo::depth>::value_type, Args...>)
+    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred, Args&&... args)
+    {
+        return find<ArCo::depth>(arr, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
+    [[nodiscard]] inline constexpr auto find(const ArCo1& arr, const ArCo2& mask)
+    {
+        return arr.find<Level>(mask);
+    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto find(const ArCo1& arr, const ArCo2& mask)
     {
-        return arr.find(mask);
+        return find<ArCo1::depth>(arr, mask);
     }
 
     template <arrnd_complient ArCo, typename InputIt>
