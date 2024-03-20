@@ -3518,7 +3518,7 @@ namespace details {
             }
 
             if (hdr_.is_sliced()) {
-                return resize(first_new_dim, last_new_dim);
+                return resize<Level>(first_new_dim, last_new_dim);
             }
 
             this_type res(*this);
@@ -4419,51 +4419,10 @@ namespace details {
                 axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
-        template <arrnd_complient ArCo, typename Binary_op>
-            requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
-        [[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, typename ArCo::value_type, T>> reduce(
-            const ArCo& init_values, Binary_op&& op, size_type axis) const
-        {
-            using U = std::invoke_result_t<Binary_op, typename ArCo::value_type, T>;
-
-            if (empty()) {
-                return replaced_type<U>();
-            }
-
-            typename replaced_type<U>::header_type new_header(hdr_.subheader(axis));
-
-            assert(init_values.header().dims().size() == 1
-                && init_values.header().dims()[0] == hdr_.numel() / hdr_.dims()[axis]);
-
-            if (new_header.empty()) {
-                return replaced_type<U>();
-            }
-
-            replaced_type<U> res({new_header.numel()});
-            res.header() = std::move(new_header);
-
-            indexer_type gen(hdr_, std::ssize(hdr_.dims()) - axis - 1);
-            indexer_type res_gen(res.header());
-            typename ArCo::indexer_type init_gen(init_values.header());
-
-            const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
-
-            while (gen && res_gen && init_gen) {
-                U res_element{init_values[*init_gen]};
-                for (size_type i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
-                    res_element = op(res_element, (*this)[*gen]);
-                }
-                res[*res_gen] = std::move(res_element);
-                ++res_gen;
-                ++init_gen;
-            }
-
-            return res;
-        }
-
-        template <typename Unary_pred>
-            requires std::is_invocable_v<Unary_pred, T>
-        [[nodiscard]] constexpr this_type filter(Unary_pred pred) const
+        template <std::int64_t Level, typename Pred, typename... Args>
+            requires(
+                Level == 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr this_type filter(Pred&& pred, Args&&... args) const
         {
             if (empty()) {
                 return this_type();
@@ -4477,7 +4436,7 @@ namespace details {
             size_type res_count{0};
 
             while (gen && res_gen) {
-                if (pred((*this)[*gen])) {
+                if (pred((*this)[*gen], std::forward<Args>(args)...)) {
                     res[*res_gen] = (*this)[*gen];
                     ++res_count;
                     ++res_gen;
@@ -4490,13 +4449,41 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize({res_count});
+                return res.resize<Level>({res_count});
             }
 
             return res;
         }
+        template <std::int64_t Level, typename Pred, typename... Args>
+            requires(
+                Level > 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr this_type filter(Pred&& pred, Args&&... args) const
+        {
+            if (empty()) {
+                return this_type();
+            }
 
-        template <arrnd_complient ArCo>
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].filter<Level - 1, Pred, Args...>(
+                    std::forward<Pred>(pred), std::forward<Args>(args)...));
+            }
+
+            return res;
+        }
+        template <typename Pred, typename... Args>
+            requires std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>
+        [[nodiscard]] constexpr this_type filter(Pred&& pred, Args&&... args) const
+        {
+            return filter<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level == 0)
         [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
         {
             if (empty()) {
@@ -4529,10 +4516,34 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize({res_count});
+                return res.resize<Level>({res_count});
             }
 
             return res;
+        }
+        template <std::int64_t Level, arrnd_complient ArCo>
+            requires(Level > 0)
+        [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].filter<Level - 1, ArCo>(mask));
+            }
+
+            return res;
+        }
+        template <arrnd_complient ArCo>
+        [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
+        {
+            return filter<this_type::depth, ArCo>(mask);
         }
 
         template <typename Unary_pred>
@@ -5771,17 +5782,28 @@ namespace details {
         return apply<std::remove_cvref_t<ArCo>::depth>(lhs, rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <arrnd_complient ArCo, typename Unary_pred>
-        requires std::is_invocable_v<Unary_pred, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Unary_pred pred)
+    template <std::int64_t Level, arrnd_complient ArCo, typename Pred, typename... Args>
+        requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>)
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.filter(pred);
+        return arr.filter<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo, typename Pred, typename... Args>
+        requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, ArCo::depth>::value_type, Args...>)
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred, Args&&... args)
+    {
+        return filter<ArCo::depth>(arr, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
+    [[nodiscard]] inline constexpr ArCo1 filter(const ArCo1& arr, const ArCo2& mask)
+    {
+        return arr.filter<Level>(mask);
+    }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr ArCo1 filter(const ArCo1& arr, const ArCo2& mask)
     {
-        return arr.filter(mask);
+        return filter<ArCo1::depth>(arr, mask);
     }
 
     template <arrnd_complient ArCo, typename Unary_pred>

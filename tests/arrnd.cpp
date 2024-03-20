@@ -1318,6 +1318,23 @@ TEST(arrnd_test, filter_elements_by_condition)
     EXPECT_TRUE(oc::all_equal(oc::arrnd<int>{}, oc::filter(oc::arrnd<int>{}, [](int) {
         return 1;
     })));
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({2, 2}, {7, 8, 9, 10})});
+
+        auto r1 = oc::filter(inarr, [](int a) {
+            return a % 2 == 0;
+        });
+        EXPECT_TRUE(oc::all_equal(
+            r1, oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({3}, {2, 4, 6}), oc::arrnd<int>({2}, {8, 10})})));
+
+        auto r2 = oc::filter<0>(inarr, [](const auto& a) {
+            return std::reduce(a.cbegin(), a.cend(), 0, std::plus<>{}) > 25;
+        });
+        EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({2, 2}, {7, 8, 9, 10})})));
+    }
 }
 
 TEST(arrnd_test, filter_elements_by_maks)
@@ -1346,6 +1363,19 @@ TEST(arrnd_test, filter_elements_by_maks)
     EXPECT_TRUE(oc::all_equal(rarr2, oc::filter(iarr, imask2)));
 
     EXPECT_TRUE(oc::all_equal(oc::arrnd<int>{}, oc::filter(oc::arrnd<int>{}, imask0)));
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
+
+        auto r1 = oc::filter(inarr, oc::arrnd<int>({3, 1, 2}, {0, 0, 1, 0, 0, 1}));
+        EXPECT_TRUE(oc::all_equal(
+            r1, oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({2}, {3, 6}), oc::arrnd<int>({2}, {9, 12})})));
+
+        auto r2 = oc::filter<0>(inarr, oc::arrnd<int>({1, 2}, {1, 0}));
+        EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})})));
+    }
 }
 
 TEST(arrnd_test, select_elements_indices_by_condition)
