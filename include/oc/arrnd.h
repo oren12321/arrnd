@@ -3659,7 +3659,7 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
         {
             if (empty()) {
-                return arr.reshape({arr.header().numel()}).clone();
+                return arr.reshape<Level>({arr.header().numel()}).clone();
             }
 
             if (arr.empty()) {
@@ -4681,8 +4681,8 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-        template <typename InputIt>
-            requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+        template <std::int64_t Level, typename InputIt>
+            requires(Level == 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
         [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
         {
             if (empty()) {
@@ -4708,14 +4708,49 @@ namespace details {
 
             return res;
         }
+        template <std::int64_t Level, typename InputIt>
+            requires(Level > 0 && std::is_same_v<size_type, iterator_value_type<InputIt>>)
+        [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen].set_from((*this)[*gen].transpose<Level - 1, InputIt>(first_order, last_order));
+            }
+
+            return res;
+        }
+        template <typename InputIt>
+            requires std::is_same_v<size_type, iterator_value_type<InputIt>>
+        [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
+        {
+            return transpose<this_type::depth, InputIt>(first_order, last_order);
+        }
+        template <std::int64_t Level, iterable_of_type<size_type> Cont>
+        [[nodiscard]] constexpr this_type transpose(const Cont& order) const
+        {
+            return transpose<Level>(std::begin(order), std::end(order));
+        }
         template <iterable_of_type<size_type> Cont>
         [[nodiscard]] constexpr this_type transpose(const Cont& order) const
         {
-            return transpose(std::begin(order), std::end(order));
+            return transpose<this_type::depth>(std::begin(order), std::end(order));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
+        {
+            return transpose<Level>(order.begin(), order.end());
         }
         [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
         {
-            return transpose(order.begin(), order.end());
+            return transpose<this_type::depth>(order.begin(), order.end());
         }
 
         template <std::int64_t Level, typename Pred, typename... Args>
@@ -5891,22 +5926,39 @@ namespace details {
         return find<ArCo1::depth>(arr, mask);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo, typename InputIt>
+        requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
+    {
+        return arr.transpose<Level>(first_order, last_order);
+    }
+    template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
+    {
+        return transpose<Level>(arr, std::begin(order), std::end(order));
+    }
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto transpose(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    {
+        return transpose<Level>(arr, order.begin(), order.end());
+    }
     template <arrnd_complient ArCo, typename InputIt>
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
     {
-        return arr.transpose(first_order, last_order);
+        return arr.transpose<ArCo::depth>(first_order, last_order);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
     {
-        return transpose(arr, std::begin(order), std::end(order));
+        return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
     }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto transpose(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
     {
-        return transpose(arr, order.begin(), order.end());
+        return transpose<ArCo::depth>(arr, order.begin(), order.end());
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>

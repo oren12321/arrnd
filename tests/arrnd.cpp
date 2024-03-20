@@ -1558,6 +1558,22 @@ TEST(arrnd_test, transpose)
 
     //EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3, 2 }))); // assertion failure
     //EXPECT_TRUE(oc::empty(oc::transpose(iarr, { 2, 0, 1, 4 }))); // assertion failure
+
+    // nested array
+    {
+        oc::arrnd<oc::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd<int>({1, 6}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({1, 4}, {1, 2, 3, 4})});
+
+        auto r1 = oc::transpose(inarr, {1, 0});
+        EXPECT_TRUE(oc::all_equal(r1,
+            oc::arrnd<oc::arrnd<int>>(
+                {1, 2}, {oc::arrnd<int>({6, 1}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({4, 1}, {1, 2, 3, 4})})));
+
+        auto r2 = oc::transpose<0>(inarr, {1, 0});
+        EXPECT_TRUE(oc::all_equal(r2,
+            oc::arrnd<oc::arrnd<int>>(
+                {2, 1}, {oc::arrnd<int>({1, 6}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({1, 4}, {1, 2, 3, 4})})));
+    }
 }
 
 TEST(arrnd_test, equal)
