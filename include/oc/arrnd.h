@@ -4212,20 +4212,57 @@ namespace details {
             return reduce<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
-        template <typename U, typename Binary_op>
-            requires std::is_invocable_v<Binary_op, U, T>
-        [[nodiscard]] constexpr std::invoke_result_t<Binary_op, U, T> reduce(const U& init_value, Binary_op&& op) const
+        template <std::int64_t Level, typename U, typename Func, typename... Args>
+            requires(Level == 0
+                && std::is_invocable_v<Func, U, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func, Args&&... args) const
         {
+            using folded_type
+                = std::invoke_result_t<Func, U, typename arrnd_inner_t<this_type, Level>::value_type, Args...>;
+
             if (empty()) {
-                return init_value;
+                return init;
             }
 
-            std::invoke_result_t<Binary_op, U, T> res{init_value};
+            folded_type res(static_cast<folded_type>(init));
             for (indexer_type gen{hdr_}; gen; ++gen) {
-                res = op(res, (*this)[*gen]);
+                res = func(res, (*this)[*gen], std::forward<Args>(args)...);
             }
 
             return res;
+        }
+        template <std::int64_t Level, typename U, typename Func, typename... Args>
+            requires(Level > 0
+                && std::is_invocable_v<Func, U, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func, Args&&... args) const
+        {
+            using folded_type = inner_replaced_type<
+                std::invoke_result_t<Func, U, typename arrnd_inner_t<this_type, Level>::value_type, Args...>,
+                Level - 1>;
+
+            if (empty()) {
+                return folded_type();
+            }
+
+            folded_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].fold<Level - 1, U, Func, Args...>(
+                    init, std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <typename U, typename Func, typename... Args>
+            requires(
+                std::is_invocable_v<Func, U, typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func, Args&&... args) const
+        {
+            return fold<this_type::depth, U, Func, Args...>(
+                init, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
@@ -4304,42 +4341,83 @@ namespace details {
             return reduce<this_type::depth, Func, Args...>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
-        //template <typename Binary_op>
-        //    requires std::is_invocable_v<Binary_op, T, T>
-        //[[nodiscard]] constexpr replaced_type<std::invoke_result_t<Binary_op, T, T>> reduce(
-        //    Binary_op&& op, size_type axis) const
-        //{
-        //    using U = std::invoke_result_t<Binary_op, T, T>;
+        template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+            requires(Level == 0
+                && std::is_invocable_v<Func, typename ArCo::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func, Args&&... args) const
+        {
+            using folded_type = replaced_type<std::invoke_result_t<Func, typename ArCo::value_type,
+                typename arrnd_inner_t<this_type, Level>::value_type, Args...>>;
 
-        //    if (empty()) {
-        //        return replaced_type<U>();
-        //    }
+            if (empty()) {
+                return folded_type();
+            }
 
-        //    typename replaced_type<U>::header_type new_header(hdr_.subheader(axis));
-        //    if (new_header.empty()) {
-        //        return replaced_type<U>();
-        //    }
+            typename folded_type::header_type new_header(hdr_.subheader(axis));
 
-        //    replaced_type<U> res({new_header.numel()});
-        //    res.header() = std::move(new_header);
+            assert(inits.header().dims().size() == 1 && inits.header().dims()[0] == hdr_.numel() / hdr_.dims()[axis]);
 
-        //    indexer_type gen(hdr_, std::ssize(hdr_.dims()) - axis - 1);
-        //    indexer_type res_gen(res.header());
+            if (new_header.empty()) {
+                return folded_type();
+            }
 
-        //    const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
+            folded_type res({new_header.numel()});
+            res.header() = std::move(new_header);
 
-        //    while (gen && res_gen) {
-        //        U res_element{static_cast<U>((*this)[*gen])};
-        //        ++gen;
-        //        for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
-        //            res_element = op(res_element, (*this)[*gen]);
-        //        }
-        //        res[*res_gen] = res_element;
-        //        ++res_gen;
-        //    }
+            indexer_type gen(hdr_, std::ssize(hdr_.dims()) - axis - 1);
+            indexer_type res_gen(res.header());
+            typename ArCo::indexer_type init_gen(inits.header());
 
-        //    return res;
-        //}
+            const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
+
+            while (gen && res_gen && init_gen) {
+                typename folded_type::value_type res_element(
+                    static_cast<typename folded_type::value_type>(inits[*init_gen]));
+                for (size_type i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
+                    res_element = func(res_element, (*this)[*gen], std::forward<Args>(args)...);
+                }
+                res[*res_gen] = std::move(res_element);
+                ++res_gen;
+                ++init_gen;
+            }
+
+            return res;
+        }
+        template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
+            requires(Level > 0
+                && std::is_invocable_v<Func, typename ArCo::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func, Args&&... args) const
+        {
+            using folded_type = inner_replaced_type<replaced_type<std::invoke_result_t<Func, typename ArCo::value_type,
+                                                        typename arrnd_inner_t<this_type, Level>::value_type, Args...>>,
+                Level - 1>;
+
+            if (empty()) {
+                return folded_type();
+            }
+
+            folded_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].fold<Level - 1, ArCo, Func, Args...>(
+                    axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <arrnd_complient ArCo, typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, typename ArCo::value_type,
+                typename arrnd_inner_t<this_type, this_type::depth>::value_type, Args...>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func, Args&&... args) const
+        {
+            return fold<this_type::depth, ArCo, Func, Args...>(
+                axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
+        }
 
         template <arrnd_complient ArCo, typename Binary_op>
             requires std::is_invocable_v<Binary_op, typename ArCo::value_type, T>
@@ -5520,18 +5598,15 @@ namespace details {
         return reduce<ArCo::depth>(arr, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    //template <arrnd_complient ArCo, typename Binary_op>
-    //    requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
-    //[[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op)
-    //{
-    //    return arr.reduce(op);
-    //}
-
-    template <arrnd_complient ArCo, typename T, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, T, typename ArCo::value_type>
-    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, const T& init_value, Binary_op&& op)
+    template <std::int64_t Level, arrnd_complient ArCo, typename T, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func, Args&&... args)
     {
-        return arr.reduce(init_value, op);
+        return arr.fold<Level>(init, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo, typename T, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func, Args&&... args)
+    {
+        return fold<ArCo::depth>(arr, init, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
@@ -5547,19 +5622,17 @@ namespace details {
         return reduce<ArCo::depth>(arr, axis, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    //template <arrnd_complient ArCo, typename Binary_op>
-    //    requires std::is_invocable_v<Binary_op, typename ArCo::value_type, typename ArCo::value_type>
-    //[[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Binary_op&& op, typename ArCo::size_type axis)
-    //{
-    //    return arr.reduce(op, axis);
-    //}
-
-    template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Binary_op>
-        requires std::is_invocable_v<Binary_op, typename ArCo2::value_type, typename ArCo1::value_type>
-    [[nodiscard]] inline constexpr auto reduce(
-        const ArCo1& arr, const ArCo2& init_values, Binary_op&& op, typename ArCo1::size_type axis)
+    template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto fold(
+        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func, Args&&... args)
     {
-        return arr.reduce(init_values, op, axis);
+        return arr.fold<Level>(axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Func, typename... Args>
+    [[nodiscard]] inline constexpr auto fold(
+        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func, Args&&... args)
+    {
+        return fold<ArCo1::depth>(arr, axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo>
@@ -6955,6 +7028,7 @@ using details::any_match;
 using details::transform;
 using details::apply;
 using details::reduce;
+using details::fold;
 using details::all;
 using details::any;
 using details::filter;

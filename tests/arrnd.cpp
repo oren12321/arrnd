@@ -1197,32 +1197,31 @@ TEST(arrnd_test, reduce_elements)
 
     //EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, [](int value, double previous) {return previous + value; }, 3))); // assertion failure
 
-    //// reduction with initial value(s)
-    //{
-    //    oc::arrnd arr{{2, 3}, {1, 2, 5, 6, 10, 11}};
+    // reduction with initial value(s)
+    {
+        oc::arrnd arr{{2, 3}, {1, 2, 5, 6, 10, 11}};
 
-    //    std::string chain = oc::reduce(arr, std::string{}, [](const std::string& s, int n) {
-    //        return s + "-" + std::to_string(n);
-    //    });
-    //    EXPECT_EQ("-1-2-5-6-10-11", chain);
+        std::string chain = oc::fold(arr, std::string{}, [](const std::string& s, int n) {
+            return s + "-" + std::to_string(n);
+        });
+        EXPECT_EQ("-1-2-5-6-10-11", chain);
 
-    //    oc::arrnd<std::string> byaxis = oc::reduce(
-    //        arr[{{0, 1}, {2}}], oc::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
-    //        [](const std::string& s, int n) {
-    //            return s + "-" + std::to_string(n);
-    //        },
-    //        1);
-    //    EXPECT_TRUE(oc::all_equal(oc::arrnd{{2}, {std::string{"1-5"}, std::string{"6-11"}}}, byaxis));
-    //}
+        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 1}, {2}}], 1,
+            oc::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
+            [](const std::string& s, int n) {
+                return s + "-" + std::to_string(n);
+            });
+        EXPECT_TRUE(oc::all_equal(oc::arrnd{{2}, {std::string{"1-5"}, std::string{"6-11"}}}, byaxis));
+    }
 
-    //// complex array reduction
-    //{
-    //    auto sum = [](int value, double previous) {
-    //        return previous + value;
-    //    };
+    // complex array reduction
+    {
+        auto sum = [](int value, double previous) {
+            return previous + value;
+        };
 
-    //    EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(oc::reduce(oc::reduce(iarr, sum, 2), sum, 1), sum, 0)));
-    //}
+        EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(oc::reduce(oc::reduce(iarr, 2, sum), 1, sum), 0, sum)));
+    }
 
     // nested array
     {
@@ -1245,6 +1244,20 @@ TEST(arrnd_test, reduce_elements)
         auto r4 = oc::reduce<0>(inarr2, 1, std::plus<>{});
         EXPECT_TRUE(
             oc::all_equal(r4, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {8, 10, 12, 14, 16, 18})})));
+
+        auto r5 = oc::fold(inarr1, 2, std::plus<>{});
+        EXPECT_TRUE(oc::all_equal(r5, oc::arrnd<int>({1, 2}, {12, 28})));
+
+        auto r6 = oc::fold<0>(inarr1, oc::arrnd<int>({4}, 2), std::plus<>{});
+        EXPECT_TRUE(oc::all_equal(r6, oc::arrnd<int>({4}, {8, 10, 12, 14})));
+
+        auto r7 = oc::fold(inarr2, 0, oc::arrnd<int>({2}, 2), std::plus<>{});
+        EXPECT_TRUE(oc::all_equal(r7,
+            oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({1, 2}, {11, 14}), oc::arrnd<int>({1, 2}, {29, 32})})));
+
+        auto r8 = oc::fold<0>(inarr2, 1, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, 2)}), std::plus<>{});
+        EXPECT_TRUE(
+            oc::all_equal(r8, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {10, 12, 14, 16, 18, 20})})));
     }
 }
 
