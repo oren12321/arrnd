@@ -4882,9 +4882,10 @@ namespace details {
             });
         }
 
+        template <std::int64_t Level = this_type::depth>
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
         {
-            return reduce(axis, [](const auto& a, const auto& b) {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
                 return a && b;
             });
         }
@@ -4897,9 +4898,10 @@ namespace details {
             });
         }
 
+        template <std::int64_t Level = this_type::depth>
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
         {
-            return reduce(axis, [](const auto& a, const auto& b) {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
                 return a || b;
             });
         }
@@ -5647,10 +5649,16 @@ namespace details {
         return all<ArCo::depth>(arr);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.all<Level>(axis);
+    }
+
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.all(axis);
+        return all<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo>
@@ -5665,10 +5673,16 @@ namespace details {
         return any<ArCo::depth>(arr);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.any<Level>(axis);
+    }
+
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.any(axis);
+        return any<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
