@@ -3989,4 +3989,28 @@ TEST(arrnd_test, ostream_operator)
                   "   [10 12]]]]",
             ss.str());
     }
+
+    // nested array
+    {
+        std::stringstream ss;
+        ss << oc::arrnd<oc::arrnd<oc::arrnd<int>>>({2},
+            {oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>(), oc::arrnd<int>()}),
+                oc::arrnd<oc::arrnd<int>>({2, 2},
+                    {oc::arrnd<int>({5}, {1, 2, 3, 4, 5}),
+                        oc::arrnd<int>({2, 1, 2, 3}, {6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}), oc::arrnd<int>(),
+                        oc::arrnd<int>({4, 1}, {18, 19, 20, 21})})});
+        EXPECT_EQ("{{[]\n"
+                  "  []}\n"
+                  " {[1 2 3 4 5]\n"
+                  "  [[[[6 7 8]\n"
+                  "     [9 10 11]]]\n"
+                  "   [[[12 13 14]\n"
+                  "     [15 16 17]]]]\n"
+                  "  []\n"
+                  "  [[18]\n"
+                  "   [19]\n"
+                  "   [20]\n"
+                  "   [21]]}}",
+            ss.str());
+    }
 }

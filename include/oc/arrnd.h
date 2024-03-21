@@ -7129,40 +7129,60 @@ namespace details {
     }
 
     template <arrnd_complient ArCo>
-    std::ostream& ostream_operator_recursive(
-        std::ostream& os, const ArCo& arco, typename ArCo::size_type nvectical_spaces)
+    std::ostream& ostream_operator_recursive(std::ostream& os, const ArCo& arco,
+        typename ArCo::size_type nvectical_spaces, typename ArCo::size_type ndepth_spaces)
     {
+        constexpr auto block_start_char = ArCo::depth > 0 ? '{' : '[';
+        constexpr auto block_stop_char = ArCo::depth > 0 ? '}' : ']';
+
         if (empty(arco)) {
-            os << "[]";
+            os << block_start_char << block_stop_char;
             return os;
         }
 
-        if (std::ssize(arco.header().dims()) > 1) {
-            os << '[';
-            for (typename ArCo::size_type i = 0; i < arco.header().dims()[0]; ++i) {
-                if (i > 0) {
-                    for (typename ArCo::size_type i = 0;
-                         i < nvectical_spaces - (std::ssize(arco.header().dims()) - 1) + 1; ++i) {
+        if constexpr (ArCo::depth == 0) {
+            if (std::ssize(arco.header().dims()) > 1) {
+                os << block_start_char;
+                for (typename ArCo::size_type i = 0; i < arco.header().dims()[0]; ++i) {
+                    if (i > 0) {
+                        for (typename ArCo::size_type i = 0; i < ndepth_spaces + nvectical_spaces + 1; ++i) {
+                            os << ' ';
+                        }
+                    }
+                    ostream_operator_recursive(
+                        os, arco[interval<typename ArCo::size_type>{i, i}], nvectical_spaces + 1, ndepth_spaces);
+                    if (i < arco.header().dims()[0] - 1) {
+                        os << '\n';
+                    }
+                }
+                os << block_stop_char;
+                return os;
+            }
+
+            os << block_start_char;
+            typename ArCo::indexer_type gen(arco.header());
+            os << arco[*gen];
+            ++gen;
+            for (; gen; ++gen) {
+                os << ' ' << arco[*gen];
+            }
+            os << block_stop_char;
+        } else {
+            os << block_start_char;
+            typename ArCo::indexer_type gen(arco.header());
+            typename ArCo::size_type inner_count = 0;
+            for (; gen; ++gen) {
+                ostream_operator_recursive(os, arco[*gen], nvectical_spaces, ndepth_spaces + 1);
+                if (++inner_count < arco.header().numel()) {
+                    os << '\n';
+                    for (typename ArCo::size_type i = 0; i < ndepth_spaces + 1; ++i) {
                         os << ' ';
                     }
                 }
-                ostream_operator_recursive(os, arco[interval<typename ArCo::size_type>{i, i}], nvectical_spaces);
-                if (i < arco.header().dims()[0] - 1) {
-                    os << '\n';
-                }
             }
-            os << ']';
-            return os;
+            os << block_stop_char;
         }
 
-        os << '[';
-        typename ArCo::indexer_type gen(arco.header());
-        os << arco[*gen];
-        ++gen;
-        for (; gen; ++gen) {
-            os << ' ' << arco[*gen];
-        }
-        os << ']';
         return os;
     }
 
@@ -7172,8 +7192,9 @@ namespace details {
         arrnd<typename ArCo::value_type, typename ArCo::storage_type, typename ArCo::shared_ref_allocator_type,
             typename ArCo::header_type, arrnd_general_indexer>
             carco = arco;
-        typename ArCo::size_type nvectical_spaces = std::ssize(carco.header().dims()) - 1;
-        return ostream_operator_recursive(os, carco, nvectical_spaces);
+        typename ArCo::size_type nvectical_spaces = 0;
+        typename ArCo::size_type ndepth_spaces = 0;
+        return ostream_operator_recursive(os, carco, nvectical_spaces, ndepth_spaces);
     }
 }
 
