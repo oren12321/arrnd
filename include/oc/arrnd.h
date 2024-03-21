@@ -4753,6 +4753,31 @@ namespace details {
             return transpose<this_type::depth>(order.begin(), order.end());
         }
 
+        template <std::int64_t Depth>
+            requires(Depth == 0)
+        [[nodiscard]] constexpr auto nest() const
+        {
+            assert(hdr_.dims().size() > Depth);
+
+            return *this;
+        }
+        template <std::int64_t Depth>
+            requires(Depth > 0)
+        [[nodiscard]] constexpr auto nest() const
+        {
+            assert(hdr_.dims().size() > Depth);
+
+            using nested_type = replaced_type<decltype(nest<Depth - 1>())>;
+
+            nested_type res({hdr_.dims().front()});
+
+            for (std::int64_t i = 0; i < hdr_.dims().front(); ++i) {
+                res[i] = (*this)[interval<size_type>(i, i)].nest<Depth - 1>();
+            }
+
+            return res;
+        }
+
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(
                 Level == 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
@@ -5959,6 +5984,13 @@ namespace details {
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
     {
         return transpose<ArCo::depth>(arr, order.begin(), order.end());
+    }
+
+    template <std::int64_t Depth, arrnd_complient ArCo>
+        requires(Depth >= 0)
+    [[nodiscard]] constexpr auto nest(const ArCo& arr)
+    {
+        return arr.nest<Depth>();
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -7194,6 +7226,7 @@ using details::any;
 using details::filter;
 using details::find;
 using details::transpose;
+using details::nest;
 using details::close;
 using details::all_equal;
 using details::all_close;
