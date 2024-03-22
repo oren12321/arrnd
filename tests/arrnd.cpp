@@ -10,6 +10,7 @@
 #include <ostream>
 #include <charconv>
 #include <complex>
+#include <random>
 
 #include <oc/arrnd.h>
 
@@ -824,6 +825,23 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
     EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 0}, value}));
     EXPECT_TRUE(oc::empty(Integer_array{{0, 0, 1}, value}));
     EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 1}, value}));
+}
+
+TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
+{
+    std::random_device rd;
+    std::mt19937 gen;
+    std::uniform_int_distribution dist(0, 9);
+
+    auto urand_0to9 = [&](int factor) {
+        return dist(gen) * factor;
+    };
+
+    oc::arrnd<int> arr({3, 1, 2}, urand_0to9, 10);
+
+    EXPECT_TRUE(std::all_of(arr.cbegin(), arr.cend(), [](int a) {
+        return a >= 0 && a <= 90;
+    }));
 }
 
 TEST(arrnd_test, can_return_its_data)

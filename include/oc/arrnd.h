@@ -3256,6 +3256,31 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), value)
         { }
 
+        template <typename InputDimsIt, typename Func, typename... Args>
+            requires(std::input_iterator<InputDimsIt> && std::is_invocable_v<Func, Args...>)
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, Func&& func, Args&&... args)
+            : hdr_(first_dim, last_dim)
+            , buffsp_(hdr_.empty()
+                      ? nullptr
+                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
+        {
+            if (buffsp_) {
+                std::for_each(buffsp_->begin(), buffsp_->end(), [&func, &args...](auto& value) {
+                    value = func(std::forward<Args>(args)...);
+                });
+            }
+        }
+        template <iterable_of_type<size_type> Cont, typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, Args...>)
+        explicit constexpr arrnd(const Cont& dims, Func&& func, Args&&... args)
+            : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func), std::forward<Args>(args)...)
+        { }
+        template <typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, Args...>)
+        explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func, Args&&... args)
+            : arrnd(dims.begin(), dims.end(), std::forward<Func>(func), std::forward<Args>(args)...)
+        { }
+
         [[nodiscard]] constexpr const header_type& header() const noexcept
         {
             return hdr_;
