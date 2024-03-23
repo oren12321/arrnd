@@ -1659,6 +1659,11 @@ namespace details {
             return current_index_ == far.current_index_;
         }
 
+        [[nodiscard]] constexpr bool operator<(const arrnd_fixed_axis_ranger& far) const noexcept
+        {
+            return current_index_ < far.current_index_;
+        }
+
         [[nodiscard]] constexpr size_type fixed_axis() const noexcept
         {
             return fixed_axis_;
@@ -1772,6 +1777,11 @@ namespace details {
             return *gen_ == *(iter.gen_);
         }
 
+        [[nodiscard]] constexpr bool operator<(const arrnd_iterator& iter) const noexcept
+        {
+            return *gen_ < *(iter.gen_);
+        }
+
         [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
         {
             return data_[gen_[index]];
@@ -1875,6 +1885,11 @@ namespace details {
             return *gen_ == *(iter.gen_);
         }
 
+        [[nodiscard]] constexpr bool operator<(const arrnd_const_iterator& iter) const noexcept
+        {
+            return *gen_ < *(iter.gen_);
+        }
+
         [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
         {
             return data_[gen_[index]];
@@ -1968,7 +1983,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr reference operator*() noexcept
+        [[nodiscard]] constexpr reference operator*() const noexcept
         {
             return data_[*gen_];
         }
@@ -1976,6 +1991,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_reverse_iterator& iter) const noexcept
         {
             return *gen_ == *(iter.gen_);
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_reverse_iterator& iter) const noexcept
+        {
+            return *gen_ > *(iter.gen_);
         }
 
         [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
@@ -2071,7 +2091,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr const reference operator*() noexcept
+        [[nodiscard]] constexpr const reference operator*() const noexcept
         {
             return data_[*gen_];
         }
@@ -2079,6 +2099,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const noexcept
         {
             return *gen_ == *(iter.gen_);
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_const_reverse_iterator& iter) const noexcept
+        {
+            return *gen_ > *(iter.gen_);
         }
 
         [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
@@ -2177,7 +2202,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr reference operator*() noexcept
+        [[nodiscard]] constexpr reference operator*() const noexcept
         {
             slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
             return slice_;
@@ -2186,6 +2211,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_axis_iterator& iter) const noexcept
         {
             return far_ == iter.far_;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_axis_iterator& iter) const noexcept
+        {
+            return far_ < iter.far_;
         }
 
         [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
@@ -2203,7 +2233,7 @@ namespace details {
         value_type arrnd_ref_;
         ranger_type far_;
 
-        value_type slice_;
+        mutable value_type slice_;
     };
 
     template <arrnd_complient Arrnd>
@@ -2287,7 +2317,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr const_reference operator*() noexcept
+        [[nodiscard]] constexpr const_reference operator*() const noexcept
         {
             slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
             return slice_;
@@ -2296,6 +2326,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_axis_const_iterator& iter) const noexcept
         {
             return far_ == iter.far_;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_axis_const_iterator& iter) const noexcept
+        {
+            return far_ < iter.far_;
         }
 
         [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
@@ -2313,7 +2348,7 @@ namespace details {
         value_type arrnd_ref_;
         ranger_type far_;
 
-        value_type slice_;
+        mutable value_type slice_;
     };
 
     template <arrnd_complient Arrnd>
@@ -2397,7 +2432,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr reference operator*() noexcept
+        [[nodiscard]] constexpr reference operator*() const noexcept
         {
             slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
             return slice_;
@@ -2406,6 +2441,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_iterator& iter) const noexcept
         {
             return far_ == iter.far_;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_axis_reverse_iterator& iter) const noexcept
+        {
+            return far_ > iter.far_;
         }
 
         [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
@@ -2423,7 +2463,7 @@ namespace details {
         value_type arrnd_ref_;
         ranger_type far_;
 
-        value_type slice_;
+        mutable value_type slice_;
     };
 
     template <arrnd_complient Arrnd>
@@ -2509,7 +2549,7 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr const_reference operator*() noexcept
+        [[nodiscard]] constexpr const_reference operator*() const noexcept
         {
             slice_ = arrnd_ref_[std::make_pair((*far_).cbegin(), (*far_).cend())];
             return slice_;
@@ -2518,6 +2558,11 @@ namespace details {
         [[nodiscard]] constexpr bool operator==(const arrnd_axis_reverse_const_iterator& iter) const noexcept
         {
             return far_ == iter.far_;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_axis_reverse_const_iterator& iter) const noexcept
+        {
+            return far_ > iter.far_;
         }
 
         [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
@@ -2535,7 +2580,7 @@ namespace details {
         value_type arrnd_ref_;
         ranger_type far_;
 
-        value_type slice_;
+        mutable value_type slice_;
     };
 
     template <arrnd_complient Arrnd>

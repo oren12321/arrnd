@@ -763,6 +763,29 @@ TEST(arrnd_test, iterators_and_inserters)
     }
 }
 
+TEST(arrnd_test, sortable_using_iterators)
+{
+    oc::arrnd<int> arr({3, 1, 4}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
+
+    oc::arrnd<int> r1({3, 1, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});
+
+    auto c1 = arr.clone();
+    std::sort(c1.begin(), c1.end());
+    EXPECT_TRUE(oc::all_equal(c1, r1));
+
+    auto c2 = arr.clone();
+    std::sort(c2.cbegin(), c2.cend());
+    EXPECT_TRUE(oc::all_equal(c2, r1));
+
+    auto c3 = arr.clone();
+    std::sort(c3.rbegin(), c3.rend(), std::greater<>{});
+    EXPECT_TRUE(oc::all_equal(c3, r1));
+
+    auto c4 = arr.clone();
+    std::sort(c4.crbegin(), c4.crend(), std::greater<>{});
+    EXPECT_TRUE(oc::all_equal(c4, r1));
+}
+
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_array = oc::arrnd<int>;
