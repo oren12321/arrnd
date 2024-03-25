@@ -3645,7 +3645,7 @@ namespace details {
             indexer_type res_gen(res.hdr_);
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].reshape<Level - 1, InputIt>(first_new_dim, last_new_dim);
+                res[*res_gen] = (*this)[*gen].template reshape<Level - 1, InputIt>(first_new_dim, last_new_dim);
             }
 
             return res;
@@ -3715,7 +3715,7 @@ namespace details {
             indexer_type res_gen(res.hdr_);
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].resize<Level - 1, InputIt>(first_new_dim, last_new_dim);
+                res[*res_gen] = (*this)[*gen].template resize<Level - 1, InputIt>(first_new_dim, last_new_dim);
             }
 
             return res;
@@ -3764,7 +3764,7 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
         {
             if (empty()) {
-                return arr.reshape<Level>({arr.header().numel()}).clone();
+                return arr.template reshape<Level>({arr.header().numel()}).clone();
             }
 
             if (arr.empty()) {
@@ -3802,7 +3802,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
-                res[*res_gen] = (*this)[*gen].insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind);
+                res[*res_gen] = (*this)[*gen].template insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind);
             }
 
             return res;
@@ -3871,7 +3871,8 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
-                res[*res_gen] = (*this)[*gen].insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind, axis);
+                res[*res_gen]
+                    = (*this)[*gen].template insert<Level - 1, typename ArCo::value_type>(arr[*arr_gen], ind, axis);
             }
 
             return res;
@@ -3922,7 +3923,7 @@ namespace details {
             indexer_type res_gen(res.hdr_);
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].remove<Level - 1>(ind, count);
+                res[*res_gen] = (*this)[*gen].template remove<Level - 1>(ind, count);
             }
 
             return res;
@@ -3990,7 +3991,7 @@ namespace details {
             indexer_type res_gen(res.hdr_);
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].remove<Level - 1>(ind, count, axis);
+                res[*res_gen] = (*this)[*gen].template remove<Level - 1>(ind, count, axis);
             }
 
             return res;
@@ -4020,7 +4021,7 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].transform<Level - 1, Func, Args...>(
+                res[*res_gen].set_from((*this)[*gen].template transform<Level - 1, Func, Args...>(
                     std::forward<Func>(func), std::forward<Args>(args)...));
             }
 
@@ -4095,7 +4096,7 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].transform<Level - 1, ArCo, Func, Args...>(
+                res[*res_gen].set_from((*this)[*gen].template transform<Level - 1, ArCo, Func, Args...>(
                     arr, std::forward<Func>(func), std::forward<Args>(args)...));
             }
 
@@ -4165,7 +4166,8 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen].apply<Level - 1, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
+                (*this)[*gen].template apply<Level - 1, Func, Args...>(
+                    std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
             return *this;
@@ -4241,7 +4243,7 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen].apply<Level - 1, ArCo, Func, Args...>(
+                (*this)[*gen].template apply<Level - 1, ArCo, Func, Args...>(
                     arr, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -4303,7 +4305,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].reduce<Level - 1, Func, Args...>(
+                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func, Args...>(
                     std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -4355,7 +4357,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].fold<Level - 1, U, Func, Args...>(
+                res[*res_gen] = (*this)[*gen].template fold<Level - 1, U, Func, Args...>(
                     init, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -4432,7 +4434,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].reduce<Level - 1, Func, Args...>(
+                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func, Args...>(
                     axis, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -4509,7 +4511,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].fold<Level - 1, ArCo, Func, Args...>(
+                res[*res_gen] = (*this)[*gen].template fold<Level - 1, ArCo, Func, Args...>(
                     axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -4574,7 +4576,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].filter<Level - 1, Pred, Args...>(
+                res[*res_gen].set_from((*this)[*gen].template filter<Level - 1, Pred, Args...>(
                     std::forward<Pred>(pred), std::forward<Args>(args)...));
             }
 
@@ -4640,7 +4642,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].filter<Level - 1, ArCo>(mask));
+                res[*res_gen].set_from((*this)[*gen].template filter<Level - 1, ArCo>(mask));
             }
 
             return res;
@@ -4683,7 +4685,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize<Level>({res_count});
+                return res.template resize<Level>({res_count});
             }
 
             return res;
@@ -4705,7 +4707,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].find<Level - 1, Pred, Args...>(
+                res[*res_gen].set_from((*this)[*gen].template find<Level - 1, Pred, Args...>(
                     std::forward<Pred>(pred), std::forward<Args>(args)...));
             }
 
@@ -4754,7 +4756,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize<Level>({res_count});
+                return res.template resize<Level>({res_count});
             }
 
             return res;
@@ -4775,7 +4777,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].find<Level - 1, ArCo>(mask));
+                res[*res_gen].set_from((*this)[*gen].template find<Level - 1, ArCo>(mask));
             }
 
             return res;
@@ -4827,7 +4829,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].transpose<Level - 1, InputIt>(first_order, last_order));
+                res[*res_gen].set_from((*this)[*gen].template transpose<Level - 1, InputIt>(first_order, last_order));
             }
 
             return res;
@@ -4877,7 +4879,7 @@ namespace details {
             nested_type res({hdr_.dims().front()});
 
             for (std::int64_t i = 0; i < hdr_.dims().front(); ++i) {
-                res[i] = (*this)[interval<size_type>(i, i)].nest<Depth - 1>();
+                res[i] = (*this)[interval<size_type>(i, i)].template nest<Depth - 1>();
             }
 
             return res;
@@ -4911,7 +4913,7 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if (!(*this)[*gen].all_match<Level - 1, Pred, Args...>(
+                if (!(*this)[*gen].template all_match<Level - 1, Pred, Args...>(
                         std::forward<Pred>(pred), std::forward<Args>(args)...)) {
                     return false;
                 }
@@ -4979,7 +4981,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (!(*this)[*gen].all_match<Level - 1, typename ArCo::value_type, Pred, Args...>(
+                if (!(*this)[*gen].template all_match<Level - 1, typename ArCo::value_type, Pred, Args...>(
                         arr[*arr_gen], std::forward<Pred>(pred), std::forward<Args>(args)...)) {
                     return false;
                 }
@@ -5025,7 +5027,7 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if ((*this)[*gen].any_match<Level - 1, Pred, Args...>(
+                if ((*this)[*gen].template any_match<Level - 1, Pred, Args...>(
                         std::forward<Pred>(pred), std::forward<Args>(args)...)) {
                     return true;
                 }
@@ -5093,7 +5095,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if ((*this)[*gen].any_match<Level - 1, typename ArCo::value_type, Pred, Args...>(
+                if ((*this)[*gen].template any_match<Level - 1, typename ArCo::value_type, Pred, Args...>(
                         arr[*arr_gen], std::forward<Pred>(pred), std::forward<Args>(args)...)) {
                     return true;
                 }
@@ -5695,7 +5697,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.reshape<Level>(first_new_dim, last_new_dim);
+        return arr.template reshape<Level>(first_new_dim, last_new_dim);
     }
     template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
@@ -5712,7 +5714,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.reshape<ArCo::depth>(first_new_dim, last_new_dim);
+        return arr.template reshape<ArCo::depth>(first_new_dim, last_new_dim);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
@@ -5730,7 +5732,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.resize<Level>(first_new_dim, last_new_dim);
+        return arr.template resize<Level>(first_new_dim, last_new_dim);
     }
     template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
@@ -5747,7 +5749,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
     {
-        return arr.resize<ArCo::depth>(first_new_dim, last_new_dim);
+        return arr.template resize<ArCo::depth>(first_new_dim, last_new_dim);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
@@ -5776,7 +5778,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     {
-        return lhs.insert<Level>(rhs, ind);
+        return lhs.template insert<Level>(rhs, ind);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
@@ -5788,7 +5790,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto insert(
         const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis)
     {
-        return lhs.insert<Level>(rhs, ind, axis);
+        return lhs.template insert<Level>(rhs, ind, axis);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto insert(
@@ -5801,7 +5803,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto remove(
         const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
     {
-        return arr.remove<Level>(ind, count);
+        return arr.template remove<Level>(ind, count);
     }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto remove(
@@ -5814,7 +5816,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto remove(
         const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
     {
-        return arr.remove<Level>(ind, count, axis);
+        return arr.template remove<Level>(ind, count, axis);
     }
     template <arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto remove(
@@ -5832,7 +5834,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func, Args&&... args)
     {
-        return arr.reduce<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template reduce<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func, Args&&... args)
@@ -5843,7 +5845,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo, typename T, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func, Args&&... args)
     {
-        return arr.fold<Level>(init, std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template fold<Level>(init, std::forward<Func>(func), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo, typename T, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func, Args&&... args)
@@ -5855,7 +5857,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto reduce(
         const ArCo& arr, typename ArCo::size_type axis, Func&& func, Args&&... args)
     {
-        return arr.reduce<Level>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template reduce<Level>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto reduce(
@@ -5868,7 +5870,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto fold(
         const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func, Args&&... args)
     {
-        return arr.fold<Level>(axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template fold<Level>(axis, inits, std::forward<Func>(func), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto fold(
@@ -5880,7 +5882,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr bool all(const ArCo& arr)
     {
-        return arr.all<Level>();
+        return arr.template all<Level>();
     }
 
     template <arrnd_complient ArCo>
@@ -5892,7 +5894,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.all<Level>(axis);
+        return arr.template all<Level>(axis);
     }
 
     template <arrnd_complient ArCo>
@@ -5904,7 +5906,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr bool any(const ArCo& arr)
     {
-        return arr.any<Level>();
+        return arr.template any<Level>();
     }
 
     template <arrnd_complient ArCo>
@@ -5916,7 +5918,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo>
     [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.any<Level>(axis);
+        return arr.template any<Level>(axis);
     }
 
     template <arrnd_complient ArCo>
@@ -5929,14 +5931,14 @@ namespace details {
         requires std::is_invocable_v<Func, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args)
     {
-        return arr.transform<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template transform<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Func, typename... Args>
         requires arrnd_complient<U>
     [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func, Args&&... args)
     {
-        return lhs.transform<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
+        return lhs.template transform<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <arrnd_complient ArCo, typename Func, typename... Args>
@@ -5957,14 +5959,14 @@ namespace details {
         requires std::is_invocable_v<Func, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     inline constexpr auto& apply(ArCo&& arr, Func&& func, Args&&... args)
     {
-        return arr.apply<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template apply<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Func, typename... Args>
         requires arrnd_complient<U>
     inline constexpr auto& apply(ArCo&& lhs, const U& rhs, Func&& func, Args&&... args)
     {
-        return lhs.apply<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
+        return lhs.template apply<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <arrnd_complient ArCo, typename Func, typename... Args>
@@ -5987,14 +5989,14 @@ namespace details {
         requires std::is_invocable_v<Func, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     inline constexpr auto& apply(ArCo& arr, Func&& func, Args&&... args)
     {
-        return arr.apply<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template apply<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Func, typename... Args>
         requires arrnd_complient<U>
     inline constexpr auto& apply(ArCo& lhs, const U& rhs, Func&& func, Args&&... args)
     {
-        return lhs.apply<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
+        return lhs.template apply<Level>(rhs, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <arrnd_complient ArCo, typename Func, typename... Args>
@@ -6015,7 +6017,7 @@ namespace details {
         requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>)
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.filter<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return arr.template filter<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo, typename Pred, typename... Args>
         requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, ArCo::depth>::value_type, Args...>)
@@ -6027,7 +6029,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
     {
-        return arr.filter<Level>(mask);
+        return arr.template filter<Level>(mask);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
@@ -6039,7 +6041,7 @@ namespace details {
         requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>)
     [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.find<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return arr.template find<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
     template <arrnd_complient ArCo, typename Pred, typename... Args>
         requires(std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, ArCo::depth>::value_type, Args...>)
@@ -6051,7 +6053,7 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto find(const ArCo1& arr, const ArCo2& mask)
     {
-        return arr.find<Level>(mask);
+        return arr.template find<Level>(mask);
     }
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     [[nodiscard]] inline constexpr auto find(const ArCo1& arr, const ArCo2& mask)
@@ -6063,7 +6065,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
     {
-        return arr.transpose<Level>(first_order, last_order);
+        return arr.template transpose<Level>(first_order, last_order);
     }
     template <std::int64_t Level, arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
@@ -6080,7 +6082,7 @@ namespace details {
         requires std::is_same_v<typename ArCo::size_type, iterator_value_type<InputIt>>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
     {
-        return arr.transpose<ArCo::depth>(first_order, last_order);
+        return arr.template transpose<ArCo::depth>(first_order, last_order);
     }
     template <arrnd_complient ArCo, iterable_of_type<typename ArCo::size_type> Cont>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
@@ -6098,7 +6100,7 @@ namespace details {
         requires(Depth >= 0)
     [[nodiscard]] constexpr auto nest(const ArCo& arr)
     {
-        return arr.nest<Depth>();
+        return arr.template nest<Depth>();
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -6156,7 +6158,7 @@ namespace details {
         const typename ArCo1::template complient_tol_type<ArCo2>& rtol
         = default_rtol<typename ArCo1::template complient_tol_type<ArCo2>>())
     {
-        return lhs.close<ArCo1::depth>(rhs, atol, rtol);
+        return lhs.template close<ArCo1::depth>(rhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo, typename T>
@@ -6165,7 +6167,7 @@ namespace details {
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return lhs.close<ArCo::depth>(rhs, atol, rtol);
+        return lhs.template close<ArCo::depth>(rhs, atol, rtol);
     }
 
     template <typename T, arrnd_complient ArCo>
@@ -6174,7 +6176,7 @@ namespace details {
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return rhs.close<ArCo::depth>(lhs, atol, rtol);
+        return rhs.template close<ArCo::depth>(lhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -7016,14 +7018,14 @@ namespace details {
         requires std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.all_match<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return arr.template all_match<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
-        return lhs.all_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return lhs.template all_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <arrnd_complient ArCo, typename Pred, typename... Args>
@@ -7044,14 +7046,14 @@ namespace details {
         requires std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo>::value_type, Args...>
     [[nodiscard]] inline constexpr bool any_match(const ArCo& arr, Pred&& pred, Args&&... args)
     {
-        return arr.any_match<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return arr.template any_match<Level>(std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename U, typename Pred, typename... Args>
         requires arrnd_complient<U>
     [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred, Args&&... args)
     {
-        return lhs.any_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return lhs.template any_match<Level>(rhs, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <arrnd_complient ArCo, typename Pred, typename... Args>
@@ -7071,14 +7073,14 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr bool all_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs.all_equal<Level>(rhs);
+        return lhs.template all_equal<Level>(rhs);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
         requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool all_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs.all_equal<Level>(lhs);
+        return rhs.template all_equal<Level>(lhs);
     }
 
     template <arrnd_complient ArCo, typename T>
@@ -7101,7 +7103,7 @@ namespace details {
         const typename ArCo1::template complient_tol_type<ArCo2, Level>& rtol
         = default_rtol<typename ArCo1::template complient_tol_type<ArCo2, Level>>())
     {
-        return lhs.all_close<Level>(rhs, atol, rtol);
+        return lhs.template all_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
@@ -7112,7 +7114,7 @@ namespace details {
         const typename ArCo::template tol_type<T, Level>& rtol
         = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
-        return lhs.all_close<Level>(rhs, atol, rtol);
+        return lhs.template all_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
@@ -7123,7 +7125,7 @@ namespace details {
         const typename ArCo::template tol_type<T, Level>& rtol
         = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
-        return rhs.all_close<Level>(lhs, atol, rtol);
+        return rhs.template all_close<Level>(lhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -7157,14 +7159,14 @@ namespace details {
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs.any_equal<Level>(rhs);
+        return lhs.template any_equal<Level>(rhs);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
         requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool any_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs.any_equal<Level>(lhs);
+        return rhs.template any_equal<Level>(lhs);
     }
 
     template <arrnd_complient ArCo, typename T>
@@ -7187,7 +7189,7 @@ namespace details {
         const typename ArCo1::template complient_tol_type<ArCo2, Level>& rtol
         = default_rtol<typename ArCo1::template complient_tol_type<ArCo2, Level>>())
     {
-        return lhs.any_close<Level>(rhs, atol, rtol);
+        return lhs.template any_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, typename T>
@@ -7197,7 +7199,7 @@ namespace details {
         const typename ArCo::template tol_type<T, Level>& rtol
         = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
-        return lhs.any_close<Level>(rhs, atol, rtol);
+        return lhs.template any_close<Level>(rhs, atol, rtol);
     }
 
     template <std::int64_t Level, typename T, arrnd_complient ArCo>
@@ -7207,7 +7209,7 @@ namespace details {
         const typename ArCo::template tol_type<T, Level>& rtol
         = default_rtol<typename ArCo::template tol_type<T, Level>>())
     {
-        return rhs.any_close<Level>(lhs, atol, rtol);
+        return rhs.template any_close<Level>(lhs, atol, rtol);
     }
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
@@ -7221,6 +7223,7 @@ namespace details {
     }
 
     template <arrnd_complient ArCo, typename T>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
@@ -7229,6 +7232,7 @@ namespace details {
     }
 
     template <typename T, arrnd_complient ArCo>
+        requires(!arrnd_complient<T>)
     [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
@@ -7297,7 +7301,7 @@ namespace details {
     template <arrnd_complient ArCo>
     inline constexpr std::ostream& operator<<(std::ostream& os, const ArCo& arco)
     {
-        arrnd<typename ArCo::value_type, typename ArCo::storage_type, typename ArCo::shared_ref_allocator_type,
+        arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
             typename ArCo::header_type, arrnd_general_indexer>
             carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
