@@ -2747,6 +2747,69 @@ TEST(arrnd_test, can_return_slice)
     }
 }
 
+TEST(arrnd_test, can_access_its_creators_chain_if_available)
+{
+    using namespace oc;
+
+    // basic chain
+    {
+        arrnd<int> arr({2, 4}, 0);
+        EXPECT_EQ(nullptr, arr.creator());
+
+        auto sarr1 = arr[interval<>::at(0)];
+        auto sarr2 = sarr1[interval<>::at(0)];
+
+        EXPECT_EQ(&sarr1, sarr2.creator());
+        EXPECT_EQ(&arr, sarr2.creator()->creator());
+
+        auto sarr3 = arr[interval<>::at(0)][interval<>::at(0)];
+        // mid subarray is an rvalue, which is being destructed, hence sarr3 creator is invalid.
+        EXPECT_EQ(nullptr, sarr3.creator());
+    }
+    {
+        arrnd<int> arr({2, 4}, 0);
+        EXPECT_EQ(nullptr, arr.creator());
+
+        auto sarr1 = arr[{interval<>::at(0)}];
+        auto sarr2 = sarr1[{interval<>::at(0)}];
+
+        EXPECT_EQ(&sarr1, sarr2.creator());
+        EXPECT_EQ(&arr, sarr2.creator()->creator());
+
+        auto sarr3 = arr[{interval<>::at(0)}][{interval<>::at(0)}];
+        // mid subarray is an rvalue, which is being destructed, hence sarr3 creator is invalid.
+        EXPECT_EQ(nullptr, sarr3.creator());
+    }
+
+    // out of scope
+    {
+        arrnd<int> arr({2, 4}, 0);
+        EXPECT_EQ(nullptr, arr.creator());
+
+        arrnd<int> sarr2;
+        EXPECT_EQ(nullptr, sarr2.creator());
+        {
+            arrnd<int> sarr1 = arr[interval<>::at(0)];
+            EXPECT_EQ(&arr, sarr1.creator());
+
+            sarr2 = sarr1[interval<>::at(0)];
+            EXPECT_EQ(&sarr1, sarr2.creator());
+        }
+        EXPECT_EQ(nullptr, sarr2.creator());
+    }
+
+    // self assignment
+    {
+        arrnd<int> arr({2, 4}, 0);
+        EXPECT_EQ(nullptr, arr.creator());
+
+        arrnd<int> sarr1 = arr[interval<>::at(0)];
+        sarr1 = sarr1[interval<>::at(0)];
+        // self assignment cancels creator
+        EXPECT_EQ(nullptr, sarr1.creator());
+    }
+}
+
 TEST(arrnd_test, can_be_assigned_with_value)
 {
     using Integer_array = oc::arrnd<int>;

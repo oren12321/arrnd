@@ -3346,6 +3346,11 @@ namespace details {
             return buffsp_;
         }
 
+        [[nodiscard]] constexpr const this_type* creator() const noexcept
+        {
+            return is_creator_valid_.expired() ? nullptr : creator_;
+        }
+
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
             assert(index >= hdr_.offset() && index <= hdr_.last_index());
@@ -3391,7 +3396,18 @@ namespace details {
 
         template <typename InputIt>
             requires std::is_same_v<interval<size_type>, iterator_value_type<InputIt>>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&
+        {
+            this_type slice{};
+            slice.hdr_ = hdr_.subheader(ranges.first, ranges.second);
+            slice.buffsp_ = buffsp_;
+            slice.is_creator_valid_ = original_valid_creator_;
+            slice.creator_ = this;
+            return slice;
+        }
+        template <typename InputIt>
+            requires std::is_same_v<interval<size_type>, iterator_value_type<InputIt>>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&&
         {
             this_type slice{};
             slice.hdr_ = hdr_.subheader(ranges.first, ranges.second);
@@ -3399,17 +3415,36 @@ namespace details {
             return slice;
         }
         template <iterable_of_type<interval<size_type>> Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&
         {
             return (*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
         }
+        template <iterable_of_type<interval<size_type>> Cont>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&&
+        {
+            return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+        }
         [[nodiscard]] constexpr shared_ref<this_type> operator[](
-            std::initializer_list<interval<size_type>> ranges) const
+            std::initializer_list<interval<size_type>> ranges) const&
         {
             return (*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](
+            std::initializer_list<interval<size_type>> ranges) const&&
+        {
+            return std::move(*this)[std::make_pair(ranges.begin(), ranges.end())];
+        }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const&
+        {
+            this_type slice{};
+            slice.hdr_ = hdr_.subheader(range);
+            slice.buffsp_ = buffsp_;
+            slice.is_creator_valid_ = original_valid_creator_;
+            slice.creator_ = this;
+            return slice;
+        }
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const&&
         {
             this_type slice{};
             slice.hdr_ = hdr_.subheader(range);
@@ -5609,6 +5644,9 @@ namespace details {
     private:
         header_type hdr_{};
         std::shared_ptr<storage_type> buffsp_{nullptr};
+        std::shared_ptr<bool> original_valid_creator_ = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
+        std::weak_ptr<bool> is_creator_valid_{};
+        const this_type* creator_ = nullptr;
     };
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
