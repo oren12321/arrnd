@@ -786,6 +786,49 @@ TEST(arrnd_test, sortable_using_iterators)
     EXPECT_TRUE(oc::all_equal(c4, r1));
 }
 
+TEST(arrnd_test, swap_array)
+{
+    using oc::swap;
+    using std::swap;
+
+    oc::arrnd<int> arr1({2}, {1, 2});
+    oc::arrnd<int> arr2({4}, {3, 4, 5, 6});
+
+    int x = 0;
+    int y = 1;
+    swap(x, y); // use std::swap;
+    EXPECT_EQ(x, 1);
+    EXPECT_EQ(y, 0);
+
+    swap(arr1, arr2); // use oc::swap
+    EXPECT_TRUE(oc::all_equal(arr1, oc::arrnd<int>({4}, {3, 4, 5, 6})));
+    EXPECT_TRUE(oc::all_equal(arr2, oc::arrnd<int>({2}, {1, 2})));
+
+    swap(arr1[{oc::interval<>::at(0)}], oc::arrnd<int>{}); // no swapping between arrays
+    EXPECT_TRUE(oc::all_equal(arr1, oc::arrnd<int>({4}, {3, 4, 5, 6})));
+    EXPECT_TRUE(oc::all_equal(arr2, oc::arrnd<int>({2}, {1, 2})));
+}
+
+TEST(arrnd_test, array_copyable_view)
+{
+    using namespace oc;
+
+    arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+    // can create an array view
+    arrnd<int>::view_type arrv1 = arr[interval<>::at(0)];
+
+    // can be cast to array view
+    arrnd<int>::view_type arrv2 = arr[interval<>::at(1)];
+
+    swap(arrv1, arrv2);
+    EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 1, 2}, {3, 4, 1, 2, 5, 6})));
+
+    swap(static_cast<arrnd<int>::view_type>(arr[interval<>::at(0)]),
+        static_cast<arrnd<int>::view_type>(arr[interval<>::at(1)]));
+    EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})));
+}
+
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_array = oc::arrnd<int>;

@@ -3038,6 +3038,103 @@ namespace details {
     template <typename T, typename R, std::int64_t Level>
     using replaced_inner_type_t = replaced_inner_type<T, R, Level>::type;
 
+    /**
+    * @note class that enables copying between viewes, and can be cast to arrnd type
+    * @note usable e.g. for sorting array slices
+    */
+    template <arrnd_complient ArCo>
+    class arrnd_view {
+    public:
+        using value_type = ArCo;
+        using reference = ArCo&;
+        using const_reference = const ArCo&;
+
+        explicit arrnd_view(const_reference arr)
+            : arr_(arr)
+        { }
+
+        arrnd_view() = delete;
+
+        arrnd_view(arrnd_view&&) = delete;
+        arrnd_view& operator=(arrnd_view&& other)
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            arr_.copy_from(other.arr_);
+            (void)std::move(other);
+            return *this;
+        }
+        template <arrnd_complient U>
+        arrnd_view& operator=(arrnd_view<U>&& other)
+        {
+            arr_.copy_from(static_cast<U>(other));
+            (void)std::move(other);
+            return *this;
+        }
+
+        arrnd_view(const arrnd_view&) = delete;
+        arrnd_view& operator=(const arrnd_view& other)
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            arr_.copy_from(other.arr_);
+            return *this;
+        }
+        template <arrnd_complient U>
+        arrnd_view& operator=(const arrnd_view<U>& other)
+        {
+            arr_.copy_from(static_cast<U>(other));
+            return *this;
+        }
+
+        [[nodiscard]] constexpr reference inner_arrnd() const noexcept
+        {
+            return arr_;
+        }
+
+        [[nodiscard]] constexpr operator reference() const noexcept
+        {
+            return inner_arrnd();
+        }
+
+        /**
+        * @note this special case of swap perform a swap between the values of the inner array
+        * @note there is no swap between the inner arrays
+        */
+        template <arrnd_complient U>
+        void swap(arrnd_view<U>& other)
+        {
+            U tmp = arr_.clone();
+            arr_.copy_from(other.inner_arrnd());
+            other.inner_arrnd().copy_from(tmp);
+        }
+        template <arrnd_complient U>
+        void swap(arrnd_view<U>&& other)
+        {
+            U tmp = arr_.clone();
+            arr_.copy_from(other.inner_arrnd());
+            other.inner_arrnd().copy_from(tmp);
+        }
+
+    private:
+        mutable value_type arr_;
+    };
+
+    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+    void swap(arrnd_view<ArCo1>& lhs, arrnd_view<ArCo2>& rhs)
+    {
+        lhs.swap(rhs);
+    }
+    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+    void swap(arrnd_view<ArCo1>&& lhs, arrnd_view<ArCo2>&& rhs)
+    {
+        lhs.swap(std::move(rhs));
+    }
+
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
         arrnd_header_complient Header = arrnd_header<>, template <typename> typename Indexer = arrnd_general_indexer>
@@ -3090,6 +3187,8 @@ namespace details {
         template <arrnd_complient ArCo, std::int64_t Level = this_type::depth>
         using complient_tol_type = decltype(typename arrnd_inner_t<this_type, Level>::value_type{} -
             typename arrnd_inner_t<ArCo, Level>::value_type{});
+
+        using view_type = arrnd_view<this_type>;
 
         constexpr arrnd() = default;
 
@@ -3325,6 +3424,31 @@ namespace details {
         explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func, Args&&... args)
             : arrnd(dims.begin(), dims.end(), std::forward<Func>(func), std::forward<Args>(args)...)
         { }
+
+        template <arrnd_complient ArCo>
+        void swap(ArCo& other)
+        {
+            arrnd tmp = std::move(*this);
+            *this = std::move(other);
+            other = std::move(tmp);
+        }
+        template <arrnd_complient ArCo>
+        void swap(ArCo&& other)
+        {
+            arrnd tmp = std::move(*this);
+            *this = std::move(other);
+            other = std::move(tmp);
+        }
+
+        [[nodiscard]] constexpr view_type view() const noexcept
+        {
+            return view_type(*this);
+        }
+
+        [[nodiscard]] constexpr operator view_type() const noexcept
+        {
+            return view();
+        }
 
         [[nodiscard]] constexpr const header_type& header() const noexcept
         {
@@ -5652,6 +5776,17 @@ namespace details {
     };
 
     template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+    void swap(ArCo1& lhs, ArCo2& rhs)
+    {
+        lhs.swap(std::move(rhs));
+    }
+    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
+    void swap(ArCo1&& lhs, ArCo2&& rhs)
+    {
+        lhs.swap(std::move(rhs));
+    }
+
+    template <arrnd_complient ArCo1, arrnd_complient ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
     {
         return dst.copy_from(src);
@@ -7337,7 +7472,9 @@ using details::arrnd_axis_front_inserter;
 using details::arrnd_axis_inserter;
 
 using details::arrnd;
+using details::arrnd_view;
 
+using details::swap;
 using details::copy;
 using details::set;
 using details::clone;
