@@ -809,6 +809,26 @@ TEST(arrnd_test, swap_array)
     EXPECT_TRUE(oc::all_equal(arr2, oc::arrnd<int>({2}, {1, 2})));
 }
 
+TEST(arrnd_test, expand)
+{
+    using namespace oc;
+
+    EXPECT_TRUE(all_equal(expand(arrnd<int>(), 0), arrnd<arrnd<int>>()));
+
+    arrnd<arrnd<int>> narr({2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
+
+    EXPECT_TRUE(all_equal(expand(narr, 0),
+        arrnd<arrnd<arrnd<int>>>({2, 1},
+            {arrnd<arrnd<int>>(
+                 {3}, {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6})}),
+                arrnd<arrnd<int>>({2}, {arrnd<int>({1, 3}, {1, 2, 3}), arrnd<int>({1, 3}, {4, 5, 6})})})));
+
+    EXPECT_TRUE(all_equal(expand<0>(narr, 0),
+        arrnd<arrnd<arrnd<int>>>({2},
+            {arrnd<arrnd<int>>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
+                arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
+}
+
 TEST(arrnd_test, array_copyable_view)
 {
     using namespace oc;

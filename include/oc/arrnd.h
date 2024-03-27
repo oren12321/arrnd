@@ -5009,6 +5009,57 @@ namespace details {
             return res;
         }
 
+        template <std::int64_t Level>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto expand(size_type axis) const
+        {
+            using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
+
+            if (empty()) {
+                return expanded_type();
+            }
+
+            expanded_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename expanded_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(axis);
+            }
+
+            return res;
+        }
+
+        template <std::int64_t Level>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto expand(size_type axis) const
+        {
+            using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
+
+            if (empty()) {
+                return expanded_type();
+            }
+
+            assert(axis >= 0 && axis < hdr_.dims().size());
+
+            expanded_type res({*std::next(hdr_.dims().cbegin(), axis)});
+            typename expanded_type::indexer_type res_gen(res.header());
+
+            ranger_type rgr(hdr_, axis);
+
+            for (; res_gen && rgr; ++res_gen, ++rgr) {
+                res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
+            }
+
+            return res;
+        }
+
+        [[nodiscard]] constexpr auto expand(size_type axis) const
+        {
+            return expand<this_type::depth>(axis);
+        }
+
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(
                 Level == 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
@@ -7149,6 +7200,17 @@ namespace details {
         return operator--(arr, int{});
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.template expand<Level>(axis);
+    }
+    template <arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return expand<ArCo::depth>(arr, axis);
+    }
+
     template <std::int64_t Level, arrnd_complient ArCo, typename Pred, typename... Args>
         requires std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
@@ -7485,6 +7547,7 @@ using details::insert;
 using details::remove;
 
 using details::empty;
+using details::expand;
 using details::all_match;
 using details::any_match;
 using details::transform;
