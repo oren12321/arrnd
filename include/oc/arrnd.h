@@ -4053,8 +4053,8 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template transform<Level - 1, Func, Args...>(
-                    std::forward<Func>(func), std::forward<Args>(args)...));
+                res[*res_gen] = (*this)[*gen].template transform<Level - 1, Func, Args...>(
+                    std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
             return res;
@@ -4080,11 +4080,7 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                if constexpr (arrnd_complient<typename transformed_type::value_type>) {
-                    res[*res_gen].set_from(func((*this)[*gen], std::forward<Args>(args)...));
-                } else {
-                    res[*res_gen] = func((*this)[*gen], std::forward<Args>(args)...);
-                }
+                res[*res_gen] = func((*this)[*gen], std::forward<Args>(args)...);
             }
 
             return res;
@@ -4128,8 +4124,8 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template transform<Level - 1, ArCo, Func, Args...>(
-                    arr, std::forward<Func>(func), std::forward<Args>(args)...));
+                res[*res_gen] = (*this)[*gen].template transform<Level - 1, ArCo, Func, Args...>(
+                    arr, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
             return res;
@@ -4165,11 +4161,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
-                if constexpr (arrnd_complient<typename transformed_type::value_type>) {
-                    res[*res_gen].set_from(func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...));
-                } else {
-                    res[*res_gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
-                }
+                res[*res_gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
             }
 
             return res;
@@ -4215,11 +4207,7 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if constexpr (arrnd_complient<value_type>) {
-                    (*this)[*gen].set_from(func((*this)[*gen], std::forward<Args>(args)...));
-                } else {
-                    (*this)[*gen] = func((*this)[*gen], std::forward<Args>(args)...);
-                }
+                (*this)[*gen] = func((*this)[*gen], std::forward<Args>(args)...);
             }
 
             return *this;
@@ -4250,11 +4238,7 @@ namespace details {
             typename std::remove_cvref_t<ArCo>::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if constexpr (arrnd_complient<value_type>) {
-                    (*this)[*gen].set_from(func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...));
-                } else {
-                    (*this)[*gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
-                }
+                (*this)[*gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
             }
 
             return *this;
@@ -4608,8 +4592,8 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template filter<Level - 1, Pred, Args...>(
-                    std::forward<Pred>(pred), std::forward<Args>(args)...));
+                res[*res_gen] = (*this)[*gen].template filter<Level - 1, Pred, Args...>(
+                    std::forward<Pred>(pred), std::forward<Args>(args)...);
             }
 
             return res;
@@ -4674,7 +4658,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template filter<Level - 1, ArCo>(mask));
+                res[*res_gen] = (*this)[*gen].template filter<Level - 1, ArCo>(mask);
             }
 
             return res;
@@ -4739,8 +4723,8 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template find<Level - 1, Pred, Args...>(
-                    std::forward<Pred>(pred), std::forward<Args>(args)...));
+                res[*res_gen] = (*this)[*gen].template find<Level - 1, Pred, Args...>(
+                    std::forward<Pred>(pred), std::forward<Args>(args)...);
             }
 
             return res;
@@ -4809,7 +4793,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template find<Level - 1, ArCo>(mask));
+                res[*res_gen] = (*this)[*gen].template find<Level - 1, ArCo>(mask);
             }
 
             return res;
@@ -4861,7 +4845,7 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen].set_from((*this)[*gen].template transpose<Level - 1, InputIt>(first_order, last_order));
+                res[*res_gen] = (*this)[*gen].template transpose<Level - 1, InputIt>(first_order, last_order);
             }
 
             return res;
