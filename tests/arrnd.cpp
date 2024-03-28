@@ -763,7 +763,7 @@ TEST(arrnd_test, iterators_and_inserters)
     }
 }
 
-TEST(arrnd_test, sortable_using_iterators)
+TEST(arrnd_test, basic_sorting_using_std_sort_and_iterators)
 {
     oc::arrnd<int> arr({3, 1, 4}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
 
@@ -784,6 +784,70 @@ TEST(arrnd_test, sortable_using_iterators)
     auto c4 = arr.clone();
     std::sort(c4.crbegin(), c4.crend(), std::greater<>{});
     EXPECT_TRUE(oc::all_equal(c4, r1));
+}
+
+TEST(arrnd_test, sort)
+{
+    using namespace oc;
+
+    {
+        auto dummy_less = [](const auto&, const auto&) {
+            return true;
+        };
+        EXPECT_TRUE(all_equal(sort(arrnd<int>(), dummy_less), arrnd<int>()));
+        EXPECT_TRUE(all_equal(sort(arrnd<int>(), 0, dummy_less), arrnd<int>()));
+        EXPECT_TRUE(all_equal(sort<0>(arrnd<arrnd<int>>(), dummy_less), arrnd<arrnd<int>>()));
+        EXPECT_TRUE(all_equal(sort<1>(arrnd<arrnd<int>>(), dummy_less), arrnd<arrnd<int>>()));
+        EXPECT_TRUE(all_equal(sort<0>(arrnd<arrnd<int>>(), 0, dummy_less), arrnd<arrnd<int>>()));
+        EXPECT_TRUE(all_equal(sort<1>(arrnd<arrnd<int>>(), 0, dummy_less), arrnd<arrnd<int>>()));
+    }
+
+    arrnd<arrnd<int>> iarr({1, 2},
+        {arrnd<int>({6, 4}, {2, 5, 4, 7, 6, 3, 9, 2, 1, 3, 5, 5, 8, 4, 3, 5, 7, 4, 2, 8, 5, 6, 2, 3}),
+            arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6})});
+
+    auto sum_less = [](const auto& lhs, const auto& rhs) {
+        return std::reduce(lhs.cbegin(), lhs.cend(), 0, std::plus<>{})
+            < std::reduce(rhs.cbegin(), rhs.cend(), 0, std::plus{});
+    };
+
+    // standard sort
+    {
+        auto sarr1 = sort(iarr, std::less<>{});
+        EXPECT_TRUE(all_equal(sarr1,
+            arrnd<arrnd<int>>({1, 2},
+                {arrnd<int>({6, 4}, {1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9}),
+                    arrnd<int>({3, 1, 2}, {2, 3, 4, 6, 6, 8})})));
+
+        auto sarr2 = sort<0>(iarr, sum_less);
+        EXPECT_TRUE(all_equal(sarr2,
+            arrnd<arrnd<int>>({1, 2},
+                {arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6}),
+                    arrnd<int>({6, 4}, {2, 5, 4, 7, 6, 3, 9, 2, 1, 3, 5, 5, 8, 4, 3, 5, 7, 4, 2, 8, 5, 6, 2, 3})})));
+    }
+
+    // sort by axis
+    {
+        auto sarr1 = sort(iarr, 0, sum_less);
+        EXPECT_TRUE(all_equal(sarr1,
+            arrnd<arrnd<int>>({1, 2},
+                {arrnd<int>({6, 4}, {1, 3, 5, 5, 5, 6, 2, 3, 2, 5, 4, 7, 6, 3, 9, 2, 8, 4, 3, 5, 7, 4, 2, 8}),
+                    arrnd<int>({3, 1, 2}, {3, 6, 4, 6, 8, 2})})));
+
+        auto sarr2 = sort(iarr, 1, sum_less);
+        EXPECT_TRUE(all_equal(sarr2,
+            arrnd<arrnd<int>>({1, 2},
+                {arrnd<int>({6, 4}, {5, 4, 2, 7, 3, 9, 6, 2, 3, 5, 1, 5, 4, 3, 8, 5, 4, 2, 7, 8, 6, 2, 5, 3}),
+                    arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6})})));
+
+        auto sarr3 = sort<0>(iarr, 1, [sum_less](const auto& lhs, const auto& rhs) {
+            return sum_less(lhs[0], rhs[0]);
+        });
+        EXPECT_TRUE(all_equal(sarr3,
+            arrnd<arrnd<int>>({1, 2},
+                {arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6}),
+                    arrnd<int>({6, 4}, {2, 5, 4, 7, 6, 3, 9, 2, 1, 3, 5, 5, 8, 4, 3, 5, 7, 4, 2, 8, 5, 6, 2, 3})})));
+    }
 }
 
 TEST(arrnd_test, expand)
