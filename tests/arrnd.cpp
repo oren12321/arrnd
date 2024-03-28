@@ -806,6 +806,61 @@ TEST(arrnd_test, expand)
                 arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
 }
 
+TEST(arrnd_test, squeeze)
+{
+    using namespace oc;
+
+    {
+        arrnd<int> arr;
+        auto sarr = squeeze(arr);
+        EXPECT_TRUE(all_equal(sarr, arrnd<int>()));
+        EXPECT_FALSE(sarr.header().is_sliced());
+    }
+
+    {
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+        auto sarr = squeeze(arr);
+        EXPECT_TRUE(all_equal(sarr, arr));
+        EXPECT_FALSE(sarr.header().is_sliced());
+    }
+
+    {
+        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+        auto sarr = squeeze(arr);
+        EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6})));
+        EXPECT_TRUE(sarr.header().is_sliced());
+    }
+
+    {
+        arrnd<int> arr(
+            {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<int> slice = arr[{interval<>::at(1), interval<>::full(2), interval<>::between(0, 1)}];
+
+        EXPECT_TRUE(all_equal(slice, arrnd<int>({1, 2, 2}, {9, 10, 13, 14})));
+
+        arrnd<int> sarr = squeeze(slice);
+        EXPECT_TRUE(all_equal(sarr, arrnd<int>({2, 2}, {9, 10, 13, 14})));
+        EXPECT_TRUE(sarr.header().is_sliced());
+    }
+
+    {
+        arrnd<arrnd<int>> arr(
+            {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})});
+
+        auto sarr1 = squeeze<0>(arr);
+        EXPECT_TRUE(all_equal(sarr1,
+            arrnd<arrnd<int>>(
+                {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})})));
+        EXPECT_TRUE(sarr1.header().is_sliced());
+
+        auto sarr2 = squeeze(arr);
+        EXPECT_TRUE(all_equal(sarr2,
+            arrnd<arrnd<int>>(
+                {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
+        EXPECT_TRUE((sarr2[{0, 0}].header().is_sliced() && sarr2[{0, 1}].header().is_sliced()));
+    }
+}
+
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_array = oc::arrnd<int>;

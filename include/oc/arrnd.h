@@ -901,6 +901,38 @@ namespace details {
             return res;
         }
 
+        [[nodiscard]] constexpr arrnd_header squeeze() const
+        {
+            if (empty() || dims_.size() == 1) {
+                return *this;
+            }
+
+            size_type ones_count = std::count(dims_.cbegin(), dims_.cend(), value_type{1});
+            if (ones_count == 0) {
+                return *this;
+            }
+
+            arrnd_header res(*this);
+
+            res.dims_ = storage_type(dims_.size() - ones_count);
+            std::copy_if(dims_.cbegin(), dims_.cend(), res.dims_.begin(), [](auto d) {
+                return d != value_type{1};
+            });
+
+            res.strides_ = storage_type(strides_.size() - ones_count);
+            size_type j = 0;
+            for (size_type i = 0; i < strides_.size(); ++i) {
+                if (*std::next(dims_.cbegin(), i) != value_type{1}) {
+                    *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                    ++j;
+                }
+            }
+
+            res.is_sliced_ = true;
+
+            return res;
+        }
+
         template <typename InputIt>
             requires std::is_same_v<size_type, iterator_value_type<InputIt>>
         [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
@@ -4936,6 +4968,43 @@ namespace details {
             return expand<this_type::depth>(axis);
         }
 
+        template <std::int64_t Level>
+            requires(Level > 0)
+        [[nodiscard]] constexpr this_type squeeze() const
+        {
+            if (empty()) {
+                return *this;
+            }
+
+            this_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename this_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template squeeze<Level - 1>();
+            }
+
+            return res;
+        }
+
+        template <std::int64_t Level>
+            requires(Level == 0)
+        [[nodiscard]] constexpr this_type squeeze() const
+        {
+            this_type squeezed{};
+            squeezed.hdr_ = hdr_.squeeze();
+            squeezed.buffsp_ = buffsp_;
+            squeezed.is_creator_valid_ = original_valid_creator_;
+            squeezed.creator_ = this;
+            return squeezed;
+        }
+
+        [[nodiscard]] constexpr auto squeeze() const
+        {
+            return squeeze<this_type::depth>();
+        }
+
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(
                 Level == 0 && std::is_invocable_v<Pred, typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
@@ -7076,6 +7145,17 @@ namespace details {
         return expand<ArCo::depth>(arr, axis);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
+    {
+        return arr.template squeeze<Level>();
+    }
+    template <arrnd_complient ArCo>
+    [[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
+    {
+        return squeeze<ArCo::depth>(arr);
+    }
+
     template <std::int64_t Level, arrnd_complient ArCo, typename Pred, typename... Args>
         requires std::is_invocable_v<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
@@ -7411,6 +7491,7 @@ using details::remove;
 
 using details::empty;
 using details::expand;
+using details::squeeze;
 using details::all_match;
 using details::any_match;
 using details::transform;
