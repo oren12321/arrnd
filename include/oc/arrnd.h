@@ -3403,7 +3403,7 @@ namespace details {
         template <iterable_of_type<size_type> Cont>
         [[nodiscard]] constexpr const_reference operator[](const Cont& subs) const noexcept
         {
-            return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
+            return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
         [[nodiscard]] constexpr const_reference operator[](std::initializer_list<size_type> subs) const noexcept
         {
@@ -3419,7 +3419,7 @@ namespace details {
         template <iterable_of_type<size_type> Cont>
         [[nodiscard]] constexpr reference operator[](const Cont& subs) noexcept
         {
-            return buffsp_->data()[std::make_pair(std::begin(subs), std::end(subs))];
+            return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
         [[nodiscard]] constexpr reference operator[](std::initializer_list<size_type> subs) noexcept
         {
