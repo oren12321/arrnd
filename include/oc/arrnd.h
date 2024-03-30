@@ -541,6 +541,9 @@ using details::modulo;
 
 namespace oc {
 namespace details {
+    /**
+    * @note half open interval
+    */
     template <std::integral T = std::int64_t>
     struct interval {
         constexpr interval(T nstart, T nstop, T nstep) noexcept
@@ -554,7 +557,7 @@ namespace details {
         { }
 
         constexpr interval(T nstart) noexcept
-            : interval(nstart, nstart, 1)
+            : interval(nstart, nstart + 1, 1)
         { }
 
         constexpr interval() = default;
@@ -564,12 +567,12 @@ namespace details {
         constexpr interval& operator=(interval&) = default;
 
         T start{0};
-        T stop{0};
+        T stop{1};
         T step{1};
 
         [[nodiscard]] static constexpr interval full(T nsize) noexcept
         {
-            return interval{0, nsize - 1};
+            return interval{0, nsize};
         }
 
         [[nodiscard]] static constexpr interval from(T nstart, T ncount)
@@ -584,7 +587,7 @@ namespace details {
 
         [[nodiscard]] static constexpr interval at(T npos) noexcept
         {
-            return interval{npos, npos};
+            return interval{npos, npos + 1};
         }
 
         [[nodiscard]] static constexpr interval between(T nstart, T nstop, T nstep = 1) noexcept
@@ -715,7 +718,7 @@ namespace details {
             auto valid_ranges = [&]() {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
                     std::logical_and<>{}, [](const auto& r, auto d) {
-                        return (r.start <= r.stop && r.step >= 1) && (r.start >= 0 && r.stop < d);
+                        return (r.start < r.stop && r.step >= 1) && (r.start >= 0 && r.stop <= d);
                     });
             };
             assert(valid_ranges());
@@ -728,7 +731,7 @@ namespace details {
 
             res.dims_ = storage_type(dims_.size());
             std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
-                return static_cast<value_type>(std::ceil((r.stop - r.start + 1.0) / r.step));
+                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop - r.start) /r.step));
             });
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
@@ -1573,9 +1576,9 @@ namespace details {
 
             ranges_ = storage_type(hdr.dims().size());
             for (size_type i = 0; i < hdr.dims().size(); ++i) {
-                ranges_[i] = {0, *std::next(hdr.dims().cbegin(), i) - 1};
+                ranges_[i] = {0, *std::next(hdr.dims().cbegin(), i)};
             }
-            ranges_[fixed_axis_] = {current_index_, current_index_};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
         }
 
         constexpr arrnd_fixed_axis_ranger() = default;
@@ -1594,7 +1597,7 @@ namespace details {
                 current_index_ = last_index_;
             }
             ++current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
             return *this;
         }
 
@@ -1611,7 +1614,7 @@ namespace details {
                 current_index_ = last_index_;
             }
             current_index_ += count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
             if (current_index_ >= last_index_) {
                 return *this;
             }
@@ -1631,7 +1634,7 @@ namespace details {
                 current_index_ = -1;
             }
             --current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
             return *this;
         }
 
@@ -1648,7 +1651,7 @@ namespace details {
                 current_index_ = -1;
             }
             current_index_ -= count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
             if (current_index_ < 0) {
                 return *this;
             }
@@ -4905,7 +4908,7 @@ namespace details {
             nested_type res({hdr_.dims().front()});
 
             for (std::int64_t i = 0; i < hdr_.dims().front(); ++i) {
-                res[i] = (*this)[interval<size_type>(i, i)].template nest<Depth - 1>();
+                res[i] = (*this)[interval<size_type>(i, i + 1)].template nest<Depth - 1>();
             }
 
             return res;
@@ -7535,7 +7538,7 @@ namespace details {
                         }
                     }
                     ostream_operator_recursive(
-                        os, arco[interval<typename ArCo::size_type>{i, i}], nvectical_spaces + 1, ndepth_spaces);
+                        os, arco[interval<typename ArCo::size_type>{i, i + 1}], nvectical_spaces + 1, ndepth_spaces);
                     if (i < arco.header().dims()[0] - 1) {
                         os << '\n';
                     }

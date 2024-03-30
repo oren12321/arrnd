@@ -151,12 +151,12 @@ TEST(interval_test, initialization)
 {
     oc::interval i1{};
     EXPECT_EQ(0, i1.start);
-    EXPECT_EQ(0, i1.stop);
+    EXPECT_EQ(1, i1.stop);
     EXPECT_EQ(1, i1.step);
 
     oc::interval i2{1};
     EXPECT_EQ(1, i2.start);
-    EXPECT_EQ(1, i2.stop);
+    EXPECT_EQ(2, i2.stop);
     EXPECT_EQ(1, i2.step);
 
     oc::interval i3{1, 2};
@@ -203,12 +203,12 @@ TEST(interval_test, presets)
 {
     oc::interval<std::int64_t> i1 = oc::interval<std::int64_t>::at(5);
     EXPECT_EQ(5, i1.start);
-    EXPECT_EQ(5, i1.stop);
+    EXPECT_EQ(6, i1.stop);
     EXPECT_EQ(1, i1.step);
 
     oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5);
     EXPECT_EQ(0, i2.start);
-    EXPECT_EQ(4, i2.stop);
+    EXPECT_EQ(5, i2.stop);
     EXPECT_EQ(1, i2.step);
 
     oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5);
@@ -702,7 +702,7 @@ TEST(arrnd_test, iterators_and_inserters)
 
     EXPECT_TRUE(all_equal(arrnd<int>({3, 1, 2}, {7, 6, 3000, 4000, 5000, 2}), arr2));
 
-    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2[{{1, 1, 2}, {0, 0}, {1, 1}}].rbegin(), [](auto a) {
+    std::transform(arr1.cbegin(), ++(arr1.cbegin()), arr2[{{1, 2, 2}, {0, 1}, {1, 2}}].rbegin(), [](auto a) {
         return a * 100;
     });
 
@@ -732,7 +732,7 @@ TEST(arrnd_test, iterators_and_inserters)
 
     // axis iterators
     std::for_each(arr.begin_subarray(), arr.end_subarray(), [](const auto& sa) {
-        auto exsa = sa[interval<std::int64_t>{0, 0}];
+        auto exsa = sa[interval<std::int64_t>{0, 1}];
         std::for_each(exsa.rbegin_subarray(), exsa.rend_subarray(), [](auto& sa) {
             sa *= 2;
         });
@@ -898,7 +898,7 @@ TEST(arrnd_test, squeeze)
     {
         arrnd<int> arr(
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
-        arrnd<int> slice = arr[{interval<>::at(1), interval<>::full(2), interval<>::between(0, 1)}];
+        arrnd<int> slice = arr[{interval<>::at(1), interval<>::full(2), interval<>::between(0, 2)}];
 
         EXPECT_TRUE(all_equal(slice, arrnd<int>({1, 2, 2}, {9, 10, 13, 14})));
 
@@ -1194,7 +1194,7 @@ TEST(arrnd_test, have_read_write_access_to_slice)
     const std::int64_t rdims[]{2, 2, 1};
     Integer_array rarr{rdims, rdata};
 
-    Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
+    Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
 
     for (std::int64_t k = 0; k < rdims[0]; ++k) {
         for (std::int64_t i = 0; i < rdims[1]; ++i) {
@@ -1386,7 +1386,7 @@ TEST(arrnd_test, reduce_elements)
         });
         EXPECT_EQ("-1-2-5-6-10-11", chain);
 
-        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 1}, {2}}], 1,
+        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 2}, {2}}], 1,
             oc::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
             [](const std::string& s, int n) {
                 return s + "-" + std::to_string(n);
@@ -1593,14 +1593,14 @@ TEST(arrnd_test, select_elements_indices_by_condition)
     // subarray
     const std::int64_t rdatas[]{2};
     oc::arrnd rarrs{{1}, rdatas};
-    EXPECT_TRUE(oc::all_equal(rarrs, oc::find((iarr[{{1, 1}}]), [](int a) {
+    EXPECT_TRUE(oc::all_equal(rarrs, oc::find((iarr[{{1, 2}}]), [](int a) {
         return a;
     })));
 
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
     {
-        oc::arrnd sarr{iarr[{{1, 2}, {0}, {0, 1}}]};
+        oc::arrnd sarr{iarr[{{1, 3}, {0}, {0, 2}}]};
         oc::arrnd not_zeros_inds{oc::find(sarr, [](int a) {
             return a != 0;
         })};
@@ -1662,7 +1662,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
     {
-        oc::arrnd sarr{iarr[{{1, 2}, {0}, {0, 1}}]};
+        oc::arrnd sarr{iarr[{{1, 3}, {0}, {0, 2}}]};
         oc::arrnd not_zeros_inds{oc::find(sarr, oc::arrnd{{2, 1, 2}, {0, 1, 0, 1}})};
 
         oc::arrnd<std::int64_t> rinds1{{2}, {3, 5}};
@@ -1763,7 +1763,7 @@ TEST(arrnd_test, nest)
     arrnd<int> iarr({10, 5, 6, 4});
     std::iota(iarr.begin(), iarr.end(), 1);
 
-    auto sarr = iarr[{interval<>::between(4, 8, 2), interval<>::at(2), interval<>::between(0, 1), interval<>::at(2)}];
+    auto sarr = iarr[{interval<>::between(4, 9, 2), interval<>::at(2), interval<>::between(0, 2), interval<>::at(2)}];
     EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 1, 2, 1}, {531, 535, 771, 775, 1011, 1015})));
 
     auto rarr = nest<2>(sarr);
@@ -2428,7 +2428,7 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         const std::int64_t rdims[]{2, 1, 2, 1};
         Integer_array rarr{rdims, rdata};
 
-        Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
+        Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
         EXPECT_TRUE(oc::all_equal(rarr, sarr));
         EXPECT_TRUE(oc::all_match(rarr, sarr, [](int a, int b) {
             return a == b;
@@ -2558,7 +2558,7 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         const std::int64_t rdims[]{2, 1, 2, 1};
         Integer_array rarr{rdims, rdata};
 
-        Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
+        Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
         EXPECT_FALSE(oc::all_equal(rarr, sarr));
         EXPECT_TRUE(oc::any_match(rarr, sarr, [](int a, int b) {
             return a == b;
@@ -2684,7 +2684,7 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
         const std::int64_t rdims[]{2, 1, 2, 1};
         Integer_array rarr{rdims, rdata};
 
-        Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
+        Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
         EXPECT_TRUE(oc::all_equal(rarr, sarr));
         EXPECT_TRUE(oc::any_equal(rarr, sarr));
     }
@@ -2789,7 +2789,7 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
         const std::int64_t rdims[]{2, 1, 2, 1};
         Integer_array rarr{rdims, rdata};
 
-        Integer_array sarr{arr[{{0, 1}, {1, 1}, {0, 1}, {1, 2, 2}}]};
+        Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
         EXPECT_TRUE(oc::all_close(rarr, sarr, 1));
         EXPECT_TRUE(oc::any_close(rarr, sarr, 1));
     }
@@ -2853,7 +2853,7 @@ TEST(arrnd_test, can_return_slice)
     {
         EXPECT_TRUE(
             oc::all_equal(Integer_array{}, (Integer_array{}[std::initializer_list<oc::interval<std::int64_t>>{}])));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[{{0, 1}, {0, 4, 2}}])));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[{{0, 2}, {0, 5, 2}}])));
     }
 
     // ranges in dims
@@ -2862,7 +2862,7 @@ TEST(arrnd_test, can_return_slice)
         const int tdata1[] = {1, 5};
         const std::int64_t tdims1[] = {2, 1, 1};
         Integer_array tarr1{tdims1, tdata1};
-        Integer_array sarr1{arr[{{0, 2, 2}, {0}, {0}}]};
+        Integer_array sarr1{arr[{{0, 3, 2}, {0}, {0}}]};
         EXPECT_TRUE(oc::all_equal(tarr1, sarr1));
         EXPECT_EQ(arr.storage()->data(), sarr1.storage()->data());
 
@@ -2870,12 +2870,12 @@ TEST(arrnd_test, can_return_slice)
         const int tdata2[] = {3, 4};
         const std::int64_t tdims2[] = {1, 1, 2};
         Integer_array tarr2{tdims2, tdata2};
-        Integer_array sarr2{arr[{{1, 2, 2}}]};
+        Integer_array sarr2{arr[{{1, 3, 2}}]};
         EXPECT_TRUE(oc::all_equal(tarr2, sarr2));
         EXPECT_EQ(arr.storage()->data(), sarr2.storage()->data());
 
         // nranges > ndims - ignore extra ranges
-        Integer_array sarr3{arr[{{0, 2, 2}, {0}, {0}, {100, 100, 5}}]};
+        Integer_array sarr3{arr[{{0, 3, 2}, {0}, {0}, {100, 101, 5}}]};
         EXPECT_TRUE(oc::all_equal(sarr1, sarr3));
         EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
 
@@ -2982,9 +2982,9 @@ TEST(arrnd_test, can_be_assigned_with_value)
         const int tdata[] = {1, 50, 3, 100, 5, 100};
         Integer_array tarr{dims, tdata};
 
-        arr[{{1, 2}, {0}, {1}}] = 100;
+        arr[{{1, 3}, {0}, {1}}] = 100;
         // assignment of different type
-        arr[{{0, 0}, {0}, {1}}] = 50.5;
+        arr[{{0, 1}, {0}, {1}}] = 50.5;
         EXPECT_TRUE(oc::all_equal(tarr, arr));
     }
 }
@@ -3010,7 +3010,7 @@ TEST(arrnd_test, copy_by_reference)
     Integer_array rarr2{dims, rdata2};
     EXPECT_TRUE(oc::all_equal(rarr2, carr2));
 
-    carr2[{{0, 1}, {0, 0}, {0, 1}}] = carr1;
+    carr2[{{0, 2}, {0, 1}, {0, 2}}] = carr1;
     EXPECT_TRUE(oc::all_equal(rarr2, carr2));
 
     // slice copying by assignment (rvalue)
@@ -3022,8 +3022,8 @@ TEST(arrnd_test, copy_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        Integer_array starr3{tarr3[{{0, 5, 2}}]};
-        rarr3[{{0, 5, 2}}] = starr3;
+        Integer_array starr3{tarr3[{{0, 6, 2}}]};
+        rarr3[{{0, 6, 2}}] = starr3;
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
     }
 
@@ -3036,8 +3036,8 @@ TEST(arrnd_test, copy_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        Integer_array starr3{tarr3[{{0, 5, 2}}]};
-        Integer_array srarr3{rarr3[{{0, 5, 2}}]};
+        Integer_array starr3{tarr3[{{0, 6, 2}}]};
+        Integer_array srarr3{rarr3[{{0, 6, 2}}]};
         rarr3 = starr3;
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
     }
@@ -3068,8 +3068,8 @@ TEST(arrnd_test, copy_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        oc::arrnd<double> starr3{tarr3[{{0, 5, 2}}]};
-        rarr3[{{0, 5, 2}}] = starr3;
+        oc::arrnd<double> starr3{tarr3[{{0, 6, 2}}]};
+        rarr3[{{0, 6, 2}}] = starr3;
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
     }
 
@@ -3082,8 +3082,8 @@ TEST(arrnd_test, copy_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        oc::arrnd<double> starr3{tarr3[{{0, 5, 2}}]};
-        rarr3[{{0, 3, 2}}] = starr3;
+        oc::arrnd<double> starr3{tarr3[{{0, 6, 2}}]};
+        rarr3[{{0, 4, 2}}] = starr3;
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
     }
 
@@ -3096,8 +3096,8 @@ TEST(arrnd_test, copy_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        oc::arrnd<double> starr3{tarr3[{{0, 5, 2}}]};
-        Integer_array srarr3{rarr3[{{0, 5, 2}}]};
+        oc::arrnd<double> starr3{tarr3[{{0, 6, 2}}]};
+        Integer_array srarr3{rarr3[{{0, 6, 2}}]};
         rarr3 = starr3;
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
     }
@@ -3122,7 +3122,7 @@ TEST(arrnd_test, move_by_reference)
     EXPECT_TRUE(empty(carr1));
 
     Integer_array sarr2{dims, data};
-    carr2[{{0, 1}, {0, 0}, {0, 1}}] = std::move(sarr2);
+    carr2[{{0, 2}, {0, 1}, {0, 2}}] = std::move(sarr2);
     EXPECT_TRUE(empty(sarr2));
     EXPECT_TRUE(oc::all_equal(sarr, carr2));
 
@@ -3135,7 +3135,7 @@ TEST(arrnd_test, move_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        rarr3[{{0, 5, 2}}] = std::move(tarr3[{{0, 5, 2}}]);
+        rarr3[{{0, 6, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
@@ -3149,8 +3149,8 @@ TEST(arrnd_test, move_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        Integer_array srarr3{rarr3[{{0, 5, 2}}]};
-        srarr3 = std::move(tarr3[{{0, 5, 2}}]);
+        Integer_array srarr3{rarr3[{{0, 6, 2}}]};
+        srarr3 = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
@@ -3183,7 +3183,7 @@ TEST(arrnd_test, move_by_reference)
         oc::arrnd<double> rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        rarr3[{{0, 5, 2}}] = std::move(tarr3[{{0, 5, 2}}]);
+        rarr3[{{0, 6, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
@@ -3197,7 +3197,7 @@ TEST(arrnd_test, move_by_reference)
         oc::arrnd<double> rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        rarr3[{{0, 3, 2}}] = std::move(tarr3[{{0, 5, 2}}]);
+        rarr3[{{0, 4, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
@@ -3211,8 +3211,8 @@ TEST(arrnd_test, move_by_reference)
         Integer_array rarr3{{6}, rdata3};
 
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        oc::arrnd<double> srarr3{rarr3[{{0, 5, 2}}]};
-        srarr3 = std::move(tarr3[{{0, 5, 2}}]);
+        oc::arrnd<double> srarr3{rarr3[{{0, 6, 2}}]};
+        srarr3 = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         EXPECT_FALSE(empty(tarr3));
     }
@@ -3235,10 +3235,10 @@ TEST(arrnd_test, clone)
     carr[{0, 0, 0}] = 0;
     EXPECT_FALSE(oc::all_equal(carr, sarr));
 
-    Integer_array csubarr{oc::clone(sarr[{{1, 1}, {0, 0}, {0, 0}}])};
-    EXPECT_TRUE(oc::all_equal((sarr[{{1, 1}, {0, 0}, {0, 0}}]), csubarr));
+    Integer_array csubarr{oc::clone(sarr[{{1, 2}, {0, 1}, {0, 1}}])};
+    EXPECT_TRUE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
     csubarr[{0, 0, 0}] = 5;
-    EXPECT_FALSE(oc::all_equal((sarr[{{1, 1}, {0, 0}, {0, 0}}]), csubarr));
+    EXPECT_FALSE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
 
     // nested array
     {
@@ -3278,7 +3278,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{};
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        copy(src, dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        copy(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3296,7 +3296,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        copy(src[{{0, 1}, {0, 0}, {1, 1}}], dst);
+        copy(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
         arrnd<int> sres{};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3314,7 +3314,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 2}, {0, 0}, {0, 0}}], dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        copy(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 3, 4, 5, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3332,7 +3332,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{0, 1}}], dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        copy(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 1, 4, 2, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3350,7 +3350,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 2}}], dst[{{0, 2}, {0, 0}, {0, 0}}]);
+        copy(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {2, 5, 3, 3, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3368,7 +3368,7 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 5}}], dst[{{0, 1}, {0, 0}, {0, 0}}]);
+        copy(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {2, 5, 3, 3, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3387,7 +3387,7 @@ TEST(arrnd_test, copy_from)
     // specific ranges
     {
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
-        std::initializer_list<interval<std::int64_t>> ranges{{0, 2}, {0, 0}, {1, 1}};
+        std::initializer_list<interval<std::int64_t>> ranges{{0, 3}, {0, 1}, {1, 2}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         copy(src, dst, ranges);
@@ -3437,7 +3437,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{};
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        auto ref = set(src, dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        auto ref = set(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(sres, dst));
         EXPECT_TRUE(all_equal(src, ref));
@@ -3456,7 +3456,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        set(src[{{0, 1}, {0, 0}, {1, 1}}], dst);
+        set(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
         arrnd<int> sres{{2, 1, 1}, {2, 4}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -3474,7 +3474,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 2}, {0, 0}, {0, 0}}], dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        auto ref = set(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 3, 4, 5, 2, 1}};
         arrnd<int> rres{{2, 1, 1}, {3, 5}};
         EXPECT_TRUE(all_equal(sres, dst));
@@ -3494,7 +3494,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{0, 1}}], dst[{{0, 1}, {0, 0}, {1, 1}}]);
+        auto ref = set(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {1, 2, 4, 3, 2, 1}};
         ;
         arrnd<int> rres{{2}, {1, 2}};
@@ -3515,7 +3515,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 2}}], dst[{{0, 2}, {0, 0}, {0, 0}}]);
+        auto ref = set(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
         arrnd<int> rres{{2}, {2, 3}};
         EXPECT_TRUE(all_equal(sres, dst));
@@ -3535,7 +3535,7 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 5}}], dst[{{0, 1}, {0, 0}, {0, 0}}]);
+        auto ref = set(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
         arrnd<int> rres{{5}, {2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(sres, dst));
@@ -3710,7 +3710,7 @@ TEST(arrnd_test, reshape)
         const int tdata[] = {1, 5};
         const std::int64_t tdims[]{1, 2};
         Integer_array tarr{tdims, tdata};
-        Integer_array x = arr[{{0, 2, 2}, {}, {}}];
+        Integer_array x = arr[{{0, 3, 2}, {}, {}}];
         Integer_array rarr{oc::reshape(x, {1, 2})};
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
         EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
@@ -3786,7 +3786,7 @@ TEST(arrnd_test, resize)
     {
         Integer_array rarr{oc::resize(arr, {10})};
         EXPECT_FALSE(oc::all_equal(arr, rarr));
-        EXPECT_TRUE(oc::all_equal(arr, (rarr[{{0, 5}}])));
+        EXPECT_TRUE(oc::all_equal(arr, (rarr[{{0, 6}}])));
         EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
     }
 
@@ -4164,30 +4164,30 @@ TEST(arrnd_test, complex_array)
     const std::int64_t sdims1[]{2, 1, 1, 2, 1};
     Integer_array sarr1{sdims1, reinterpret_cast<const int*>(sdata1)};
 
-    EXPECT_TRUE(oc::all_equal(sarr1, (arr[{{0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2}}])));
+    EXPECT_TRUE(oc::all_equal(sarr1, (arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}])));
 
     const int sdata2[1][1][1][1][1]{{{{{17}}}}};
     const std::int64_t sdims2[]{1, 1, 1, 1, 1};
     Integer_array sarr2{sdims2, reinterpret_cast<const int*>(sdata2)};
 
-    EXPECT_TRUE(oc::all_equal(sarr2, (sarr1[{{0, 0}, {0, 0}, {0, 0}, {1, 1}, {0, 0}}])));
+    EXPECT_TRUE(oc::all_equal(sarr2, (sarr1[{{0, 1}, {0, 1}, {0, 1}, {1, 2}, {0, 1}}])));
 
     {
         const int edata1[1][2][1]{{{11}, {17}}};
         oc::arrnd<int> rarr1{{1, 2, 1}, reinterpret_cast<const int*>(edata1)};
-        auto earr1 = arr[{{0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2}}][oc::interval<std::int64_t>{0, 0}]
-                        [oc::interval<std::int64_t>{0, 0}];
+        auto earr1 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][oc::interval<std::int64_t>{0, 1}]
+                        [oc::interval<std::int64_t>{0, 1}];
         EXPECT_TRUE(oc::all_equal(rarr1, earr1));
 
         const int edata2[1][2][1]{{{47}, {53}}};
         oc::arrnd<int> rarr2{{1, 2, 1}, reinterpret_cast<const int*>(edata2)};
-        auto earr2 = arr[{{0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2}}][oc::interval<std::int64_t>{1, 1}]
-                        [oc::interval<std::int64_t>{0, 0}];
+        auto earr2 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][oc::interval<std::int64_t>{1, 2}]
+                        [oc::interval<std::int64_t>{0, 1}];
         EXPECT_TRUE(oc::all_equal(rarr2, earr2));
 
         const int edata3[]{47, 53};
         oc::arrnd<int> rarr3{{1, 1, 1, 2, 1}, edata3};
-        auto earr3 = arr[{{0, 1}, {0, 0}, {1, 1}, {0, 2, 2}, {1, 2, 2}}][{{1, 1}}][{{0, 0}}];
+        auto earr3 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][{{1, 2}}][{{0, 1}}];
         EXPECT_TRUE(oc::all_equal(rarr3, earr3));
     }
 }
@@ -4227,7 +4227,7 @@ TEST(arrnd_test, ostream_operator)
 
                 7, 8, 9, 10, 11, 12}};
         ss << arr[{
-            oc::interval<>::at(1), oc::interval<>::full(1), oc::interval<>::full(2), oc::interval<>::between(0, 2, 2)}];
+            oc::interval<>::at(1), oc::interval<>::full(1), oc::interval<>::full(2), oc::interval<>::between(0, 3, 2)}];
         EXPECT_EQ("[[[[7 9]\n"
                   "   [10 12]]]]",
             ss.str());
