@@ -241,14 +241,30 @@ TEST(interval_test, presets)
     EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_type::none), i5.align(std::rand()));
 }
 
-TEST(general_iterable_types_check, iterator_value_type)
+TEST(general_iterable_types_check, typed_iterator)
 {
     static_assert(std::is_same_v<int, oc::iterator_value_type<std::vector<int>::iterator>>);
+    static_assert(std::is_same_v<int, oc::iterator_value_type<oc::arrnd<int>::iterator>>);
+    static_assert(oc::integral_type_iterator<std::vector<int>::iterator>);
+    static_assert(oc::integral_type_iterator<oc::arrnd<int>::iterator>);
+    static_assert(!oc::integral_type_iterator<std::vector<double>::iterator>);
+    static_assert(oc::interval_type_iterator<std::vector<oc::interval<int>>::iterator>);
+    static_assert(oc::interval_type_iterator<oc::arrnd<oc::interval<int>>::iterator>);
+    static_assert(!oc::interval_type_iterator<std::vector<double>::iterator>);
 }
 
-TEST(general_iterable_types_check, iterable_of_type)
+TEST(general_iterable_types_check, typed_iterable)
 {
-    static_assert(oc::iterable_of_type<std::vector<int>, int>);
+    static_assert(oc::iterable<std::vector<int>>);
+    static_assert(oc::iterable<oc::arrnd<int>>);
+
+    static_assert(oc::integral_type_iterable<std::vector<int>>);
+    static_assert(oc::integral_type_iterable<oc::arrnd<int>>);
+    static_assert(!oc::integral_type_iterable<std::vector<double>>);
+
+    static_assert(oc::interval_type_iterable<std::vector<oc::interval<int>>>);
+    static_assert(oc::interval_type_iterable<oc::arrnd<oc::interval<int>>>);
+    static_assert(!oc::interval_type_iterable<std::vector<double>>);
 }
 
 TEST(general_iterable_types_check, random_access_type)
@@ -1617,10 +1633,10 @@ TEST(arrnd_test, select_elements_indices_by_condition)
         oc::arrnd<std::int64_t> rinds1{{3}, {2, 4, 5}};
         EXPECT_TRUE(oc::all_equal(rinds1, not_zeros_inds));
 
-        oc::arrnd<std::int64_t> rvals1{{3}, {12, 14, 15}};
+        //oc::arrnd<std::int64_t> rvals1{{3}, {12, 14, 15}}; // deprecated
 
-        oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
+        //oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
+        //EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
     }
 
     // nested array
@@ -1677,10 +1693,10 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         oc::arrnd<std::int64_t> rinds1{{2}, {3, 5}};
         EXPECT_TRUE(oc::all_equal(rinds1, not_zeros_inds));
 
-        oc::arrnd<std::int64_t> rvals1{{2}, {13, 15}};
+        //oc::arrnd<std::int64_t> rvals1{{2}, {13, 15}}; // deprecated
 
-        oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
+        //oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
+        //EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
     }
 
     // nested array
