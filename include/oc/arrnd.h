@@ -541,16 +541,20 @@ using details::modulo;
 
 namespace oc {
 namespace details {
+    enum class interval_type { full, from, to, none };
+
     /**
     * @note half open interval
     */
     template <std::integral T = std::int64_t>
     class interval {
     public:
-        explicit constexpr interval(T start, T stop, T step = 1) noexcept
+        // interval type might cause ignoring values of interval's start or stop values
+        explicit constexpr interval(T start, T stop, T step = 1, interval_type type = interval_type::none) noexcept
             : start_(start)
             , stop_(stop)
             , step_(step)
+            , type_(type)
         { }
 
         constexpr interval() = default; // interval of first element
@@ -574,19 +578,41 @@ namespace details {
             return step_;
         }
 
-        [[nodiscard]] static constexpr interval full(T size) noexcept
+        [[nodiscard]] constexpr interval_type type() const noexcept
         {
-            return interval{0, size};
+            return type_;
         }
 
-        [[nodiscard]] static constexpr interval from(T start, T count)
+        // returns normalize type from dimension, useful in case of interval types that are not none
+        [[nodiscard]] constexpr interval align(T dim) const noexcept
         {
-            return interval{start, start + count};
+            switch (type_) {
+            case interval_type::none:
+                return *this;
+            case interval_type::full:
+                return interval{0, dim, step_, interval_type::none};
+            case interval_type::from:
+                return interval{start_, dim, step_, interval_type::none};
+            case interval_type::to:
+                return interval{0, stop_, step_, interval_type::none};
+            }
+
+            return *this;
         }
 
-        [[nodiscard]] static constexpr interval to(T stop) noexcept
+        [[nodiscard]] static constexpr interval full(T step = 1) noexcept
         {
-            return interval{0, stop};
+            return interval{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), step, interval_type::full};
+        }
+
+        [[nodiscard]] static constexpr interval from(T start, T step = 1)
+        {
+            return interval{start, std::numeric_limits<T>::max(), step, interval_type::from};
+        }
+
+        [[nodiscard]] static constexpr interval to(T stop, T step = 1) noexcept
+        {
+            return interval{0, stop, step, interval_type::to};
         }
 
         [[nodiscard]] static constexpr interval at(T pos) noexcept
@@ -603,6 +629,7 @@ namespace details {
         T start_{0};
         T stop_{1};
         T step_{1};
+        interval_type type_{interval_type::none};
     };
 
     template <std::integral T>
@@ -626,10 +653,17 @@ namespace details {
     template <std::integral T>
     [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
-        return lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step();
+        return (lhs.type() == interval_type::none && rhs.type() == interval_type::none && lhs.start() == rhs.start()
+                   && lhs.stop() == rhs.stop() && lhs.step() == rhs.step())
+            || (lhs.type() == interval_type::full && rhs.type() == interval_type::full && lhs.step() == rhs.step())
+            || (lhs.type() == interval_type::from && rhs.type() == interval_type::from && lhs.start() == rhs.start()
+                && lhs.step() == rhs.step())
+            || (lhs.type() == interval_type::to && rhs.type() == interval_type::to && lhs.start() == 0
+                && rhs.start() == 0 && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
     }
 }
 
+using details::interval_type;
 using details::interval;
 
 using details::modulo;
@@ -727,7 +761,8 @@ namespace details {
             auto valid_ranges = [&]() {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
                     std::logical_and<>{}, [](const auto& r, auto d) {
-                        return (r.start() < r.stop() && r.step() >= 1) && (r.start() >= 0 && r.stop() <= d);
+                        auto nr = r.align(d);
+                        return (nr.start() < nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
                     });
             };
             assert(valid_ranges());
@@ -739,9 +774,14 @@ namespace details {
             arrnd_header res{};
 
             res.dims_ = storage_type(dims_.size());
-            std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
-                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop() - r.start()) / r.step()));
-            });
+            std::transform(first_range, std::next(first_range, nranges), dims_.cbegin(), res.dims_.begin(),
+                [](const auto& r, auto d) {
+                    auto nr = r.align(d);
+                    return static_cast<value_type>(std::ceil(static_cast<double>(nr.stop() - nr.start()) / nr.step()));
+                });
+            //std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
+            //    return static_cast<value_type>(std::ceil(static_cast<double>(r.stop() - r.start()) / r.step()));
+            //});
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
             if (std::equal(res.dims_.cbegin(), res.dims_.cend(), dims_.cbegin(), dims_.cend())) {
@@ -751,17 +791,24 @@ namespace details {
             res.numel_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), value_type{1}, std::multiplies<>{});
 
             res.strides_ = storage_type(res.dims_.size());
-            std::transform(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range, res.strides_.begin(),
-                [](auto s, const auto& r) {
-                    return s * r.step();
-                });
+            //std::transform(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range, res.strides_.begin(),
+            //    [](auto s, const auto& r) {
+            //        return s * r.step();
+            //    });
+            res.offset_ = offset_;
+            for (size_type i = 0; i < nranges; ++i) {
+                auto s = *std::next(strides_.cbegin(), i);
+                auto nr = std::next(first_range, i)->align(*std::next(dims_.cbegin(), i));
+                *std::next(res.strides_.begin(), i) = s * nr.step();
+                res.offset_ += s * nr.start();
+            }
             std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
 
-            res.offset_ = offset_
-                + std::transform_reduce(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range,
-                    value_type{0}, std::plus<>{}, [](auto s, const auto& r) {
-                        return s * r.start();
-                    });
+            //res.offset_ = offset_
+            //    + std::transform_reduce(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range,
+            //        value_type{0}, std::plus<>{}, [](auto s, const auto& r) {
+            //            return s * r.start();
+            //        });
 
             res.last_index_ = res.offset_
                 + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), value_type{0},
@@ -787,7 +834,7 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header subheader(interval<value_type> range) const
         {
-            std::initializer_list<interval<value_type>> ranges = {range};
+            std::initializer_list<interval<value_type>> ranges = {range.align(dims_.front())};
 
             auto res = subheader(ranges.begin(), ranges.end());
             if (res.empty() || res.dims_.front() != 1) {

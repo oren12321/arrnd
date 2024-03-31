@@ -205,31 +205,40 @@ TEST(interval_test, presets)
     EXPECT_EQ(5, i1.start());
     EXPECT_EQ(6, i1.stop());
     EXPECT_EQ(1, i1.step());
+    EXPECT_EQ(oc::interval_type::none, i1.type());
+    EXPECT_EQ(oc::interval<std::int64_t>(5, 6, 1, oc::interval_type::none), i1);
 
-    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5);
-    EXPECT_EQ(0, i2.start());
-    EXPECT_EQ(5, i2.stop());
-    EXPECT_EQ(1, i2.step());
+    //oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5); // deprecated
+    //EXPECT_EQ(0, i2.start());
+    //EXPECT_EQ(5, i2.stop());
+    //EXPECT_EQ(1, i2.step());
+    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(2);
+    EXPECT_EQ(2, i2.step());
+    EXPECT_EQ(oc::interval_type::full, i2.type());
+    EXPECT_EQ(oc::interval<std::int64_t>(std::rand(), std::rand(), 2, oc::interval_type::full), i2);
+    EXPECT_EQ(oc::interval<std::int64_t>(0, 6, 2, oc::interval_type::none), i2.align(6));
 
-    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5);
-    EXPECT_EQ(5, i3.start());
-    EXPECT_EQ(10, i3.stop());
-    EXPECT_EQ(1, i3.step());
+    //oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5); // deprecated
+    //EXPECT_EQ(5, i3.start());
+    //EXPECT_EQ(10, i3.stop());
+    //EXPECT_EQ(1, i3.step());
+    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(6, 2);
+    EXPECT_EQ(6, i3.start());
+    EXPECT_EQ(2, i3.step());
+    EXPECT_EQ(oc::interval_type::from, i3.type());
+    EXPECT_EQ(oc::interval<std::int64_t>(6, std::rand(), 2, oc::interval_type::from), i3);
+    EXPECT_EQ(oc::interval<std::int64_t>(6, 10, 2, oc::interval_type::none), i3.align(10));
 
-    oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5);
+    oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5, 3);
     EXPECT_EQ(0, i4.start());
     EXPECT_EQ(5, i4.stop());
-    EXPECT_EQ(1, i4.step());
+    EXPECT_EQ(3, i4.step());
+    EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_type::to), i4);
+    EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_type::none), i4.align(10));
 
-    oc::interval<std::int64_t> i5 = oc::interval<std::int64_t>::between(1, 5);
-    EXPECT_EQ(1, i5.start());
-    EXPECT_EQ(5, i5.stop());
-    EXPECT_EQ(1, i5.step());
-
-    oc::interval<std::int64_t> i6 = oc::interval<std::int64_t>::between(1, 5, 5);
-    EXPECT_EQ(1, i6.start());
-    EXPECT_EQ(5, i6.stop());
-    EXPECT_EQ(5, i6.step());
+    oc::interval<std::int64_t> i5 = oc::interval<std::int64_t>::between(1, 5, 5);
+    EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_type::none), i5);
+    EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_type::none), i5.align(std::rand()));
 }
 
 TEST(general_iterable_types_check, iterator_value_type)
@@ -898,7 +907,7 @@ TEST(arrnd_test, squeeze)
     {
         arrnd<int> arr(
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
-        arrnd<int> slice = arr[{interval<>::at(1), interval<>::full(2), interval<>::between(0, 2)}];
+        arrnd<int> slice = arr[{interval<>::at(1), interval<>::full(), interval<>::between(0, 2)}];
 
         EXPECT_TRUE(all_equal(slice, arrnd<int>({1, 2, 2}, {9, 10, 13, 14})));
 
@@ -3412,7 +3421,7 @@ TEST(arrnd_test, copy_from)
         copy(arr_with_vals, arr_no_vals);
 
         EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}][{interval<>::at(0), interval<>::full(1), interval<>::full(3)}],
+        EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}][{interval<>::at(0), interval<>::full(), interval<>::full()}],
             arr_no_vals[{0}][{0, 1}]));
         EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], reshape(arr_no_vals[{1}][{0, 0}], {2, 2})));
 
@@ -4228,7 +4237,7 @@ TEST(arrnd_test, ostream_operator)
 
                 7, 8, 9, 10, 11, 12}};
         ss << arr[{
-            oc::interval<>::at(1), oc::interval<>::full(1), oc::interval<>::full(2), oc::interval<>::between(0, 3, 2)}];
+            oc::interval<>::at(1), oc::interval<>::full(), oc::interval<>::full(), oc::interval<>::between(0, 3, 2)}];
         EXPECT_EQ("[[[[7 9]\n"
                   "   [10 12]]]]",
             ss.str());
