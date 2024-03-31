@@ -87,7 +87,7 @@ namespace details {
         template <typename U>
         using replaced_type = simple_dynamic_vector<U, Allocator>;
 
-        constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
+        explicit constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
             : size_(size)
         {
             assert(size >= 0);
@@ -102,7 +102,7 @@ namespace details {
         }
 
         template <typename InputIt>
-        constexpr simple_dynamic_vector(InputIt first, InputIt last)
+        explicit constexpr simple_dynamic_vector(InputIt first, InputIt last)
             : simple_dynamic_vector(std::distance(first, last), &(*first))
         { }
 
@@ -318,7 +318,7 @@ namespace details {
         template <typename U>
         using replaced_type = simple_static_vector<U, Size>;
 
-        constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
+        explicit constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
             : size_(size)
         {
             assert(size_ >= 0 && size_ <= Size);
@@ -328,7 +328,7 @@ namespace details {
         }
 
         template <typename InputIt>
-        constexpr simple_static_vector(InputIt first, InputIt last)
+        explicit constexpr simple_static_vector(InputIt first, InputIt last)
             : simple_static_vector(std::distance(first, last), &(*first))
         { }
 
@@ -713,7 +713,7 @@ namespace details {
 
         template <typename InputIt>
             requires std::is_same_v<value_type, iterator_value_type<InputIt>>
-        constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
+        explicit constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
         {
             assert(first_dim <= last_dim);
             assert(std::all_of(first_dim, last_dim, [](auto d) {
@@ -738,11 +738,11 @@ namespace details {
         }
 
         template <iterable_of_type<value_type> Cont>
-        constexpr arrnd_header(const Cont& dims)
+        explicit constexpr arrnd_header(const Cont& dims)
             : arrnd_header(std::begin(dims), std::end(dims))
         { }
 
-        constexpr arrnd_header(std::initializer_list<value_type> dims)
+        explicit constexpr arrnd_header(std::initializer_list<value_type> dims)
             : arrnd_header(dims.begin(), dims.end())
         { }
 
@@ -1111,14 +1111,14 @@ namespace details {
         using size_type = typename Header::size_type;
         using value_type = typename Header::value_type;
 
-        constexpr arrnd_general_indexer(
+        explicit constexpr arrnd_general_indexer(
             const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : hdr_(hdr)
         {
             setup(pos);
         }
 
-        constexpr arrnd_general_indexer(
+        explicit constexpr arrnd_general_indexer(
             const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : hdr_(hdr.reorder(axis))
         {
@@ -1127,7 +1127,7 @@ namespace details {
 
         template <typename InputIt>
             requires std::is_same_v<size_type, iterator_value_type<InputIt>>
-        constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order,
+        explicit constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order,
             arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : hdr_(hdr.reorder(first_order, last_order))
         {
@@ -1135,12 +1135,12 @@ namespace details {
         }
 
         template <iterable_of_type<size_type> Cont>
-        constexpr arrnd_general_indexer(
+        explicit constexpr arrnd_general_indexer(
             const header_type& hdr, const Cont& order, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : arrnd_general_indexer(hdr, std::begin(order), std::end(order), pos)
         { }
 
-        constexpr arrnd_general_indexer(const header_type& hdr, std::initializer_list<size_type> order,
+        explicit constexpr arrnd_general_indexer(const header_type& hdr, std::initializer_list<size_type> order,
             arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : arrnd_general_indexer(hdr, order.begin(), order.end(), pos)
         { }
@@ -1351,11 +1351,12 @@ namespace details {
         using size_type = typename Header::size_type;
         using value_type = typename Header::value_type;
 
-        constexpr arrnd_fast_indexer(const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+        explicit constexpr arrnd_fast_indexer(
+            const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : arrnd_fast_indexer(hdr, 0, pos)
         { }
 
-        constexpr arrnd_fast_indexer(
+        explicit constexpr arrnd_fast_indexer(
             const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
         {
             assert(!hdr.is_sliced() && !hdr.is_reordered());
@@ -1621,7 +1622,8 @@ namespace details {
 
         using storage_type = typename Header::storage_type::template replaced_type<interval<value_type>>;
 
-        constexpr arrnd_fixed_axis_ranger(const header_type& hdr, size_type fixed_axis = 0, bool backward = false)
+        explicit constexpr arrnd_fixed_axis_ranger(
+            const header_type& hdr, size_type fixed_axis = 0, bool backward = false)
             : fixed_axis_(fixed_axis)
         {
             assert(fixed_axis >= 0 && fixed_axis < hdr.dims().size());
@@ -1791,7 +1793,7 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
 
-        constexpr arrnd_iterator(pointer data, const indexer_type& gen)
+        explicit constexpr arrnd_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
             , data_(data)
         { }
@@ -1899,7 +1901,7 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
 
-        constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
+        explicit constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
             , data_(data)
         { }
@@ -2007,7 +2009,7 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
 
-        constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
+        explicit constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
             , data_(data)
         { }
@@ -2115,7 +2117,7 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
 
-        constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
+        explicit constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
             , data_(data)
         { }
@@ -2222,7 +2224,7 @@ namespace details {
 
         using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-        constexpr arrnd_axis_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_axis_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -2337,7 +2339,7 @@ namespace details {
 
         using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-        constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -2452,7 +2454,7 @@ namespace details {
 
         using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-        constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -2567,7 +2569,7 @@ namespace details {
 
         using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
 
-        constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
