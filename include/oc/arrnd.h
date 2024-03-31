@@ -3291,8 +3291,7 @@ namespace details {
 
         virtual constexpr ~arrnd() = default;
 
-        template <typename InputDimsIt, typename InputDataIt>
-            requires(std::input_iterator<InputDimsIt> && std::input_iterator<InputDataIt>)
+        template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
@@ -3301,18 +3300,16 @@ namespace details {
         {
             std::copy(first_data, std::next(first_data, hdr_.numel()), buffsp_->data());
         }
-        template <integral_type_iterable Cont, typename InputDataIt>
-            requires std::input_iterator<InputDataIt>
+        template <integral_type_iterable Cont, std::input_iterator InputDataIt>
         explicit constexpr arrnd(const Cont& dims, InputDataIt first_data)
             : arrnd(std::begin(dims), std::end(dims), first_data)
         { }
-        template <typename InputDataIt>
-            requires std::input_iterator<InputDataIt>
+        template <std::input_iterator InputDataIt>
         explicit constexpr arrnd(std::initializer_list<size_type> dims, InputDataIt first_data)
             : arrnd(dims.begin(), dims.end(), first_data)
         { }
-        template <typename InputDimsIt, typename U>
-            requires(std::input_iterator<InputDimsIt> && !(std::is_pointer_v<U> || std::is_array_v<U>))
+        template <integral_type_iterator InputDimsIt, typename U>
+            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<U> data)
             : arrnd(first_dim, last_dim, data.begin())
         { }
@@ -3327,8 +3324,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), data.begin())
         { }
 
-        template <typename InputDimsIt>
-            requires std::input_iterator<InputDimsIt>
+        template <integral_type_iterator InputDimsIt>
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_pointer first_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty() ? nullptr
@@ -3342,8 +3338,7 @@ namespace details {
         explicit constexpr arrnd(std::initializer_list<size_type> dims, const_pointer first_data)
             : arrnd(dims.begin(), dims.end(), first_data)
         { }
-        template <typename InputDimsIt>
-            requires std::input_iterator<InputDimsIt>
+        template <integral_type_iterator InputDimsIt>
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<T> data)
             : arrnd(first_dim, last_dim, data.begin())
         { }
@@ -3355,8 +3350,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), data.begin())
         { }
 
-        template <typename InputDimsIt>
-            requires std::input_iterator<InputDimsIt>
+        template <integral_type_iterator InputDimsIt>
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
@@ -3371,8 +3365,8 @@ namespace details {
             : arrnd(dims.begin(), dims.end())
         { }
 
-        template <typename InputDimsIt, typename U>
-            requires(std::input_iterator<InputDimsIt> && !(std::is_pointer_v<U> || std::is_array_v<U>))
+        template <integral_type_iterator InputDimsIt, typename U>
+            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
@@ -3394,8 +3388,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), value)
         { }
 
-        template <typename InputDimsIt>
-            requires std::input_iterator<InputDimsIt>
+        template <integral_type_iterator InputDimsIt>
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_reference value)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
@@ -3414,8 +3407,8 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), value)
         { }
 
-        template <typename InputDimsIt, typename Func, typename... Args>
-            requires(std::input_iterator<InputDimsIt> && std::is_invocable_v<Func, Args...>)
+        template <integral_type_iterator InputDimsIt, typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, Args...>)
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, Func&& func, Args&&... args)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
