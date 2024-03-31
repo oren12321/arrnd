@@ -87,7 +87,8 @@ namespace details {
         template <typename U>
         using replaced_type = simple_dynamic_vector<U, Allocator>;
 
-        explicit constexpr simple_dynamic_vector(size_type size = 0, const_pointer data = nullptr)
+        template <typename U = value_type>
+        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr)
             : size_(size)
         {
             assert(size >= 0);
@@ -318,7 +319,8 @@ namespace details {
         template <typename U>
         using replaced_type = simple_static_vector<U, Size>;
 
-        explicit constexpr simple_static_vector(size_type size = 0, const_pointer data = nullptr)
+        template <typename U = value_type>
+        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr)
             : size_(size)
         {
             assert(size_ >= 0 && size_ <= Size);
