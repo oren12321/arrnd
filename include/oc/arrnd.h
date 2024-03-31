@@ -545,71 +545,88 @@ namespace details {
     * @note half open interval
     */
     template <std::integral T = std::int64_t>
-    struct interval {
-        explicit constexpr interval(T nstart, T nstop, T nstep = 1) noexcept
-            : start(nstart)
-            , stop(nstop)
-            , step(nstep)
+    class interval {
+    public:
+        explicit constexpr interval(T start, T stop, T step = 1) noexcept
+            : start_(start)
+            , stop_(stop)
+            , step_(step)
         { }
 
-        constexpr interval() = default;
+        constexpr interval() = default; // interval of first element
         constexpr interval(const interval&) = default;
         constexpr interval& operator=(const interval&) = default;
         constexpr interval(interval&) = default;
         constexpr interval& operator=(interval&) = default;
 
-        T start{0};
-        T stop{1};
-        T step{1};
-
-        [[nodiscard]] static constexpr interval full(T nsize) noexcept
+        [[nodiscard]] constexpr T start() const noexcept
         {
-            return interval{0, nsize};
+            return start_;
         }
 
-        [[nodiscard]] static constexpr interval from(T nstart, T ncount)
+        [[nodiscard]] constexpr T stop() const noexcept
         {
-            return interval{nstart, nstart + ncount};
+            return stop_;
         }
 
-        [[nodiscard]] static constexpr interval to(T nstop) noexcept
+        [[nodiscard]] constexpr T step() const noexcept
         {
-            return interval{0, nstop};
+            return step_;
         }
 
-        [[nodiscard]] static constexpr interval at(T npos) noexcept
+        [[nodiscard]] static constexpr interval full(T size) noexcept
         {
-            return interval{npos, npos + 1};
+            return interval{0, size};
         }
 
-        [[nodiscard]] static constexpr interval between(T nstart, T nstop, T nstep = 1) noexcept
+        [[nodiscard]] static constexpr interval from(T start, T count)
         {
-            return interval{nstart, nstop, nstep};
+            return interval{start, start + count};
         }
+
+        [[nodiscard]] static constexpr interval to(T stop) noexcept
+        {
+            return interval{0, stop};
+        }
+
+        [[nodiscard]] static constexpr interval at(T pos) noexcept
+        {
+            return interval{pos, pos + 1};
+        }
+
+        [[nodiscard]] static constexpr interval between(T start, T stop, T step = 1) noexcept
+        {
+            return interval{start, stop, step};
+        }
+
+    private:
+        T start_{0};
+        T stop_{1};
+        T step_{1};
     };
 
     template <std::integral T>
     [[nodiscard]] inline constexpr interval<T> reverse(const interval<T>& i) noexcept
     {
-        return interval<T>{i.stop, i.start, -i.step};
+        return interval<T>{i.stop(), i.start(), -i.step()};
     }
 
     template <std::integral T>
     [[nodiscard]] inline constexpr interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
     {
-        return interval<T>{modulo(i.start, modulus), modulo(i.stop, modulus), i.step};
+        return interval<T>{modulo(i.start(), modulus), modulo(i.stop(), modulus), i.step()};
     }
 
     template <std::integral T>
     [[nodiscard]] inline constexpr interval<T> forward(const interval<T>& i) noexcept
     {
-        return i.step < T{0} ? reverse(i) : i;
+        return i.step() < T{0} ? reverse(i) : i;
     }
 
     template <std::integral T>
     [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
-        return lhs.start == rhs.start && lhs.stop == rhs.stop && lhs.step == rhs.step;
+        return lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step();
     }
 }
 
@@ -710,7 +727,7 @@ namespace details {
             auto valid_ranges = [&]() {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
                     std::logical_and<>{}, [](const auto& r, auto d) {
-                        return (r.start < r.stop && r.step >= 1) && (r.start >= 0 && r.stop <= d);
+                        return (r.start() < r.stop() && r.step() >= 1) && (r.start() >= 0 && r.stop() <= d);
                     });
             };
             assert(valid_ranges());
@@ -723,7 +740,7 @@ namespace details {
 
             res.dims_ = storage_type(dims_.size());
             std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
-                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop - r.start) / r.step));
+                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop() - r.start()) / r.step()));
             });
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
@@ -736,14 +753,14 @@ namespace details {
             res.strides_ = storage_type(res.dims_.size());
             std::transform(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range, res.strides_.begin(),
                 [](auto s, const auto& r) {
-                    return s * r.step;
+                    return s * r.step();
                 });
             std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
 
             res.offset_ = offset_
                 + std::transform_reduce(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range,
                     value_type{0}, std::plus<>{}, [](auto s, const auto& r) {
-                        return s * r.start;
+                        return s * r.start();
                     });
 
             res.last_index_ = res.offset_
@@ -2253,7 +2270,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
+            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
         }
 
     private:
@@ -2368,7 +2385,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
+            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
         }
 
     private:
@@ -2483,7 +2500,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
+            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
         }
 
     private:
@@ -2600,7 +2617,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_axis_reverse_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
+            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
         }
 
     private:
