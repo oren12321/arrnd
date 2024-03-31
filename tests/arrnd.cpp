@@ -154,10 +154,10 @@ TEST(interval_test, initialization)
     EXPECT_EQ(1, i1.stop);
     EXPECT_EQ(1, i1.step);
 
-    oc::interval i2{1};
-    EXPECT_EQ(1, i2.start);
-    EXPECT_EQ(2, i2.stop);
-    EXPECT_EQ(1, i2.step);
+    //oc::interval i2{1}; // deprecated
+    //EXPECT_EQ(1, i2.start);
+    //EXPECT_EQ(2, i2.stop);
+    //EXPECT_EQ(1, i2.step);
 
     oc::interval i3{1, 2};
     EXPECT_EQ(1, i3.start);
@@ -580,7 +580,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[3]{interval<>{0}, interval<>{1}, interval<>{2}};
+    const interval<> expected_inds_list[3]{interval<>{0, 1}, interval<>{1, 2}, interval<>{2, 3}};
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
@@ -608,7 +608,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[3]{interval<>{2}, interval<>{1}, interval<>{0}};
+    const interval<> expected_inds_list[3]{interval<>{2, 3}, interval<>{1, 2}, interval<>{0, 1}};
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
@@ -636,7 +636,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_steps_bigg
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[2]{interval<>{0}, interval<>{2}};
+    const interval<> expected_inds_list[2]{interval<>{0, 1}, interval<>{2, 3}};
     const std::int64_t expected_generated_subs{2};
 
     std::int64_t generated_subs_counter{0};
@@ -664,7 +664,7 @@ TEST(arrnd_fixed_axis_ranger, random_access)
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[3]{interval<>{0}, interval<>{2}, interval<>{1}};
+    const interval<> expected_inds_list[3]{interval<>{0, 1}, interval<>{2, 3}, interval<>{1, 2}};
 
     arrnd_fixed_axis_ranger gen(hdr, 2);
 
@@ -1386,7 +1386,7 @@ TEST(arrnd_test, reduce_elements)
         });
         EXPECT_EQ("-1-2-5-6-10-11", chain);
 
-        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 2}, {2}}], 1,
+        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 2}, {2, 3}}], 1,
             oc::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
             [](const std::string& s, int n) {
                 return s + "-" + std::to_string(n);
@@ -1600,7 +1600,7 @@ TEST(arrnd_test, select_elements_indices_by_condition)
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
     {
-        oc::arrnd sarr{iarr[{{1, 3}, {0}, {0, 2}}]};
+        oc::arrnd sarr{iarr[{{1, 3}, {0, 1}, {0, 2}}]};
         oc::arrnd not_zeros_inds{oc::find(sarr, [](int a) {
             return a != 0;
         })};
@@ -1662,7 +1662,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
     // Get subarray, find values indices by predicate,
     // and use this indices in different array.
     {
-        oc::arrnd sarr{iarr[{{1, 3}, {0}, {0, 2}}]};
+        oc::arrnd sarr{iarr[{{1, 3}, {0, 1}, {0, 2}}]};
         oc::arrnd not_zeros_inds{oc::find(sarr, oc::arrnd{{2, 1, 2}, {0, 1, 0, 1}})};
 
         oc::arrnd<std::int64_t> rinds1{{2}, {3, 5}};
@@ -2862,7 +2862,7 @@ TEST(arrnd_test, can_return_slice)
         const int tdata1[] = {1, 5};
         const std::int64_t tdims1[] = {2, 1, 1};
         Integer_array tarr1{tdims1, tdata1};
-        Integer_array sarr1{arr[{{0, 3, 2}, {0}, {0}}]};
+        Integer_array sarr1{arr[{{0, 3, 2}, {0, 1}, {0, 1}}]};
         EXPECT_TRUE(oc::all_equal(tarr1, sarr1));
         EXPECT_EQ(arr.storage()->data(), sarr1.storage()->data());
 
@@ -2875,7 +2875,7 @@ TEST(arrnd_test, can_return_slice)
         EXPECT_EQ(arr.storage()->data(), sarr2.storage()->data());
 
         // nranges > ndims - ignore extra ranges
-        Integer_array sarr3{arr[{{0, 3, 2}, {0}, {0}, {100, 101, 5}}]};
+        Integer_array sarr3{arr[{{0, 3, 2}, {0, 1}, {0, 1}, {100, 101, 5}}]};
         EXPECT_TRUE(oc::all_equal(sarr1, sarr3));
         EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
 
@@ -2982,9 +2982,9 @@ TEST(arrnd_test, can_be_assigned_with_value)
         const int tdata[] = {1, 50, 3, 100, 5, 100};
         Integer_array tarr{dims, tdata};
 
-        arr[{{1, 3}, {0}, {1}}] = 100;
+        arr[{{1, 3}, {0, 1}, {1, 2}}] = 100;
         // assignment of different type
-        arr[{{0, 1}, {0}, {1}}] = 50.5;
+        arr[{{0, 1}, {0, 1}, {1, 2}}] = 50.5;
         EXPECT_TRUE(oc::all_equal(tarr, arr));
     }
 }
@@ -3387,7 +3387,8 @@ TEST(arrnd_test, copy_from)
     // specific ranges
     {
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
-        std::initializer_list<interval<std::int64_t>> ranges{{0, 3}, {0, 1}, {1, 2}};
+        std::initializer_list<interval<std::int64_t>> ranges{
+            interval<std::int64_t>{0, 3}, interval<std::int64_t>{0, 1}, interval<std::int64_t>{1, 2}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         copy(src, dst, ranges);

@@ -546,18 +546,10 @@ namespace details {
     */
     template <std::integral T = std::int64_t>
     struct interval {
-        constexpr interval(T nstart, T nstop, T nstep) noexcept
+        explicit constexpr interval(T nstart, T nstop, T nstep = 1) noexcept
             : start(nstart)
             , stop(nstop)
             , step(nstep)
-        { }
-
-        constexpr interval(T nstart, T nstop) noexcept
-            : interval(nstart, nstop, 1)
-        { }
-
-        constexpr interval(T nstart) noexcept
-            : interval(nstart, nstart + 1, 1)
         { }
 
         constexpr interval() = default;
@@ -599,13 +591,13 @@ namespace details {
     template <std::integral T>
     [[nodiscard]] inline constexpr interval<T> reverse(const interval<T>& i) noexcept
     {
-        return {i.stop, i.start, -i.step};
+        return interval<T>{i.stop, i.start, -i.step};
     }
 
     template <std::integral T>
     [[nodiscard]] inline constexpr interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
     {
-        return {modulo(i.start, modulus), modulo(i.stop, modulus), i.step};
+        return interval<T>{modulo(i.start, modulus), modulo(i.stop, modulus), i.step};
     }
 
     template <std::integral T>
@@ -731,7 +723,7 @@ namespace details {
 
             res.dims_ = storage_type(dims_.size());
             std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
-                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop - r.start) /r.step));
+                return static_cast<value_type>(std::ceil(static_cast<double>(r.stop - r.start) / r.step));
             });
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
