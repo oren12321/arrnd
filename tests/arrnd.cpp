@@ -1014,6 +1014,214 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
     EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 1}, value}));
 }
 
+TEST(arrnd_test, parameterized_constructors_compilation)
+{
+    using namespace oc;
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims.cbegin(), dims.cend(), data.cbegin(), data.cend());
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims, data.cbegin(), data.cend());
+    }
+
+    {
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
+        arrnd<int> arr2({3, 1, 2}, data.cbegin(), data.cend());
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims, data.cbegin(), data.cend());
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd arr(dims, {1, 2, 3, 4, 5, 6});
+    }
+
+    {
+        arrnd arr1(std::initializer_list<int>{}, {1, 2, 3, 4, 5, 6});
+        arrnd arr2({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd arr(dims, {1, 2, 3, 4, 5, 6});
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims.cbegin(), dims.cend(), {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+    }
+
+    {
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr1(std::initializer_list<int>{}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+        arrnd<int> arr2({3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd<int> arr(dims, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims.cbegin(), dims.cend(), data);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims, data);
+    }
+
+    {
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd arr1(std::initializer_list<int>{}, data);
+        arrnd arr2({3, 1, 2}, data);
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims, data);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        double data[]{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims.cbegin(), dims.cend(), data);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        double data[]{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims, data);
+    }
+
+    {
+        double data[]{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr1(std::initializer_list<int>{}, data);
+        arrnd<int> arr2({3, 1, 2}, data);
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        double data[]{1, 2, 3, 4, 5, 6};
+        arrnd<int> arr(dims, data);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims.cbegin(), dims.cend());
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims);
+    }
+
+    {
+        arrnd<int> arr1(std::initializer_list<int>{});
+        arrnd<int> arr2({3, 1, 2});
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd<int> arr(dims);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd arr(dims.cbegin(), dims.cend(), 0);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd arr(dims, 0);
+    }
+
+    {
+        arrnd arr1(std::initializer_list<int>{}, 0);
+        arrnd arr2({3, 1, 2}, 0);
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd arr(dims, 0);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims.cbegin(), dims.cend(), 0.1);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims, 0.1);
+    }
+
+    {
+        arrnd<int> arr1(std::initializer_list<int>{}, 0.1);
+        arrnd<int> arr2({3, 1, 2}, 0.1);
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd<int> arr(dims, 0.1);
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims.cbegin(), dims.cend(), []() {
+            return 0.1;
+        });
+    }
+
+    {
+        std::vector<int> dims{3, 1, 2};
+        arrnd<int> arr(dims, []() {
+            return 1;
+        });
+    }
+
+    {
+        arrnd<int> arr1(std::initializer_list<int>{}, []() {
+            return 1;
+        });
+        arrnd<int> arr2({3, 1, 2}, []() {
+            return 1;
+        });
+    }
+
+    {
+        int dims[]{3, 1, 2};
+        arrnd<int> arr(dims, []() {
+            return 1;
+        });
+    }
+}
+
 TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
 {
     std::random_device rd;
@@ -2511,7 +2719,7 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::all_match(Integer_array{}, Integer_array({}), [](int, int) {
             return false;
         }));
-        EXPECT_TRUE(oc::all_match(Integer_array{}, Integer_array({}, 0), [](int, int) {
+        EXPECT_TRUE(oc::all_match(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0), [](int, int) {
             return false;
         }));
     }
@@ -2641,7 +2849,7 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::any_match(Integer_array{}, Integer_array({}), [](int, int) {
             return false;
         }));
-        EXPECT_TRUE(oc::any_match(Integer_array{}, Integer_array({}, 0), [](int, int) {
+        EXPECT_TRUE(oc::any_match(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0), [](int, int) {
             return false;
         }));
     }
@@ -2732,10 +2940,10 @@ TEST(arrnd_test, can_be_compared_with_another_array_or_value)
     {
         EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array({})));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0)));
         EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array({})));
-        EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::any_equal(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0)));
     }
 
     // scalar
@@ -2835,12 +3043,13 @@ TEST(arrnd_test, can_be_compared_by_tolerance_values_with_another_array_or_value
 
     // empty arrays
     {
+        Integer_array({});
         EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array({})));
-        EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::all_close(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0)));
         EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array{}));
         EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array({})));
-        EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array({}, 0)));
+        EXPECT_TRUE(oc::any_close(Integer_array{}, Integer_array(std::initializer_list<int>{}, 0)));
     }
 
     // scalar
@@ -4184,29 +4393,29 @@ TEST(arrnd_test, complex_array)
 
                 {{64, 65, 66}, {67, 68, 69}, {70, 71, 72}}}}};
     const std::int64_t dims[]{2, 2, 2, 3, 3};
-    Integer_array arr{dims, reinterpret_cast<const int*>(data)};
+    Integer_array arr{dims, oc::const_array_cast<int>(data)};
 
-    const int sdata1[2][1][1][2][1]{{{{{11}, {17}}}}, {{{{47}, {53}}}}};
+    int sdata1[2][1][1][2][1]{{{{{11}, {17}}}}, {{{{47}, {53}}}}};
     const std::int64_t sdims1[]{2, 1, 1, 2, 1};
-    Integer_array sarr1{sdims1, reinterpret_cast<const int*>(sdata1)};
+    Integer_array sarr1{sdims1, oc::array_cast<int>(sdata1)};
 
     EXPECT_TRUE(oc::all_equal(sarr1, (arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}])));
 
-    const int sdata2[1][1][1][1][1]{{{{{17}}}}};
+    int sdata2[1][1][1][1][1]{{{{{17}}}}};
     const std::int64_t sdims2[]{1, 1, 1, 1, 1};
-    Integer_array sarr2{sdims2, reinterpret_cast<const int*>(sdata2)};
+    Integer_array sarr2{sdims2, oc::array_cast<int>(sdata2)};
 
     EXPECT_TRUE(oc::all_equal(sarr2, (sarr1[{{0, 1}, {0, 1}, {0, 1}, {1, 2}, {0, 1}}])));
 
     {
         const int edata1[1][2][1]{{{11}, {17}}};
-        oc::arrnd<int> rarr1{{1, 2, 1}, reinterpret_cast<const int*>(edata1)};
+        oc::arrnd<int> rarr1{{1, 2, 1}, oc::const_array_cast<int>(edata1)};
         auto earr1 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][oc::interval<std::int64_t>{0, 1}]
                         [oc::interval<std::int64_t>{0, 1}];
         EXPECT_TRUE(oc::all_equal(rarr1, earr1));
 
         const int edata2[1][2][1]{{{47}, {53}}};
-        oc::arrnd<int> rarr2{{1, 2, 1}, reinterpret_cast<const int*>(edata2)};
+        oc::arrnd<int> rarr2{{1, 2, 1}, oc::const_array_cast<int>(edata2)};
         auto earr2 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][oc::interval<std::int64_t>{1, 2}]
                         [oc::interval<std::int64_t>{0, 1}];
         EXPECT_TRUE(oc::all_equal(rarr2, earr2));

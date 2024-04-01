@@ -692,6 +692,8 @@ namespace details {
 
     template <typename Iter>
     using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
+    template <typename Iter, typename T>
+    concept iterator_of_type = std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter>
     concept integral_type_iterator = std::is_integral_v<iterator_value_type<Iter>>;
     template <typename Iter>
@@ -705,7 +707,14 @@ namespace details {
                            {
                                std::end(c)
                            };
-                       };
+                       } && !
+    std::is_array_v<Cont>;
+    template <typename Cont, typename T>
+    concept iterable_of_type = iterable<Cont> && requires(Cont&& c) {
+                                                     {
+                                                         std::remove_cvref_t<decltype(*std::begin(c))>{}
+                                                         } -> std::same_as<T>;
+                                                 };
     template <typename Cont>
     concept integral_type_iterable = iterable<Cont> && requires(Cont&& c) {
                                                            {
@@ -721,15 +730,48 @@ namespace details {
 
     template <typename T>
     concept random_access_type = std::random_access_iterator<typename T::iterator>;
+
+    template <typename T, std::size_t... Ns>
+    constexpr std::size_t array_elements_count(std::index_sequence<Ns...>)
+    {
+        return (1 * ... * std::extent<T, Ns>{});
+    }
+    template <typename T>
+    constexpr std::size_t array_elements_count()
+    {
+        return array_elements_count<T>(std::make_index_sequence<std::rank<T>{}>());
+    }
+
+    template <typename T, typename U>
+    T (&array_cast(U& u))
+    [array_elements_count<U>()]
+    {
+        auto ptr = reinterpret_cast<T*>(u);
+        T(&res)[array_elements_count<U>()] = *reinterpret_cast<T(*)[array_elements_count<U>()]>(ptr);
+        return res;
+    }
+
+    template <typename T, typename U>
+    const T (&const_array_cast(const U& u))[array_elements_count<U>()]
+    {
+        auto ptr = reinterpret_cast<const T*>(u);
+        const T(&res)[array_elements_count<U>()] = *reinterpret_cast<const T(*)[array_elements_count<U>()]>(ptr);
+        return res;
+    }
 }
 
 using details::iterator_value_type;
+using details::iterator_of_type;
 using details::integral_type_iterator;
 using details::interval_type_iterator;
 using details::iterable;
+using details::iterable_of_type;
 using details::interval_type_iterable;
 using details::integral_type_iterable;
 using details::random_access_type;
+
+using details::array_cast;
+using details::const_array_cast;
 }
 
 namespace oc {
@@ -781,6 +823,11 @@ namespace details {
 
         explicit constexpr arrnd_header(std::initializer_list<value_type> dims)
             : arrnd_header(dims.begin(), dims.end())
+        { }
+
+        template <std::integral D, std::int64_t M>
+        explicit constexpr arrnd_header(const D (&dims)[M])
+            : arrnd_header(std::begin(dims), std::end(dims))
         { }
 
         template <interval_type_iterator InputIt>
@@ -3292,62 +3339,97 @@ namespace details {
         virtual constexpr ~arrnd() = default;
 
         template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data)
+        explicit constexpr arrnd(
+            InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data, InputDataIt last_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
         {
-            std::copy(first_data, std::next(first_data, hdr_.numel()), buffsp_->data());
+            assert(last_data - first_data >= hdr_.numel());
+            if (buffsp_) {
+                std::copy_n(first_data, hdr_.numel(), buffsp_->data());
+            }
         }
         template <integral_type_iterable Cont, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(const Cont& dims, InputDataIt first_data)
-            : arrnd(std::begin(dims), std::end(dims), first_data)
+        explicit constexpr arrnd(const Cont& dims, InputDataIt first_data, InputDataIt last_data)
+            : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
-        template <std::input_iterator InputDataIt>
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, InputDataIt first_data)
-            : arrnd(dims.begin(), dims.end(), first_data)
+        template <std::integral D, std::input_iterator InputDataIt>
+        explicit constexpr arrnd(std::initializer_list<D> dims, InputDataIt first_data, InputDataIt last_data)
+            : arrnd(dims.begin(), dims.end(), first_data, last_data)
         { }
-        template <integral_type_iterator InputDimsIt, typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<U> data)
-            : arrnd(first_dim, last_dim, data.begin())
-        { }
-        template <integral_type_iterable Cont, typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(const Cont& dims, std::initializer_list<U> data)
-            : arrnd(std::begin(dims), std::end(dims), data.begin())
-        { }
-        template <typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<U> data)
-            : arrnd(dims.begin(), dims.end(), data.begin())
+        template <std::integral D, std::int64_t M, std::input_iterator InputDataIt>
+        explicit constexpr arrnd(const D (&dims)[M], InputDataIt first_data, InputDataIt last_data)
+            : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
 
         template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_pointer first_data)
-            : hdr_(first_dim, last_dim)
-            , buffsp_(hdr_.empty() ? nullptr
-                                   : std::allocate_shared<storage_type>(
-                                       shared_ref_allocator_type<storage_type>(), hdr_.numel(), first_data))
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<value_type> data)
+            : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
         template <integral_type_iterable Cont>
-        explicit constexpr arrnd(const Cont& dims, const_pointer first_data)
-            : arrnd(std::begin(dims), std::end(dims), first_data)
+        explicit constexpr arrnd(const Cont& dims, std::initializer_list<value_type> data)
+            : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
         { }
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, const_pointer first_data)
-            : arrnd(dims.begin(), dims.end(), first_data)
+        template <std::integral D>
+        explicit constexpr arrnd(std::initializer_list<D> dims, std::initializer_list<value_type> data)
+            : arrnd(dims.begin(), dims.end(), data.begin(), data.end())
         { }
-        template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<T> data)
-            : arrnd(first_dim, last_dim, data.begin())
+        template <std::integral D, std::int64_t M>
+        explicit constexpr arrnd(const D (&dims)[M], std::initializer_list<value_type> data)
+            : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
         { }
-        template <integral_type_iterable Cont>
-        explicit constexpr arrnd(const Cont& dims, std::initializer_list<T> data)
-            : arrnd(std::begin(dims), std::end(dims), data.begin())
+
+        template <integral_type_iterator InputDimsIt, typename U>
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<U> data)
+            : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<T> data)
-            : arrnd(dims.begin(), dims.end(), data.begin())
+        template <integral_type_iterable Cont, typename U>
+        explicit constexpr arrnd(const Cont& dims, std::initializer_list<U> data)
+            : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
+        { }
+        template <std::integral D, typename U>
+        explicit constexpr arrnd(std::initializer_list<D> dims, std::initializer_list<U> data)
+            : arrnd(dims.begin(), dims.end(), data.begin(), data.end())
+        { }
+        template <std::integral D, std::int64_t M, typename U>
+        explicit constexpr arrnd(const D (&dims)[M], std::initializer_list<U> data)
+            : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
+        { }
+
+        template <integral_type_iterator InputDimsIt, std::int64_t N>
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const value_type (&data)[N])
+            : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
+        { }
+        template <integral_type_iterable Cont, std::int64_t N>
+        explicit constexpr arrnd(const Cont& dims, const value_type (&data)[N])
+            : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
+        { }
+        template <std::integral D, std::int64_t N>
+        explicit constexpr arrnd(std::initializer_list<D> dims, const value_type (&data)[N])
+            : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
+        { }
+        template <std::integral D, std::int64_t M, std::int64_t N>
+        explicit constexpr arrnd(const D (&dims)[M], const value_type (&data)[N])
+            : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
+        { }
+
+        template <integral_type_iterator InputDimsIt, typename U, std::int64_t N>
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U (&data)[N])
+            : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
+        { }
+        template <integral_type_iterable Cont, typename U, std::int64_t N>
+        explicit constexpr arrnd(const Cont& dims, const U (&data)[N])
+            : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
+        { }
+        template <std::integral D, typename U, std::int64_t N>
+        explicit constexpr arrnd(std::initializer_list<D> dims, const U (&data)[N])
+            : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
+        { }
+        template <std::integral D, std::int64_t M, typename U, std::int64_t N>
+        explicit constexpr arrnd(const D (&dims)[M], const U (&data)[N])
+            : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
         { }
 
         template <integral_type_iterator InputDimsIt>
@@ -3361,31 +3443,13 @@ namespace details {
         explicit constexpr arrnd(const Cont& dims)
             : arrnd(std::begin(dims), std::end(dims))
         { }
-        explicit constexpr arrnd(std::initializer_list<size_type> dims)
+        template <std::integral D>
+        explicit constexpr arrnd(std::initializer_list<D> dims)
             : arrnd(dims.begin(), dims.end())
         { }
-
-        template <integral_type_iterator InputDimsIt, typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
-            : hdr_(first_dim, last_dim)
-            , buffsp_(hdr_.empty()
-                      ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
-        {
-            if (buffsp_) {
-                std::fill(buffsp_->begin(), buffsp_->end(), value);
-            }
-        }
-        template <integral_type_iterable Cont, typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(const Cont& dims, const U& value)
-            : arrnd(std::begin(dims), std::end(dims), value)
-        { }
-        template <typename U>
-            requires(!(std::is_pointer_v<U> || std::is_array_v<U>))
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, const U& value)
-            : arrnd(dims.begin(), dims.end(), value)
+        template <std::integral D, std::int64_t M>
+        explicit constexpr arrnd(const D (&dims)[M])
+            : arrnd(std::begin(dims), std::end(dims))
         { }
 
         template <integral_type_iterator InputDimsIt>
@@ -3403,8 +3467,37 @@ namespace details {
         explicit constexpr arrnd(const Cont& dims, const_reference value)
             : arrnd(std::begin(dims), std::end(dims), value)
         { }
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, const_reference value)
+        template <std::integral D>
+        explicit constexpr arrnd(std::initializer_list<D> dims, const_reference value)
             : arrnd(dims.begin(), dims.end(), value)
+        { }
+        template <std::integral D, std::int64_t M>
+        explicit constexpr arrnd(const D (&dims)[M], const_reference value)
+            : arrnd(std::begin(dims), std::end(dims), value)
+        { }
+
+        template <integral_type_iterator InputDimsIt, typename U>
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
+            : hdr_(first_dim, last_dim)
+            , buffsp_(hdr_.empty()
+                      ? nullptr
+                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
+        {
+            if (buffsp_) {
+                std::fill(buffsp_->begin(), buffsp_->end(), value);
+            }
+        }
+        template <integral_type_iterable Cont, typename U>
+        explicit constexpr arrnd(const Cont& dims, const U& value)
+            : arrnd(std::begin(dims), std::end(dims), value)
+        { }
+        template <std::integral D, typename U>
+        explicit constexpr arrnd(std::initializer_list<D> dims, const U& value)
+            : arrnd(dims.begin(), dims.end(), value)
+        { }
+        template <std::integral D, std::int64_t M, typename U>
+        explicit constexpr arrnd(const D (&dims)[M], const U& value)
+            : arrnd(std::begin(dims), std::end(dims), value)
         { }
 
         template <integral_type_iterator InputDimsIt, typename Func, typename... Args>
@@ -3417,7 +3510,7 @@ namespace details {
         {
             if (buffsp_) {
                 std::for_each(buffsp_->begin(), buffsp_->end(), [&func, &args...](auto& value) {
-                    value = func(std::forward<Args>(args)...);
+                    value = static_cast<value_type>(func(std::forward<Args>(args)...));
                 });
             }
         }
@@ -3426,10 +3519,15 @@ namespace details {
         explicit constexpr arrnd(const Cont& dims, Func&& func, Args&&... args)
             : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func), std::forward<Args>(args)...)
         { }
-        template <typename Func, typename... Args>
+        template <std::integral D, typename Func, typename... Args>
             requires(std::is_invocable_v<Func, Args...>)
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func, Args&&... args)
+        explicit constexpr arrnd(std::initializer_list<D> dims, Func&& func, Args&&... args)
             : arrnd(dims.begin(), dims.end(), std::forward<Func>(func), std::forward<Args>(args)...)
+        { }
+        template <std::integral D, std::int64_t M, typename Func, typename... Args>
+            requires(std::is_invocable_v<Func, Args...>)
+        explicit constexpr arrnd(const D (&dims)[M], Func&& func, Args&&... args)
+            : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func), std::forward<Args>(args)...)
         { }
 
         [[nodiscard]] constexpr const header_type& header() const noexcept
