@@ -707,8 +707,8 @@ namespace details {
                            {
                                std::end(c)
                            };
-                       } && !
-    std::is_array_v<Cont>;
+    }
+    &&!std::is_array_v<Cont>;
     template <typename Cont, typename T>
     concept iterable_of_type = iterable<Cont> && requires(Cont&& c) {
                                                      {
@@ -794,14 +794,14 @@ namespace details {
         template <integral_type_iterator InputIt>
         explicit constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
         {
-            assert(first_dim <= last_dim);
-            assert(std::all_of(first_dim, last_dim, [](auto d) {
-                return d >= 0;
-            }));
-
             if (first_dim == last_dim) {
                 return;
             }
+
+            assert(first_dim < last_dim);
+            assert(std::all_of(first_dim, last_dim, [](auto d) {
+                return d >= 0;
+            }));
 
             numel_ = std::reduce(first_dim, last_dim, iterator_value_type<InputIt>{1}, std::multiplies<>{});
             if (numel_ == 0) {
@@ -833,7 +833,11 @@ namespace details {
         template <interval_type_iterator InputIt>
         [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
         {
-            assert(first_range <= last_range);
+            if (first_range == last_range) {
+                return *this;
+            }
+
+            assert(first_range < last_range);
 
             if (empty()) {
                 return *this;
@@ -849,10 +853,6 @@ namespace details {
                     });
             };
             assert(valid_ranges());
-
-            if (first_range == last_range) {
-                return *this;
-            }
 
             arrnd_header res{};
 
@@ -881,7 +881,7 @@ namespace details {
             res.offset_ = offset_;
             for (size_type i = 0; i < nranges; ++i) {
                 auto s = *std::next(strides_.cbegin(), i);
-                auto nr = std::next(first_range, i)->align(*std::next(dims_.cbegin(), i));
+                auto nr = (*std::next(first_range, i)).align(*std::next(dims_.cbegin(), i));
                 *std::next(res.strides_.begin(), i) = s * nr.step();
                 res.offset_ += s * nr.start();
             }
@@ -1077,7 +1077,7 @@ namespace details {
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
         {
-            assert(first_sub <= last_sub);
+            assert(first_sub < last_sub); // at least one subscript is required
 
             size_type nsubs = std::distance(first_sub, last_sub);
             assert(nsubs > 0 && nsubs <= dims_.size());
@@ -3555,12 +3555,14 @@ namespace details {
             return is_creator_valid_.expired() ? nullptr : creator_;
         }
 
-        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+        template <std::integral U>
+        [[nodiscard]] constexpr const_reference operator[](U index) const noexcept
         {
             assert(index >= hdr_.offset() && index <= hdr_.last_index());
             return buffsp_->data()[index];
         }
-        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+        template <std::integral U>
+        [[nodiscard]] constexpr reference operator[](U index) noexcept
         {
             assert(index >= hdr_.offset() && index <= hdr_.last_index());
             return buffsp_->data()[index];
@@ -3576,9 +3578,15 @@ namespace details {
         {
             return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
-        [[nodiscard]] constexpr const_reference operator[](std::initializer_list<size_type> subs) const noexcept
+        template <std::integral U>
+        [[nodiscard]] constexpr const_reference operator[](std::initializer_list<U> subs) const noexcept
         {
             return (*this)[std::make_pair(subs.begin(), subs.end())];
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr const_reference operator[](const U (&subs)[M]) const noexcept
+        {
+            return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
 
         template <integral_type_iterator InputIt>
@@ -3591,9 +3599,15 @@ namespace details {
         {
             return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
-        [[nodiscard]] constexpr reference operator[](std::initializer_list<size_type> subs) noexcept
+        template <std::integral U>
+        [[nodiscard]] constexpr reference operator[](std::initializer_list<U> subs) noexcept
         {
             return (*this)[std::make_pair(subs.begin(), subs.end())];
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr reference operator[](const U (&subs)[M]) noexcept
+        {
+            return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
         }
 
         template <interval_type_iterator InputIt>
@@ -3617,25 +3631,36 @@ namespace details {
         template <interval_type_iterable Cont>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&
         {
-            return (*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+            return (*this)[std::make_pair(std::cbegin(ranges), std::cend(ranges))];
         }
         template <interval_type_iterable Cont>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&&
         {
             return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](
-            std::initializer_list<interval<size_type>> ranges) const&
+        template <std::integral U = size_type>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval<U>> ranges) const&
         {
             return (*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](
-            std::initializer_list<interval<size_type>> ranges) const&&
+        template <std::integral U = size_type>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval<U>> ranges) const&&
         {
             return std::move(*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const interval<U> (&ranges)[M]) const&
+        {
+            return (*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const interval<U> (&ranges)[M]) const&&
+        {
+            return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+        }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const&
+        template <std::integral U>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<U> range) const&
         {
             this_type slice{};
             slice.hdr_ = hdr_.subheader(range);
@@ -3644,7 +3669,8 @@ namespace details {
             slice.creator_ = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<size_type> range) const&&
+        template <std::integral U>
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval<U> range) const&&
         {
             this_type slice{};
             slice.hdr_ = hdr_.subheader(range);
@@ -5701,9 +5727,20 @@ namespace details {
         {
             return iterator(buffsp_->data(), indexer_type(hdr_, axis));
         }
+        /**
+        * @note the const begin/end/rbegin/rend functions are for compatibility with the free standard library begin/end/rbegin/rend functions
+        */
+        [[nodiscard]] constexpr auto begin() const
+        {
+            return iterator(buffsp_->data(), indexer_type(hdr_, 0));
+        }
         [[nodiscard]] constexpr auto end(size_type axis = 0)
         {
             return iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
+        }
+        [[nodiscard]] constexpr auto end() const
+        {
+            return iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::end));
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis = 0) const
         {
@@ -5717,9 +5754,17 @@ namespace details {
         {
             return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
         }
+        [[nodiscard]] constexpr auto rbegin() const
+        {
+            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rbegin));
+        }
         [[nodiscard]] constexpr auto rend(size_type axis = 0)
         {
             return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
+        }
+        [[nodiscard]] constexpr auto rend() const
+        {
+            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rend));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis = 0) const
         {

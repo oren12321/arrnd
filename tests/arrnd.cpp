@@ -1222,6 +1222,42 @@ TEST(arrnd_test, parameterized_constructors_compilation)
     }
 }
 
+TEST(arrnd_test, subscript_operators_compilation)
+{
+    using namespace oc;
+
+    arrnd arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+    const auto& x1 = arr[0];
+    arr[0] = 0;
+    std::vector<int> subs1{0, 0, 0};
+    const auto& x2 = arr[std::make_pair(subs1.cbegin(), subs1.cend())];
+    arr[std::make_pair(subs1.cbegin(), subs1.cend())] = 0;
+    const auto& x3 = arr[subs1];
+    arr[subs1] = 0;
+    const auto& x4 = arr[{0, 0, 0}];
+    arr[{0, 0, 0}] = 0;
+    int subs2[]{0, 0, 0};
+    const auto& x5 = arr[subs2];
+    arr[subs2] = 0;
+    arrnd subs3({3}, {0, 0, 0});
+    const auto& x6 = arr[subs3];
+    arr[subs3] = 0;
+
+    std::vector<interval<>> ranges1{interval<>::full(), interval<>::at(0), interval<>::at(0)};
+    std::vector<interval<>> ranges2{interval<>::between(0, 2)};
+    auto s1 = arr[std::make_pair(ranges1.cbegin(), ranges1.cend())][std::make_pair(ranges2.cbegin(), ranges2.cend())];
+    auto s2 = arr[ranges1][ranges2];
+    auto s3 = arr[{interval<>::full(), interval<>::at(0), interval<>::at(0)}][{interval<>::between(0, 2)}];
+    interval<> ranges3[]{interval<>::full(), interval<>::at(0), interval<>::at(0)};
+    interval<> ranges4[]{interval<>::between(0, 2)};
+    auto s4 = arr[ranges3][ranges4];
+    auto s5 = arr[interval<>::full()][interval<>::between(0, 2)];
+    arrnd ranges5({3}, {interval<>::full(), interval<>::at(0), interval<>::at(0)});
+    arrnd ranges6({1}, {interval<>::between(0, 2)});
+    const auto& s6 = arr[ranges5][ranges6];
+}
+
 TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
 {
     std::random_device rd;
@@ -1432,7 +1468,7 @@ TEST(arrnd_test, have_read_write_access_to_slice)
     for (std::int64_t k = 0; k < rdims[0]; ++k) {
         for (std::int64_t i = 0; i < rdims[1]; ++i) {
             for (std::int64_t j = 0; j < rdims[2]; ++j) {
-                EXPECT_EQ((rarr[{k, i, j}]), (sarr[{k, 0, i, j}]));
+                EXPECT_EQ((rarr[{k, i, j}]), (sarr[{k, 0ll, i, j}]));
             }
         }
     }
