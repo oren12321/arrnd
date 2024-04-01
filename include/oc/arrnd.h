@@ -1009,11 +1009,11 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
         {
-            assert(main_axis >= 0 && main_axis < dims_.size());
-
             if (empty() || dims_.size() == 1 || main_axis == 0) {
                 return *this;
             }
+
+            assert(main_axis >= 0 && main_axis < dims_.size());
 
             arrnd_header res(*this);
 
@@ -5725,99 +5725,116 @@ namespace details {
 
         [[nodiscard]] constexpr auto begin(size_type axis = 0)
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, axis));
+            return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, axis));
         }
         /**
         * @note the const begin/end/rbegin/rend functions are for compatibility with the free standard library begin/end/rbegin/rend functions
         */
         [[nodiscard]] constexpr auto begin() const
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, 0));
+            return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, 0));
         }
         [[nodiscard]] constexpr auto end(size_type axis = 0)
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
+            return empty() ? iterator()
+                           : iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
         }
         [[nodiscard]] constexpr auto end() const
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::end));
+            return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::end));
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis = 0) const
         {
-            return const_iterator(buffsp_->data(), indexer_type(hdr_, axis));
+            return empty() ? const_iterator() : const_iterator(buffsp_->data(), indexer_type(hdr_, axis));
         }
         [[nodiscard]] constexpr auto cend(size_type axis = 0) const
         {
-            return const_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
+            return empty() ? const_iterator()
+                           : const_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis = 0)
         {
-            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
+            return empty() ? reverse_iterator() : reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin() const
         {
-            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rbegin));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis = 0)
         {
-            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
         }
         [[nodiscard]] constexpr auto rend() const
         {
-            return reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rend));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_indexer_position::rend));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis = 0) const
         {
-            return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
+            return empty()
+                ? const_reverse_iterator()
+                : const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rbegin));
         }
         [[nodiscard]] constexpr auto crend(size_type axis = 0) const
         {
-            return const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
+            return empty()
+                ? const_reverse_iterator()
+                : const_reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_indexer_position::rend));
         }
 
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto begin(InputIt first_order, InputIt last_order)
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
+            return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order)
         {
-            return iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
+            return empty()
+                ? iterator()
+                : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto cbegin(InputIt first_order, InputIt last_order) const
         {
-            return const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
+            return empty() ? const_iterator()
+                           : const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto cend(InputIt first_order, InputIt last_order) const
         {
-            return const_iterator(
+            return empty() ? const_iterator()
+                           : const_iterator(
                 buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order)
         {
-            return reverse_iterator(
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(
                 buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order)
         {
-            return reverse_iterator(
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(
                 buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rend));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto crbegin(InputIt first_order, InputIt last_order) const
         {
-            return const_reverse_iterator(
+            return empty() ? const_reverse_iterator()
+                           : const_reverse_iterator(
                 buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
         }
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto crend(InputIt first_order, InputIt last_order) const
         {
-            return const_reverse_iterator(
+            return empty() ? const_reverse_iterator()
+                           : const_reverse_iterator(
                 buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rend));
         }
 
@@ -5897,35 +5914,40 @@ namespace details {
 
         [[nodiscard]] constexpr auto begin_subarray(size_type fixed_axis = 0)
         {
-            return subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
+            return empty() ? subarray_iterator() : subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
         }
         [[nodiscard]] constexpr auto end_subarray(size_type fixed_axis = 0)
         {
-            return subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
+            return empty() ? subarray_iterator() : subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
         }
         [[nodiscard]] constexpr auto cbegin_subarray(size_type fixed_axis = 0) const
         {
-            return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
+            return empty() ? const_subarray_iterator() : const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
         }
         [[nodiscard]] constexpr auto cend_subarray(size_type fixed_axis = 0) const
         {
-            return const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
+            return empty() ? const_subarray_iterator()
+                           : const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
         }
         [[nodiscard]] constexpr auto rbegin_subarray(size_type fixed_axis = 0)
         {
-            return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
+            return empty() ? reverse_subarray_iterator()
+                           : reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
         }
         [[nodiscard]] constexpr auto rend_subarray(size_type fixed_axis = 0)
         {
-            return reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
+            return empty() ? reverse_subarray_iterator()
+                           : reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
         }
         [[nodiscard]] constexpr auto crbegin_subarray(size_type fixed_axis = 0) const
         {
-            return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
+            return empty() ? const_reverse_subarray_iterator()
+                           : const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
         }
         [[nodiscard]] constexpr auto crend_subarray(size_type fixed_axis = 0) const
         {
-            return const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
+            return empty() ? const_reverse_subarray_iterator()
+                           : const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
         }
 
         [[nodiscard]] constexpr auto abs()

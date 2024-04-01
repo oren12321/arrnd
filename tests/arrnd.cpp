@@ -702,6 +702,16 @@ TEST(arrnd_test, iterators_and_inserters)
 {
     using namespace oc;
 
+    arrnd<int> earr;
+    EXPECT_EQ(earr.begin(), earr.end());
+    EXPECT_EQ(earr.cbegin(), earr.cend());
+    EXPECT_EQ(earr.rbegin(), earr.rend());
+    EXPECT_EQ(earr.crbegin(), earr.crend());
+    EXPECT_EQ(earr.begin_subarray(), earr.end_subarray());
+    EXPECT_EQ(earr.cbegin_subarray(), earr.cend_subarray());
+    EXPECT_EQ(earr.rbegin_subarray(), earr.rend_subarray());
+    EXPECT_EQ(earr.crbegin_subarray(), earr.crend_subarray());
+
     const arrnd<int> arr1{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
     arrnd<int> arr2{{3, 1, 2}, {0, 1, 2, 3, 4, 5}};
 
