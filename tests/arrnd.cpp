@@ -1887,10 +1887,10 @@ TEST(arrnd_test, select_elements_indices_by_condition)
         oc::arrnd<std::int64_t> rinds1{{3}, {2, 4, 5}};
         EXPECT_TRUE(oc::all_equal(rinds1, not_zeros_inds));
 
-        //oc::arrnd<std::int64_t> rvals1{{3}, {12, 14, 15}}; // deprecated
+        oc::arrnd<std::int64_t> rvals1{{3}, {12, 14, 15}}; // deprecated
 
-        //oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        //EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
+        oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
+        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1(not_zeros_inds)));
     }
 
     // nested array
@@ -1947,10 +1947,10 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         oc::arrnd<std::int64_t> rinds1{{2}, {3, 5}};
         EXPECT_TRUE(oc::all_equal(rinds1, not_zeros_inds));
 
-        //oc::arrnd<std::int64_t> rvals1{{2}, {13, 15}}; // deprecated
+        oc::arrnd<std::int64_t> rvals1{{2}, {13, 15}}; // deprecated
 
-        //oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        //EXPECT_TRUE(oc::all_equal(rvals1, rallvals1[not_zeros_inds]));
+        oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
+        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1(not_zeros_inds)));
     }
 
     // nested array
@@ -1964,6 +1964,39 @@ TEST(arrnd_test, select_elements_indices_by_maks)
 
         auto r2 = oc::find<0>(inarr, oc::arrnd<int>({1, 2}, {1, 0}));
         EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<int>({1}, {0})));
+    }
+}
+
+TEST(arrnd_test, callable_operator)
+{
+    using namespace oc;
+
+    arrnd arr({3, 2, 2}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
+
+    {
+        auto r = arr({0, 5, 3, 2});
+        EXPECT_TRUE(all_equal(r, arrnd({4}, {5, 6, 2, 10})));
+    }
+
+    {
+        auto r = arr(arr <= 5);
+        EXPECT_TRUE(all_equal(r, arrnd({6}, {5, 2, 1, 0, 3, 4})));
+    }
+
+    {
+        auto r = arr(
+            [](int a, int factor) {
+                return a <= 5 - factor;
+            },
+            1);
+        EXPECT_TRUE(all_equal(r, arrnd({5}, {2, 1, 0, 3, 4})));
+    }
+
+    {
+        EXPECT_TRUE(all_equal(arr(arrnd_type::vector), arrnd({12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
+
+        EXPECT_TRUE(all_equal(arr(arrnd_type::row_vector), arrnd({1, 12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
+        EXPECT_TRUE(all_equal(arr(arrnd_type::column_vector), arrnd({12, 1}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
     }
 }
 
@@ -4014,6 +4047,14 @@ TEST(arrnd_test, reshape)
         EXPECT_TRUE(oc::all_equal(rnarr2[{1}], inarr[{0, 1}]));
         EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_EQ((rnarr2[{1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
+
+        auto rnarr3 = oc::reshape(inarr, oc::arrnd_type::vector);
+        EXPECT_TRUE(oc::all_equal(rnarr3,
+            oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({4}, {5, 6, 7, 8})})));
+
+        auto rnarr4 = oc::reshape<0>(inarr, oc::arrnd_type::vector);
+        EXPECT_TRUE(oc::all_equal(rnarr4,
+            oc::arrnd<Integer_array>({2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({1, 4}, {5, 6, 7, 8})})));
     }
 }
 
