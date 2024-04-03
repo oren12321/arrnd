@@ -991,7 +991,7 @@ namespace details {
                 *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
             }
-            res.is_reordered_ = true;
+            //res.is_reordered_ = true;
 
             return res;
         }
@@ -1037,7 +1037,7 @@ namespace details {
             res.dims_.front() = main_dim;
             res.strides_.front() = main_stride;
 
-            res.is_reordered_ = true;
+            //res.is_reordered_ = true;
 
             return res;
         }
@@ -1149,10 +1149,10 @@ namespace details {
             return is_sliced_;
         }
 
-        [[nodiscard]] constexpr bool is_reordered() const noexcept
-        {
-            return is_reordered_;
-        }
+        //[[nodiscard]] constexpr bool is_reordered() const noexcept // deprecated
+        //{
+        //    return is_reordered_;
+        //}
 
         [[nodiscard]] constexpr bool empty() const noexcept
         {
@@ -1171,7 +1171,7 @@ namespace details {
         value_type offset_{0};
         value_type last_index_{0};
         bool is_sliced_{false};
-        bool is_reordered_{false};
+        //bool is_reordered_{false};
     };
 }
 
@@ -1424,274 +1424,274 @@ namespace details {
         size_type rel_pos_ = 0;
     };
 
-    template <arrnd_header_complient Header = arrnd_header<>>
-    class arrnd_fast_indexer final {
-    public:
-        using header_type = Header;
-        using size_type = typename Header::size_type;
-        using value_type = typename Header::value_type;
+    //template <arrnd_header_complient Header = arrnd_header<>> // deprecated
+    //class arrnd_fast_indexer final {
+    //public:
+    //    using header_type = Header;
+    //    using size_type = typename Header::size_type;
+    //    using value_type = typename Header::value_type;
 
-        explicit constexpr arrnd_fast_indexer(
-            const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
-            : arrnd_fast_indexer(hdr, 0, pos)
-        { }
+    //    explicit constexpr arrnd_fast_indexer(
+    //        const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+    //        : arrnd_fast_indexer(hdr, 0, pos)
+    //    { }
 
-        explicit constexpr arrnd_fast_indexer(
-            const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
-        {
-            assert(!hdr.is_sliced() && !hdr.is_reordered());
-            assert(axis >= 0 && axis < hdr.dims().size());
+    //    explicit constexpr arrnd_fast_indexer(
+    //        const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
+    //    {
+    //        assert(!hdr.is_sliced() && !hdr.is_reordered());
+    //        assert(axis >= 0 && axis < hdr.dims().size());
 
-            last_index_ = hdr.last_index();
+    //        last_index_ = hdr.last_index();
 
-            num_super_groups_ = *std::next(hdr.dims().cbegin(), axis);
-            step_size_between_super_groups_ = *std::next(hdr.strides().cbegin(), axis);
+    //        num_super_groups_ = *std::next(hdr.dims().cbegin(), axis);
+    //        step_size_between_super_groups_ = *std::next(hdr.strides().cbegin(), axis);
 
-            num_groups_in_super_group_ = std::accumulate(hdr.dims().cbegin(), std::next(hdr.dims().cbegin(), axis + 1),
-                                             value_type{1}, std::multiplies<>{})
-                / num_super_groups_;
-            group_size_ = *std::next(hdr.strides().cbegin(), axis);
-            step_size_inside_group_ = hdr.strides().back();
-            step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
+    //        num_groups_in_super_group_ = std::accumulate(hdr.dims().cbegin(), std::next(hdr.dims().cbegin(), axis + 1),
+    //                                         value_type{1}, std::multiplies<>{})
+    //            / num_super_groups_;
+    //        group_size_ = *std::next(hdr.strides().cbegin(), axis);
+    //        step_size_inside_group_ = hdr.strides().back();
+    //        step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
 
-            bool backward = (pos == arrnd_indexer_position::rbegin || pos == arrnd_indexer_position::end);
+    //        bool backward = (pos == arrnd_indexer_position::rbegin || pos == arrnd_indexer_position::end);
 
-            if (!backward) {
-                group_indices_counter_ = 0;
-                groups_counter_ = 0;
-                super_groups_counter_ = 0;
+    //        if (!backward) {
+    //            group_indices_counter_ = 0;
+    //            groups_counter_ = 0;
+    //            super_groups_counter_ = 0;
 
-                super_group_start_index_ = 0;
-                group_start_index_ = 0;
+    //            super_group_start_index_ = 0;
+    //            group_start_index_ = 0;
 
-                current_index_ = 0;
-                rel_pos_ = 0;
-            } else {
-                group_indices_counter_ = group_size_ - 1;
-                groups_counter_ = num_groups_in_super_group_ - 1;
-                super_groups_counter_ = num_super_groups_ - 1;
+    //            current_index_ = 0;
+    //            rel_pos_ = 0;
+    //        } else {
+    //            group_indices_counter_ = group_size_ - 1;
+    //            groups_counter_ = num_groups_in_super_group_ - 1;
+    //            super_groups_counter_ = num_super_groups_ - 1;
 
-                super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
-                group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
+    //            super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
+    //            group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
-                current_index_ = last_index_;
-                rel_pos_ = hdr.numel() - 1;
-            }
+    //            current_index_ = last_index_;
+    //            rel_pos_ = hdr.numel() - 1;
+    //        }
 
-            if (pos == arrnd_indexer_position::end) {
-                ++(*this);
-            } else if (pos == arrnd_indexer_position::rend) {
-                --(*this);
-            }
-        }
+    //        if (pos == arrnd_indexer_position::end) {
+    //            ++(*this);
+    //        } else if (pos == arrnd_indexer_position::rend) {
+    //            --(*this);
+    //        }
+    //    }
 
-        constexpr arrnd_fast_indexer() = default;
+    //    constexpr arrnd_fast_indexer() = default;
 
-        constexpr arrnd_fast_indexer(const arrnd_fast_indexer& other) = default;
-        constexpr arrnd_fast_indexer& operator=(const arrnd_fast_indexer& other) = default;
+    //    constexpr arrnd_fast_indexer(const arrnd_fast_indexer& other) = default;
+    //    constexpr arrnd_fast_indexer& operator=(const arrnd_fast_indexer& other) = default;
 
-        constexpr arrnd_fast_indexer(arrnd_fast_indexer&& other) noexcept = default;
-        constexpr arrnd_fast_indexer& operator=(arrnd_fast_indexer&& other) noexcept = default;
+    //    constexpr arrnd_fast_indexer(arrnd_fast_indexer&& other) noexcept = default;
+    //    constexpr arrnd_fast_indexer& operator=(arrnd_fast_indexer&& other) noexcept = default;
 
-        constexpr ~arrnd_fast_indexer() = default;
+    //    constexpr ~arrnd_fast_indexer() = default;
 
-        constexpr arrnd_fast_indexer& operator++() noexcept
-        {
-            if (current_index_ > last_index_) {
-                return *this;
-            }
+    //    constexpr arrnd_fast_indexer& operator++() noexcept
+    //    {
+    //        if (current_index_ > last_index_) {
+    //            return *this;
+    //        }
 
-            ++group_indices_counter_;
+    //        ++group_indices_counter_;
 
-            current_index_ += step_size_inside_group_;
+    //        current_index_ += step_size_inside_group_;
 
-            if (group_indices_counter_ < group_size_) {
-                ++rel_pos_;
-                return *this;
-            }
+    //        if (group_indices_counter_ < group_size_) {
+    //            ++rel_pos_;
+    //            return *this;
+    //        }
 
-            group_indices_counter_ = 0;
-            ++groups_counter_;
-            group_start_index_ += step_size_between_groups_;
+    //        group_indices_counter_ = 0;
+    //        ++groups_counter_;
+    //        group_start_index_ += step_size_between_groups_;
 
-            current_index_ = group_start_index_;
+    //        current_index_ = group_start_index_;
 
-            if (groups_counter_ < num_groups_in_super_group_) {
-                ++rel_pos_;
-                return *this;
-            }
+    //        if (groups_counter_ < num_groups_in_super_group_) {
+    //            ++rel_pos_;
+    //            return *this;
+    //        }
 
-            groups_counter_ = 0;
-            ++super_groups_counter_;
-            super_group_start_index_ += step_size_between_super_groups_;
-            group_start_index_ = super_group_start_index_;
+    //        groups_counter_ = 0;
+    //        ++super_groups_counter_;
+    //        super_group_start_index_ += step_size_between_super_groups_;
+    //        group_start_index_ = super_group_start_index_;
 
-            current_index_ = group_start_index_;
+    //        current_index_ = group_start_index_;
 
-            if (super_groups_counter_ < num_super_groups_) {
-                ++rel_pos_;
-                return *this;
-            }
+    //        if (super_groups_counter_ < num_super_groups_) {
+    //            ++rel_pos_;
+    //            return *this;
+    //        }
 
-            group_indices_counter_ = group_size_;
-            groups_counter_ = num_groups_in_super_group_ - 1;
-            super_groups_counter_ = num_super_groups_ - 1;
-            super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
-            group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
+    //        group_indices_counter_ = group_size_;
+    //        groups_counter_ = num_groups_in_super_group_ - 1;
+    //        super_groups_counter_ = num_super_groups_ - 1;
+    //        super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
+    //        group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
-            current_index_ = last_index_ + 1;
+    //        current_index_ = last_index_ + 1;
 
-            ++rel_pos_;
-            return *this;
-        }
+    //        ++rel_pos_;
+    //        return *this;
+    //    }
 
-        constexpr arrnd_fast_indexer operator++(int) noexcept
-        {
-            arrnd_fast_indexer<header_type> temp{*this};
-            ++(*this);
-            return temp;
-        }
+    //    constexpr arrnd_fast_indexer operator++(int) noexcept
+    //    {
+    //        arrnd_fast_indexer<header_type> temp{*this};
+    //        ++(*this);
+    //        return temp;
+    //    }
 
-        constexpr arrnd_fast_indexer& operator+=(size_type count) noexcept
-        {
-            for (size_type i = 0; i < count; ++i) {
-                ++(*this);
-            }
-            return *this;
-        }
+    //    constexpr arrnd_fast_indexer& operator+=(size_type count) noexcept
+    //    {
+    //        for (size_type i = 0; i < count; ++i) {
+    //            ++(*this);
+    //        }
+    //        return *this;
+    //    }
 
-        constexpr arrnd_fast_indexer operator+(size_type count) const noexcept
-        {
-            arrnd_fast_indexer<header_type> temp{*this};
-            temp += count;
-            return temp;
-        }
+    //    constexpr arrnd_fast_indexer operator+(size_type count) const noexcept
+    //    {
+    //        arrnd_fast_indexer<header_type> temp{*this};
+    //        temp += count;
+    //        return temp;
+    //    }
 
-        constexpr arrnd_fast_indexer& operator--() noexcept
-        {
-            if (current_index_ < 0) {
-                return *this;
-            }
+    //    constexpr arrnd_fast_indexer& operator--() noexcept
+    //    {
+    //        if (current_index_ < 0) {
+    //            return *this;
+    //        }
 
-            --group_indices_counter_;
+    //        --group_indices_counter_;
 
-            current_index_ -= step_size_inside_group_;
+    //        current_index_ -= step_size_inside_group_;
 
-            if (group_indices_counter_ >= 0) {
-                --rel_pos_;
-                return *this;
-            }
+    //        if (group_indices_counter_ >= 0) {
+    //            --rel_pos_;
+    //            return *this;
+    //        }
 
-            group_indices_counter_ = group_size_ - 1;
-            --groups_counter_;
-            group_start_index_ -= step_size_between_groups_;
+    //        group_indices_counter_ = group_size_ - 1;
+    //        --groups_counter_;
+    //        group_start_index_ -= step_size_between_groups_;
 
-            current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
+    //        current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
 
-            if (groups_counter_ >= 0) {
-                --rel_pos_;
-                return *this;
-            }
+    //        if (groups_counter_ >= 0) {
+    //            --rel_pos_;
+    //            return *this;
+    //        }
 
-            groups_counter_ = num_groups_in_super_group_ - 1;
-            --super_groups_counter_;
-            super_group_start_index_ -= step_size_between_super_groups_;
-            group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
+    //        groups_counter_ = num_groups_in_super_group_ - 1;
+    //        --super_groups_counter_;
+    //        super_group_start_index_ -= step_size_between_super_groups_;
+    //        group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
 
-            current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
+    //        current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
 
-            if (super_groups_counter_ >= 0) {
-                --rel_pos_;
-                return *this;
-            }
+    //        if (super_groups_counter_ >= 0) {
+    //            --rel_pos_;
+    //            return *this;
+    //        }
 
-            group_indices_counter_ = -1;
-            groups_counter_ = 0;
-            super_groups_counter_ = 0;
-            super_group_start_index_ = 0;
-            group_start_index_ = 0;
+    //        group_indices_counter_ = -1;
+    //        groups_counter_ = 0;
+    //        super_groups_counter_ = 0;
+    //        super_group_start_index_ = 0;
+    //        group_start_index_ = 0;
 
-            current_index_ = -1;
+    //        current_index_ = -1;
 
-            --rel_pos_;
-            return *this;
-        }
+    //        --rel_pos_;
+    //        return *this;
+    //    }
 
-        constexpr arrnd_fast_indexer operator--(int) noexcept
-        {
-            arrnd_fast_indexer<header_type> temp{*this};
-            --(*this);
-            return temp;
-        }
+    //    constexpr arrnd_fast_indexer operator--(int) noexcept
+    //    {
+    //        arrnd_fast_indexer<header_type> temp{*this};
+    //        --(*this);
+    //        return temp;
+    //    }
 
-        constexpr arrnd_fast_indexer& operator-=(size_type count) noexcept
-        {
-            for (size_type i = 0; i < count; ++i) {
-                --(*this);
-            }
-            return *this;
-        }
+    //    constexpr arrnd_fast_indexer& operator-=(size_type count) noexcept
+    //    {
+    //        for (size_type i = 0; i < count; ++i) {
+    //            --(*this);
+    //        }
+    //        return *this;
+    //    }
 
-        constexpr arrnd_fast_indexer operator-(size_type count) const noexcept
-        {
-            arrnd_fast_indexer<header_type> temp{*this};
-            temp -= count;
-            return temp;
-        }
+    //    constexpr arrnd_fast_indexer operator-(size_type count) const noexcept
+    //    {
+    //        arrnd_fast_indexer<header_type> temp{*this};
+    //        temp -= count;
+    //        return temp;
+    //    }
 
-        [[nodiscard]] explicit constexpr operator bool() const noexcept
-        {
-            return static_cast<std::make_unsigned_t<value_type>>(current_index_)
-                <= static_cast<std::make_unsigned_t<value_type>>(last_index_);
-        }
+    //    [[nodiscard]] explicit constexpr operator bool() const noexcept
+    //    {
+    //        return static_cast<std::make_unsigned_t<value_type>>(current_index_)
+    //            <= static_cast<std::make_unsigned_t<value_type>>(last_index_);
+    //    }
 
-        [[nodiscard]] constexpr value_type operator*() const noexcept
-        {
-            return current_index_;
-        }
+    //    [[nodiscard]] constexpr value_type operator*() const noexcept
+    //    {
+    //        return current_index_;
+    //    }
 
-        [[nodiscard]] constexpr value_type operator[](size_type index) const noexcept
-        {
-            assert(index >= 0 && index < num_super_groups_ * num_groups_in_super_group_ * group_size_);
+    //    [[nodiscard]] constexpr value_type operator[](size_type index) const noexcept
+    //    {
+    //        assert(index >= 0 && index < num_super_groups_ * num_groups_in_super_group_ * group_size_);
 
-            size_type advance_count = index - rel_pos_;
-            if (advance_count > 0) {
-                return ((*this) + advance_count).current_index_;
-            }
-            if (advance_count < 0) {
-                return ((*this) - (-advance_count)).current_index_;
-            }
-            return current_index_;
-        }
+    //        size_type advance_count = index - rel_pos_;
+    //        if (advance_count > 0) {
+    //            return ((*this) + advance_count).current_index_;
+    //        }
+    //        if (advance_count < 0) {
+    //            return ((*this) - (-advance_count)).current_index_;
+    //        }
+    //        return current_index_;
+    //    }
 
-    private:
-        value_type current_index_ = 0;
+    //private:
+    //    value_type current_index_ = 0;
 
-        // data
+    //    // data
 
-        value_type last_index_ = 0;
+    //    value_type last_index_ = 0;
 
-        size_type num_super_groups_ = 0;
-        value_type step_size_between_super_groups_ = 0;
+    //    size_type num_super_groups_ = 0;
+    //    value_type step_size_between_super_groups_ = 0;
 
-        size_type num_groups_in_super_group_ = 0;
-        size_type group_size_ = 0;
-        value_type step_size_inside_group_ = 0;
-        value_type step_size_between_groups_ = 0;
+    //    size_type num_groups_in_super_group_ = 0;
+    //    size_type group_size_ = 0;
+    //    value_type step_size_inside_group_ = 0;
+    //    value_type step_size_between_groups_ = 0;
 
-        // counters
+    //    // counters
 
-        size_type super_groups_counter_ = 0;
+    //    size_type super_groups_counter_ = 0;
 
-        size_type group_indices_counter_ = 0;
-        size_type groups_counter_ = 0;
+    //    size_type group_indices_counter_ = 0;
+    //    size_type groups_counter_ = 0;
 
-        value_type super_group_start_index_ = 0;
+    //    value_type super_group_start_index_ = 0;
 
-        value_type group_start_index_ = 0;
+    //    value_type group_start_index_ = 0;
 
-        size_type rel_pos_ = 0;
-    };
+    //    size_type rel_pos_ = 0;
+    //};
 
     template <arrnd_header_complient Header = arrnd_header<>>
     class arrnd_fixed_axis_ranger final {
@@ -1852,7 +1852,7 @@ namespace details {
 
 using details::arrnd_indexer_position;
 using details::arrnd_general_indexer;
-using details::arrnd_fast_indexer;
+//using details::arrnd_fast_indexer;
 using details::arrnd_fixed_axis_ranger;
 }
 

@@ -282,7 +282,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_sliced());
-    EXPECT_FALSE(ehdr.is_reordered());
+    //EXPECT_FALSE(ehdr.is_reordered());
 
     oc::arrnd_header hdr({3, 1, 2});
 
@@ -296,10 +296,16 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_sliced());
-    EXPECT_FALSE(hdr.is_reordered());
+    //EXPECT_FALSE(hdr.is_reordered());
 
     auto rhdr = hdr.reorder(1);
-    EXPECT_TRUE(rhdr.is_reordered());
+    //EXPECT_TRUE(rhdr.is_reordered());
+    EXPECT_EQ(1, rhdr.dims().data()[0]);
+    EXPECT_EQ(3, rhdr.dims().data()[1]);
+    EXPECT_EQ(2, rhdr.dims().data()[2]);
+    EXPECT_EQ(2, rhdr.strides().data()[0]);
+    EXPECT_EQ(2, rhdr.strides().data()[1]);
+    EXPECT_EQ(1, rhdr.strides().data()[2]);
 }
 
 TEST(arrnd_general_indexer, simple_forward_backward_iterations)
@@ -463,139 +469,139 @@ TEST(arrnd_general_indexer, random_access)
     EXPECT_EQ(expected_inds_list[5], gen[3]);
 }
 
-TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
-{
-    using namespace oc;
-
-    const std::int64_t dims[]{2, 3, 4, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 4);
-
-    const std::int64_t expected_inds_list[48]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
-    const std::int64_t expected_generated_subs{48};
-
-    std::int64_t generated_subs_counter{0};
-    arrnd_fast_indexer gen(hdr);
-
-    while (gen) {
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-        ++generated_subs_counter;
-        ++gen;
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (--gen) {
-        --generated_subs_counter;
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
-{
-    using namespace oc;
-
-    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
-
-    const std::int64_t expected_inds_list[6]{5, 4, 3, 2, 1, 0};
-    const std::int64_t expected_generated_subs{6};
-
-    std::int64_t generated_subs_counter{0};
-    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
-
-    while (gen) {
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-        ++generated_subs_counter;
-        --gen;
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while (++gen) {
-        --generated_subs_counter;
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
-{
-    using namespace oc;
-
-    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
-
-    const std::int64_t expected_inds_list[6]{0, 2, 4};
-    const std::int64_t expected_generated_subs{3};
-
-    std::int64_t generated_subs_counter{0};
-    arrnd_fast_indexer gen(hdr);
-
-    while (gen) {
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-        ++generated_subs_counter;
-        gen += 2;
-    }
-    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-    while ((gen = gen - 2)) {
-        --generated_subs_counter;
-        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
-    }
-    EXPECT_EQ(0, generated_subs_counter);
-}
-
-TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
-{
-    using namespace oc;
-
-    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
-
-    const std::int64_t expected_inds_list[][6]{{0, 1, 2, 3, 4, 5},
-
-        {0, 1, 2, 3, 4, 5},
-
-        {0, 2, 4, 1, 3, 5}};
-    const std::int64_t expected_generated_subs{6};
-
-    for (std::int64_t axis = 0; axis <= 2; ++axis) {
-        std::int64_t generated_subs_counter{0};
-        arrnd_fast_indexer gen(hdr, axis);
-
-        while (gen) {
-            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
-            ++generated_subs_counter;
-            ++gen;
-        }
-        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
-
-        while (--gen) {
-            --generated_subs_counter;
-            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
-        }
-        EXPECT_EQ(0, generated_subs_counter);
-    }
-}
-
-TEST(arrnd_fast_indexer, random_access)
-{
-    using namespace oc;
-
-    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
-
-    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
-
-    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
-
-    EXPECT_EQ(expected_inds_list[0], gen[0]);
-    EXPECT_EQ(expected_inds_list[1], gen[5]);
-    EXPECT_EQ(expected_inds_list[2], gen[4]);
-    EXPECT_EQ(expected_inds_list[3], gen[1]);
-    EXPECT_EQ(expected_inds_list[4], gen[2]);
-    EXPECT_EQ(expected_inds_list[5], gen[3]);
-}
+//TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
+//{
+//    using namespace oc;
+//
+//    const std::int64_t dims[]{2, 3, 4, 2}; // strides = {2, 2, 1}
+//    arrnd_header hdr(dims, dims + 4);
+//
+//    const std::int64_t expected_inds_list[48]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+//        21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
+//    const std::int64_t expected_generated_subs{48};
+//
+//    std::int64_t generated_subs_counter{0};
+//    arrnd_fast_indexer gen(hdr);
+//
+//    while (gen) {
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//        ++generated_subs_counter;
+//        ++gen;
+//    }
+//    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+//
+//    while (--gen) {
+//        --generated_subs_counter;
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//    }
+//    EXPECT_EQ(0, generated_subs_counter);
+//}
+//
+//TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
+//{
+//    using namespace oc;
+//
+//    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
+//    arrnd_header hdr(dims, dims + 3);
+//
+//    const std::int64_t expected_inds_list[6]{5, 4, 3, 2, 1, 0};
+//    const std::int64_t expected_generated_subs{6};
+//
+//    std::int64_t generated_subs_counter{0};
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+//
+//    while (gen) {
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//        ++generated_subs_counter;
+//        --gen;
+//    }
+//    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+//
+//    while (++gen) {
+//        --generated_subs_counter;
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//    }
+//    EXPECT_EQ(0, generated_subs_counter);
+//}
+//
+//TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
+//{
+//    using namespace oc;
+//
+//    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
+//    arrnd_header hdr(dims, dims + 3);
+//
+//    const std::int64_t expected_inds_list[6]{0, 2, 4};
+//    const std::int64_t expected_generated_subs{3};
+//
+//    std::int64_t generated_subs_counter{0};
+//    arrnd_fast_indexer gen(hdr);
+//
+//    while (gen) {
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//        ++generated_subs_counter;
+//        gen += 2;
+//    }
+//    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+//
+//    while ((gen = gen - 2)) {
+//        --generated_subs_counter;
+//        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
+//    }
+//    EXPECT_EQ(0, generated_subs_counter);
+//}
+//
+//TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
+//{
+//    using namespace oc;
+//
+//    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
+//    arrnd_header hdr(dims, dims + 3);
+//
+//    const std::int64_t expected_inds_list[][6]{{0, 1, 2, 3, 4, 5},
+//
+//        {0, 1, 2, 3, 4, 5},
+//
+//        {0, 2, 4, 1, 3, 5}};
+//    const std::int64_t expected_generated_subs{6};
+//
+//    for (std::int64_t axis = 0; axis <= 2; ++axis) {
+//        std::int64_t generated_subs_counter{0};
+//        arrnd_fast_indexer gen(hdr, axis);
+//
+//        while (gen) {
+//            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+//            ++generated_subs_counter;
+//            ++gen;
+//        }
+//        EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+//
+//        while (--gen) {
+//            --generated_subs_counter;
+//            EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
+//        }
+//        EXPECT_EQ(0, generated_subs_counter);
+//    }
+//}
+//
+//TEST(arrnd_fast_indexer, random_access)
+//{
+//    using namespace oc;
+//
+//    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
+//    arrnd_header hdr(dims, dims + 3);
+//
+//    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
+//
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+//
+//    EXPECT_EQ(expected_inds_list[0], gen[0]);
+//    EXPECT_EQ(expected_inds_list[1], gen[5]);
+//    EXPECT_EQ(expected_inds_list[2], gen[4]);
+//    EXPECT_EQ(expected_inds_list[3], gen[1]);
+//    EXPECT_EQ(expected_inds_list[4], gen[2]);
+//    EXPECT_EQ(expected_inds_list[5], gen[3]);
+//}
 
 TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
 {
