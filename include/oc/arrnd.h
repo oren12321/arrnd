@@ -899,7 +899,7 @@ namespace details {
                         return (d - 1) * s;
                     });
 
-            res.is_sliced_ = true;
+            res.is_slice_ = true;
 
             return res;
         }
@@ -931,7 +931,7 @@ namespace details {
                     std::plus<>{}, [](auto d, auto s) {
                         return (d - 1) * s;
                     });
-            res.is_sliced_ = true;
+            res.is_slice_ = true;
 
             return res;
         }
@@ -1069,7 +1069,7 @@ namespace details {
                 }
             }
 
-            res.is_sliced_ = true;
+            res.is_slice_ = true;
 
             return res;
         }
@@ -1144,9 +1144,9 @@ namespace details {
             return offset_;
         }
 
-        [[nodiscard]] constexpr bool is_sliced() const noexcept
+        [[nodiscard]] constexpr bool is_slice() const noexcept
         {
-            return is_sliced_;
+            return is_slice_;
         }
 
         //[[nodiscard]] constexpr bool is_reordered() const noexcept // deprecated
@@ -1170,7 +1170,7 @@ namespace details {
         value_type numel_{0};
         value_type offset_{0};
         value_type last_index_{0};
-        bool is_sliced_{false};
+        bool is_slice_{false};
         //bool is_reordered_{false};
     };
 }
@@ -1439,7 +1439,7 @@ namespace details {
     //    explicit constexpr arrnd_fast_indexer(
     //        const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
     //    {
-    //        assert(!hdr.is_sliced() && !hdr.is_reordered());
+    //        assert(!hdr.is_slice() && !hdr.is_reordered());
     //        assert(axis >= 0 && axis < hdr.dims().size());
 
     //        last_index_ = hdr.last_index();
@@ -3745,7 +3745,7 @@ namespace details {
 
         [[nodiscard]] constexpr bool empty() const noexcept
         {
-            return hdr_.empty() && (hdr_.is_sliced() || !buffsp_);
+            return hdr_.empty() && (hdr_.is_slice() || !buffsp_);
         }
 
         /**
@@ -3895,7 +3895,7 @@ namespace details {
                 return *this;
             }
 
-            if (hdr_.is_sliced()) {
+            if (hdr_.is_slice()) {
                 return resize<Level>(first_new_dim, last_new_dim);
             }
 

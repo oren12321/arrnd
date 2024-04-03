@@ -281,7 +281,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_TRUE(ehdr.dims().empty());
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
-    EXPECT_FALSE(ehdr.is_sliced());
+    EXPECT_FALSE(ehdr.is_slice());
     //EXPECT_FALSE(ehdr.is_reordered());
 
     oc::arrnd_header hdr({3, 1, 2});
@@ -295,7 +295,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_EQ(2, hdr.strides().data()[1]);
     EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
-    EXPECT_FALSE(hdr.is_sliced());
+    EXPECT_FALSE(hdr.is_slice());
     //EXPECT_FALSE(hdr.is_reordered());
 
     auto rhdr = hdr.reorder(1);
@@ -933,21 +933,21 @@ TEST(arrnd_test, squeeze)
         arrnd<int> arr;
         auto sarr = squeeze(arr);
         EXPECT_TRUE(all_equal(sarr, arrnd<int>()));
-        EXPECT_FALSE(sarr.header().is_sliced());
+        EXPECT_FALSE(sarr.header().is_slice());
     }
 
     {
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
         auto sarr = squeeze(arr);
         EXPECT_TRUE(all_equal(sarr, arr));
-        EXPECT_FALSE(sarr.header().is_sliced());
+        EXPECT_FALSE(sarr.header().is_slice());
     }
 
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
         auto sarr = squeeze(arr);
         EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6})));
-        EXPECT_TRUE(sarr.header().is_sliced());
+        EXPECT_TRUE(sarr.header().is_slice());
     }
 
     {
@@ -959,7 +959,7 @@ TEST(arrnd_test, squeeze)
 
         arrnd<int> sarr = squeeze(slice);
         EXPECT_TRUE(all_equal(sarr, arrnd<int>({2, 2}, {9, 10, 13, 14})));
-        EXPECT_TRUE(sarr.header().is_sliced());
+        EXPECT_TRUE(sarr.header().is_slice());
     }
 
     {
@@ -970,13 +970,13 @@ TEST(arrnd_test, squeeze)
         EXPECT_TRUE(all_equal(sarr1,
             arrnd<arrnd<int>>(
                 {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})})));
-        EXPECT_TRUE(sarr1.header().is_sliced());
+        EXPECT_TRUE(sarr1.header().is_slice());
 
         auto sarr2 = squeeze(arr);
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>(
                 {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
-        EXPECT_TRUE((sarr2[{0, 0}].header().is_sliced() && sarr2[{0, 1}].header().is_sliced()));
+        EXPECT_TRUE((sarr2[{0, 0}].header().is_slice() && sarr2[{0, 1}].header().is_slice()));
     }
 }
 
