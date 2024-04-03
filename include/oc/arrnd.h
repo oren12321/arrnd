@@ -4165,7 +4165,7 @@ namespace details {
             indexer_type res_gen(res.hdr_, axis);
 
             size_type cycle = ind
-                * (std::accumulate(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
+                * (std::reduce(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
                     / res.hdr_.dims()[axis]);
 
             auto ptr = storage()->data();
@@ -4281,7 +4281,7 @@ namespace details {
             indexer_type res_gen(res.hdr_, axis);
 
             size_type cycle = ind
-                * (std::accumulate(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
+                * (std::reduce(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
                     / res.hdr_.dims()[axis]);
 
             size_type removals = hdr_.numel() - res.hdr_.numel();
@@ -5375,6 +5375,106 @@ namespace details {
         [[nodiscard]] constexpr this_type sort(size_type axis, Comp&& comp, Args&&... args) const
         {
             return sort<this_type::depth, Comp, Args...>(axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, typename Comp, typename... Args>
+            requires(Level == 0
+                && invocable_no_arrnd<Comp, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr bool is_sorted(Comp&& comp, Args&&... args) const
+        {
+            if (empty()) {
+                return true;
+            }
+
+            return std::is_sorted(cbegin(), cend(), [&comp, &args...](const auto& lhs, const auto& rhs) {
+                return comp(lhs, rhs, std::forward<Args>(args)...);
+            });
+        }
+        template <std::int64_t Level, typename Comp, typename... Args>
+            requires(Level > 0
+                && invocable_no_arrnd<Comp, typename arrnd_inner_t<this_type, Level>::value_type,
+                    typename arrnd_inner_t<this_type, Level>::value_type, Args...>)
+        [[nodiscard]] constexpr auto is_sorted(Comp&& comp, Args&&... args) const
+        {
+            using is_sorted_type = inner_replaced_type<bool, Level - 1>;
+
+            if (empty()) {
+                return is_sorted_type();
+            }
+
+            is_sorted_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template is_sorted<Level - 1, Comp, Args...>(
+                    std::forward<Comp>(comp), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <typename Comp, typename... Args>
+            requires invocable_no_arrnd<Comp, typename arrnd_inner_t<this_type>::value_type,
+                typename arrnd_inner_t<this_type>::value_type, Args...>
+        [[nodiscard]] constexpr auto is_sorted(Comp&& comp, Args&&... args) const
+        {
+            return is_sorted<this_type::depth, Comp, Args...>(std::forward<Comp>(comp), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, typename Comp, typename... Args>
+            requires(Level == 0
+                && invocable_no_arrnd<Comp, arrnd_inner_t<this_type, Level>, arrnd_inner_t<this_type, Level>, Args...>)
+        [[nodiscard]] constexpr bool is_sorted(size_type axis, Comp&& comp, Args&&... args) const
+        {
+            if (empty()) {
+                return true;
+            }
+
+            assert(axis >= 0 && axis < hdr_.dims().size());
+
+            auto expanded = expand<Level>(axis);
+
+            return expanded.template is_sorted<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
+
+            /*auto sorted = expanded.template sort<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
+
+            auto reduced = sorted.template reduce<Level>([axis](const auto& acc, const auto& cur) {
+                return acc.template append<Level>(cur, axis);
+            });
+
+            return reduced.reshape<Level>(hdr_.dims());*/
+        }
+        template <std::int64_t Level, typename Comp, typename... Args>
+            requires(Level > 0
+                && invocable_no_arrnd<Comp, arrnd_inner_t<this_type, Level>, arrnd_inner_t<this_type, Level>, Args...>)
+        [[nodiscard]] constexpr auto is_sorted(size_type axis, Comp&& comp, Args&&... args) const
+        {
+            using is_sorted_type = inner_replaced_type<bool, Level - 1>;
+
+            if (empty()) {
+                return is_sorted_type();
+            }
+
+            is_sorted_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template is_sorted<Level - 1, Comp, Args...>(
+                    axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+        template <typename Comp, typename... Args>
+            requires invocable_no_arrnd<Comp, arrnd_inner_t<this_type>, arrnd_inner_t<this_type>, Args...>
+        [[nodiscard]] constexpr auto is_sorted(size_type axis, Comp&& comp, Args&&... args) const
+        {
+            return is_sorted<this_type::depth, Comp, Args...>(
+                axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
         }
 
         template <std::int64_t Level, typename Pred, typename... Args>
@@ -7606,6 +7706,36 @@ namespace details {
         return sort<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
     }
 
+    template <std::int64_t Level, arrnd_complient ArCo, typename Comp, typename... Args>
+        requires invocable_no_arrnd<Comp, typename arrnd_inner_t<ArCo, Level>::value_type,
+            typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
+    [[nodiscard]] inline constexpr auto is_sorted(const ArCo& arr, Comp&& comp, Args&&... args)
+    {
+        return arr.template is_sorted<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo, typename Comp, typename... Args>
+        requires invocable_no_arrnd<Comp, typename arrnd_inner_t<ArCo>::value_type,
+            typename arrnd_inner_t<ArCo>::value_type, Args...>
+    [[nodiscard]] inline constexpr auto is_sorted(const ArCo& arr, Comp&& comp, Args&&... args)
+    {
+        return is_sorted<ArCo::depth>(arr, std::forward<Comp>(comp), std::forward<Args>(args)...);
+    }
+
+    template <std::int64_t Level, arrnd_complient ArCo, typename Comp, typename... Args>
+        requires invocable_no_arrnd<Comp, arrnd_inner_t<ArCo, Level>, arrnd_inner_t<ArCo, Level>, Args...>
+    [[nodiscard]] inline constexpr auto is_sorted(
+        const ArCo& arr, typename ArCo::size_type axis, Comp&& comp, Args&&... args)
+    {
+        return arr.template is_sorted<Level>(axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
+    }
+    template <arrnd_complient ArCo, typename Comp, typename... Args>
+        requires invocable_no_arrnd<Comp, arrnd_inner_t<ArCo>, arrnd_inner_t<ArCo>, Args...>
+    [[nodiscard]] inline constexpr auto is_sorted(
+        const ArCo& arr, typename ArCo::size_type axis, Comp&& comp, Args&&... args)
+    {
+        return is_sorted<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
+    }
+
     template <std::int64_t Level, arrnd_complient ArCo, typename Pred, typename... Args>
         requires invocable_no_arrnd<Pred, typename arrnd_inner_t<ArCo, Level>::value_type, Args...>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
@@ -7944,6 +8074,7 @@ using details::empty;
 using details::expand;
 using details::squeeze;
 using details::sort;
+using details::is_sorted;
 using details::all_match;
 using details::any_match;
 using details::transform;

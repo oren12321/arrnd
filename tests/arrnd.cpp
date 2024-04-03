@@ -854,13 +854,17 @@ TEST(arrnd_test, sort)
 
     // standard sort
     {
+        EXPECT_TRUE(all_equal(is_sorted(iarr, std::less<>{}), arrnd<bool>({1, 2}, {false, false})));
         auto sarr1 = sort(iarr, std::less<>{});
+        EXPECT_TRUE(all_equal(is_sorted(sarr1, std::less<>{}), arrnd<bool>({1, 2}, {true, true})));
         EXPECT_TRUE(all_equal(sarr1,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({6, 4}, {1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9}),
                     arrnd<int>({3, 1, 2}, {2, 3, 4, 6, 6, 8})})));
 
+        EXPECT_FALSE(is_sorted<0>(iarr, sum_less));
         auto sarr2 = sort<0>(iarr, sum_less);
+        EXPECT_TRUE(is_sorted<0>(sarr2, sum_less));
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6}),
@@ -869,21 +873,31 @@ TEST(arrnd_test, sort)
 
     // sort by axis
     {
+        EXPECT_TRUE(all_equal(is_sorted(iarr, 0, sum_less), arrnd<bool>({1, 2}, {false, false})));
         auto sarr1 = sort(iarr, 0, sum_less);
+        EXPECT_TRUE(all_equal(is_sorted(sarr1, 0, sum_less), arrnd<bool>({1, 2}, {true, true})));
         EXPECT_TRUE(all_equal(sarr1,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({6, 4}, {1, 3, 5, 5, 5, 6, 2, 3, 2, 5, 4, 7, 6, 3, 9, 2, 8, 4, 3, 5, 7, 4, 2, 8}),
                     arrnd<int>({3, 1, 2}, {3, 6, 4, 6, 8, 2})})));
 
+        EXPECT_TRUE(all_equal(is_sorted(iarr, 1, sum_less), arrnd<bool>({1, 2}, {false, true})));
         auto sarr2 = sort(iarr, 1, sum_less);
+        EXPECT_TRUE(all_equal(is_sorted(sarr2, 1, sum_less), arrnd<bool>({1, 2}, {true, true})));
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({6, 4}, {5, 4, 2, 7, 3, 9, 6, 2, 3, 5, 1, 5, 4, 3, 8, 5, 4, 2, 7, 8, 6, 2, 5, 3}),
                     arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6})})));
 
+        EXPECT_FALSE(is_sorted<0>(iarr, 1, [sum_less](const auto& lhs, const auto& rhs) {
+            return sum_less(lhs[{0}], rhs[{0}]);
+        }));
         auto sarr3 = sort<0>(iarr, 1, [sum_less](const auto& lhs, const auto& rhs) {
-            return sum_less(lhs[0], rhs[0]);
+            return sum_less(lhs[{0}], rhs[{0}]);
         });
+        EXPECT_TRUE(is_sorted<0>(sarr3, 1, [sum_less](const auto& lhs, const auto& rhs) {
+            return sum_less(lhs[{0}], rhs[{0}]);
+        }));
         EXPECT_TRUE(all_equal(sarr3,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6}),
