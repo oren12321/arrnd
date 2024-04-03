@@ -3586,6 +3586,12 @@ namespace details {
             return is_creator_valid_.expired() ? nullptr : creator_;
         }
 
+        [[nodiscard]] explicit constexpr operator value_type() const noexcept
+        {
+            assert(hdr_.is_scalar());
+            return (*this)[hdr_.offset()];
+        }
+
         template <std::integral U>
         [[nodiscard]] constexpr const_reference operator[](U index) const noexcept
         {

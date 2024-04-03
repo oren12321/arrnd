@@ -1303,6 +1303,28 @@ TEST(arrnd_test, subscript_operators_compilation)
     const auto& s6 = arr[ranges5][ranges6];
 }
 
+TEST(arrnd_test, can_be_explicitly_be_casted_to_value_type_if_scalar)
+{
+    {
+        oc::arrnd<double> arr({1}, 0.5);
+        EXPECT_TRUE(arr.header().is_scalar());
+        EXPECT_EQ(0.5, static_cast<double>(arr));
+    }
+
+    {
+        oc::arrnd<double> arr({1, 1, 1}, 0.5);
+        EXPECT_TRUE(arr.header().is_scalar());
+        EXPECT_EQ(0.5, static_cast<double>(arr));
+    }
+
+    {
+        oc::arrnd<double> arr({3, 1, 2}, {0.1, 0.2, 0.3, 0.4, 0.5, 0.6});
+        auto slc = arr[{oc::interval<>::at(2), oc::interval<>::at(0), oc::interval<>::at(1)}];
+        EXPECT_TRUE(slc.header().is_scalar());
+        EXPECT_EQ(0.6, static_cast<double>(slc));
+    }
+}
+
 TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
 {
     std::random_device rd;
