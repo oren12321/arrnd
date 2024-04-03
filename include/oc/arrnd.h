@@ -3202,7 +3202,7 @@ namespace details {
     template <typename T, typename R, std::int64_t Level>
     using replaced_inner_type_t = replaced_inner_type<T, R, Level>::type;
 
-    enum class arrnd_type { vector, row_vector, column_vector };
+    enum class arrnd_shape { vector, row, column };
 
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
@@ -3731,9 +3731,9 @@ namespace details {
             return (*this)(std::make_pair(std::begin(indices), std::end(indices)));
         }
 
-        [[nodiscard]] constexpr auto operator()(arrnd_type type) const
+        [[nodiscard]] constexpr auto operator()(arrnd_shape shape) const
         {
-            return reshape<0>(type);
+            return reshape<0>(shape);
         }
 
         template <typename Func, typename... Args>
@@ -3949,7 +3949,7 @@ namespace details {
         }
         template <std::int64_t Level>
             requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_type type) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape shape) const
         {
             if (empty()) {
                 return *this;
@@ -3961,31 +3961,34 @@ namespace details {
             indexer_type res_gen(res.hdr_);
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template reshape<Level - 1>(type);
+                res[*res_gen] = (*this)[*gen].template reshape<Level - 1>(shape);
             }
 
             return res;
         }
         template <std::int64_t Level>
             requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_type type) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape shape) const
         {
             if (empty()) {
                 return *this;
             }
 
-            switch (type) {
-            case arrnd_type::vector:
+            switch (shape) {
+            case arrnd_shape::vector:
                 return reshape<Level>({hdr_.numel()});
-            case arrnd_type::row_vector:
+            case arrnd_shape::row:
                 return reshape<Level>({1, hdr_.numel()});
-            case arrnd_type::column_vector:
+            case arrnd_shape::column:
                 return reshape<Level>({hdr_.numel(), 1});
+            default:
+                assert(false && "unknown arrnd_shape value");
+                return this_type();
             }
         }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_type type) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape shape) const
         {
-            return reshape<this_type::depth>(type);
+            return reshape<this_type::depth>(shape);
         }
 
         template <std::int64_t Level, integral_type_iterator InputIt>
@@ -6233,9 +6236,9 @@ namespace details {
         return reshape<Level>(arr, new_dims.begin(), new_dims.end());
     }
     template <std::int64_t Level, arrnd_complient ArCo>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_type type)
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape shape)
     {
-        return arr.reshape<Level>(type);
+        return arr.reshape<Level>(shape);
     }
     template <arrnd_complient ArCo, integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
@@ -6254,9 +6257,9 @@ namespace details {
         return reshape<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
     }
     template <arrnd_complient ArCo>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_type type)
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape shape)
     {
-        return reshape<ArCo::depth>(arr, type);
+        return reshape<ArCo::depth>(arr, shape);
     }
 
     template <std::int64_t Level, arrnd_complient ArCo, integral_type_iterator InputIt>
@@ -7925,7 +7928,7 @@ using details::arrnd_axis_back_inserter;
 using details::arrnd_axis_front_inserter;
 using details::arrnd_axis_inserter;
 
-using details::arrnd_type;
+using details::arrnd_shape;
 using details::arrnd;
 
 using details::copy;

@@ -1339,7 +1339,7 @@ TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compil
     static_assert(!oc::arrnd_complient_with_trait<oc::arrnd<int>, std::is_floating_point>);
 }
 
-TEST(arrnd_test, check_nested_arrnd_type)
+TEST(arrnd_test, check_nested_arrnd_shape)
 {
     using namespace oc;
 
@@ -1356,7 +1356,7 @@ TEST(arrnd_test, check_nested_arrnd_type)
     static_assert(std::is_same_v<oc::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
 }
 
-TEST(arrnd_test, can_replace_arrnd_type_at_specific_depth)
+TEST(arrnd_test, can_replace_arrnd_shape_at_specific_depth)
 {
     using namespace oc;
 
@@ -1993,10 +1993,10 @@ TEST(arrnd_test, callable_operator)
     }
 
     {
-        EXPECT_TRUE(all_equal(arr(arrnd_type::vector), arrnd({12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
+        EXPECT_TRUE(all_equal(arr(arrnd_shape::vector), arrnd({12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
 
-        EXPECT_TRUE(all_equal(arr(arrnd_type::row_vector), arrnd({1, 12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
-        EXPECT_TRUE(all_equal(arr(arrnd_type::column_vector), arrnd({12, 1}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
+        EXPECT_TRUE(all_equal(arr(arrnd_shape::row), arrnd({1, 12}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
+        EXPECT_TRUE(all_equal(arr(arrnd_shape::column), arrnd({12, 1}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4})));
     }
 }
 
@@ -4048,11 +4048,11 @@ TEST(arrnd_test, reshape)
         EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_EQ((rnarr2[{1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        auto rnarr3 = oc::reshape(inarr, oc::arrnd_type::vector);
+        auto rnarr3 = oc::reshape(inarr, oc::arrnd_shape::vector);
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({4}, {5, 6, 7, 8})})));
 
-        auto rnarr4 = oc::reshape<0>(inarr, oc::arrnd_type::vector);
+        auto rnarr4 = oc::reshape<0>(inarr, oc::arrnd_shape::vector);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({1, 4}, {5, 6, 7, 8})})));
     }
