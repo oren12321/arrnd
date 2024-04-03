@@ -1164,6 +1164,31 @@ namespace details {
             return last_index_;
         }
 
+        [[nodiscard]] constexpr bool is_vector() const noexcept
+        {
+            return dims_.size() == 1;
+        }
+
+        [[nodiscard]] constexpr bool is_row() const noexcept
+        {
+            return dims_.size() == 2 && dims_.front() == 1;
+        }
+
+        [[nodiscard]] constexpr bool is_column() const noexcept
+        {
+            return dims_.size() == 2 && dims_.back() == 1;
+        }
+
+        [[nodiscard]] constexpr bool is_matrix() const noexcept
+        {
+            return dims_.size() == 2;
+        }
+
+        [[nodiscard]] constexpr bool is_scalar() const noexcept
+        {
+            return numel_ == 1;
+        }
+
     private:
         storage_type dims_{};
         storage_type strides_{};

@@ -282,6 +282,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_TRUE(ehdr.strides().empty());
     EXPECT_EQ(0, ehdr.offset());
     EXPECT_FALSE(ehdr.is_slice());
+    EXPECT_TRUE(!ehdr.is_vector() && !ehdr.is_matrix() && !ehdr.is_row() && !ehdr.is_column() && !ehdr.is_scalar());
     //EXPECT_FALSE(ehdr.is_reordered());
 
     oc::arrnd_header hdr({3, 1, 2});
@@ -296,6 +297,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_EQ(1, hdr.strides().data()[2]);
     EXPECT_EQ(0, hdr.offset());
     EXPECT_FALSE(hdr.is_slice());
+    EXPECT_TRUE(!ehdr.is_vector() && !ehdr.is_matrix() && !ehdr.is_row() && !ehdr.is_column() && !ehdr.is_scalar());
     //EXPECT_FALSE(hdr.is_reordered());
 
     auto rhdr = hdr.reorder(1);
@@ -306,6 +308,19 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_EQ(2, rhdr.strides().data()[0]);
     EXPECT_EQ(2, rhdr.strides().data()[1]);
     EXPECT_EQ(1, rhdr.strides().data()[2]);
+
+    oc::arrnd_header hdr1({2});
+    EXPECT_TRUE(hdr1.is_vector() && !hdr1.is_matrix() && !hdr1.is_row() && !hdr1.is_column() && !hdr1.is_scalar());
+    oc::arrnd_header hdr2({1, 2});
+    EXPECT_TRUE(!hdr2.is_vector() && hdr2.is_matrix() && hdr2.is_row() && !hdr2.is_column() && !hdr2.is_scalar());
+    oc::arrnd_header hdr3({2, 1});
+    EXPECT_TRUE(!hdr3.is_vector() && hdr3.is_matrix() && !hdr3.is_row() && hdr3.is_column() && !hdr3.is_scalar());
+    oc::arrnd_header hdr4({2, 2});
+    EXPECT_TRUE(!hdr4.is_vector() && hdr4.is_matrix() && !hdr4.is_row() && !hdr4.is_column() && !hdr4.is_scalar());
+    oc::arrnd_header hdr5({1, 1, 1, 1});
+    EXPECT_TRUE(!hdr5.is_vector() && !hdr5.is_matrix() && !hdr5.is_row() && !hdr5.is_column() && hdr5.is_scalar());
+    oc::arrnd_header hdr6;
+    EXPECT_TRUE(!hdr6.is_vector() && !hdr6.is_matrix() && !hdr6.is_row() && !hdr6.is_column() && !hdr6.is_scalar());
 }
 
 TEST(arrnd_general_indexer, simple_forward_backward_iterations)
