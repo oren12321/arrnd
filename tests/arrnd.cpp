@@ -4726,11 +4726,35 @@ TEST(arrnd_test, ostream_operator)
             {1, 2, 3, 4, 5, 6,
 
                 7, 8, 9, 10, 11, 12}};
-        ss << arr[{
+        auto slice = arr[{
             oc::interval<>::at(1), oc::interval<>::full(), oc::interval<>::full(), oc::interval<>::between(0, 3, 2)}];
+        ss << slice;
         EXPECT_EQ("[[[[7 9]\n"
                   "   [10 12]]]]",
             ss.str());
+
+        // array header ostream operator
+        {
+            ss.str(std::string{});
+            ss << arr.header();
+            EXPECT_EQ("numel: 12\n"
+                      "dims: [2 1 2 3]\n"
+                      "strides: [6 6 3 1]\n"
+                      "offset: 0\n"
+                      "last_index: 11\n"
+                      "flags: vector(0), matrix(0), row(0), column(0), scalar(0), slice(0)",
+                ss.str());
+
+            ss.str(std::string{});
+            ss << slice.squeeze().header();
+            EXPECT_EQ("numel: 4\n"
+                      "dims: [2 2]\n"
+                      "strides: [3 2]\n"
+                      "offset: 6\n"
+                      "last_index: 11\n"
+                      "flags: vector(0), matrix(1), row(0), column(0), scalar(0), slice(1)",
+                ss.str());
+        }
     }
 
     // nested array

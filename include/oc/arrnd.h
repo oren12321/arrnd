@@ -1218,6 +1218,38 @@ namespace details {
         bool is_slice_{false};
         //bool is_reordered_{false};
     };
+
+    template <arrnd_header_complient ArHdrCo>
+    inline constexpr std::ostream& operator<<(std::ostream& os, const ArHdrCo& hdr)
+    {
+        if (hdr.empty()) {
+            os << "empty";
+            return os;
+        }
+
+        auto print_vec = [&os](const auto& vec) {
+            os << '[';
+            std::for_each_n(std::cbegin(vec), std::ssize(vec) - 1, [&os](const auto& e) {
+                os << e << ' ';
+            });
+            os << *std::next(std::cbegin(vec), std::ssize(vec) - 1) << ']';
+        };
+
+        os << "numel: " << hdr.numel() << '\n';
+        os << "dims: ";
+        print_vec(hdr.dims());
+        os << '\n';
+        os << "strides: ";
+        print_vec(hdr.strides());
+        os << '\n';
+        os << "offset: " << hdr.offset() << '\n';
+        os << "last_index: " << hdr.last_index() << '\n';
+        os << "flags: vector(" << hdr.is_vector() << "), matrix(" << hdr.is_matrix() << "), row(" << hdr.is_row()
+           << "), column(" << hdr.is_column() << "), scalar(" << hdr.is_scalar() << "), slice(" << hdr.is_slice()
+           << ')';
+
+        return os;
+    }
 }
 
 using details::arrnd_header_tag;
