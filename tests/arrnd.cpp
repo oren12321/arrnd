@@ -995,6 +995,25 @@ TEST(arrnd_test, squeeze)
     }
 }
 
+TEST(arrnd_test, can_access_relative_array_indices)
+{
+    using namespace oc;
+
+    arrnd<int> arr({3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+
+    for (auto i = 0; i < arr.header().numel(); ++i) {
+        EXPECT_EQ(arr[i], arr(i));
+    }
+
+    auto slc = arr[{interval<>::at(2), interval<>::full(), interval<>::from(1, 2)}];
+    std::vector<int> slc_values{18, 20, 22, 24};
+
+    EXPECT_EQ(slc_values.size(), slc.header().numel());
+    for (auto i = 0; i < slc.header().numel(); ++i) {
+        EXPECT_EQ(slc_values[i], slc(i));
+    }
+}
+
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 {
     using Integer_array = oc::arrnd<int>;

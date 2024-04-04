@@ -3715,6 +3715,22 @@ namespace details {
             return slice;
         }
 
+        // access relative array indices, might be slow for slices
+        template <std::integral U>
+        [[nodiscard]] constexpr const_reference operator()(U relative_index) const noexcept
+        {
+            assert(relative_index >= 0 && relative_index <= hdr_.numel());
+            return hdr_.is_slice() ? buffsp_->data()[*(indexer_type(hdr_) + relative_index)]
+                                   : buffsp_->data()[relative_index];
+        }
+        template <std::integral U>
+        [[nodiscard]] constexpr reference operator()(U relative_index) noexcept
+        {
+            assert(relative_index >= 0 && relative_index <= hdr_.numel());
+            return hdr_.is_slice() ? buffsp_->data()[*(indexer_type(hdr_) + relative_index)]
+                                   : buffsp_->data()[relative_index];
+        }
+
         template <integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto operator()(std::pair<InputIt, InputIt> indices) const
         {
