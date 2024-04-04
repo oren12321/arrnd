@@ -14,6 +14,68 @@
 
 #include <oc/arrnd.h>
 
+//#include <chrono>
+//#include <thread>
+//#include <execution>
+//
+//void seq_loop(oc::arrnd<double> arr)
+//{
+//    std::for_each(arr.begin(), arr.end(), [](auto& val) {
+//        val = std::rand();
+//    });
+//}
+//void par_loop(oc::arrnd<double> arr) {
+//    auto fill = [](auto arr) {
+//        std::for_each(arr.begin(), arr.end(), [](auto& val) {
+//            val = std::rand();
+//        });
+//    };
+//
+//    auto slices_count = std::thread::hardware_concurrency();
+//    auto step_size = arr.header().dims()[0] / slices_count;
+//
+//    std::vector<std::thread> ts(slices_count);
+//
+//    for (int i = 0; i < slices_count; ++i) {
+//        auto slice = arr[{oc::interval<>::between(i * step_size, (i + 1) * step_size)}];
+//        ts[i] = std::thread(fill, slice);
+//    }
+//
+//    for (auto& t : ts) {
+//        t.join();
+//    }
+//}
+//
+//TEST(dummy, benchmark)
+//{
+//    using namespace std;
+//    using namespace std::chrono;
+//    using namespace oc;
+//
+//    int cycles = 25;
+//    std::vector<int> dims{960 * 2 * 1080 * 4};
+//    arrnd<double> arr(dims, 0.0);
+//
+//    std::int64_t duration = 0;
+//
+//    for (int i = 0; i < cycles; ++i) {
+//        auto start = high_resolution_clock::now();
+//        seq_loop(arr);
+//        auto stop = high_resolution_clock::now();
+//        duration += duration_cast<milliseconds>(stop - start).count();
+//    }
+//    std::cout << "seq duration[ms]: " << (duration / static_cast<double>(cycles)) << "\n";
+//
+//    duration = 0;
+//    for (int i = 0; i < cycles; ++i) {
+//        auto start = high_resolution_clock::now();
+//        par_loop(arr);
+//        auto stop = high_resolution_clock::now();
+//        duration += duration_cast<milliseconds>(stop - start).count();
+//    }
+//    std::cout << "par duration[ms]: " << (duration / static_cast<double>(cycles)) << "\n";
+//}
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::simple_dynamic_vector<std::string>;
@@ -3693,11 +3755,49 @@ TEST(arrnd_test, copy_from)
     // same dimensions
     {
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
-        arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst);
-        arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
-        EXPECT_TRUE(all_equal(res, dst));
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            copy(src, dst);
+            arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
+
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            copy(src, dst, std::vector<int>{0, 2, 4});
+            arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
+
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            copy(src, dst, {0, 2, 4});
+            arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
+
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            int inds[]{0, 2, 4};
+            copy(src, dst, inds);
+            arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
+
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            copy(src, dst, arrnd<int>({3}, {0, 2, 4}));
+            arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
+
+        {
+            arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+            copy(src, dst, arrnd<bool>({3, 1, 2}, {1, 0, 1, 0, 1, 0}));
+            arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
+            EXPECT_TRUE(all_equal(res, dst));
+        }
     }
     {
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
@@ -4091,7 +4191,8 @@ TEST(arrnd_test, reshape)
     }
 
     {
-        Integer_array rarr{oc::reshape(arr, {3, 1, 2})};
+        const std::int64_t tdims[]{3, 1, 2};
+        Integer_array rarr{oc::reshape(arr, tdims)};
         EXPECT_TRUE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
@@ -4182,7 +4283,8 @@ TEST(arrnd_test, resize)
     }
 
     {
-        Integer_array rarr{oc::resize(arr, {10})};
+        const std::int64_t tdims[]{10};
+        Integer_array rarr{oc::resize(arr, tdims)};
         EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_TRUE(oc::all_equal(arr, (rarr[{{0, 6}}])));
         EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
