@@ -4699,13 +4699,38 @@ TEST(arrnd_test, ostream_operator)
         std::stringstream ss;
         ss << oc::arrnd<int>{};
         EXPECT_EQ("[]", ss.str());
+
+        // json
+        {
+            ss.str(std::string{});
+            ss << oc::arrnd_json << oc::arrnd<int>{};
+            EXPECT_EQ("{\n"
+                      "    \"base_type\": \"int\"\n"
+                      "    \"header\": \"empty\",\n"
+                      "    \"values\": \"empty\"\n"
+                      "}",
+                ss.str());
+        }
     }
 
     // one dimensional array
     {
         std::stringstream ss;
-        ss << oc::arrnd<int>{{6}, {1, 2, 3, 4, 5, 6}};
+        oc::arrnd<int> arr{{6}, {1, 2, 3, 4, 5, 6}};
+        ss << arr;
         EXPECT_EQ("[1 2 3 4 5 6]", ss.str());
+
+        {
+            ss.str(std::string{});
+            ss << oc::arrnd_json << arr;
+            EXPECT_EQ("{\n"
+                      "    \"base_type\": \"int\"\n"
+                      "    \"header\": \"numel: 6\\ndims: [6]\\nstrides: [1]\\noffset: 0\\nlast_index: 5\\nflags: "
+                      "vector(1), matrix(0), row(0), column(0), scalar(0), slice(0)\",\n"
+                      "    \"values\": \"[1 2 3 4 5 6]\"\n"
+                      "}",
+                ss.str());
+        }
     }
 
     // multi dimensional array
@@ -4760,12 +4785,13 @@ TEST(arrnd_test, ostream_operator)
     // nested array
     {
         std::stringstream ss;
-        ss << oc::arrnd<oc::arrnd<oc::arrnd<int>>>({2},
+        oc::arrnd<oc::arrnd<oc::arrnd<int>>> arr({2},
             {oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>(), oc::arrnd<int>()}),
                 oc::arrnd<oc::arrnd<int>>({2, 2},
                     {oc::arrnd<int>({5}, {1, 2, 3, 4, 5}),
                         oc::arrnd<int>({2, 1, 2, 3}, {6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}), oc::arrnd<int>(),
                         oc::arrnd<int>({4, 1}, {18, 19, 20, 21})})});
+        ss << arr;
         EXPECT_EQ("{{[]\n"
                   "  []}\n"
                   " {[1 2 3 4 5]\n"
@@ -4779,5 +4805,58 @@ TEST(arrnd_test, ostream_operator)
                   "   [20]\n"
                   "   [21]]}}",
             ss.str());
+
+        {
+            ss.str(std::string{});
+            ss << oc::arrnd_json << arr;
+            EXPECT_EQ(
+                "{\n"
+                "    \"base_type\": \"int\"\n"
+                "    \"header\": \"numel: 2\\ndims: [2]\\nstrides: [1]\\noffset: 0\\nlast_index: 1\\nflags: vector(1), "
+                "matrix(0), row(0), column(0), scalar(0), slice(0)\",\n"
+                "    \"arrays\": [\n"
+                "        {\n"
+                "            \"header\": \"numel: 2\\ndims: [1 2]\\nstrides: [2 1]\\noffset: 0\\nlast_index: "
+                "1\\nflags: vector(0), matrix(1), row(1), column(0), scalar(0), slice(0)\",\n"
+                "            \"arrays\": [\n"
+                "                {\n"
+                "                    \"header\": \"empty\",\n"
+                "                    \"values\": \"empty\"\n"
+                "                },\n"
+                "                {\n"
+                "                    \"header\": \"empty\",\n"
+                "                    \"values\": \"empty\"\n"
+                "                }\n"
+                "            ]\n"
+                "        },\n"
+                "        {\n"
+                "            \"header\": \"numel: 4\\ndims: [2 2]\\nstrides: [2 1]\\noffset: 0\\nlast_index: "
+                "3\\nflags: vector(0), matrix(1), row(0), column(0), scalar(0), slice(0)\",\n"
+                "            \"arrays\": [\n"
+                "                {\n"
+                "                    \"header\": \"numel: 5\\ndims: [5]\\nstrides: [1]\\noffset: 0\\nlast_index: "
+                "4\\nflags: vector(1), matrix(0), row(0), column(0), scalar(0), slice(0)\",\n"
+                "                    \"values\": \"[1 2 3 4 5]\"\n"
+                "                },\n"
+                "                {\n"
+                "                    \"header\": \"numel: 12\\ndims: [2 1 2 3]\\nstrides: [6 6 3 1]\\noffset: "
+                "0\\nlast_index: 11\\nflags: vector(0), matrix(0), row(0), column(0), scalar(0), slice(0)\",\n"
+                "                    \"values\": \"[[[[6 7 8]\\n   [9 10 11]]]\\n [[[12 13 14]\\n   [15 16 17]]]]\"\n"
+                "                },\n"
+                "                {\n"
+                "                    \"header\": \"empty\",\n"
+                "                    \"values\": \"empty\"\n"
+                "                },\n"
+                "                {\n"
+                "                    \"header\": \"numel: 4\\ndims: [4 1]\\nstrides: [1 1]\\noffset: 0\\nlast_index: "
+                "3\\nflags: vector(0), matrix(1), row(0), column(1), scalar(0), slice(0)\",\n"
+                "                    \"values\": \"[[18]\\n [19]\\n [20]\\n [21]]\"\n"
+                "                }\n"
+                "            ]\n"
+                "        }\n"
+                "    ]\n"
+                "}",
+                ss.str());
+        }
     }
 }

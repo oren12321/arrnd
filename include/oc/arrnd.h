@@ -17,6 +17,43 @@
 #include <functional>
 #include <complex>
 #include <tuple>
+#include <string>
+#include <typeinfo>
+#ifndef _MSC_VER
+#include <cxxabi.h>
+#endif
+
+namespace oc {
+namespace details {
+    // reference: http://stackoverflow.com/a/20170989/1593077
+    template <typename T, bool AddCvref = false>
+    std::string type_name()
+    {
+        using bare_type = std::remove_cvref_t<T>;
+
+        std::unique_ptr<char, void (*)(void*)> type_ptr(
+#ifndef _MSC_VER
+            abi::__cxa_demangle(typeid(TR).name(), nullptr, nullptr, nullptr),
+#else
+            nullptr,
+#endif
+            std::free);
+
+        std::string type_name = (type_ptr ? type_ptr.get() : typeid(bare_type).name());
+        if (AddCvref) {
+            if (std::is_const_v<bare_type>)
+                type_name += " const";
+            if (std::is_volatile_v<bare_type>)
+                type_name += " volatile";
+            if (std::is_lvalue_reference_v<T>)
+                type_name += "&";
+            else if (std::is_rvalue_reference_v<T>)
+                type_name += "&&";
+        }
+        return type_name;
+    }
+}
+}
 
 namespace oc {
 namespace details {
@@ -8359,12 +8396,111 @@ namespace details {
         typename ArCo::size_type ndepth_spaces = 0;
         return ostream_operator_recursive(os, carco, nvectical_spaces, ndepth_spaces);
     }
+
+    struct arrnd_json_manip {
+        explicit arrnd_json_manip(std::ostream& os)
+            : os_(os)
+        { }
+
+        template <typename T>
+            requires(!arrnd_compliant<T>)
+        friend std::ostream& operator<<(const arrnd_json_manip& ajm, const T& rhs)
+        {
+            return ajm.os_ << rhs;
+        }
+
+        template <arrnd_compliant ArCo>
+        friend std::ostream& operator<<(const arrnd_json_manip& ajm, const ArCo& arco)
+        {
+            arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
+                typename ArCo::header_type, arrnd_general_indexer>
+                carco = arco;
+            typename ArCo::size_type nvertical_spaces = 4;
+            ajm.os_ << "{\n";
+            ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
+                    << type_name<typename arrnd_inner_t<ArCo>::value_type>() << "\"\n";
+            to_json(ajm.os_, carco, nvertical_spaces);
+            ajm.os_ << "}";
+            return ajm.os_;
+        }
+
+    private:
+        template <arrnd_compliant ArCo>
+        static std::ostream& to_json(std::ostream& os, const ArCo& arco, typename ArCo::size_type nvertical_spaces)
+        {
+            auto replace_newlines = [](std::string s) {
+                std::string::size_type n = 0;
+                std::string d = s;
+                while ((n = d.find("\n", n)) != std::string::npos) {
+                    d.replace(n, 1, "\\n");
+                    n += 2;
+                }
+                return d;
+            };
+
+            if (empty(arco)) {
+                os << std::string(nvertical_spaces, ' ') << "\"header\": \"empty\",\n";
+                os << std::string(nvertical_spaces, ' ') << "\"values\": \"empty\"\n";
+                return os;
+            }
+
+            if constexpr (ArCo::depth == 0) {
+                // header
+                {
+                    std::stringstream ss;
+                    ss << arco.header();
+                    os << std::string(nvertical_spaces, ' ') << "\"header\": \"" << replace_newlines(ss.str())
+                       << "\",\n";
+                }
+                // array
+                {
+                    std::stringstream ss;
+                    ss << arco;
+                    os << std::string(nvertical_spaces, ' ') << "\"values\": \"" << replace_newlines(ss.str())
+                       << "\"\n";
+                }
+            } else {
+                // header
+                {
+                    std::stringstream ss;
+                    ss << arco.header();
+                    os << std::string(nvertical_spaces, ' ') << "\"header\": \"" << replace_newlines(ss.str())
+                       << "\",\n";
+                }
+                // arrays
+                os << std::string(nvertical_spaces, ' ') << "\"arrays\": [\n";
+                typename ArCo::indexer_type gen(arco.header());
+                for (typename ArCo::size_type i = 0; gen; ++gen, ++i) {
+                    os << std::string(nvertical_spaces + 4, ' ') << "{\n";
+                    to_json(os, arco[*gen], nvertical_spaces + 8);
+                    os << std::string(nvertical_spaces + 4, ' ') << '}';
+                    if (i < arco.header().numel() - 1) {
+                        os << ',';
+                    }
+                    os << '\n';
+                }
+                os << std::string(nvertical_spaces, ' ') << "]\n";
+            }
+
+            return os;
+        }
+
+        std::ostream& os_;
+    };
+
+    struct arrnd_json_manip_tag {
+    } arrnd_json;
+    arrnd_json_manip operator<<(std::ostream& os, arrnd_json_manip_tag)
+    {
+        return arrnd_json_manip(os);
+    }
 }
 
 using details::arrnd_compliant;
 using details::arrnd_compliant_of_type;
 using details::arrnd_compliant_of_template_type;
 using details::arrnd_compliant_with_trait;
+using details::arrnd_json;
 
 using details::arrnd_inner;
 using details::arrnd_inner_t;
