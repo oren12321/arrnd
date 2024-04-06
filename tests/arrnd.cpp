@@ -11,6 +11,7 @@
 #include <charconv>
 #include <complex>
 #include <random>
+#include <thread>
 
 #include <oc/arrnd.h>
 
@@ -1086,6 +1087,47 @@ TEST(arrnd_test, expand)
             arrnd<arrnd<int>>({6},
                 {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6}),
                     arrnd<int>({1, 1, 2}, {7, 8}), arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
+    }
+
+    // expand function e.g. can be used for parallel array processing
+    {
+        // e.g. apply function on array values
+
+        arrnd<int> res(
+            {12, 1, 2}, {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48});
+
+        auto multiply = [](int value, int factor) {
+            return value * factor;
+        };
+
+        // serial
+        {
+            arrnd<int> arr(
+                {12, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+            apply(arr, multiply, 2);
+            EXPECT_TRUE(all_equal(res, arr));
+        }
+
+        // parallel
+        {
+            std::vector<std::thread> threads(std::thread::hardware_concurrency());
+
+            arrnd<int> arr(
+                {12, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+            auto works = expand(arr, 0, std::ssize(threads));
+
+            for (auto i = 0; i < std::ssize(threads); ++i) {
+                threads[i] = std::thread([&multiply, &works, i]() {
+                    apply(works[i], multiply, 2);
+                });
+            }
+
+            std::for_each(threads.begin(), threads.end(), [](std::thread& t) {
+                t.join();
+            });
+
+            EXPECT_TRUE(all_equal(res, arr));
+        }
     }
 }
 
