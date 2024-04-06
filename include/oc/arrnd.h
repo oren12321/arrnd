@@ -3958,7 +3958,7 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-        [[nodiscard]] constexpr const this_type& copy_to(ArCo&& dst, std::pair<InputIt, InputIt> indices) const
+        constexpr const this_type& copy_to(ArCo&& dst, std::pair<InputIt, InputIt> indices) const
         {
             if (empty() || dst.empty() || std::distance(indices.first, indices.second) <= 0) {
                 return *this;
@@ -3979,13 +3979,13 @@ namespace details {
         }
         template <arrnd_compliant ArCo, integral_type_iterable Cont>
             requires(!arrnd_compliant<Cont>)
-        [[nodiscard]] constexpr const this_type& copy_to(ArCo&& dst, const Cont& indices) const
+        constexpr const this_type& copy_to(ArCo&& dst, const Cont& indices) const
         {
             return copy_to(std::forward<ArCo>(dst), std::make_pair(std::begin(indices), std::end(indices)));
         }
         template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
             requires(std::integral<typename ArCo2::value_type>)
-        [[nodiscard]] constexpr const this_type& copy_to(ArCo1&& dst, const ArCo2& selector) const
+        constexpr const this_type& copy_to(ArCo1&& dst, const ArCo2& selector) const
         {
             // in case that indices isn't a vector treat it as a mask
             if constexpr (std::is_same_v<bool, typename ArCo2::value_type>) {
@@ -4016,12 +4016,12 @@ namespace details {
             }
         }
         template <arrnd_compliant ArCo, std::integral U = size_type>
-        [[nodiscard]] constexpr const this_type& copy_to(ArCo&& dst, std::initializer_list<U> indices) const
+        constexpr const this_type& copy_to(ArCo&& dst, std::initializer_list<U> indices) const
         {
             return copy_to(std::forward<ArCo>(dst), std::make_pair(indices.begin(), indices.end()));
         }
         template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-        [[nodiscard]] constexpr const this_type& copy_to(ArCo&& dst, const U (&indices)[M]) const
+        constexpr const this_type& copy_to(ArCo&& dst, const U (&indices)[M]) const
         {
             return copy_to(std::forward<ArCo>(dst), std::make_pair(std::begin(indices), std::end(indices)));
         }
@@ -4083,31 +4083,31 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-        [[nodiscard]] constexpr this_type& copy_from(const ArCo& src, std::pair<InputIt, InputIt> indices)
+        constexpr this_type& copy_from(const ArCo& src, std::pair<InputIt, InputIt> indices)
         {
             src.copy_to(*this, indices);
             return *this;
         }
         template <arrnd_compliant ArCo, integral_type_iterable Cont>
             requires(!arrnd_compliant<Cont>)
-        [[nodiscard]] constexpr this_type& copy_from(const ArCo& src, const Cont& indices)
+        constexpr this_type& copy_from(const ArCo& src, const Cont& indices)
         {
             return copy_from(src, std::make_pair(indices.begin(), indices.end()));
         }
         template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
             requires(std::integral<typename ArCo2::value_type>)
-        [[nodiscard]] constexpr this_type& copy_from(const ArCo1& src, const ArCo2& selector)
+        constexpr this_type& copy_from(const ArCo1& src, const ArCo2& selector)
         {
             src.copy_to(*this, selector);
             return *this;
         }
         template <arrnd_compliant ArCo, std::integral U = size_type>
-        [[nodiscard]] constexpr this_type& copy_from(const ArCo& src, std::initializer_list<U> indices)
+        constexpr this_type& copy_from(const ArCo& src, std::initializer_list<U> indices)
         {
             return copy_from(src, std::make_pair(indices.begin(), indices.end()));
         }
         template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-        [[nodiscard]] constexpr this_type& copy_from(const ArCo& src, const U (&indices)[M])
+        constexpr this_type& copy_from(const ArCo& src, const U (&indices)[M])
         {
             return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
         }
