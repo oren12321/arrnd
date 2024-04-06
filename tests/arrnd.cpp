@@ -708,6 +708,35 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
+TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one)
+{
+    using namespace oc;
+    using namespace oc::details;
+
+    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
+    arrnd_header hdr(dims, dims + 3);
+
+    const interval<> expected_inds_list[6]{
+        interval<>{0, 3}, interval<>{1, 4}, interval<>{2, 5}, interval<>{3, 6}};
+    const std::int64_t expected_generated_subs{4};
+
+    std::int64_t generated_subs_counter{0};
+    arrnd_fixed_axis_ranger gen(hdr, 2, false, 3);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+        ++generated_subs_counter;
+        ++gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
 TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
 {
     using namespace oc;
@@ -721,6 +750,35 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
 
     std::int64_t generated_subs_counter{0};
     arrnd_fixed_axis_ranger gen(hdr, 2, true);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+        ++generated_subs_counter;
+        --gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (++gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_width_bigger_than_one)
+{
+    using namespace oc;
+    using namespace oc::details;
+
+    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
+    arrnd_header hdr(dims, dims + 3);
+
+    const interval<> expected_inds_list[4]
+    {interval<>{3, 6}, interval<>{2, 5}, interval<>{1, 4}, interval<>{0, 3}};
+    const std::int64_t expected_generated_subs{4};
+
+    std::int64_t generated_subs_counter{0};
+    arrnd_fixed_axis_ranger gen(hdr, 2, true, 3);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);

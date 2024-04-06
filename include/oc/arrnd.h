@@ -1830,12 +1830,14 @@ namespace details {
         using storage_type = typename Header::storage_type::template replaced_type<interval<value_type>>;
 
         template <std::integral U>
-        explicit constexpr arrnd_fixed_axis_ranger(const header_type& hdr, U fixed_axis = 0, bool backward = false)
+        explicit constexpr arrnd_fixed_axis_ranger(const header_type& hdr, U fixed_axis = 0, bool backward = false, value_type interval_width = 1)
             : fixed_axis_(fixed_axis)
+            , interval_width_(interval_width)
         {
             assert(fixed_axis >= 0 && fixed_axis < hdr.dims().size());
+            assert(interval_width > 0 && interval_width <= *std::next(hdr.dims().cbegin(), fixed_axis));
 
-            current_index_ = backward ? *std::next(hdr.dims().cbegin(), fixed_axis) - 1 : 0;
+            current_index_ = backward ? *std::next(hdr.dims().cbegin(), fixed_axis) - interval_width_ : 0;
 
             last_index_ = *std::next(hdr.dims().cbegin(), fixed_axis);
 
@@ -1843,7 +1845,7 @@ namespace details {
             for (size_type i = 0; i < hdr.dims().size(); ++i) {
                 ranges_[i] = {0, *std::next(hdr.dims().cbegin(), i)};
             }
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
         }
 
         constexpr arrnd_fixed_axis_ranger() = default;
@@ -1858,11 +1860,12 @@ namespace details {
 
         constexpr arrnd_fixed_axis_ranger& operator++() noexcept
         {
-            if (current_index_ > last_index_) {
-                current_index_ = last_index_;
+            if (current_index_ + interval_width_ > last_index_) {
+                //current_index_ = last_index_;
+                return *this;
             }
             ++current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
             return *this;
         }
 
@@ -1876,11 +1879,12 @@ namespace details {
         template <std::integral U>
         constexpr arrnd_fixed_axis_ranger& operator+=(U count) noexcept
         {
-            if (current_index_ > last_index_) {
-                current_index_ = last_index_;
+            if (current_index_ + interval_width_ > last_index_) {
+                //current_index_ = last_index_;
+                return *this;
             }
             current_index_ += count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
             if (current_index_ >= last_index_) {
                 return *this;
             }
@@ -1901,7 +1905,7 @@ namespace details {
                 current_index_ = -1;
             }
             --current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
             return *this;
         }
 
@@ -1919,7 +1923,7 @@ namespace details {
                 current_index_ = -1;
             }
             current_index_ -= count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + value_type{1}};
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
             if (current_index_ < 0) {
                 return *this;
             }
@@ -1936,7 +1940,7 @@ namespace details {
 
         [[nodiscard]] explicit constexpr operator bool() const noexcept
         {
-            return current_index_ >= 0 && current_index_ < last_index_;
+            return current_index_ >= 0 && current_index_ + interval_width_ <= last_index_;
         }
 
         [[nodiscard]] constexpr const storage_type& operator*() const noexcept
@@ -1947,7 +1951,7 @@ namespace details {
         template <std::integral U>
         [[nodiscard]] constexpr storage_type operator[](U index) const noexcept
         {
-            assert(index >= 0 && index <= last_index_);
+            assert(index >= 0 && index + interval_width_ <= last_index_);
 
             size_type advance_count = index - current_index_;
             if (advance_count > 0) {
@@ -1974,8 +1978,15 @@ namespace details {
             return fixed_axis_;
         }
 
+        constexpr arrnd_fixed_axis_ranger& change_interval_width(value_type interval_width) noexcept
+        {
+            interval_width_ = interval_width;
+            return *this;
+        }
+
     private:
         size_type fixed_axis_;
+        value_type interval_width_;
         value_type current_index_;
         value_type last_index_;
         storage_type ranges_;
