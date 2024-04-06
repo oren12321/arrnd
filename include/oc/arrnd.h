@@ -58,7 +58,7 @@ namespace details {
 namespace oc {
 namespace details {
     template <typename T>
-        requires(!std::is_reference_v<T>)
+    //requires(!std::is_reference_v<T>)
     class lightweight_allocator {
     public:
         using value_type = T;
@@ -77,7 +77,7 @@ namespace details {
         constexpr ~lightweight_allocator() = default;
 
         template <typename U>
-            requires(!std::is_reference_v<U>)
+        //requires(!std::is_reference_v<U>)
         constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept
         { }
 
@@ -105,7 +105,7 @@ using details::lightweight_allocator;
 namespace oc {
 namespace details {
     template <typename T, template <typename> typename Allocator = lightweight_allocator>
-        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
+    //requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
     class simple_dynamic_vector final {
     public:
         using value_type = T;
@@ -132,9 +132,13 @@ namespace details {
             if (size > 0) {
                 data_ptr_ = alloc_.allocate(size);
                 if (data) {
-                    std::uninitialized_copy_n(data, size, data_ptr_);
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::uninitialized_copy_n(data, size, data_ptr_);
+                    }
                 } else if constexpr (!std::is_fundamental_v<T>) {
-                    std::uninitialized_default_construct_n(data_ptr_, size);
+                    if constexpr (std::is_default_constructible_v<T>) {
+                        std::uninitialized_default_construct_n(data_ptr_, size);
+                    }
                 }
             }
         }
@@ -150,7 +154,9 @@ namespace details {
         {
             if (!other.empty()) {
                 data_ptr_ = alloc_.allocate(size_);
-                std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                }
             }
         }
 
@@ -173,7 +179,9 @@ namespace details {
             if (!other.empty()) {
                 data_ptr_ = alloc_.allocate(size_);
                 if (data_ptr_) {
-                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    }
                 }
             }
 
@@ -336,7 +344,7 @@ namespace details {
     }
 
     template <typename T, std::int64_t Size>
-        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
+    //requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
     class simple_static_vector final {
         static_assert(Size >= 0);
 
@@ -362,7 +370,9 @@ namespace details {
         {
             assert(size_ >= 0 && size_ <= Size);
             if (data) {
-                std::copy(data, std::next(data, size_), data_ptr_);
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::copy(data, std::next(data, size_), data_ptr_);
+                }
             }
         }
 
@@ -374,7 +384,9 @@ namespace details {
         constexpr simple_static_vector(const simple_static_vector& other)
             : size_(other.size_)
         {
-            std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            if constexpr (std::is_copy_constructible_v<T>) {
+                std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            }
         }
 
         constexpr simple_static_vector operator=(const simple_static_vector& other)
@@ -385,7 +397,9 @@ namespace details {
 
             size_ = other.size_;
 
-            std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            if constexpr (std::is_copy_constructible_v<T>) {
+                std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            }
 
             return *this;
         }
@@ -393,7 +407,9 @@ namespace details {
         constexpr simple_static_vector(simple_static_vector&& other) noexcept
             : size_(other.size_)
         {
-            std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            if constexpr (std::is_move_constructible_v<T>) {
+                std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            }
 
             other.size_ = 0;
         }
@@ -406,7 +422,9 @@ namespace details {
 
             size_ = other.size_;
 
-            std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            if constexpr (std::is_move_constructible_v<T>) {
+                std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+            }
 
             other.size_ = 0;
 
