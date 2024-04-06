@@ -33,7 +33,7 @@ namespace details {
 
         std::unique_ptr<char, void (*)(void*)> type_ptr(
 #ifndef _MSC_VER
-            abi::__cxa_demangle(typeid(TR).name(), nullptr, nullptr, nullptr),
+            abi::__cxa_demangle(typeid(bare_type).name(), nullptr, nullptr, nullptr),
 #else
             nullptr,
 #endif
@@ -5153,7 +5153,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize<Level>({res_count});
+                return res.template resize<Level>({res_count});
             }
 
             return res;
@@ -5220,7 +5220,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.resize<Level>({res_count});
+                return res.template resize<Level>({res_count});
             }
 
             return res;
@@ -5688,7 +5688,7 @@ namespace details {
                 return acc.template append<Level>(cur, axis);
             });
 
-            return reduced.reshape<Level>(hdr_.dims());
+            return reduced.template reshape<Level>(hdr_.dims());
         }
         template <std::int64_t Level, std::integral U, typename Comp, typename... Args>
             requires(Level > 0
@@ -5786,7 +5786,7 @@ namespace details {
                 return acc.template append<Level>(cur, axis);
             });
 
-            return reduced.reshape<Level>(hdr_.dims());*/
+            return reduced.template reshape<Level>(hdr_.dims());*/
         }
         template <std::int64_t Level, std::integral U, typename Comp, typename... Args>
             requires(Level > 0
@@ -6768,7 +6768,7 @@ namespace details {
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape shape)
     {
-        return arr.reshape<Level>(shape);
+        return arr.template reshape<Level>(shape);
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
