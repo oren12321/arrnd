@@ -1830,7 +1830,8 @@ namespace details {
         using storage_type = typename Header::storage_type::template replaced_type<interval<value_type>>;
 
         template <std::integral U>
-        explicit constexpr arrnd_fixed_axis_ranger(const header_type& hdr, U fixed_axis = 0, bool backward = false, value_type interval_width = 1)
+        explicit constexpr arrnd_fixed_axis_ranger(
+            const header_type& hdr, U fixed_axis = 0, bool backward = false, value_type interval_width = 1)
             : fixed_axis_(fixed_axis)
             , interval_width_(interval_width)
         {
@@ -1981,6 +1982,7 @@ namespace details {
         constexpr arrnd_fixed_axis_ranger& change_interval_width(value_type interval_width) noexcept
         {
             interval_width_ = interval_width;
+            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
             return *this;
         }
 
@@ -5474,7 +5476,7 @@ namespace details {
 
         template <std::int64_t Level, std::integral U>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto expand(U axis) const
+        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
         {
             using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
 
@@ -5488,7 +5490,7 @@ namespace details {
             typename expanded_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(axis);
+                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(axis, division);
             }
 
             return res;
@@ -5496,7 +5498,7 @@ namespace details {
 
         template <std::int64_t Level, std::integral U>
             requires(Level == 0)
-        [[nodiscard]] constexpr auto expand(U axis) const
+        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
         {
             using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
 
@@ -5505,23 +5507,63 @@ namespace details {
             }
 
             assert(axis >= 0 && axis < hdr_.dims().size());
+            auto axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
-            expanded_type res({*std::next(hdr_.dims().cbegin(), axis)});
+            assert(division <= axis_dim);
+            auto fixed_div = division > 0 ? std::min(axis_dim, division) : axis_dim;
+
+            expanded_type res({fixed_div});
             typename expanded_type::indexer_type res_gen(res.header());
 
-            ranger_type rgr(hdr_, axis);
+            //auto axis_dim_left = axis_dim;
+            //auto interval_width
+            //    = static_cast<size_type>(std::ceil(axis_dim / static_cast<double>(fixed_div)));
+            //auto count = 0;
 
-            for (; res_gen && rgr; ++res_gen, ++rgr) {
+            auto curr_div = fixed_div;
+            auto curr_axis_dim = axis_dim;
+            auto curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
+
+            auto count = 0;
+
+            ranger_type rgr(hdr_, axis, false, curr_ival_width);
+
+            while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
+
+                rgr += curr_ival_width;
+                ++res_gen;
+
+                --curr_div;
+                curr_axis_dim -= curr_ival_width;
+                curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
+                rgr.change_interval_width(curr_ival_width);
+
+                ++count;
             }
 
+            //for (; res_gen && rgr; ++res_gen, rgr += interval_width) {
+            //    res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
+
+            //    axis_dim_left -= interval_width;
+            //    if (axis_dim_left > 0 && axis_dim_left < interval_width) {
+            //        interval_width = axis_dim_left + 1;
+            //        rgr.change_interval_width(axis_dim_left);
+            //    }
+
+            //    ++count;
+            //}
+
+            if (count != fixed_div) {
+                return res.template resize<Level>({count});
+            }
             return res;
         }
 
         template <std::integral U>
-        [[nodiscard]] constexpr auto expand(U axis) const
+        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
         {
-            return expand<this_type::depth>(axis);
+            return expand<this_type::depth>(axis, division);
         }
 
         template <std::int64_t Level>
@@ -8036,14 +8078,14 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis)
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0)
     {
-        return arr.template expand<Level>(axis);
+        return arr.template expand<Level>(axis, division);
     }
     template <arrnd_compliant ArCo, std::integral U>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis)
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0)
     {
-        return expand<ArCo::depth>(arr, axis);
+        return expand<ArCo::depth>(arr, axis, division);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>

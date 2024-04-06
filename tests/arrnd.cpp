@@ -716,8 +716,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_w
     const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[6]{
-        interval<>{0, 3}, interval<>{1, 4}, interval<>{2, 5}, interval<>{3, 6}};
+    const interval<> expected_inds_list[6]{interval<>{0, 3}, interval<>{1, 4}, interval<>{2, 5}, interval<>{3, 6}};
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
@@ -773,8 +772,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_w
     const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
     arrnd_header hdr(dims, dims + 3);
 
-    const interval<> expected_inds_list[4]
-    {interval<>{3, 6}, interval<>{2, 5}, interval<>{1, 4}, interval<>{0, 3}};
+    const interval<> expected_inds_list[4]{interval<>{3, 6}, interval<>{2, 5}, interval<>{1, 4}, interval<>{0, 3}};
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
@@ -1058,6 +1056,37 @@ TEST(arrnd_test, expand)
         arrnd<arrnd<arrnd<int>>>({2},
             {arrnd<arrnd<int>>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
                 arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
+
+    {
+        arrnd<int> iarr({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 1),
+            arrnd<arrnd<int>>({1}, {arrnd<int>({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 2),
+            arrnd<arrnd<int>>(
+                {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})})));
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 3),
+            arrnd<arrnd<int>>({3},
+                {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
+                    arrnd<int>({2, 1, 2}, {9, 10, 11, 12})})));
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 4),
+            arrnd<arrnd<int>>({4},
+                {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
+                    arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 5),
+            arrnd<arrnd<int>>({5},
+                {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({1, 1, 2}, {5, 6}), arrnd<int>({1, 1, 2}, {7, 8}),
+                    arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
+
+        EXPECT_TRUE(all_equal(expand(iarr, 0, 6),
+            arrnd<arrnd<int>>({6},
+                {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6}),
+                    arrnd<int>({1, 1, 2}, {7, 8}), arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
+    }
 }
 
 TEST(arrnd_test, squeeze)
