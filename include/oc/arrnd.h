@@ -4507,6 +4507,39 @@ namespace details {
             return insert<this_type::depth, ArCo>(arr, ind, axis);
         }
 
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(std::pair<ArCo, U> arr_ind_pair) const
+        {
+            return insert<Level>(arr_ind_pair.first, arr_ind_pair.second);
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, typename... ArCoIndexPairs>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(
+            std::pair<ArCo, U> arr_ind_pair, ArCoIndexPairs&&... others) const
+        {
+            return insert<Level>(arr_ind_pair.first, arr_ind_pair.second)
+                .template cat<ArCoIndexPairs...>(std::forward<ArCoIndexPairs>(others)...);
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(std::tuple<ArCo, U, V> arr_ind_axis_tuple) const
+        {
+            return insert<Level>(
+                std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple));
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V,
+            typename... ArCoIndexAxisTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(
+            std::tuple<ArCo, U, V> arr_ind_axis_tuple, ArCoIndexAxisTuples&&... others) const
+        {
+            return insert<Level>(
+                std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple))
+                .template cat<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
+        }
+        template <typename... PairsOrTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(PairsOrTuples&&... pairs_or_tuples) const
+        {
+            return cat<this_type::depth>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
+        }
+
         template <std::int64_t Level, std::integral U, std::integral V>
             requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(U ind, V count) const
@@ -6917,6 +6950,17 @@ namespace details {
         return insert<ArCo1::depth>(lhs, rhs, ind, axis);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, typename... PairsOrTuples>
+    [[nodiscard]] inline constexpr auto cat(const ArCo& arr, PairsOrTuples&&... pairs_or_tuples)
+    {
+        return arr.cat<Level>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
+    }
+    template <arrnd_compliant ArCo, typename... PairsOrTuples>
+    [[nodiscard]] inline constexpr auto cat(const ArCo& arr, PairsOrTuples&&... pairs_or_tuples)
+    {
+        return cat<ArCo::depth>(arr, std::forward<PairsOrTuples>(pairs_or_tuples)...);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V>
     [[nodiscard]] inline constexpr auto remove(const ArCo& arr, U ind, V count)
     {
@@ -8642,6 +8686,7 @@ using details::reshape;
 using details::resize;
 using details::append;
 using details::insert;
+using details::cat;
 using details::remove;
 
 using details::empty;
