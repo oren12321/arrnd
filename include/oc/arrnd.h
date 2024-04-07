@@ -577,6 +577,10 @@ namespace details {
         const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(),
         const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>()) noexcept
     {
+        using std::abs;
+        if (a == b) {
+            return true;
+        }
         const decltype(a - b) reps{rtol * (abs(a) > abs(b) ? abs(a) : abs(b))};
         return abs(a - b) <= (atol > reps ? atol : reps);
     }
@@ -748,11 +752,12 @@ namespace details {
     template <typename Iter>
     using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
     template <typename Iter, typename T>
-    concept iterator_of_type = std::input_iterator<Iter>&& std::is_same_v<T, iterator_value_type<Iter>>;
+    concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter>
     concept integral_type_iterator = std::input_iterator<Iter> && std::is_integral_v<iterator_value_type<Iter>>;
     template <typename Iter>
-    concept interval_type_iterator = std::input_iterator<Iter> && is_template_type<interval, iterator_value_type<Iter>>::value;
+    concept interval_type_iterator
+        = std::input_iterator<Iter> && is_template_type<interval, iterator_value_type<Iter>>::value;
 
     template <typename Cont>
     concept iterable = requires(Cont&& c) {
@@ -1340,8 +1345,8 @@ namespace details {
         }
 
         template <integral_type_iterator InputIt>
-        explicit constexpr arrnd_general_indexer(const header_type& hdr, const InputIt& first_order, const InputIt& last_order,
-            arrnd_indexer_position pos = arrnd_indexer_position::begin)
+        explicit constexpr arrnd_general_indexer(const header_type& hdr, const InputIt& first_order,
+            const InputIt& last_order, arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : hdr_(hdr.reorder(first_order, last_order))
         {
             setup(pos);
@@ -3508,8 +3513,8 @@ namespace details {
         virtual constexpr ~arrnd() = default;
 
         template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(
-            const InputDimsIt& first_dim, const InputDimsIt& last_dim, const InputDataIt& first_data, const InputDataIt& last_data)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
+            const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -3525,7 +3530,8 @@ namespace details {
             : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
         template <std::integral D, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(std::initializer_list<D> dims, const InputDataIt& first_data, const InputDataIt& last_data)
+        explicit constexpr arrnd(
+            std::initializer_list<D> dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(dims.begin(), dims.end(), first_data, last_data)
         { }
         template <std::integral D, std::int64_t M, std::input_iterator InputDataIt>
@@ -3534,7 +3540,8 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<value_type> data)
+        explicit constexpr arrnd(
+            const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<value_type> data)
             : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
         template <integral_type_iterable Cont>
@@ -3551,7 +3558,8 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt, typename U>
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
+        explicit constexpr arrnd(
+            const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
             : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
         template <integral_type_iterable Cont, typename U>
@@ -4150,7 +4158,8 @@ namespace details {
 
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             typename this_type::header_type new_header(first_new_dim, last_new_dim);
             assert(hdr_.numel() == new_header.numel());
@@ -4170,7 +4179,8 @@ namespace details {
         }
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (empty()) {
                 return *this;
@@ -4188,7 +4198,8 @@ namespace details {
             return res;
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             return reshape<this_type::depth>(first_new_dim, last_new_dim);
         }
@@ -4268,7 +4279,8 @@ namespace details {
 
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (std::equal(hdr_.dims().cbegin(), hdr_.dims().cend(), first_new_dim, last_new_dim)) {
                 return *this;
@@ -4293,7 +4305,8 @@ namespace details {
         }
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (empty()) {
                 return *this;
@@ -4311,7 +4324,8 @@ namespace details {
             return res;
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
+            const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             return resize<this_type::depth>(first_new_dim, last_new_dim);
         }
@@ -6554,126 +6568,144 @@ namespace details {
         [[nodiscard]] constexpr auto abs()
         {
             return transform([](const auto& a) {
-                return ::abs(a);
+                using std::abs;
+                return abs(a);
             });
         }
 
         [[nodiscard]] constexpr auto acos()
         {
             return transform([](const auto& a) {
-                return ::acos(a);
+                using std::acos;
+                return acos(a);
             });
         }
 
         [[nodiscard]] constexpr auto acosh()
         {
             return transform([](const auto& a) {
-                return ::acosh(a);
+                using std::acosh;
+                return acosh(a);
             });
         }
 
         [[nodiscard]] constexpr auto asin()
         {
             return transform([](const auto& a) {
-                return ::asin(a);
+                using std::asin;
+                return asin(a);
             });
         }
 
         [[nodiscard]] constexpr auto asinh()
         {
             return transform([](const auto& a) {
-                return ::asinh(a);
+                using std::asinh;
+                return asinh(a);
             });
         }
 
         [[nodiscard]] constexpr auto atan()
         {
             return transform([](const auto& a) {
-                return ::atan(a);
+                using std::atan;
+                return atan(a);
             });
         }
 
         [[nodiscard]] constexpr auto atanh()
         {
             return transform([](const auto& a) {
-                return ::atanh(a);
+                using std::atanh;
+                return atanh(a);
             });
         }
 
         [[nodiscard]] constexpr auto cos()
         {
             return transform([](const auto& a) {
-                return ::cos(a);
+                using std::cos;
+                return cos(a);
             });
         }
 
         [[nodiscard]] constexpr auto cosh()
         {
             return transform([](const auto& a) {
-                return ::cosh(a);
+                using std::cosh;
+                return cosh(a);
             });
         }
 
         [[nodiscard]] constexpr auto exp()
         {
             return transform([](const auto& a) {
-                return ::exp(a);
+                using std::exp;
+                return exp(a);
             });
         }
 
         [[nodiscard]] constexpr auto log()
         {
             return transform([](const auto& a) {
-                return ::log(a);
+                using std::log;
+                return log(a);
             });
         }
 
         [[nodiscard]] constexpr auto log10()
         {
             return transform([](const auto& a) {
-                return ::log10(a);
+                using std::log10;
+                return log10(a);
             });
         }
 
         [[nodiscard]] constexpr auto pow()
         {
             return transform([](const auto& a) {
-                return ::pow(a);
+                using std::pow;
+                return pow(a);
             });
         }
 
         [[nodiscard]] constexpr auto sin()
         {
             return transform([](const auto& a) {
-                return ::sin(a);
+                using std::sin;
+                return sin(a);
             });
         }
 
         [[nodiscard]] constexpr auto sinh()
         {
             return transform([](const auto& a) {
-                return ::sinh(a);
+                using std::sinh;
+                return sinh(a);
             });
         }
 
         [[nodiscard]] constexpr auto sqrt()
         {
             return transform([](const auto& a) {
-                return ::sqrt(a);
+                using std::sqrt;
+                return sqrt(a);
             });
         }
 
         [[nodiscard]] constexpr auto tan()
         {
             return transform([](const auto& a) {
-                return ::tan(a);
+                using std::tan;
+                return tan(a);
             });
         }
 
         [[nodiscard]] constexpr auto tanh()
         {
             return transform([](const auto& a) {
-                return ::tanh(a);
+                using std::tanh;
+                return tanh(a);
             });
         }
 
@@ -6746,7 +6778,8 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    [[nodiscard]] inline constexpr auto reshape(
+        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template reshape<Level>(first_new_dim, last_new_dim);
     }
@@ -6771,7 +6804,8 @@ namespace details {
         return arr.template reshape<Level>(shape);
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    [[nodiscard]] inline constexpr auto reshape(
+        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template reshape<ArCo::depth>(first_new_dim, last_new_dim);
     }
@@ -6797,7 +6831,8 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    [[nodiscard]] inline constexpr auto resize(
+        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template resize<Level>(first_new_dim, last_new_dim);
     }
@@ -6817,7 +6852,8 @@ namespace details {
         return resize<Level>(arr, std::begin(new_dims), std::end(new_dims));
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    [[nodiscard]] inline constexpr auto resize(
+        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template resize<ArCo::depth>(first_new_dim, last_new_dim);
     }
@@ -7137,7 +7173,8 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
+    [[nodiscard]] inline constexpr auto transpose(
+        const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
     {
         return arr.template transpose<Level>(first_order, last_order);
     }
@@ -7157,7 +7194,8 @@ namespace details {
         return transpose<Level>(arr, std::begin(order), std::end(order));
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
+    [[nodiscard]] inline constexpr auto transpose(
+        const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
     {
         return arr.template transpose<ArCo::depth>(first_order, last_order);
     }
