@@ -418,7 +418,7 @@ TEST(arrnd_general_indexer, simple_backward_forward_iterations)
     using namespace oc;
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[6]{5, 4, 3, 2, 1, 0};
     const std::int64_t expected_generated_subs{6};
@@ -445,7 +445,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger
     using namespace oc;
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 2, 4};
     const std::int64_t expected_generated_subs{3};
@@ -473,13 +473,13 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     const std::int64_t order[]{2, 0, 1};
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 2, 4, 1, 3, 5};
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_general_indexer gen(hdr, order, order + 3);
+    arrnd_general_indexer gen(hdr, order);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -500,7 +500,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
     using namespace oc;
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[][6]{{0, 1, 2, 3, 4, 5},
 
@@ -533,7 +533,7 @@ TEST(arrnd_general_indexer, random_access)
     using namespace oc;
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 
@@ -687,7 +687,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[3]{interval<>{0, 1}, interval<>{1, 2}, interval<>{2, 3}};
     const std::int64_t expected_generated_subs{3};
@@ -715,7 +715,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_w
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[6]{interval<>{0, 3}, interval<>{1, 4}, interval<>{2, 5}, interval<>{3, 6}};
     const std::int64_t expected_generated_subs{4};
@@ -743,7 +743,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[3]{interval<>{2, 3}, interval<>{1, 2}, interval<>{0, 1}};
     const std::int64_t expected_generated_subs{3};
@@ -771,7 +771,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_w
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[4]{interval<>{3, 6}, interval<>{2, 5}, interval<>{1, 4}, interval<>{0, 3}};
     const std::int64_t expected_generated_subs{4};
@@ -799,7 +799,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_steps_bigg
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[2]{interval<>{0, 1}, interval<>{2, 3}};
     const std::int64_t expected_generated_subs{2};
@@ -827,7 +827,7 @@ TEST(arrnd_fixed_axis_ranger, random_access)
     using namespace oc::details;
 
     const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims, dims + 3);
+    arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[3]{interval<>{0, 1}, interval<>{2, 3}, interval<>{1, 2}};
 

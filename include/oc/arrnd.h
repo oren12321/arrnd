@@ -144,7 +144,7 @@ namespace details {
         }
 
         template <typename InputIt>
-        explicit constexpr simple_dynamic_vector(InputIt first, InputIt last)
+        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last)
             : simple_dynamic_vector(std::distance(first, last), &(*first))
         { }
 
@@ -377,7 +377,7 @@ namespace details {
         }
 
         template <typename InputIt>
-        explicit constexpr simple_static_vector(InputIt first, InputIt last)
+        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last)
             : simple_static_vector(std::distance(first, last), &(*first))
         { }
 
@@ -748,11 +748,11 @@ namespace details {
     template <typename Iter>
     using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
     template <typename Iter, typename T>
-    concept iterator_of_type = std::is_same_v<T, iterator_value_type<Iter>>;
+    concept iterator_of_type = std::input_iterator<Iter>&& std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter>
-    concept integral_type_iterator = std::is_integral_v<iterator_value_type<Iter>>;
+    concept integral_type_iterator = std::input_iterator<Iter> && std::is_integral_v<iterator_value_type<Iter>>;
     template <typename Iter>
-    concept interval_type_iterator = is_template_type<interval, iterator_value_type<Iter>>::value;
+    concept interval_type_iterator = std::input_iterator<Iter> && is_template_type<interval, iterator_value_type<Iter>>::value;
 
     template <typename Cont>
     concept iterable = requires(Cont&& c) {
@@ -847,7 +847,7 @@ namespace details {
         constexpr arrnd_header() = default;
 
         template <integral_type_iterator InputIt>
-        explicit constexpr arrnd_header(InputIt first_dim, InputIt last_dim)
+        explicit constexpr arrnd_header(const InputIt& first_dim, const InputIt& last_dim)
         {
             if (first_dim == last_dim) {
                 return;
@@ -887,7 +887,7 @@ namespace details {
         { }
 
         template <interval_type_iterator InputIt>
-        [[nodiscard]] constexpr arrnd_header subheader(InputIt first_range, InputIt last_range) const
+        [[nodiscard]] constexpr arrnd_header subheader(const InputIt& first_range, const InputIt& last_range) const
         {
             if (first_range == last_range) {
                 return *this;
@@ -1040,7 +1040,7 @@ namespace details {
         }
 
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr arrnd_header reorder(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr arrnd_header reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             assert(std::distance(first_order, last_order) == dims_.size());
             assert(std::all_of(first_order, last_order, [&](auto order) {
@@ -1149,7 +1149,7 @@ namespace details {
         }
 
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr value_type subs2ind(InputIt first_sub, InputIt last_sub) const
+        [[nodiscard]] constexpr value_type subs2ind(const InputIt& first_sub, const InputIt& last_sub) const
         {
             assert(first_sub < last_sub); // at least one subscript is required
 
@@ -1340,7 +1340,7 @@ namespace details {
         }
 
         template <integral_type_iterator InputIt>
-        explicit constexpr arrnd_general_indexer(const header_type& hdr, InputIt first_order, InputIt last_order,
+        explicit constexpr arrnd_general_indexer(const header_type& hdr, const InputIt& first_order, const InputIt& last_order,
             arrnd_indexer_position pos = arrnd_indexer_position::begin)
             : hdr_(hdr.reorder(first_order, last_order))
         {
@@ -3509,7 +3509,7 @@ namespace details {
 
         template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
         explicit constexpr arrnd(
-            InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data, InputDataIt last_data)
+            const InputDimsIt& first_dim, const InputDimsIt& last_dim, const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -3521,20 +3521,20 @@ namespace details {
             }
         }
         template <integral_type_iterable Cont, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(const Cont& dims, InputDataIt first_data, InputDataIt last_data)
+        explicit constexpr arrnd(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
         template <std::integral D, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(std::initializer_list<D> dims, InputDataIt first_data, InputDataIt last_data)
+        explicit constexpr arrnd(std::initializer_list<D> dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(dims.begin(), dims.end(), first_data, last_data)
         { }
         template <std::integral D, std::int64_t M, std::input_iterator InputDataIt>
-        explicit constexpr arrnd(const D (&dims)[M], InputDataIt first_data, InputDataIt last_data)
+        explicit constexpr arrnd(const D (&dims)[M], const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
 
         template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<value_type> data)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<value_type> data)
             : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
         template <integral_type_iterable Cont>
@@ -3551,7 +3551,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt, typename U>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, std::initializer_list<U> data)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
             : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
         template <integral_type_iterable Cont, typename U>
@@ -3568,7 +3568,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt, std::int64_t N>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const value_type (&data)[N])
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const value_type (&data)[N])
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
         template <integral_type_iterable Cont, std::int64_t N>
@@ -3585,7 +3585,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt, typename U, std::int64_t N>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U (&data)[N])
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const U (&data)[N])
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
         template <integral_type_iterable Cont, typename U, std::int64_t N>
@@ -3602,7 +3602,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -3622,7 +3622,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_reference value)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const_reference value)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -3646,7 +3646,7 @@ namespace details {
         { }
 
         template <integral_type_iterator InputDimsIt, typename U>
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const U& value)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -3671,7 +3671,7 @@ namespace details {
 
         template <integral_type_iterator InputDimsIt, typename Func, typename... Args>
             requires(invocable_no_arrnd<Func, Args...>)
-        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, Func&& func, Args&&... args)
+        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func, Args&&... args)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
@@ -4027,7 +4027,7 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, interval_type_iterator InputIt>
-        constexpr const this_type& copy_to(ArCo&& dst, InputIt first_range, InputIt last_range) const
+        constexpr const this_type& copy_to(ArCo&& dst, const InputIt& first_range, const InputIt& last_range) const
         {
             copy_to(dst[std::make_pair(first_range, last_range)]);
             return *this;
@@ -4113,7 +4113,7 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, interval_type_iterator InputIt>
-        constexpr this_type& copy_from(const ArCo& src, InputIt first_range, InputIt last_range)
+        constexpr this_type& copy_from(const ArCo& src, const InputIt& first_range, const InputIt& last_range)
         {
             src.copy_to(*this, first_range, last_range);
             return *this;
@@ -4150,7 +4150,7 @@ namespace details {
 
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             typename this_type::header_type new_header(first_new_dim, last_new_dim);
             assert(hdr_.numel() == new_header.numel());
@@ -4170,7 +4170,7 @@ namespace details {
         }
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (empty()) {
                 return *this;
@@ -4188,7 +4188,7 @@ namespace details {
             return res;
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             return reshape<this_type::depth>(first_new_dim, last_new_dim);
         }
@@ -4268,7 +4268,7 @@ namespace details {
 
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (std::equal(hdr_.dims().cbegin(), hdr_.dims().cend(), first_new_dim, last_new_dim)) {
                 return *this;
@@ -4293,7 +4293,7 @@ namespace details {
         }
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             if (empty()) {
                 return *this;
@@ -4311,7 +4311,7 @@ namespace details {
             return res;
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(InputIt first_new_dim, InputIt last_new_dim) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
             return resize<this_type::depth>(first_new_dim, last_new_dim);
         }
@@ -5387,7 +5387,7 @@ namespace details {
 
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
-        [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -5414,7 +5414,7 @@ namespace details {
         }
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -5432,7 +5432,7 @@ namespace details {
             return res;
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr this_type transpose(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             return transpose<this_type::depth, InputIt>(first_order, last_order);
         }
@@ -6329,53 +6329,53 @@ namespace details {
         }
 
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto begin(InputIt first_order, InputIt last_order)
+        [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order)
         {
             return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order)
+        [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
         {
             return empty()
                 ? iterator()
                 : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto cbegin(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_iterator()
                            : const_iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto cend(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr auto cend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_iterator()
                            : const_iterator(buffsp_->data(),
                                indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::end));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order)
+        [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order)
         {
             return empty() ? reverse_iterator()
                            : reverse_iterator(buffsp_->data(),
                                indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order)
+        [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
         {
             return empty() ? reverse_iterator()
                            : reverse_iterator(buffsp_->data(),
                                indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rend));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto crbegin(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_reverse_iterator()
                            : const_reverse_iterator(buffsp_->data(),
                                indexer_type(hdr_, first_order, last_order, arrnd_indexer_position::rbegin));
         }
         template <integral_type_iterator InputIt>
-        [[nodiscard]] constexpr auto crend(InputIt first_order, InputIt last_order) const
+        [[nodiscard]] constexpr auto crend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_reverse_iterator()
                            : const_reverse_iterator(buffsp_->data(),
@@ -6713,7 +6713,7 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterator InputIt>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, InputIt first_range, InputIt last_range)
+    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const InputIt& first_range, const InputIt& last_range)
     {
         return dst.copy_from(src, first_range, last_range);
     }
@@ -6746,7 +6746,7 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template reshape<Level>(first_new_dim, last_new_dim);
     }
@@ -6771,7 +6771,7 @@ namespace details {
         return arr.template reshape<Level>(shape);
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template reshape<ArCo::depth>(first_new_dim, last_new_dim);
     }
@@ -6797,7 +6797,7 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template resize<Level>(first_new_dim, last_new_dim);
     }
@@ -6817,7 +6817,7 @@ namespace details {
         return resize<Level>(arr, std::begin(new_dims), std::end(new_dims));
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, InputIt first_new_dim, InputIt last_new_dim)
+    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
         return arr.template resize<ArCo::depth>(first_new_dim, last_new_dim);
     }
@@ -7137,7 +7137,7 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
     {
         return arr.template transpose<Level>(first_order, last_order);
     }
@@ -7157,7 +7157,7 @@ namespace details {
         return transpose<Level>(arr, std::begin(order), std::end(order));
     }
     template <arrnd_compliant ArCo, integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, InputIt first_order, InputIt last_order)
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
     {
         return arr.template transpose<ArCo::depth>(first_order, last_order);
     }
