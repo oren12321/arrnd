@@ -607,7 +607,7 @@ namespace details {
     class interval {
     public:
         // interval type might cause ignoring values of interval's start or stop values
-        explicit constexpr interval(T start, T stop, T step = 1, interval_type type = interval_type::none) noexcept
+        constexpr interval(T start, T stop, T step = 1, interval_type type = interval_type::none) noexcept
             : start_(start)
             , stop_(stop)
             , step_(step)

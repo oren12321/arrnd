@@ -1745,7 +1745,7 @@ TEST(arrnd_test, have_read_write_access_to_slice)
     for (std::int64_t k = 0; k < rdims[0]; ++k) {
         for (std::int64_t i = 0; i < rdims[1]; ++i) {
             for (std::int64_t j = 0; j < rdims[2]; ++j) {
-                EXPECT_EQ((rarr[{k, i, j}]), (sarr[{k, 0ll, i, j}]));
+                EXPECT_EQ((rarr[{k, i, j}]), (sarr[{k, static_cast<std::int64_t>(0), i, j}]));
             }
         }
     }
