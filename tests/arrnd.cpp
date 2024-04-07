@@ -2335,33 +2335,33 @@ TEST(arrnd_test, transpose)
     }
 }
 
-TEST(arrnd_test, nest)
-{
-    using namespace oc;
-
-    arrnd<int> iarr({10, 5, 6, 4});
-    std::iota(iarr.begin(), iarr.end(), 1);
-
-    auto sarr = iarr[{interval<>::between(4, 9, 2), interval<>::at(2), interval<>::between(0, 2), interval<>::at(2)}];
-    EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 1, 2, 1}, {531, 535, 771, 775, 1011, 1015})));
-
-    auto rarr = nest<2>(sarr);
-    EXPECT_TRUE(all_equal(rarr,
-        arrnd<arrnd<arrnd<int>>>({3},
-            {arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {531, 535})}),
-                arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {771, 775})}),
-                arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {1011, 1015})})})));
-
-    auto ind535 = find(iarr, [](int a) {
-        return a == 535;
-    })[0];
-    EXPECT_EQ(535, iarr[ind535]);
-    EXPECT_EQ(535, (rarr[{0}][{0}][{1, 0}]));
-
-    iarr[ind535] = 0;
-    EXPECT_EQ(0, iarr[ind535]);
-    EXPECT_EQ(0, (rarr[{0}][{0}][{1, 0}]));
-}
+//TEST(arrnd_test, nest)
+//{
+//    using namespace oc;
+//
+//    arrnd<int> iarr({10, 5, 6, 4});
+//    std::iota(iarr.begin(), iarr.end(), 1);
+//
+//    auto sarr = iarr[{interval<>::between(4, 9, 2), interval<>::at(2), interval<>::between(0, 2), interval<>::at(2)}];
+//    EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 1, 2, 1}, {531, 535, 771, 775, 1011, 1015})));
+//
+//    auto rarr = nest<2>(sarr);
+//    EXPECT_TRUE(all_equal(rarr,
+//        arrnd<arrnd<arrnd<int>>>({3},
+//            {arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {531, 535})}),
+//                arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {771, 775})}),
+//                arrnd<arrnd<int>>({1}, {arrnd<int>({2, 1}, {1011, 1015})})})));
+//
+//    auto ind535 = find(iarr, [](int a) {
+//        return a == 535;
+//    })[0];
+//    EXPECT_EQ(535, iarr[ind535]);
+//    EXPECT_EQ(535, (rarr[{0}][{0}][{1, 0}]));
+//
+//    iarr[ind535] = 0;
+//    EXPECT_EQ(0, iarr[ind535]);
+//    EXPECT_EQ(0, (rarr[{0}][{0}][{1, 0}]));
+//}
 
 TEST(arrnd_test, equal)
 {

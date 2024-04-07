@@ -5481,30 +5481,30 @@ namespace details {
             return transpose<this_type::depth>(std::begin(order), std::end(order));
         }
 
-        template <std::int64_t Depth>
-            requires(Depth == 0)
-        [[nodiscard]] constexpr auto nest() const
-        {
-            assert(hdr_.dims().size() > Depth);
+        //template <std::int64_t Depth>
+        //    requires(Depth == 0)
+        //[[nodiscard]] constexpr auto nest() const // deprecated
+        //{
+        //    assert(hdr_.dims().size() > Depth);
 
-            return *this;
-        }
-        template <std::int64_t Depth>
-            requires(Depth > 0)
-        [[nodiscard]] constexpr auto nest() const
-        {
-            assert(hdr_.dims().size() > Depth);
+        //    return *this;
+        //}
+        //template <std::int64_t Depth>
+        //    requires(Depth > 0)
+        //[[nodiscard]] constexpr auto nest() const
+        //{
+        //    assert(hdr_.dims().size() > Depth);
 
-            using nested_type = replaced_type<decltype(nest<Depth - 1>())>;
+        //    using nested_type = replaced_type<decltype(nest<Depth - 1>())>;
 
-            nested_type res({hdr_.dims().front()});
+        //    nested_type res({hdr_.dims().front()});
 
-            for (std::int64_t i = 0; i < hdr_.dims().front(); ++i) {
-                res[i] = (*this)[interval<size_type>(i, i + 1)].template nest<Depth - 1>();
-            }
+        //    for (std::int64_t i = 0; i < hdr_.dims().front(); ++i) {
+        //        res[i] = (*this)[interval<size_type>(i, i + 1)].template nest<Depth - 1>();
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
         template <std::int64_t Level, std::integral U>
             requires(Level > 0)
@@ -7215,12 +7215,12 @@ namespace details {
         return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
     }
 
-    template <std::int64_t Depth, arrnd_compliant ArCo>
-        requires(Depth >= 0)
-    [[nodiscard]] constexpr auto nest(const ArCo& arr)
-    {
-        return arr.template nest<Depth>();
-    }
+    //template <std::int64_t Depth, arrnd_compliant ArCo>
+    //    requires(Depth >= 0)
+    //[[nodiscard]] constexpr auto nest(const ArCo& arr) // deprecated
+    //{
+    //    return arr.template nest<Depth>();
+    //}
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto operator==(const ArCo1& lhs, const ArCo2& rhs)
@@ -8660,7 +8660,7 @@ using details::any;
 using details::filter;
 using details::find;
 using details::transpose;
-using details::nest;
+//using details::nest; // deprecated
 using details::close;
 using details::all_equal;
 using details::all_close;
