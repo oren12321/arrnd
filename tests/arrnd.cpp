@@ -4557,13 +4557,12 @@ TEST(arrnd_test, append)
         //EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr1, rarr2, 0))); // invalid operation, assertion required
     }
 
-        // multiple append cat like
+    // multiple append cat like
     {
         // standard
         {
             oc::arrnd<int> arr = oc::append(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
-                oc::arrnd<int>({4}, {7, 8, 9, 10}),
-                oc::arrnd<int>({4}, {11, 12, 13, 14}));
+                oc::arrnd<int>({4}, {7, 8, 9, 10}), oc::arrnd<int>({4}, {11, 12, 13, 14}));
 
             oc::arrnd<int> res({14}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
 
@@ -4846,6 +4845,29 @@ TEST(arrnd_test, remove)
         auto rnarr4 = oc::remove<0>(inarr2, 1, 1, 1);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({1, 1}, {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
+    }
+
+    // multiple remove cat like
+    {
+        // standard
+        {
+            oc::arrnd<int> arr = oc::remove(oc::arrnd<int>({14}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}),
+                std::make_tuple(0, 4), std::make_tuple(4, 6));
+
+            oc::arrnd<int> res({4}, {5, 6, 7, 8});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
+
+        // by axis
+        {
+            oc::arrnd<int> arr = oc::remove(oc::arrnd<int>({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16}),
+                std::make_tuple(2, 1, 2), std::make_tuple(1, 2, 0));
+
+            oc::arrnd<int> res({1, 1, 2}, {1, 2});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
     }
 }
 

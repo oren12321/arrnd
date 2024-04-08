@@ -4384,25 +4384,20 @@ namespace details {
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(
-            const ArCo& arr, ArCos&&... others) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, ArCos&&... others) const
         {
-            return append<Level>(arr)
-                .template append<ArCos...>(std::forward<ArCos>(others)...);
+            return append<Level>(arr).template append<ArCos...>(std::forward<ArCos>(others)...);
         }
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> append(std::tuple<ArCo, U> arr_axis_tuple) const
         {
-            return append<Level>(
-                std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple));
+            return append<Level>(std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple));
         }
-        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U,
-            typename... ArCoAxisTuples>
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, typename... ArCoAxisTuples>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> append(
             std::tuple<ArCo, U> arr_axis_tuple, ArCoAxisTuples&&... others) const
         {
-            return append<Level>(
-                std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple))
+            return append<Level>(std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple))
                 .template append<ArCoAxisTuples...>(std::forward<ArCoAxisTuples>(others)...);
         }
         template <typename... ArCosOrTuples>
@@ -4562,10 +4557,10 @@ namespace details {
                 std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple))
                 .template insert<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
         }
-        template <typename... PairsOrTuples>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(PairsOrTuples&&... pairs_or_tuples) const
+        template <typename... Tuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuples&&... tuples) const
         {
-            return insert<this_type::depth>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
+            return insert<this_type::depth>(std::forward<Tuples>(tuples)...);
         }
 
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
@@ -4695,6 +4690,39 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(U ind, V count, W axis) const
         {
             return remove<this_type::depth>(ind, count, axis);
+        }
+
+        template <std::int64_t Level, std::integral U, std::integral V>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(std::tuple<U, V> ind_count_tuple) const
+        {
+            return remove<Level>(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple));
+        }
+        template <std::int64_t Level, std::integral U, std::integral V, typename... IndexCountTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+            std::tuple<U, V> ind_count_tuple, IndexCountTuples&&... others) const
+        {
+            return remove<Level>(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple))
+                .template remove<IndexCountTuples...>(std::forward<IndexCountTuples>(others)...);
+        }
+        template <std::int64_t Level, std::integral U, std::integral V, std::integral W>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(std::tuple<U, V, W> ind_count_axis_tuple) const
+        {
+            return remove<Level>(std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple),
+                std::get<2>(ind_count_axis_tuple));
+        }
+        template <std::int64_t Level, std::integral U, std::integral V, std::integral W,
+            typename... IndexCountAxisTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+            std::tuple<U, V, W> ind_count_axis_tuple, IndexCountAxisTuples&&... others) const
+        {
+            return remove<Level>(
+                std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple), std::get<2>(ind_count_axis_tuple))
+                .template remove<IndexCountAxisTuples...>(std::forward<IndexCountAxisTuples>(others)...);
+        }
+        template <typename... Tuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuples&&... tuples) const
+        {
+            return remove<this_type::depth>(std::forward<Tuples>(tuples)...);
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
@@ -6970,7 +6998,7 @@ namespace details {
     {
         return arr.template append<Level>(first, std::forward<ArCos>(others)...);
     }
-        template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
     [[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
     {
         return append<ArCo1::depth>(arr, first, std::forward<ArCos>(others)...);
@@ -7039,6 +7067,17 @@ namespace details {
     [[nodiscard]] inline constexpr auto remove(const ArCo& arr, U ind, V count, W axis)
     {
         return remove<ArCo::depth>(arr, ind, count, axis);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto remove(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    {
+        return arr.template remove<Level>(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    }
+    template <arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto remove(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    {
+        return remove<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     }
 
     template <arrnd_compliant ArCo>
