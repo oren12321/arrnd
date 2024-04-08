@@ -891,6 +891,45 @@ namespace details {
             : arrnd_header(std::begin(dims), std::end(dims))
         { }
 
+        //template <integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
+        //{
+        //    if (first_dim == last_dim) {
+        //        return *this;
+        //    }
+
+        //    assert(first_dim < last_dim);
+
+        //    if (empty()) {
+        //        return arrnd_header(first_dim, last_dim);
+        //    }
+
+        //    storage_type new_dims(dims_.size() + std::distance(first_dim, last_dim));
+        //
+        //    std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
+        //    std::copy(first_dim, last_dim, std::next(new_dims.begin(), dims_.size()));
+
+        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        //}
+
+        //        template <integral_type_iterable Cont>
+        //[[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
+        //{
+        //    return expand(std::begin(dims), std::end(dims));
+        //}
+
+        //template <std::integral U = value_type>
+        //[[nodiscard]] constexpr arrnd_header expand(std::initializer_list<U> dims) const
+        //{
+        //    return expand(dims.begin(), dims.end());
+        //}
+
+        //template <std::integral D, std::int64_t M>
+        //[[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
+        //{
+        //    return expand(std::begin(dims), std::end(dims));
+        //}
+
         template <interval_type_iterator InputIt>
         [[nodiscard]] constexpr arrnd_header subheader(const InputIt& first_range, const InputIt& last_range) const
         {
@@ -5739,6 +5778,84 @@ namespace details {
         }
 
         template <std::int64_t Level>
+            requires(Level > 1 && !this_type::is_flat)
+        [[nodiscard]] constexpr auto collapse() const
+        {
+            using collapsed_type = inner_replaced_type<typename arrnd_inner_t<this_type, Level>::value_type, Level - 1>;
+
+            if (empty()) {
+                return collapsed_type();
+            }
+
+            collapsed_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename collapsed_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template collapse<Level - 1>();
+            }
+
+            return res;
+        }
+
+        /**
+        * @note collapse should only used on valid expanded arrays
+        */
+        template <std::int64_t Level>
+            requires(Level == 1 && !this_type::is_flat)
+        [[nodiscard]] constexpr auto collapse() const
+        {
+            using collapsed_type = value_type;
+
+            if (empty()) {
+                return collapsed_type();
+            }
+
+            bool all_nested_values_have_the_same_creator
+                = std::adjacent_find(cbegin(), cend(),
+                      [](const collapsed_type& vt1, const collapsed_type& vt2) {
+                          return !vt1.creator() || !vt2.creator() || vt1.creator() != vt2.creator();
+                      })
+                == cend();
+
+            assert(all_nested_values_have_the_same_creator);
+
+            return *((*this)(0).creator());
+
+            //bool nested_values_with_same_dims
+            //    = std::adjacent_find(cbegin(), cend(), [](const collapsed_type& vt1, const collapsed_type& vt2) {
+            //          return vt1.header().dims() != vt2.header().dims();
+            //      }) == cend();
+            //assert(nested_values_with_same_dims);
+
+            //size_type assumed_axis = hdr_.dims().size();
+
+            //header_type new_header = hdr_.expand((*this)(0).header().dims());
+            //collapsed_type res(new_header.dims());
+            //typename collapsed_type::indexer_type res_gen(res.header(), assumed_axis);
+
+            //indexer_type gen(hdr_);
+
+            //while (res_gen) {
+            //    auto current_page = (*this)[*gen];
+            //    typename collapsed_type::indexer_type page_gen(current_page.header());
+
+            //    for (; page_gen; ++page_gen, ++res_gen) {
+            //        res[*res_gen] = current_page[*page_gen];
+            //    }
+            //}
+
+            //return res;
+        }
+
+        [[nodiscard]] constexpr auto collapse() const
+            requires(!this_type::is_flat)
+        {
+            return collapse<this_type::depth>();
+        }
+
+        template <std::int64_t Level>
             requires(Level > 0)
         [[nodiscard]] constexpr this_type squeeze() const
         {
@@ -8365,6 +8482,18 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] constexpr auto collapse(const ArCo& arr)
+    {
+        return arr.template collapse<Level>();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] constexpr auto collapse(const ArCo& arr)
+    {
+        return collapse<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
     {
         return arr.template squeeze<Level>();
@@ -8867,6 +8996,7 @@ using details::remove;
 
 using details::empty;
 using details::expand;
+using details::collapse;
 using details::squeeze;
 using details::sort;
 using details::is_sorted;

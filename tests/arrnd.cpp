@@ -1131,6 +1131,42 @@ TEST(arrnd_test, expand)
     }
 }
 
+TEST(arrnd_test, collapse)
+{
+    using namespace oc;
+
+    // form known array creator
+    {
+        arrnd<int> arr(
+            {2, 3, 2, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+
+        auto exp = expand(arr, 2);
+
+        auto col = collapse(exp);
+
+        EXPECT_TRUE(all_equal(arr, col));
+
+        arr[0] = 100;
+        EXPECT_EQ(100, col[0]);
+    }
+
+    // nested array
+    {
+        arrnd<arrnd<int>> arr(
+            {2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
+        std::cout << arr << "\n\n";
+
+        auto exp = expand<1>(arr, 0);
+
+        auto col = collapse<2>(exp);
+
+        EXPECT_TRUE(all_equal(arr, col));
+
+        arr[0][0] = 100;
+        EXPECT_EQ(100, col[0][0]);
+    }
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
