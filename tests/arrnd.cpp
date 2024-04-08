@@ -1049,12 +1049,12 @@ TEST(arrnd_test, expand)
 
     EXPECT_TRUE(all_equal(expand(narr, 0),
         arrnd<arrnd<arrnd<int>>>({2, 1},
-            {arrnd<arrnd<int>>(
-                 {3}, {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6})}),
-                arrnd<arrnd<int>>({2}, {arrnd<int>({1, 3}, {1, 2, 3}), arrnd<int>({1, 3}, {4, 5, 6})})})));
+            {arrnd<arrnd<int>>({3, 1, 1},
+                 {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6})}),
+                arrnd<arrnd<int>>({2, 1}, {arrnd<int>({1, 3}, {1, 2, 3}), arrnd<int>({1, 3}, {4, 5, 6})})})));
 
     EXPECT_TRUE(all_equal(expand<0>(narr, 0),
-        arrnd<arrnd<arrnd<int>>>({2},
+        arrnd<arrnd<arrnd<int>>>({2, 1},
             {arrnd<arrnd<int>>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
                 arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
 
@@ -1062,29 +1062,29 @@ TEST(arrnd_test, expand)
         arrnd<int> iarr({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 1),
-            arrnd<arrnd<int>>({1}, {arrnd<int>({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
+            arrnd<arrnd<int>>({1, 1, 1}, {arrnd<int>({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 2),
             arrnd<arrnd<int>>(
-                {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})})));
+                {2, 1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})})));
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 3),
-            arrnd<arrnd<int>>({3},
+            arrnd<arrnd<int>>({3, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
                     arrnd<int>({2, 1, 2}, {9, 10, 11, 12})})));
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 4),
-            arrnd<arrnd<int>>({4},
+            arrnd<arrnd<int>>({4, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
                     arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 5),
-            arrnd<arrnd<int>>({5},
+            arrnd<arrnd<int>>({5, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({1, 1, 2}, {5, 6}), arrnd<int>({1, 1, 2}, {7, 8}),
                     arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
 
         EXPECT_TRUE(all_equal(expand(iarr, 0, 6),
-            arrnd<arrnd<int>>({6},
+            arrnd<arrnd<int>>({6, 1, 1},
                 {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6}),
                     arrnd<int>({1, 1, 2}, {7, 8}), arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
     }
@@ -1150,11 +1150,24 @@ TEST(arrnd_test, collapse)
         EXPECT_EQ(100, col[0]);
     }
 
+    // form unknown array creator
+    {
+        auto exp = expand(arrnd<int>({2, 3, 2, 2},
+                              {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}),
+            1, 2);
+
+        auto col = collapse(exp);
+
+        EXPECT_TRUE(
+            all_equal(arrnd<int>({2, 3, 2, 2},
+                          {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}),
+                col));
+    }
+
     // nested array
     {
         arrnd<arrnd<int>> arr(
             {2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
-        std::cout << arr << "\n\n";
 
         auto exp = expand<1>(arr, 0);
 
@@ -1164,6 +1177,19 @@ TEST(arrnd_test, collapse)
 
         arr[0][0] = 100;
         EXPECT_EQ(100, col[0][0]);
+    }
+
+    // nested array
+    {
+        auto exp = expand<1>(arrnd<arrnd<int>>({2, 1},
+                                 {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
+            0);
+
+        auto col = collapse<2>(exp);
+
+        EXPECT_TRUE(all_equal(arrnd<arrnd<int>>({2, 1},
+                                  {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
+            col));
     }
 }
 

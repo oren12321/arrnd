@@ -5723,7 +5723,12 @@ namespace details {
             assert(division <= axis_dim);
             auto fixed_div = division > 0 ? std::min(axis_dim, division) : axis_dim;
 
-            expanded_type res({fixed_div});
+            // TODO: new dimensions creation should be in arrnd_header class
+            typename expanded_type::header_type::storage_type new_dims(hdr_.dims().size());
+            std::fill(new_dims.begin(), new_dims.end(), 1);
+            *std::next(new_dims.begin(), axis) = fixed_div;
+
+            expanded_type res(new_dims);
             typename expanded_type::indexer_type res_gen(res.header());
 
             //auto axis_dim_left = axis_dim;
@@ -5812,6 +5817,8 @@ namespace details {
                 return collapsed_type();
             }
 
+            // from array creator
+
             bool all_nested_values_have_the_same_creator
                 = std::adjacent_find(cbegin(), cend(),
                       [](const collapsed_type& vt1, const collapsed_type& vt2) {
@@ -5819,9 +5826,34 @@ namespace details {
                       })
                 == cend();
 
-            assert(all_nested_values_have_the_same_creator);
+            if (all_nested_values_have_the_same_creator) {
+                return *((*this)(0).creator());
+            }
 
-            return *((*this)(0).creator());
+            // from one collapsed array
+
+            if (hdr_.numel() == 1) {
+                return (*this)(0);
+            }
+
+            // from assumed axis hint
+
+            assert(std::count(hdr_.dims().cbegin(), hdr_.dims().cend(), 1) == hdr_.dims().size() - 1);
+
+            auto axis_dim_it = std::find(hdr_.dims().cbegin(), hdr_.dims().cend(), hdr_.numel());
+            auto assumed_axis = axis_dim_it - hdr_.dims().cbegin();
+
+            indexer_type gen(hdr_);
+
+            collapsed_type res = (*this)[*gen];
+            ++gen;
+
+            while (gen) {
+                res = res.template append<Level - 1>((*this)[*gen], assumed_axis);
+                ++gen;
+            }
+
+            return res;
 
             //bool nested_values_with_same_dims
             //    = std::adjacent_find(cbegin(), cend(), [](const collapsed_type& vt1, const collapsed_type& vt2) {
