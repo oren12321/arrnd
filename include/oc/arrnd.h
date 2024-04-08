@@ -4563,6 +4563,48 @@ namespace details {
             return insert<this_type::depth>(std::forward<Tuples>(tuples)...);
         }
 
+        template <std::int64_t Level, std::integral U>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(U count) const
+        {
+            assert(count >= 0);
+
+            auto res = *this;
+
+            for (U i = 0; i < count - 1; ++i) {
+                res = res.template append<Level>(*this);
+            }
+
+            return res;
+        }
+        template <std::integral U>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(U count) const
+        {
+            return repeat<this_type::depth>(count);
+        }
+
+        template <std::int64_t Level, std::integral U = size_type, std::integral V = size_type>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(
+            std::initializer_list<std::tuple<U, V>> count_axis_tuples) const
+        {
+            auto res = *this;
+            auto mid = res;
+
+            std::for_each(count_axis_tuples.begin(), count_axis_tuples.end(), [&res, &mid](const auto& tuple) {
+                for (U i = 0; i < std::get<0>(tuple) - 1; ++i) {
+                    res = res.template append<Level>(mid, std::get<1>(tuple));
+                }
+                mid = res;
+            });
+
+            return res;
+        }
+        template <std::integral U = size_type, std::integral V = size_type>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(
+            std::initializer_list<std::tuple<U, V>> count_axis_tuples) const
+        {
+            return repeat<this_type::depth>(count_axis_tuples);
+        }
+
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
         //{
         //    auto res = *this;
@@ -7047,6 +7089,32 @@ namespace details {
         return insert<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, U count)
+    {
+        return arr.template repeat<Level>(count);
+    }
+    template <arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, U count)
+    {
+        return repeat<ArCo::depth>(arr, count);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U = typename ArCo::size_type,
+        std::integral V = typename ArCo::size_type>
+    [[nodiscard]] inline constexpr auto repeat(
+        const ArCo& arr, std::initializer_list<std::tuple<U, V>> count_axis_tuples)
+    {
+        return arr.template repeat<Level>(count_axis_tuples);
+    }
+    template <arrnd_compliant ArCo, std::integral U = typename ArCo::size_type,
+        std::integral V = typename ArCo::size_type>
+    [[nodiscard]] inline constexpr auto repeat(
+        const ArCo& arr, std::initializer_list<std::tuple<U, V>> count_axis_tuples)
+    {
+        return repeat<ArCo::depth>(arr, count_axis_tuples);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V>
     [[nodiscard]] inline constexpr auto remove(const ArCo& arr, U ind, V count)
     {
@@ -8783,6 +8851,7 @@ using details::reshape;
 using details::resize;
 using details::append;
 using details::insert;
+using details::repeat;
 using details::remove;
 
 using details::empty;

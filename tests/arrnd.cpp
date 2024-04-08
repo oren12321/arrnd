@@ -4732,6 +4732,31 @@ TEST(arrnd_test, insert)
     }
 }
 
+TEST(arrnd_test, repeat)
+{
+    using namespace oc;
+
+    // standard
+    {
+        auto arr = repeat(arrnd<int>({2, 2}, {1, 2, 3, 4}), 4);
+
+        arrnd<int> res({16}, {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4});
+
+        EXPECT_TRUE(all_equal(arr, res));
+    }
+
+    // by axis
+    {
+        auto arr = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
+
+        arrnd<int> res({2, 6, 4},
+            {1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2,
+                3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4});
+
+        EXPECT_TRUE(all_equal(arr, res));
+    }
+}
+
 //TEST(arrnd_test, cat)
 //{
 //    using namespace oc;
