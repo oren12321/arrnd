@@ -4383,6 +4383,34 @@ namespace details {
             return append<this_type::depth, ArCo>(arr, axis);
         }
 
+        template <std::int64_t Level, arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(
+            const ArCo& arr, ArCos&&... others) const
+        {
+            return append<Level>(arr)
+                .template append<ArCos...>(std::forward<ArCos>(others)...);
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(std::tuple<ArCo, U> arr_axis_tuple) const
+        {
+            return append<Level>(
+                std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple));
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U,
+            typename... ArCoAxisTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(
+            std::tuple<ArCo, U> arr_axis_tuple, ArCoAxisTuples&&... others) const
+        {
+            return append<Level>(
+                std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple))
+                .template append<ArCoAxisTuples...>(std::forward<ArCoAxisTuples>(others)...);
+        }
+        template <typename... ArCosOrTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(ArCosOrTuples&&... arrs_or_tuples) const
+        {
+            return append<this_type::depth>(std::forward<ArCosOrTuples>(arrs_or_tuples)...);
+        }
+
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
             requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, U ind) const
@@ -4508,37 +4536,46 @@ namespace details {
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(std::pair<ArCo, U> arr_ind_pair) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(std::tuple<ArCo, U> arr_ind_tuple) const
         {
-            return insert<Level>(arr_ind_pair.first, arr_ind_pair.second);
+            return insert<Level>(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple));
         }
-        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, typename... ArCoIndexPairs>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(
-            std::pair<ArCo, U> arr_ind_pair, ArCoIndexPairs&&... others) const
+        template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, typename... ArCoIndexTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
+            std::tuple<ArCo, U> arr_ind_tuple, ArCoIndexTuples&&... others) const
         {
-            return insert<Level>(arr_ind_pair.first, arr_ind_pair.second)
-                .template cat<ArCoIndexPairs...>(std::forward<ArCoIndexPairs>(others)...);
+            return insert<Level>(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple))
+                .template insert<ArCoIndexTuples...>(std::forward<ArCoIndexTuples>(others)...);
         }
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(std::tuple<ArCo, U, V> arr_ind_axis_tuple) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(std::tuple<ArCo, U, V> arr_ind_axis_tuple) const
         {
             return insert<Level>(
                 std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple));
         }
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V,
             typename... ArCoIndexAxisTuples>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
             std::tuple<ArCo, U, V> arr_ind_axis_tuple, ArCoIndexAxisTuples&&... others) const
         {
             return insert<Level>(
                 std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple))
-                .template cat<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
+                .template insert<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
         }
         template <typename... PairsOrTuples>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> cat(PairsOrTuples&&... pairs_or_tuples) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(PairsOrTuples&&... pairs_or_tuples) const
         {
-            return cat<this_type::depth>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
+            return insert<this_type::depth>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
         }
+
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
+        //{
+        //    auto res = *this;
+        //    std::for_each(axes.begin(), axes.end(), [&](const auto& axis) {
+        //        res = res.append(res, axis);
+        //        });
+        //    return res;
+        //}
 
         template <std::int64_t Level, std::integral U, std::integral V>
             requires(Level == 0)
@@ -6928,6 +6965,27 @@ namespace details {
         return append<ArCo1::depth>(lhs, rhs, axis);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    [[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
+    {
+        return arr.template append<Level>(first, std::forward<ArCos>(others)...);
+    }
+        template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    [[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
+    {
+        return append<ArCo1::depth>(arr, first, std::forward<ArCos>(others)...);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto append(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    {
+        return arr.template append<Level>(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    }
+    template <arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto append(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    {
+        return append<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, std::integral U>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, U ind)
     {
@@ -6950,15 +7008,15 @@ namespace details {
         return insert<ArCo1::depth>(lhs, rhs, ind, axis);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename... PairsOrTuples>
-    [[nodiscard]] inline constexpr auto cat(const ArCo& arr, PairsOrTuples&&... pairs_or_tuples)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
     {
-        return arr.cat<Level>(std::forward<PairsOrTuples>(pairs_or_tuples)...);
+        return arr.template insert<Level>(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     }
-    template <arrnd_compliant ArCo, typename... PairsOrTuples>
-    [[nodiscard]] inline constexpr auto cat(const ArCo& arr, PairsOrTuples&&... pairs_or_tuples)
+    template <arrnd_compliant ArCo, typename Tuple, typename... Tuples>
+    [[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
     {
-        return cat<ArCo::depth>(arr, std::forward<PairsOrTuples>(pairs_or_tuples)...);
+        return insert<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::integral V>
@@ -8686,7 +8744,6 @@ using details::reshape;
 using details::resize;
 using details::append;
 using details::insert;
-using details::cat;
 using details::remove;
 
 using details::empty;

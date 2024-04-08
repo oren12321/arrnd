@@ -4556,6 +4556,31 @@ TEST(arrnd_test, append)
 
         //EXPECT_TRUE(oc::all_equal(rinvalid_arr1, oc::append(arr1, rarr2, 0))); // invalid operation, assertion required
     }
+
+        // multiple append cat like
+    {
+        // standard
+        {
+            oc::arrnd<int> arr = oc::append(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
+                oc::arrnd<int>({4}, {7, 8, 9, 10}),
+                oc::arrnd<int>({4}, {11, 12, 13, 14}));
+
+            oc::arrnd<int> res({14}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
+
+        // by axis
+        {
+            oc::arrnd<int> arr = oc::append(oc::arrnd<int>({1, 1, 2}, {1, 2}),
+                std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 0),
+                std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2));
+
+            oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
+    }
 }
 
 TEST(arrnd_test, insert)
@@ -4681,33 +4706,64 @@ TEST(arrnd_test, insert)
                                       oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0),
             oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}})));
     }
+
+    // multiple insert cat like
+    {
+        // standard
+        {
+            oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
+                std::make_tuple(oc::arrnd<int>({4}, {7, 8, 9, 10}), 6),
+                std::make_tuple(oc::arrnd<int>({4}, {11, 12, 13, 14}), 0));
+
+            oc::arrnd<int> res({14}, {11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
+
+        // by axis
+        {
+            oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({1, 1, 2}, {1, 2}),
+                std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 1, 0),
+                std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2, 2));
+
+            oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
+
+            EXPECT_TRUE(all_equal(arr, res));
+        }
+    }
 }
 
-TEST(arrnd_test, cat)
-{
-    using namespace oc;
-
-    // standard cat
-    {
-        arrnd<int> arr
-            = cat(arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), std::make_pair(oc::arrnd<int>({4}, {7, 8, 9, 10}), 6),
-                std::make_pair(oc::arrnd<int>({4}, {11, 12, 13, 14}), 0));
-
-        arrnd<int> res({14}, {11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
-
-        EXPECT_TRUE(all_equal(arr, res));
-    }
-
-    // cat by axis
-    {
-        arrnd<int> arr = cat(arrnd<int>({1, 1, 2}, {1, 2}), std::tuple(arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 1, 0),
-            std::tuple(arrnd<int>({3, 1, 1}, {14, 15, 16}), 2, 2));
-
-        arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
-
-        EXPECT_TRUE(all_equal(arr, res));
-    }
-}
+//TEST(arrnd_test, cat)
+//{
+//    using namespace oc;
+//
+//    // standard cat
+//    {
+//        arrnd<int> arr
+//            = cat(arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), std::make_pair(oc::arrnd<int>({4}, {7, 8, 9, 10}), 6),
+//                std::make_pair(oc::arrnd<int>({4}, {11, 12, 13, 14}), 0));
+//
+//        arrnd<int> res({14}, {11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+//
+//        EXPECT_TRUE(all_equal(arr, res));
+//    }
+//
+//    // cat by axis
+//    {
+//        arrnd<int> arr = cat(arrnd<int>({1, 1, 2}, {1, 2}), std::tuple(arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 1, 0),
+//            std::tuple(arrnd<int>({3, 1, 1}, {14, 15, 16}), 2, 2));
+//
+//        arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
+//
+//        EXPECT_TRUE(all_equal(arr, res));
+//    }
+//
+//    //// repeat
+//    //{
+//    //    arrnd<int> arr = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).repeat({2, 1, 0});
+//    //    std::cout << arr << "\n\n";
+//    //}
+//}
 
 TEST(arrnd_test, remove)
 {
