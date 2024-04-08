@@ -6801,11 +6801,22 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto pow()
+        template <typename U>
+            requires(!arrnd_compliant<U>)
+        [[nodiscard]] constexpr auto pow(const U& value)
         {
-            return transform([](const auto& a) {
+            return transform([&value](const auto& a) {
                 using std::pow;
-                return pow(a);
+                return pow(a, value);
+            });
+        }
+
+        template <arrnd_compliant ArCo>
+        [[nodiscard]] constexpr auto pow(const ArCo& arr)
+        {
+            return transform(arr, [](const auto& a, const auto& b) {
+                using std::pow;
+                return pow(a, b);
             });
         }
 
@@ -8184,10 +8195,10 @@ namespace details {
         return arr.log10();
     }
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pow(const ArCo& arr)
+    template <arrnd_compliant ArCo, typename U>
+    [[nodiscard]] inline constexpr auto pow(const ArCo& arr, const U& value)
     {
-        return arr.pow();
+        return arr.pow(value);
     }
 
     template <arrnd_compliant ArCo>
