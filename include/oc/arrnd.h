@@ -6382,6 +6382,38 @@ namespace details {
             });
         }
 
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto sum() const
+        {
+            return reduce<Level>([](const auto& a, const auto& b) {
+                return a + b;
+            });
+        }
+
+        template <std::int64_t Level = this_type::depth, std::integral U>
+        [[nodiscard]] constexpr auto sum(U axis) const
+        {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
+                return a + b;
+            });
+        }
+
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto prod() const
+        {
+            return reduce<Level>([](const auto& a, const auto& b) {
+                return a * b;
+            });
+        }
+
+        template <std::int64_t Level = this_type::depth, std::integral U>
+        [[nodiscard]] constexpr auto prod(U axis) const
+        {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
+                return a * b;
+            });
+        }
+
         template <std::int64_t Level, arrnd_compliant ArCo>
         [[nodiscard]] constexpr replaced_type<bool> close(const ArCo& arr,
             const compliant_tol_type<ArCo, Level>& atol = default_atol<compliant_tol_type<ArCo, Level>>(),
@@ -6854,7 +6886,7 @@ namespace details {
                            : const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
         }
 
-        [[nodiscard]] constexpr auto abs()
+        [[nodiscard]] constexpr auto abs() const
         {
             return transform([](const auto& a) {
                 using std::abs;
@@ -6862,7 +6894,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto acos()
+        [[nodiscard]] constexpr auto acos() const
         {
             return transform([](const auto& a) {
                 using std::acos;
@@ -6870,7 +6902,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto acosh()
+        [[nodiscard]] constexpr auto acosh() const
         {
             return transform([](const auto& a) {
                 using std::acosh;
@@ -6878,7 +6910,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto asin()
+        [[nodiscard]] constexpr auto asin() const
         {
             return transform([](const auto& a) {
                 using std::asin;
@@ -6886,7 +6918,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto asinh()
+        [[nodiscard]] constexpr auto asinh() const
         {
             return transform([](const auto& a) {
                 using std::asinh;
@@ -6894,7 +6926,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto atan()
+        [[nodiscard]] constexpr auto atan() const
         {
             return transform([](const auto& a) {
                 using std::atan;
@@ -6902,7 +6934,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto atanh()
+        [[nodiscard]] constexpr auto atanh() const
         {
             return transform([](const auto& a) {
                 using std::atanh;
@@ -6910,7 +6942,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto cos()
+        [[nodiscard]] constexpr auto cos() const
         {
             return transform([](const auto& a) {
                 using std::cos;
@@ -6918,7 +6950,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto cosh()
+        [[nodiscard]] constexpr auto cosh() const
         {
             return transform([](const auto& a) {
                 using std::cosh;
@@ -6926,7 +6958,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto exp()
+        [[nodiscard]] constexpr auto exp() const
         {
             return transform([](const auto& a) {
                 using std::exp;
@@ -6934,7 +6966,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto log()
+        [[nodiscard]] constexpr auto log() const
         {
             return transform([](const auto& a) {
                 using std::log;
@@ -6942,7 +6974,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto log10()
+        [[nodiscard]] constexpr auto log10() const
         {
             return transform([](const auto& a) {
                 using std::log10;
@@ -6952,7 +6984,7 @@ namespace details {
 
         template <typename U>
             requires(!arrnd_compliant<U>)
-        [[nodiscard]] constexpr auto pow(const U& value)
+        [[nodiscard]] constexpr auto pow(const U& value) const
         {
             return transform([&value](const auto& a) {
                 using std::pow;
@@ -6961,7 +6993,7 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr auto pow(const ArCo& arr)
+        [[nodiscard]] constexpr auto pow(const ArCo& arr) const
         {
             return transform(arr, [](const auto& a, const auto& b) {
                 using std::pow;
@@ -6969,7 +7001,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto sin()
+        [[nodiscard]] constexpr auto sin() const
         {
             return transform([](const auto& a) {
                 using std::sin;
@@ -6977,7 +7009,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto sinh()
+        [[nodiscard]] constexpr auto sinh() const
         {
             return transform([](const auto& a) {
                 using std::sinh;
@@ -6985,7 +7017,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto sqrt()
+        [[nodiscard]] constexpr auto sqrt() const
         {
             return transform([](const auto& a) {
                 using std::sqrt;
@@ -6993,7 +7025,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto tan()
+        [[nodiscard]] constexpr auto tan() const
         {
             return transform([](const auto& a) {
                 using std::tan;
@@ -7001,11 +7033,35 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto tanh()
+        [[nodiscard]] constexpr auto tanh() const
         {
             return transform([](const auto& a) {
                 using std::tanh;
                 return tanh(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto round() const
+        {
+            return transform([](const auto& a) {
+                using std::round;
+                return round(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto ceil() const
+        {
+            return transform([](const auto& a) {
+                using std::ceil;
+                return ceil(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto floor() const
+        {
+            return transform([](const auto& a) {
+                using std::floor;
+                return floor(a);
             });
         }
 
@@ -7405,6 +7461,54 @@ namespace details {
     [[nodiscard]] inline constexpr auto any(const ArCo& arr, U axis)
     {
         return any<ArCo::depth>(arr, axis);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto sum(const ArCo& arr)
+    {
+        return arr.template sum<Level>();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto sum(const ArCo& arr)
+    {
+        return sum<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto sum(const ArCo& arr, U axis)
+    {
+        return arr.template sum<Level>(axis);
+    }
+
+    template <arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto sum(const ArCo& arr, U axis)
+    {
+        return sum<ArCo::depth>(arr, axis);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto prod(const ArCo& arr)
+    {
+        return arr.template prod<Level>();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto prod(const ArCo& arr)
+    {
+        return prod<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto prod(const ArCo& arr, U axis)
+    {
+        return arr.template prod<Level>(axis);
+    }
+
+    template <arrnd_compliant ArCo, std::integral U>
+    [[nodiscard]] inline constexpr auto prod(const ArCo& arr, U axis)
+    {
+        return prod<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
@@ -8380,6 +8484,24 @@ namespace details {
         return arr.tanh();
     }
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto round(const ArCo& arr)
+    {
+        return arr.round();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto ceil(const ArCo& arr)
+    {
+        return arr.ceil();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto floor(const ArCo& arr)
+    {
+        return arr.floor();
+    }
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto operator&&(const ArCo1& lhs, const ArCo2& rhs)
     {
@@ -9040,6 +9162,8 @@ using details::reduce;
 using details::fold;
 using details::all;
 using details::any;
+using details::sum;
+using details::prod;
 using details::filter;
 using details::find;
 using details::transpose;
@@ -9068,6 +9192,9 @@ using details::sinh;
 using details::sqrt;
 using details::tan;
 using details::tanh;
+using details::round;
+using details::ceil;
+using details::floor;
 }
 
 #endif // OC_ARRAY_H

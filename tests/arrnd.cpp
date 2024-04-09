@@ -2075,6 +2075,102 @@ TEST(arrnd_test, any)
     EXPECT_TRUE(oc::all_equal(rarr, oc::any(arr, 0)));
 }
 
+TEST(arrnd_test, sum)
+{
+    using namespace oc;
+
+    arrnd<int> arr({2, 2}, {1, 2, 3, 4});
+
+    EXPECT_EQ(10, sum(arr));
+
+    EXPECT_TRUE(all_equal(arrnd<int>({2}, {3, 7}), sum(arr, 1)));
+}
+
+TEST(arrnd_test, prod)
+{
+    using namespace oc;
+
+    arrnd<int> arr({2, 2}, {1, 2, 3, 4});
+
+    EXPECT_EQ(24, prod(arr));
+
+    EXPECT_TRUE(all_equal(arrnd<int>({2}, {2, 12}), prod(arr, 1)));
+}
+
+TEST(arrnd_test, basic_math_and_trigo)
+{
+    using namespace oc;
+
+    arrnd<double> arr1({1, 5}, {0.1, 0.2, 0.3, 0.4, 0.5});
+    arrnd<double> arr2({1, 5}, {1, 2, 3, 4, 5});
+
+    EXPECT_TRUE(all_close(arrnd<double>({1, 5}, {0.1, 0.2, 0.3, 0.4, 0.5}), abs(arr1)));
+
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::acos(0.1), std::acos(0.2), std::acos(0.3), std::acos(0.4), std::acos(0.5)}),
+        acos(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::asin(0.1), std::asin(0.2), std::asin(0.3), std::asin(0.4), std::asin(0.5)}),
+        asin(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::atan(0.1), std::atan(0.2), std::atan(0.3), std::atan(0.4), std::atan(0.5)}),
+        atan(arr1)));
+
+    EXPECT_TRUE(
+        all_close(arrnd<double>({1, 5}, {std::acosh(1), std::acosh(2), std::acosh(3), std::acosh(4), std::acosh(5)}),
+            acosh(arr2)));
+    EXPECT_TRUE(
+        all_close(arrnd<double>({1, 5}, {std::asinh(1), std::asinh(2), std::asinh(3), std::asinh(4), std::asinh(5)}),
+            asinh(arr2)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::atanh(0.1), std::atanh(0.2), std::atanh(0.3), std::atanh(0.4), std::atanh(0.5)}),
+        atanh(arr1)));
+
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::cos(0.1), std::cos(0.2), std::cos(0.3), std::cos(0.4), std::cos(0.5)}), cos(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::sin(0.1), std::sin(0.2), std::sin(0.3), std::sin(0.4), std::sin(0.5)}), sin(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::tan(0.1), std::tan(0.2), std::tan(0.3), std::tan(0.4), std::tan(0.5)}), tan(arr1)));
+
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::cosh(0.1), std::cosh(0.2), std::cosh(0.3), std::cosh(0.4), std::cosh(0.5)}),
+        cosh(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::sinh(0.1), std::sinh(0.2), std::sinh(0.3), std::sinh(0.4), std::sinh(0.5)}),
+        sinh(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::tanh(0.1), std::tanh(0.2), std::tanh(0.3), std::tanh(0.4), std::tanh(0.5)}),
+        tanh(arr1)));
+
+    EXPECT_TRUE(
+        all_close(arrnd<double>({1, 5}, {std::exp(1), std::exp(2), std::exp(3), std::exp(4), std::exp(5)}), exp(arr2)));
+    EXPECT_TRUE(
+        all_close(arrnd<double>({1, 5}, {std::log(1), std::log(2), std::log(3), std::log(4), std::log(5)}), log(arr2)));
+    EXPECT_TRUE(
+        all_close(arrnd<double>({1, 5}, {std::log10(1), std::log10(2), std::log10(3), std::log10(4), std::log10(5)}),
+            log10(arr2)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::sqrt(1), std::sqrt(2), std::sqrt(3), std::sqrt(4), std::sqrt(5)}), sqrt(arr2)));
+
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::pow(1, 2), std::pow(2, 2), std::pow(3, 2), std::pow(4, 2), std::pow(5, 2)}),
+        pow(arr2, 2)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::pow(1, 1), std::pow(2, 2), std::pow(3, 3), std::pow(4, 4), std::pow(5, 5)}),
+        pow(arr2, arr2)));
+
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::round(0.1), std::round(0.2), std::round(0.3), std::round(0.4), std::round(0.5)}),
+        round(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::ceil(0.1), std::ceil(0.2), std::ceil(0.3), std::ceil(0.4), std::ceil(0.5)}),
+        ceil(arr1)));
+    EXPECT_TRUE(all_close(
+        arrnd<double>({1, 5}, {std::floor(0.1), std::floor(0.2), std::floor(0.3), std::floor(0.4), std::floor(0.5)}),
+        floor(arr1)));
+}
+
 TEST(arrnd_test, filter_elements_by_condition)
 {
     std::int64_t dims[]{3, 1, 2};
