@@ -1895,33 +1895,37 @@ namespace details {
             interval<value_type> window = interval<value_type>(0, 0, 1), bool is_window_contained = true,
             arrnd_indexer_position start_pos = arrnd_indexer_position::begin)
             : fixed_axis_(fixed_axis)
-            , window_(window)
+            , left_window_size_(-window.start())
+            , right_window_size_(window.stop())
+            , window_step_(window.step())
             , is_window_contained_(is_window_contained)
         {
-            assert(fixed_axis >= 0 && fixed_axis < hdr.dims().size());
+            assert(fixed_axis_ >= 0 && fixed_axis_ < hdr.dims().size());
+            assert(window.start() <= 0 && window.stop() >= 0);
 
-            value_type fixed_axis_dim = *std::next(hdr.dims().cbegin(), fixed_axis);
-            assert(window.stop() - window.start() <= fixed_axis_dim && window.step() <= fixed_axis_dim);
+            fixed_axis_dim_ = *std::next(hdr.dims().cbegin(), fixed_axis_);
+
+            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
 
             ranges_ = storage_type(hdr.dims().size());
             for (size_type i = 0; i < hdr.dims().size(); ++i) {
                 *std::next(ranges_.begin(), i) = interval<value_type>(0, *std::next(hdr.dims().cbegin(), i));
             }
 
-            last_index_ = fixed_axis_dim - 1;
+            last_index_ = fixed_axis_dim_ - 1;
 
             switch (start_pos) {
             case arrnd_indexer_position::begin:
             case arrnd_indexer_position::rend:
-                current_index_ = is_window_contained ? window.start() : 0;
+                current_index_ = is_window_contained_ ? left_window_size_ : 0;
                 break;
             case arrnd_indexer_position::end:
             case arrnd_indexer_position::rbegin:
-                current_index_ = is_window_contained ? fixed_axis_dim - 1 - window_.stop() : fixed_axis_dim - 1;
+                current_index_ = is_window_contained_ ? fixed_axis_dim_ - 1 - right_window_size_ : fixed_axis_dim_ - 1;
                 break;
             }
 
-            ranges_[fixed_axis] = compute_current_index_interval();
+            ranges_[fixed_axis_] = compute_current_index_interval();
 
             if (start_pos == arrnd_indexer_position::end) {
                 ++(*this);
@@ -2003,7 +2007,7 @@ namespace details {
         [[nodiscard]] explicit constexpr operator bool() const noexcept
         {
             return is_window_contained_
-                ? (current_index_ - window_.start() >= 0 && current_index_ + window_.stop() <= last_index_)
+                ? (current_index_ - left_window_size_ >= 0 && current_index_ + right_window_size_ <= last_index_)
                 : (current_index_ >= 0 && current_index_ <= last_index_);
         }
 
@@ -2016,7 +2020,7 @@ namespace details {
         [[nodiscard]] constexpr storage_type operator[](U index) const noexcept
         {
             if (is_window_contained_) {
-                assert(index - window_.start() >= 0 && index + window_.stop() <= last_index_);
+                assert(index - left_window_size_ >= 0 && index + right_window_size_ <= last_index_);
             } else {
                 assert(index >= 0 && index <= last_index_);
             }
@@ -2048,7 +2052,12 @@ namespace details {
 
         constexpr arrnd_fixed_axis_ranger& change_window(interval<value_type> window) noexcept
         {
-            window_ = window;
+            assert(window.start() <= 0 && window.stop() >= 0);
+            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
+
+            left_window_size_ = -window.start();
+            right_window_size_ = window.stop();
+            window_step_ = window.step();
             ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
@@ -2062,22 +2071,26 @@ namespace details {
             }
 
             // calculate normalized forward neigh
-            value_type norm_window_stop = (current_index_ + window_.stop() <= last_index_)
-                ? window_.stop()
-                : last_index_ - current_index_; //(current_index_ + window_.stop() - last_index_);
+            value_type norm_window_stop = (current_index_ + right_window_size_ <= last_index_)
+                ? right_window_size_
+                : last_index_ - current_index_; //(current_index_ + right_window_size_ - last_index_);
 
             // calculate normalized backward neigh
-            value_type norm_window_start = (current_index_ - window_.start() >= 0) ? window_.start() : current_index_;
-            // (window_.start() - current_index_ - 1);
+            value_type norm_window_start
+                = (current_index_ - left_window_size_ >= 0) ? left_window_size_ : current_index_;
+            // (left_window_size_ - current_index_ - 1);
 
             // set interval
             return interval<value_type>{
-                current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_.step()};
+                current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_step_};
         }
 
         size_type fixed_axis_;
         //value_type interval_width_;
-        interval<value_type> window_;
+        size_type fixed_axis_dim_;
+        value_type left_window_size_;
+        value_type right_window_size_;
+        value_type window_step_;
         value_type current_index_;
         value_type last_index_;
         storage_type ranges_;
@@ -5780,8 +5793,12 @@ namespace details {
 
                 --curr_div;
                 curr_axis_dim -= curr_ival_width;
-                curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
-                rgr.change_window(interval<size_type>(0, curr_ival_width - 1));
+
+                // prevent division by zero before end of division loop
+                if (curr_div > 0) {
+                    curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
+                    rgr.change_window(interval<size_type>(0, curr_ival_width - 1));
+                }
 
                 ++count;
             }

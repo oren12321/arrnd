@@ -762,11 +762,11 @@ TEST(arrnd_fixed_axis_ranger,
     arrnd_header hdr(dims);
 
     const interval<> expected_inds_list[6]{
-        interval<>{0, 4}, interval<>{0, 5}, interval<>{0, 6}, interval<>{1, 6}, interval<>{2, 6}, interval<>{3, 6}};
+        interval<>{0, 3}, interval<>{0, 4}, interval<>{0, 5}, interval<>{1, 6}, interval<>{2, 6}, interval<>{3, 6}};
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{2, 3}, false);
+    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{-2, 2}, false);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
