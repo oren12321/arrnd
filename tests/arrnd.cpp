@@ -77,6 +77,20 @@
 //    std::cout << "par duration[ms]: " << (duration / static_cast<double>(cycles)) << "\n";
 //}
 
+//TEST(dummy, ranger)
+//{
+//    using namespace oc;
+//
+//    arrnd_header<> hdr({6, 10, 4});
+//
+//    arrnd_fixed_axis_ranger<> rgr(hdr, 1, false, 4, 2, 2, true);
+//
+//    for (; rgr; ++rgr) {
+//        auto ival = (*rgr)[1];
+//        std::cout << "{" << ival.start() << ", " << ival.stop() << ", " << ival.step() << "}\n";
+//    }
+//}
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::simple_dynamic_vector<std::string>;
@@ -709,7 +723,8 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one)
+TEST(
+    arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_contained_window)
 {
     using namespace oc;
     using namespace oc::details;
@@ -721,7 +736,37 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_w
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, false, 3);
+    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 2}, true);
+
+    while (gen) {
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+        ++generated_subs_counter;
+        ++gen;
+    }
+    EXPECT_EQ(expected_generated_subs, generated_subs_counter);
+
+    while (--gen) {
+        --generated_subs_counter;
+        EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
+    }
+    EXPECT_EQ(0, generated_subs_counter);
+}
+
+TEST(arrnd_fixed_axis_ranger,
+    simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_none_contained_window)
+{
+    using namespace oc;
+    using namespace oc::details;
+
+    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
+    arrnd_header hdr(dims);
+
+    const interval<> expected_inds_list[6]{
+        interval<>{0, 4}, interval<>{0, 5}, interval<>{0, 6}, interval<>{1, 6}, interval<>{2, 6}, interval<>{3, 6}};
+    const std::int64_t expected_generated_subs{6};
+
+    std::int64_t generated_subs_counter{0};
+    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{2, 3}, false);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -749,7 +794,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, true);
+    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 0}, true, arrnd_indexer_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -777,7 +822,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_w
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, true, 3);
+    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 2}, true, arrnd_indexer_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);

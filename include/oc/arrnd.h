@@ -1891,24 +1891,43 @@ namespace details {
 
         using storage_type = typename Header::storage_type::template replaced_type<interval<value_type>>;
 
-        template <std::integral U>
-        explicit constexpr arrnd_fixed_axis_ranger(
-            const header_type& hdr, U fixed_axis = 0, bool backward = false, value_type interval_width = 1)
+        explicit constexpr arrnd_fixed_axis_ranger(const header_type& hdr, size_type fixed_axis = 0,
+            interval<value_type> window = interval<value_type>(0, 0, 1), bool is_window_contained = true,
+            arrnd_indexer_position start_pos = arrnd_indexer_position::begin)
             : fixed_axis_(fixed_axis)
-            , interval_width_(interval_width)
+            , window_(window)
+            , is_window_contained_(is_window_contained)
         {
             assert(fixed_axis >= 0 && fixed_axis < hdr.dims().size());
-            assert(interval_width > 0 && interval_width <= *std::next(hdr.dims().cbegin(), fixed_axis));
 
-            current_index_ = backward ? *std::next(hdr.dims().cbegin(), fixed_axis) - interval_width_ : 0;
-
-            last_index_ = *std::next(hdr.dims().cbegin(), fixed_axis);
+            value_type fixed_axis_dim = *std::next(hdr.dims().cbegin(), fixed_axis);
+            assert(window.stop() - window.start() <= fixed_axis_dim && window.step() <= fixed_axis_dim);
 
             ranges_ = storage_type(hdr.dims().size());
             for (size_type i = 0; i < hdr.dims().size(); ++i) {
-                ranges_[i] = {0, *std::next(hdr.dims().cbegin(), i)};
+                *std::next(ranges_.begin(), i) = interval<value_type>(0, *std::next(hdr.dims().cbegin(), i));
             }
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
+
+            last_index_ = fixed_axis_dim - 1;
+
+            switch (start_pos) {
+            case arrnd_indexer_position::begin:
+            case arrnd_indexer_position::rend:
+                current_index_ = is_window_contained ? window.start() : 0;
+                break;
+            case arrnd_indexer_position::end:
+            case arrnd_indexer_position::rbegin:
+                current_index_ = is_window_contained ? fixed_axis_dim - 1 - window_.stop() : fixed_axis_dim - 1;
+                break;
+            }
+
+            ranges_[fixed_axis] = compute_current_index_interval();
+
+            if (start_pos == arrnd_indexer_position::end) {
+                ++(*this);
+            } else if (start_pos == arrnd_indexer_position::rend) {
+                --(*this);
+            }
         }
 
         constexpr arrnd_fixed_axis_ranger() = default;
@@ -1923,12 +1942,8 @@ namespace details {
 
         constexpr arrnd_fixed_axis_ranger& operator++() noexcept
         {
-            if (current_index_ + interval_width_ > last_index_) {
-                //current_index_ = last_index_;
-                return *this;
-            }
             ++current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
+            ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
 
@@ -1942,15 +1957,8 @@ namespace details {
         template <std::integral U>
         constexpr arrnd_fixed_axis_ranger& operator+=(U count) noexcept
         {
-            if (current_index_ + interval_width_ > last_index_) {
-                //current_index_ = last_index_;
-                return *this;
-            }
             current_index_ += count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
-            if (current_index_ >= last_index_) {
-                return *this;
-            }
+            ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
 
@@ -1964,11 +1972,8 @@ namespace details {
 
         constexpr arrnd_fixed_axis_ranger& operator--() noexcept
         {
-            if (current_index_ < 0) {
-                current_index_ = -1;
-            }
             --current_index_;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
+            ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
 
@@ -1982,14 +1987,8 @@ namespace details {
         template <std::integral U>
         constexpr arrnd_fixed_axis_ranger& operator-=(U count) noexcept
         {
-            if (current_index_ < 0) {
-                current_index_ = -1;
-            }
             current_index_ -= count;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
-            if (current_index_ < 0) {
-                return *this;
-            }
+            ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
 
@@ -2003,7 +2002,9 @@ namespace details {
 
         [[nodiscard]] explicit constexpr operator bool() const noexcept
         {
-            return current_index_ >= 0 && current_index_ + interval_width_ <= last_index_;
+            return is_window_contained_
+                ? (current_index_ - window_.start() >= 0 && current_index_ + window_.stop() <= last_index_)
+                : (current_index_ >= 0 && current_index_ <= last_index_);
         }
 
         [[nodiscard]] constexpr const storage_type& operator*() const noexcept
@@ -2014,7 +2015,11 @@ namespace details {
         template <std::integral U>
         [[nodiscard]] constexpr storage_type operator[](U index) const noexcept
         {
-            assert(index >= 0 && index + interval_width_ <= last_index_);
+            if (is_window_contained_) {
+                assert(index - window_.start() >= 0 && index + window_.stop() <= last_index_);
+            } else {
+                assert(index >= 0 && index <= last_index_);
+            }
 
             size_type advance_count = index - current_index_;
             if (advance_count > 0) {
@@ -2041,19 +2046,42 @@ namespace details {
             return fixed_axis_;
         }
 
-        constexpr arrnd_fixed_axis_ranger& change_interval_width(value_type interval_width) noexcept
+        constexpr arrnd_fixed_axis_ranger& change_window(interval<value_type> window) noexcept
         {
-            interval_width_ = interval_width;
-            ranges_[fixed_axis_] = interval<value_type>{current_index_, current_index_ + interval_width_};
+            window_ = window;
+            ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
 
     private:
+        // Calculate current interval window according to current index
+        [[nodiscard]] constexpr interval<value_type> compute_current_index_interval() const noexcept
+        {
+            if (current_index_ < 0 || current_index_ > last_index_) {
+                return interval<value_type>{};
+            }
+
+            // calculate normalized forward neigh
+            value_type norm_window_stop = (current_index_ + window_.stop() <= last_index_)
+                ? window_.stop()
+                : last_index_ - current_index_; //(current_index_ + window_.stop() - last_index_);
+
+            // calculate normalized backward neigh
+            value_type norm_window_start = (current_index_ - window_.start() >= 0) ? window_.start() : current_index_;
+            // (window_.start() - current_index_ - 1);
+
+            // set interval
+            return interval<value_type>{
+                current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_.step()};
+        }
+
         size_type fixed_axis_;
-        value_type interval_width_;
+        //value_type interval_width_;
+        interval<value_type> window_;
         value_type current_index_;
         value_type last_index_;
         storage_type ranges_;
+        bool is_window_contained_;
     };
 }
 
@@ -5742,7 +5770,7 @@ namespace details {
 
             auto count = 0;
 
-            ranger_type rgr(hdr_, axis, false, curr_ival_width);
+            ranger_type rgr(hdr_, axis, interval<size_type>(0, curr_ival_width - 1), true);
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -5753,7 +5781,7 @@ namespace details {
                 --curr_div;
                 curr_axis_dim -= curr_ival_width;
                 curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
-                rgr.change_interval_width(curr_ival_width);
+                rgr.change_window(interval<size_type>(0, curr_ival_width - 1));
 
                 ++count;
             }
@@ -6843,47 +6871,66 @@ namespace details {
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto begin_subarray(U fixed_axis = 0)
         {
-            return empty() ? subarray_iterator() : subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
+            return empty()
+                ? subarray_iterator()
+                : subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::begin));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto end_subarray(U fixed_axis = 0)
         {
-            return empty() ? subarray_iterator() : subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
+            return empty()
+                ? subarray_iterator()
+                : subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::end));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto cbegin_subarray(U fixed_axis = 0) const
         {
-            return empty() ? const_subarray_iterator() : const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis));
+            return empty()
+                ? const_subarray_iterator()
+                : const_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::begin));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto cend_subarray(U fixed_axis = 0) const
         {
-            return empty() ? const_subarray_iterator()
-                           : const_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true) + 1);
+            return empty()
+                ? const_subarray_iterator()
+                : const_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::end));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto rbegin_subarray(U fixed_axis = 0)
         {
-            return empty() ? reverse_subarray_iterator()
-                           : reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
+            return empty()
+                ? reverse_subarray_iterator()
+                : reverse_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::rbegin));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto rend_subarray(U fixed_axis = 0)
         {
-            return empty() ? reverse_subarray_iterator()
-                           : reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
+            return empty()
+                ? reverse_subarray_iterator()
+                : reverse_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::rend));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto crbegin_subarray(U fixed_axis = 0) const
         {
-            return empty() ? const_reverse_subarray_iterator()
-                           : const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis, true));
+            return empty()
+                ? const_reverse_subarray_iterator()
+                : const_reverse_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::rbegin));
         }
         template <std::integral U = size_type>
         [[nodiscard]] constexpr auto crend_subarray(U fixed_axis = 0) const
         {
-            return empty() ? const_reverse_subarray_iterator()
-                           : const_reverse_subarray_iterator(*this, ranger_type(hdr_, fixed_axis) - 1);
+            return empty()
+                ? const_reverse_subarray_iterator()
+                : const_reverse_subarray_iterator(*this,
+                    ranger_type(hdr_, fixed_axis, interval<size_type>{0, 0}, false, arrnd_indexer_position::rend));
         }
 
         [[nodiscard]] constexpr auto abs() const
