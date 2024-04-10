@@ -6005,7 +6005,7 @@ namespace details {
                 }
             }
 
-            auto expanded = expand(hdr_.dims().size() - 3);
+            auto expanded = expand<Level>(hdr_.dims().size() - 3);
 
             using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
 
@@ -6055,6 +6055,77 @@ namespace details {
         constexpr auto pageop(Func&& func, Args&&... args) const
         {
             return pageop<this_type::depth>(std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level>
+        requires(Level > 0) [[nodiscard]] constexpr auto pages() const
+        {
+            using pages_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
+
+            if (empty()) {
+                return pages_type();
+            }
+
+            pages_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename pages_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template pages<Level - 1>();
+            }
+
+            return res;
+        }
+        template <std::int64_t Level>
+        requires(Level == 0)
+        constexpr auto pages() const
+        {
+            using page_type = this_type;
+            using pages_type = inner_replaced_type<page_type, Level>;
+
+            if (empty()) {
+                return pages_type();
+            }
+
+            assert(hdr_.dims().size() >= 2);
+
+            if (hdr_.is_matrix()) {
+                return pages_type({1}, {*this});
+            }
+
+            // find axis
+            // the first axis from the end bigger than one, and after the page
+            auto assumed_axis = hdr_.dims().size() - 3;
+            if (*std::next(hdr_.dims().cbegin(), assumed_axis) == 1) {
+                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
+                    if (*std::next(hdr_.dims().cbegin(), i) > 1) {
+                        assumed_axis = i;
+                        break;
+                    }
+                }
+            }
+
+            pages_type pages = expand<Level>(assumed_axis);
+            
+            for (typename pages_type::indexer_type pgen(pages.header()); pgen; ++pgen) {
+                //size_type cycles_until_page = pages[*pgen].header().dims().size() - 2;
+
+                while (pages[*pgen].header().dims().size() > 2) {
+                    assert(pages[*pgen].header().dims().front() == 1);
+                    pages[*pgen] = pages[*pgen][interval<size_type>::full()];
+                }
+                //for (size_type i = 0; i < cycles_until_page; ++i) {
+                //    assert(pages[*pgen].header().dims().front() == 1);
+                //    pages[*pgen] = pages[*pgen][interval<size_type>::full()];
+                //}
+            }
+
+            return pages.reshape<Level>(hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2));
+        }
+        constexpr auto pages() const
+        {
+            return pages<this_type::depth>();
         }
 
         template <std::int64_t Level>
@@ -8836,6 +8907,17 @@ namespace details {
         return collapse<ArCo::depth>(arr);
     }
 
+        template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto pages(const ArCo& arr)
+    {
+        return arr.template pages<Level>();
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto pages(const ArCo& arr)
+    {
+        return pages<ArCo::depth>(arr);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
     {
@@ -9352,6 +9434,7 @@ using details::remove;
 using details::empty;
 using details::expand;
 using details::collapse;
+using details::pages;
 using details::pageop;
 using details::squeeze;
 using details::sort;

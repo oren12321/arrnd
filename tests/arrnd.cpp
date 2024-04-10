@@ -1176,6 +1176,47 @@ TEST(arrnd_test, expand)
     }
 }
 
+TEST(arrnd_test, pages)
+{
+    using namespace oc;
+
+    {
+        EXPECT_TRUE(all_equal(pages(arrnd<int>{}), arrnd<arrnd<int>>{}));
+    }
+
+    {
+        arrnd<int> mat({2, 3}, {1, 2, 3, 4, 5, 6});
+        auto p = pages(mat);
+        EXPECT_TRUE(all_equal(p, arrnd<arrnd<int>>({1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})));
+        p[0][0] = 100;
+        EXPECT_EQ(100, mat[0]);
+    }
+
+    {
+        arrnd<int> arr({3, 1, 1, 2}, {1, 2, 3, 4, 5, 6});
+        auto p = pages(arr);
+        EXPECT_TRUE(all_equal(p,
+            arrnd<arrnd<int>>(
+                {3, 1}, {arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {3, 4}), arrnd<int>({1, 2}, {5, 6})})));
+        p[0][0] = 100;
+        EXPECT_EQ(100, arr[0]);
+    }
+
+    {
+        arrnd<arrnd<int>> narr({3, 1, 2},
+            {arrnd<int>({2}, {1, 2}), arrnd<int>({2}, {3, 4}), arrnd<int>({2}, {5, 6}), arrnd<int>({2}, {7, 8}),
+                arrnd<int>({2}, {9, 10}), arrnd<int>({2}, {11, 12})});
+        auto p = pages<0>(narr);
+        EXPECT_TRUE(all_equal(p,
+            arrnd<arrnd<arrnd<int>>>({3},
+                {arrnd<arrnd<int>>({1, 2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({2}, {3, 4})}),
+                    arrnd<arrnd<int>>({1, 2}, {arrnd<int>({2}, {5, 6}), arrnd<int>({2}, {7, 8})}),
+                    arrnd<arrnd<int>>({1, 2}, {arrnd<int>({2}, {9, 10}), arrnd<int>({2}, {11, 12})})})));
+        p[0][0][0] = 100;
+        EXPECT_EQ(100, narr[0][0]);
+    }
+}
+
 TEST(arrnd_test, collapse)
 {
     using namespace oc;
