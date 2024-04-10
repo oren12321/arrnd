@@ -1388,6 +1388,39 @@ TEST(arrnd_test, pageop)
     }
 }
 
+TEST(arrnd_test, mtimes)
+{
+    using namespace oc;
+
+    {
+        arrnd<int> arr1({3, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18});
+        arrnd<double> arr2({3, 1}, {1, 2, 3});
+
+        auto res = mtimes(arr1, arr2);
+
+        EXPECT_TRUE(all_equal(res, arrnd<double>({3, 2, 1}, {14, 32, 50, 68, 86, 104})));
+    }
+
+    {
+        arrnd<int> arr1({3, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18});
+        arrnd<double> arr2({3, 1, 3, 1}, {1, 2, 3, 4, 5, 6, 7, 8, 9});
+
+        auto res = mtimes(arr1, arr2);
+
+        EXPECT_TRUE(all_equal(res, arrnd<double>({3, 2, 1}, {14, 32, 122, 167, 338, 410})));
+    }
+
+    {
+        arrnd<int> arr1({1, 2, 3}, {1, 2, 3, 4, 5, 6});
+        arrnd<double> arr2({1, 3, 1}, {1.5, 2.5, 3.5});
+        arrnd<long> arr3({1, 1, 2}, {1, 2});
+
+        auto res = mtimes(arr1, arr2, arr3);
+
+        EXPECT_TRUE(all_equal(res, arrnd<double>({1, 2, 2}, {17, 34, 39.5, 79})));
+    }
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;

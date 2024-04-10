@@ -4490,6 +4490,17 @@ namespace details {
             return append<this_type::depth>(std::forward<ArCosOrTuples>(arrs_or_tuples)...);
         }
 
+        template <std::int64_t Level, arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        [[nodiscard]] constexpr auto mtimes(const ArCo& arr, ArCos&&... others) const
+        {
+            return mtimes<Level>(arr).template mtimes<ArCos...>(std::forward<ArCos>(others)...);
+        }
+        template <arrnd_compliant... ArCos>
+        [[nodiscard]] constexpr auto mtimes(ArCos&&... others) const
+        {
+            return mtimes<this_type::depth>(std::forward<ArCos>(others)...);
+        }
+
         template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
             requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, U ind) const
@@ -5623,6 +5634,103 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
+                template <std::int64_t Level, arrnd_compliant ArCo>
+        requires(Level > 0) [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        {
+            using ret_type = replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{} * (typename arrnd_inner_t<ArCo, Level>::value_type{}))>;
+
+            if (empty()) {
+                return ret_type();
+            }
+
+            ret_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename ret_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template mtimes<Level - 1>(arr);
+            }
+
+            return res;
+        }
+        template <std::int64_t Level, arrnd_compliant ArCo>
+        requires (Level == 0)
+        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        {
+            using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
+
+            assert(hdr_.dims().size() >= 2 && arr.header().dims().size() >= 2);
+
+            if (arr.header().is_matrix()) {
+                return pageop<Level>([&](auto page) {
+                    auto lhs = page;
+                    auto rhs = arr;
+                    //auto matmul = [](const auto& lhs, const auto& rhs) {
+                    assert(lhs.header().is_matrix() && rhs.header().is_matrix());
+                    assert(lhs.header().dims().back() == rhs.header().dims().front());
+
+                    ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
+
+                    size_type ind = 0;
+                    auto trhs = rhs.template transpose<Level>({1, 0});
+                    std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
+                        std::for_each(
+                            trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
+                                auto dot = row * col;
+                                auto mag = dot.template reduce<Level>(std::plus<>{});
+                                res[ind++] = mag;
+                            });
+                    });
+
+                    return res;
+                });
+            } else {
+                size_type lhs_num_pages
+                    = hdr_.numel() / ((*std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2)) * hdr_.dims().back());
+                size_type rhs_num_pages = arr.header().numel()
+                    / ((*std::next(arr.header().dims().cbegin(), arr.header().dims().size() - 2)) * arr.header().dims().back());
+                assert(lhs_num_pages == rhs_num_pages);
+
+                auto arr_pages = arr.pages<Level>();
+                typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
+
+                return pageop<Level>([&](auto page) {
+                    auto lhs = page;
+                    auto rhs = arr_pages[*arr_pages_gen];
+                    ++arr_pages_gen;
+                    //auto matmul = [](const auto& lhs, const auto& rhs) {
+                    assert(lhs.header().is_matrix() && rhs.header().is_matrix());
+                    assert(lhs.header().dims().back() == rhs.header().dims().front());
+
+                    ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
+
+                    size_type ind = 0;
+                    auto trhs = rhs.template transpose<Level>({1, 0});
+                    std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
+                        std::for_each(
+                            trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
+                                auto dot = row * col;
+                                auto mag = dot.template reduce<Level>(std::plus<>{});
+                                res[ind++] = mag;
+                            });
+                    });
+
+                    return res;
+                });
+            }
+            //};
+
+            //return pageop([&arr, &matmul](const auto& page) {
+            //    return matmul(page, arr);
+            //});
+        }
+        template <arrnd_compliant ArCo>
+        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        {
+            return mtimes<this_type::depth>(arr);
+        }
+
         template <std::int64_t Level, integral_type_iterator InputIt>
             requires(Level == 0)
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
@@ -5875,7 +5983,7 @@ namespace details {
                       })
                 == cend();
 
-            if (all_nested_values_have_the_same_creator) {
+            if (all_nested_values_have_the_same_creator && (*this)(0).creator() != nullptr) {
                 return *((*this)(0).creator());
             }
 
@@ -6046,7 +6154,7 @@ namespace details {
                 return *this;
             } else {
 
-                return trans_expanded.template collapse<1>();
+                return trans_expanded.template collapse<Level + 1>();
             }
         }
 
@@ -7530,6 +7638,28 @@ namespace details {
     [[nodiscard]] inline constexpr auto append(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
     {
         return append<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    [[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    {
+        return lhs.mtimes<Level>(rhs);
+    }
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    [[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    {
+        return mtimes<ArCo1::depth>(lhs, rhs);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    [[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    {
+        return arr1.template mtimes<Level>(arr2, std::forward<ArCos>(others)...);
+    }
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    [[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    {
+        return mtimes<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, std::integral U>
@@ -9449,6 +9579,7 @@ using details::all;
 using details::any;
 using details::sum;
 using details::prod;
+using details::mtimes;
 using details::filter;
 using details::find;
 using details::transpose;
