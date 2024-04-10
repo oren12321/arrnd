@@ -891,44 +891,44 @@ namespace details {
             : arrnd_header(std::begin(dims), std::end(dims))
         { }
 
-        //template <integral_type_iterator InputIt>
-        //[[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
-        //{
-        //    if (first_dim == last_dim) {
-        //        return *this;
-        //    }
+        template <integral_type_iterator InputIt>
+        [[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
+        {
+            if (first_dim == last_dim) {
+                return *this;
+            }
 
-        //    assert(first_dim < last_dim);
+            assert(first_dim < last_dim);
 
-        //    if (empty()) {
-        //        return arrnd_header(first_dim, last_dim);
-        //    }
+            if (empty()) {
+                return arrnd_header(first_dim, last_dim);
+            }
 
-        //    storage_type new_dims(dims_.size() + std::distance(first_dim, last_dim));
-        //
-        //    std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
-        //    std::copy(first_dim, last_dim, std::next(new_dims.begin(), dims_.size()));
+            storage_type new_dims(dims_.size() + std::distance(first_dim, last_dim));
 
-        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        //}
+            std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
+            std::copy(first_dim, last_dim, std::next(new_dims.begin(), dims_.size()));
 
-        //        template <integral_type_iterable Cont>
-        //[[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
-        //{
-        //    return expand(std::begin(dims), std::end(dims));
-        //}
+            return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        }
 
-        //template <std::integral U = value_type>
-        //[[nodiscard]] constexpr arrnd_header expand(std::initializer_list<U> dims) const
-        //{
-        //    return expand(dims.begin(), dims.end());
-        //}
+        template <integral_type_iterable Cont>
+        [[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
+        {
+            return expand(std::begin(dims), std::end(dims));
+        }
 
-        //template <std::integral D, std::int64_t M>
-        //[[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
-        //{
-        //    return expand(std::begin(dims), std::end(dims));
-        //}
+        template <std::integral U = value_type>
+        [[nodiscard]] constexpr arrnd_header expand(std::initializer_list<U> dims) const
+        {
+            return expand(dims.begin(), dims.end());
+        }
+
+        template <std::integral D, std::int64_t M>
+        [[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
+        {
+            return expand(std::begin(dims), std::end(dims));
+        }
 
         template <interval_type_iterator InputIt>
         [[nodiscard]] constexpr arrnd_header subheader(const InputIt& first_range, const InputIt& last_range) const
@@ -2109,6 +2109,10 @@ namespace details {
     struct arrnd_tag { };
     template <typename T>
     concept arrnd_compliant = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
+
+    template <typename T, typename U>
+    concept same_depth = T::depth ==
+    U::depth;
 
     template <typename T, typename... Args>
     concept invocable_no_arrnd = !
@@ -5932,6 +5936,127 @@ namespace details {
             return collapse<this_type::depth>();
         }
 
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level > 0)
+        constexpr auto pageop(Func&& func, Args&&... args) const
+        {
+            constexpr bool is_void_func
+                = std::is_same_v<std::invoke_result_t<Func, arrnd_inner_t<this_type, Level>, Args...>, void>;
+            using func_res_type = std::conditional_t<is_void_func, arrnd_inner_t<this_type, Level>,
+                std::invoke_result_t<Func, arrnd_inner_t<this_type, Level>, Args...>>;
+            using returned_type = std::conditional_t<arrnd_compliant<func_res_type>
+                    && same_depth<func_res_type, arrnd_inner_t<this_type, Level>>,
+                inner_replaced_type<func_res_type, Level - 1>, inner_replaced_type<func_res_type, Level>>;
+
+            if (empty()) {
+                return returned_type();
+            }
+
+            returned_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename returned_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template pageop<Level - 1, Func, Args...>(
+                    std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>)
+        constexpr auto pageop(Func&& func, Args&&... args) const
+        {
+            constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type, Args...>, void>;
+            using func_res_type
+                = std::conditional_t<is_void_func, this_type, std::invoke_result_t<Func, this_type, Args...>>;
+            using returned_type
+                = std::conditional_t<arrnd_compliant<func_res_type> && same_depth<func_res_type, this_type>,
+                    func_res_type, replaced_type<func_res_type>>;
+
+            auto invoke_func = [&func, &args...](auto page) {
+                if constexpr (arrnd_compliant<func_res_type> && same_depth<func_res_type, this_type>) {
+                    if constexpr (is_void_func) {
+                        func(page, std::forward<Args>(args)...);
+                        return page;
+                    } else {
+                        return func(page, std::forward<Args>(args)...);
+                    }
+                } else { // in case that the returned type of func is not arrnd_compliant, then it should not be void returned type
+                    return returned_type({1}, {func(page, std::forward<Args>(args)...)});
+                }
+            };
+
+            if (empty()) {
+                return returned_type{};
+            }
+
+            assert(hdr_.dims().size() >= 2);
+
+            if (hdr_.dims().size() == 2) {
+                if constexpr (is_void_func) {
+                    invoke_func(*this);
+                    return *this;
+                } else {
+
+                    return invoke_func(*this);
+                }
+            }
+
+            auto expanded = expand(hdr_.dims().size() - 3);
+
+            using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
+
+            trans_expanded_type trans_expanded{};
+            if constexpr (std::is_same_v<decltype(expanded), trans_expanded_type>) {
+                trans_expanded = expanded;
+            } else {
+                trans_expanded = trans_expanded_type(expanded.header().dims());
+            }
+
+            typename decltype(expanded)::indexer_type exp_gen(expanded.header());
+            typename trans_expanded_type::indexer_type trs_gen(trans_expanded.header());
+
+            auto page_dim1 = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2);
+            auto page_dim2 = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 1);
+
+            for (; exp_gen && trs_gen; ++exp_gen, ++trs_gen) {
+                auto page = expanded[*exp_gen];
+
+                auto trimed_page = page;
+                size_type cycles_until_page = page.header().dims().size() - 2;
+                for (size_type i = 0; i < cycles_until_page; ++i) {
+                    assert(trimed_page.header().dims().front() == 1);
+                    trimed_page = trimed_page[interval<size_type>::full()];
+                }
+                //auto page = expanded[*exp_gen];
+
+                auto processed = invoke_func(trimed_page /*.template reshape<0>({page_dim1, page_dim2})*/);
+
+                processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
+                    std::next(page.header().dims().cbegin(), page.header().dims().size() - 2))
+                                         .expand(processed.header().dims());
+
+                trans_expanded[*trs_gen] = processed;
+            }
+
+            if constexpr (is_void_func) {
+                return *this;
+            } else {
+
+                return trans_expanded.template collapse<1>();
+            }
+        }
+
+        template <typename Func, typename... Args>
+            requires(invocable_no_arrnd<Func, this_type, Args...>)
+        constexpr auto pageop(Func&& func, Args&&... args) const
+        {
+            return pageop<this_type::depth>(std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
         template <std::int64_t Level>
             requires(Level > 0)
         [[nodiscard]] constexpr this_type squeeze() const
@@ -8700,15 +8825,27 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto collapse(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
     {
         return arr.template collapse<Level>();
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto collapse(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
     {
         return collapse<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
+    inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
+    {
+        return arr.template pageop<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+
+    template <arrnd_compliant ArCo, typename Func, typename... Args>
+    inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
+    {
+        return pageop<ArCo::depth>(arr, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -9215,6 +9352,7 @@ using details::remove;
 using details::empty;
 using details::expand;
 using details::collapse;
+using details::pageop;
 using details::squeeze;
 using details::sort;
 using details::is_sorted;

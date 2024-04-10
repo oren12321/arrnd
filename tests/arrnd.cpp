@@ -1238,6 +1238,115 @@ TEST(arrnd_test, collapse)
     }
 }
 
+TEST(arrnd_test, pageop)
+{
+    using namespace oc;
+
+    // empty array
+    {
+        auto res = pageop(arrnd<int>{}, [](arrnd<int> page) {
+            return page;
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<int>{}));
+    }
+
+    // matrix
+    {
+        arrnd<int> arr({1, 2}, {1, 2});
+
+        auto res = pageop(arr, [](arrnd<int> page) {
+            return page.transpose({1, 0});
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<int>({2, 1}, {1, 2})));
+    }
+
+    // apply opration
+    {
+        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto res = pageop(arr, [](arrnd<int> page) {
+            page.apply([](int value) {
+                return value * 2;
+            });
+        });
+
+        EXPECT_TRUE(all_equal(arr, res));
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 1, 2}, {2, 4, 6, 8, 10, 12})));
+    }
+    // nested
+    {
+        arrnd<arrnd<int>> arr({1}, arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}));
+
+        auto res = pageop<1>(arr, [](arrnd<int> page) {
+            page.apply([](int value) {
+                return value * 2;
+            });
+        });
+
+        EXPECT_TRUE(all_equal(arr, res));
+        EXPECT_TRUE(all_equal(arr, arrnd<arrnd<int>>({1}, arrnd<int>({3, 1, 2}, {2, 4, 6, 8, 10, 12}))));
+    }
+
+    // transform operation
+    {
+        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto res = pageop(arr, [](arrnd<int> page) {
+            return page.transpose({1, 0});
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<int>({3, 2, 1}, {1, 2, 3, 4, 5, 6})));
+    }
+    // nested
+    {
+        arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
+
+        auto res = pageop<1>(arr, [](arrnd<int> page) {
+            return page.transpose({1, 0});
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<arrnd<int>>({1}, {arrnd<int>({3, 2, 1}, {1, 2, 3, 4, 5, 6})})));
+    }
+
+    // reduce operation
+    {
+        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto res = pageop(arr, [](arrnd<int> page) {
+            return 0.5 * page.sum();
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
+    }
+    // nested
+    {
+        arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
+
+        auto res = pageop<1>(arr, [](arrnd<int> page) {
+            return 0.5 * page.sum();
+        });
+
+        EXPECT_TRUE(all_equal(res, arrnd<arrnd<double>>({1}, {arrnd<double>({3, 1}, {1.5, 3.5, 5.5})})));
+    }
+
+    // expanded operation (type of reduction since resulted type array is in differernt depth)
+    {
+        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto res = pageop(arr, [](arrnd<int> page) {
+            return arrnd<arrnd<int>>({1}, {page});
+        });
+
+        EXPECT_TRUE(all_equal(res,
+            arrnd<arrnd<arrnd<int>>>({3, 1},
+                {arrnd<arrnd<int>>({1}, {arrnd<int>({1, 2}, {1, 2})}),
+                    arrnd<arrnd<int>>({1}, {arrnd<int>({1, 2}, {3, 4})}),
+                    arrnd<arrnd<int>>({1}, {arrnd<int>({1, 2}, {5, 6})})})));
+    }
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
