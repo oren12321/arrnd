@@ -1386,7 +1386,7 @@ TEST(arrnd_test, pageop)
 
     // empty array
     {
-        auto res = pageop(arrnd<int>{}, [](arrnd<int> page) {
+        auto res = pageop(arrnd<int>{}, 2, [](arrnd<int> page) {
             return page;
         });
 
@@ -1397,7 +1397,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({1, 2}, {1, 2});
 
-        auto res = pageop(arr, [](arrnd<int> page) {
+        auto res = pageop(arr, 2, [](arrnd<int> page) {
             return page.transpose({1, 0});
         });
 
@@ -1408,7 +1408,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, [](arrnd<int> page) {
+        auto res = pageop(arr, 2, [](arrnd<int> page) {
             page.apply([](int value) {
                 return value * 2;
             });
@@ -1421,7 +1421,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}));
 
-        auto res = pageop<1>(arr, [](arrnd<int> page) {
+        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
             page.apply([](int value) {
                 return value * 2;
             });
@@ -1435,7 +1435,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, [](arrnd<int> page) {
+        auto res = pageop(arr, 2, [](arrnd<int> page) {
             return page.transpose({1, 0});
         });
 
@@ -1445,7 +1445,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        auto res = pageop<1>(arr, [](arrnd<int> page) {
+        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
             return page.transpose({1, 0});
         });
 
@@ -1454,19 +1454,33 @@ TEST(arrnd_test, pageop)
 
     // reduce operation
     {
-        arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
+        arrnd<int> arr1({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, [](arrnd<int> page) {
+        auto res1 = pageop(arr1, 2, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
-        EXPECT_TRUE(all_equal(res, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
+        EXPECT_TRUE(all_equal(res1, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
+
+        auto res2 = pageop(arr1, 1, [](arrnd<int> page) {
+            return 0.5 * page.sum();
+        });
+
+        EXPECT_TRUE(all_equal(res2, arrnd<double>({3, 1, 1}, {1.5, 3.5, 5.5})));
+
+        arrnd<int> arr2({2, 3, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+
+        auto res3 = pageop(arr2, 3, [](arrnd<int> page) {
+            return page.sum();
+        });
+
+        EXPECT_TRUE(all_equal(res3, arrnd<int>({2, 1}, {21, 57})));
     }
     // nested
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        auto res = pageop<1>(arr, [](arrnd<int> page) {
+        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
@@ -1477,7 +1491,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, [](arrnd<int> page) {
+        auto res = pageop(arr, 2, [](arrnd<int> page) {
             return arrnd<arrnd<int>>({1}, {page});
         });
 

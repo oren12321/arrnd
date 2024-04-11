@@ -5652,7 +5652,7 @@ namespace details {
             }
 
             if (arr.header().is_matrix()) {
-                return pageop<Level>([&arr, matmul](auto page) {
+                return pageop<Level>(2, [&arr, matmul](auto page) {
                     return matmul(page, arr);
                 });
             } else {
@@ -5666,7 +5666,7 @@ namespace details {
                 auto arr_pages = arr.pages<Level>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return pageop<Level>([&arr_pages, &arr_pages_gen, &matmul](auto page) {
+                return pageop<Level>(2, [&arr_pages, &arr_pages_gen, &matmul](auto page) {
                     return matmul(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
@@ -6012,7 +6012,7 @@ namespace details {
 
         template <std::int64_t Level, typename Func, typename... Args>
             requires(Level > 0)
-        constexpr auto pageop(Func&& func, Args&&... args) const
+        constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
         {
             constexpr bool is_void_func
                 = std::is_same_v<std::invoke_result_t<Func, arrnd_inner_t<this_type, Level>, Args...>, void>;
@@ -6033,7 +6033,7 @@ namespace details {
 
             for (; gen && res_gen; ++gen, ++res_gen) {
                 res[*res_gen] = (*this)[*gen].template pageop<Level - 1, Func, Args...>(
-                    std::forward<Func>(func), std::forward<Args>(args)...);
+                    page_size, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
             return res;
@@ -6180,8 +6180,8 @@ namespace details {
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
-            requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>)
-        constexpr auto pageop(Func&& func, Args&&... args) const
+            requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>) constexpr auto pageop(
+            size_type page_size, Func&& func, Args&&... args) const
         {
             constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type, Args...>, void>;
             using func_res_type
@@ -6207,9 +6207,9 @@ namespace details {
                 return returned_type{};
             }
 
-            assert(hdr_.dims().size() >= 2);
+            assert(hdr_.dims().size() >= page_size);
 
-            if (hdr_.dims().size() == 2) {
+            if (hdr_.dims().size() == page_size) {
                 if constexpr (is_void_func) {
                     invoke_func(*this);
                     return *this;
@@ -6219,7 +6219,7 @@ namespace details {
                 }
             }
 
-            auto expanded = expand<Level>(hdr_.dims().size() - 3);
+            auto expanded = expand<Level>(hdr_.dims().size() - (page_size + 1), 0, true);
 
             using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
 
@@ -6233,14 +6233,11 @@ namespace details {
             typename decltype(expanded)::indexer_type exp_gen(expanded.header());
             typename trans_expanded_type::indexer_type trs_gen(trans_expanded.header());
 
-            auto page_dim1 = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2);
-            auto page_dim2 = *std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 1);
-
             for (; exp_gen && trs_gen; ++exp_gen, ++trs_gen) {
                 auto page = expanded[*exp_gen];
 
                 auto trimed_page = page;
-                size_type cycles_until_page = page.header().dims().size() - 2;
+                size_type cycles_until_page = page.header().dims().size() - page_size;
                 for (size_type i = 0; i < cycles_until_page; ++i) {
                     assert(trimed_page.header().dims().front() == 1);
                     trimed_page = trimed_page[interval<size_type>::full()];
@@ -6250,7 +6247,7 @@ namespace details {
                 auto processed = invoke_func(trimed_page /*.template reshape<0>({page_dim1, page_dim2})*/);
 
                 processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
-                    std::next(page.header().dims().cbegin(), page.header().dims().size() - 2))
+                    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size))
                                          .expand(processed.header().dims());
 
                 trans_expanded[*trs_gen] = processed;
@@ -6265,10 +6262,10 @@ namespace details {
         }
 
         template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, this_type, Args...>)
-        constexpr auto pageop(Func&& func, Args&&... args) const
+            requires(invocable_no_arrnd<Func, this_type, Args...>) constexpr auto pageop(
+            size_type page_size, Func&& func, Args&&... args) const
         {
-            return pageop<this_type::depth>(std::forward<Func>(func), std::forward<Args>(args)...);
+            return pageop<this_type::depth>(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
         template <std::int64_t Level>
@@ -9207,15 +9204,15 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
-    inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
+    inline constexpr auto pageop(const ArCo& arr, typename ArCo::size_type page_size, Func&& func, Args&&... args)
     {
-        return arr.template pageop<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr.template pageop<Level>(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <arrnd_compliant ArCo, typename Func, typename... Args>
-    inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
+    inline constexpr auto pageop(const ArCo& arr, typename ArCo::size_type page_size, Func&& func, Args&&... args)
     {
-        return pageop<ArCo::depth>(arr, std::forward<Func>(func), std::forward<Args>(args)...);
+        return pageop<ArCo::depth>(arr, page_size, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
