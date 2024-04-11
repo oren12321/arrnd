@@ -6076,6 +6076,70 @@ namespace details {
         }
 
         template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto movop(
+            size_type axis, interval<size_type> window, bool bounded, Func&& func, Args&&... args) const
+        {
+            using func_res_type = std::invoke_result_t<Func, arrnd_inner_t<this_type, Level>, Args...>;
+            using movop_type = inner_replaced_type<func_res_type, Level>;
+
+            if (empty()) {
+                return movop_type();
+            }
+
+            movop_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename movop_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template movop<Level - 1, Func, Args...>(
+                    axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+
+        template <std::int64_t Level, typename Func, typename... Args>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto movop(
+            size_type axis, interval<size_type> window, bool bounded, Func&& func, Args&&... args) const
+        {
+            using func_res_type = std::invoke_result_t<Func, this_type, Args...>;
+            using movop_type = replaced_type<func_res_type>;
+
+            if (empty()) {
+                return movop_type();
+            }
+
+            assert(axis >= 0 && axis < hdr_.dims().size());
+
+            size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
+
+            ranger_type rgr(hdr_, axis, window, bounded);
+
+            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() : axis_dim;
+
+            movop_type res({res_numel});
+            typename movop_type::indexer_type res_gen(res.header());
+
+            for (; rgr && res_gen; ++rgr, ++res_gen) {
+                res[*res_gen]
+                    = func((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())], std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+
+        template <typename Func, typename... Args>
+        [[nodiscard]] constexpr auto movop(
+            size_type axis, interval<size_type> window, bool bounded, Func&& func, Args&&... args) const
+        {
+            return movop<this_type::depth>(
+                axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
+        template <std::int64_t Level, typename Func, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>)
         constexpr auto pageop(Func&& func, Args&&... args) const
         {
@@ -9063,6 +9127,20 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
+    [[nodiscard]] constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
+        interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
+    {
+        return arr.template movop<Level>(axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+
+    template <arrnd_compliant ArCo, typename Func, typename... Args>
+    [[nodiscard]] constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
+        interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
+    {
+        return movop<ArCo::depth>(arr, axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
     {
         return arr.template pageop<Level>(std::forward<Func>(func), std::forward<Args>(args)...);
@@ -9579,6 +9657,7 @@ using details::empty;
 using details::expand;
 using details::collapse;
 using details::pages;
+using details::movop;
 using details::pageop;
 using details::squeeze;
 using details::sort;

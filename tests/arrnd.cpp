@@ -1246,6 +1246,41 @@ TEST(arrnd_test, pages)
     }
 }
 
+TEST(arrnd_test, movop)
+{
+    using namespace oc;
+
+    {
+        arrnd<arrnd<int>> arr(
+            {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})});
+
+        auto weigted_sum = [](const auto& slice, double weight) {
+            return weight * slice.sum();
+        };
+
+        {
+            EXPECT_TRUE(
+                all_equal(arrnd<arrnd<double>>(), movop<0>(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum, 0.5)));
+        }
+
+        {
+            auto res = movop(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
+
+            EXPECT_TRUE(all_equal(res,
+                arrnd<arrnd<double>>({1, 2},
+                    {arrnd<double>({3}, {10.5, 10.5, 9}),
+                        arrnd<double>({10}, {3, 5, 7, 9, 11, 13, 15, 17, 13.5, 9.5})})));
+        }
+
+        {
+            auto res = movop(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
+
+            EXPECT_TRUE(all_equal(
+                res, arrnd<arrnd<double>>({1, 2}, {arrnd<double>(), arrnd<double>({7}, {5, 7, 9, 11, 13, 15, 17})})));
+        }
+    }
+}
+
 TEST(arrnd_test, collapse)
 {
     using namespace oc;
