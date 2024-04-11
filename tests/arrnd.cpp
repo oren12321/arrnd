@@ -1281,6 +1281,43 @@ TEST(arrnd_test, movop)
     }
 }
 
+TEST(arrnd_test, cumop)
+{
+    using namespace oc;
+
+    {
+        arrnd<arrnd<int>> arr(
+            {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})});
+
+        auto slice_sum = [](arrnd<int> slice) {
+            return slice.sum();
+        };
+
+        auto add_prev = [](int acc, int processed) {
+            return acc + processed;
+        };
+
+        {
+            EXPECT_TRUE(all_equal(arrnd<int>(), cumop(arrnd<int>(), 0, {-1, 2}, false, add_prev, slice_sum)));
+        }
+
+        {
+            auto res = cumop(arr, 0, {-1, 2}, false, add_prev, slice_sum);
+
+            EXPECT_TRUE(all_equal(res,
+                arrnd<arrnd<int>>({1, 2},
+                    {arrnd<int>({3}, {21, 42, 60}), arrnd<int>({10}, {6, 16, 30, 48, 70, 96, 126, 160, 187, 206})})));
+        }
+
+        {
+            auto res = cumop(arr, 0, {-1, 2}, true, add_prev, slice_sum);
+
+            EXPECT_TRUE(all_equal(
+                res, arrnd<arrnd<int>>({1, 2}, {arrnd<int>(), arrnd<int>({7}, {10, 24, 42, 64, 90, 120, 154})})));
+        }
+    }
+}
+
 TEST(arrnd_test, collapse)
 {
     using namespace oc;

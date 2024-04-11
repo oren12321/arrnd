@@ -6139,6 +6139,82 @@ namespace details {
                 axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
         }
 
+        template <std::int64_t Level, typename AccFunc, typename TransFunc, typename... Args>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto cumop(size_type axis, interval<size_type> window, bool bounded, AccFunc&& afunc,
+            TransFunc&& tfunc, Args&&... args) const
+        {
+            using trans_res_type = std::invoke_result_t<TransFunc, arrnd_inner_t<this_type, Level>, Args...>;
+            using acc_res_type = std::invoke_result_t<AccFunc, trans_res_type, trans_res_type>;
+            using cumop_type = inner_replaced_type<acc_res_type, Level>;
+
+            if (empty()) {
+                return cumop_type();
+            }
+
+            cumop_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename cumop_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template cumop<Level - 1, AccFunc, TransFunc, Args...>(axis, window,
+                    bounded, std::forward<AccFunc>(afunc), std::forward<TransFunc>(tfunc), std::forward<Args>(args)...);
+            }
+
+            return res;
+        }
+
+        template <std::int64_t Level, typename AccFunc, typename TransFunc, typename... Args>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto cumop(size_type axis, interval<size_type> window, bool bounded, AccFunc&& afunc,
+            TransFunc&& tfunc, Args&&... args) const
+        {
+            using trans_res_type = std::invoke_result_t<TransFunc, this_type, Args...>;
+            using acc_res_type = std::invoke_result_t<AccFunc, trans_res_type, trans_res_type>;
+            using cumop_type = replaced_type<acc_res_type>;
+
+            if (empty()) {
+                return cumop_type();
+            }
+
+            assert(axis >= 0 && axis < hdr_.dims().size());
+
+            size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
+
+            ranger_type rgr(hdr_, axis, window, bounded);
+
+            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() : axis_dim;
+
+            cumop_type res({res_numel});
+            typename cumop_type::indexer_type res_gen(res.header());
+
+            if (res.empty()) {
+                return res;
+            }
+
+            res[*res_gen] = tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())], std::forward<Args>(args)...);
+            auto prev = res[*res_gen];
+            ++res_gen;
+            ++rgr;
+
+            for (; rgr && res_gen; ++rgr, ++res_gen) {
+                res[*res_gen] = afunc(
+                    prev, tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())], std::forward<Args>(args)...));
+                prev = res[*res_gen];
+            }
+
+            return res;
+        }
+
+        template <typename AccFunc, typename TransFunc, typename... Args>
+        [[nodiscard]] constexpr auto cumop(size_type axis, interval<size_type> window, bool bounded, AccFunc&& afunc,
+            TransFunc&& tfunc, Args&&... args) const
+        {
+            return cumop<this_type::depth>(axis, window, bounded, std::forward<AccFunc>(afunc),
+                std::forward<TransFunc>(tfunc), std::forward<Args>(args)...);
+        }
+
         template <std::int64_t Level, typename Func, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>)
         constexpr auto pageop(Func&& func, Args&&... args) const
@@ -9140,6 +9216,22 @@ namespace details {
         return movop<ArCo::depth>(arr, axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, typename AccFunc, typename TransFunc, typename... Args>
+    [[nodiscard]] constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
+        interval<typename ArCo::size_type> window, bool bounded, AccFunc&& afunc, TransFunc&& tfunc, Args&&... args)
+    {
+        return arr.template cumop<Level>(axis, window, bounded, std::forward<AccFunc>(afunc),
+            std::forward<TransFunc>(tfunc), std::forward<Args>(args)...);
+    }
+
+    template <arrnd_compliant ArCo, typename AccFunc, typename TransFunc, typename... Args>
+    [[nodiscard]] constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
+        interval<typename ArCo::size_type> window, bool bounded, AccFunc&& afunc, TransFunc&& tfunc, Args&&... args)
+    {
+        return cumop<ArCo::depth>(arr, axis, window, bounded, std::forward<AccFunc>(afunc),
+            std::forward<TransFunc>(tfunc), std::forward<Args>(args)...);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     inline constexpr auto pageop(const ArCo& arr, Func&& func, Args&&... args)
     {
@@ -9658,6 +9750,7 @@ using details::expand;
 using details::collapse;
 using details::pages;
 using details::movop;
+using details::cumop;
 using details::pageop;
 using details::squeeze;
 using details::sort;
