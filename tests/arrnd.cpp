@@ -322,9 +322,9 @@ TEST(general_iterable_types_check, typed_iterator)
 {
     static_assert(std::is_same_v<int, oc::iterator_value_type<std::vector<int>::iterator>>);
     static_assert(std::is_same_v<int, oc::iterator_value_type<oc::arrnd<int>::iterator>>);
-    static_assert(oc::integral_type_iterator<std::vector<int>::iterator>);
-    static_assert(oc::integral_type_iterator<oc::arrnd<int>::iterator>);
-    static_assert(!oc::integral_type_iterator<std::vector<double>::iterator>);
+    static_assert(oc::signed_integral_type_iterator<std::vector<int>::iterator>);
+    static_assert(oc::signed_integral_type_iterator<oc::arrnd<int>::iterator>);
+    static_assert(!oc::signed_integral_type_iterator<std::vector<double>::iterator>);
     static_assert(oc::interval_type_iterator<std::vector<oc::interval<int>>::iterator>);
     static_assert(oc::interval_type_iterator<oc::arrnd<oc::interval<int>>::iterator>);
     static_assert(!oc::interval_type_iterator<std::vector<double>::iterator>);
@@ -335,9 +335,9 @@ TEST(general_iterable_types_check, typed_iterable)
     static_assert(oc::iterable<std::vector<int>>);
     static_assert(oc::iterable<oc::arrnd<int>>);
 
-    static_assert(oc::integral_type_iterable<std::vector<int>>);
-    static_assert(oc::integral_type_iterable<oc::arrnd<int>>);
-    static_assert(!oc::integral_type_iterable<std::vector<double>>);
+    static_assert(oc::signed_integral_type_iterable<std::vector<int>>);
+    static_assert(oc::signed_integral_type_iterable<oc::arrnd<int>>);
+    static_assert(!oc::signed_integral_type_iterable<std::vector<double>>);
 
     static_assert(oc::interval_type_iterable<std::vector<oc::interval<int>>>);
     static_assert(oc::interval_type_iterable<oc::arrnd<oc::interval<int>>>);
