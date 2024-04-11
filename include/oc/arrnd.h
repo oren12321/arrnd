@@ -5634,10 +5634,12 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-                template <std::int64_t Level, arrnd_compliant ArCo>
-        requires(Level > 0) [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        template <std::int64_t Level, arrnd_compliant ArCo>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
         {
-            using ret_type = replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{} * (typename arrnd_inner_t<ArCo, Level>::value_type{}))>;
+            using ret_type = replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{}
+                * (typename arrnd_inner_t<ArCo, Level>::value_type{}))>;
 
             if (empty()) {
                 return ret_type();
@@ -5655,7 +5657,7 @@ namespace details {
             return res;
         }
         template <std::int64_t Level, arrnd_compliant ArCo>
-        requires (Level == 0)
+            requires(Level == 0)
         [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
         {
             using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
@@ -5689,10 +5691,11 @@ namespace details {
                 size_type lhs_num_pages
                     = hdr_.numel() / ((*std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2)) * hdr_.dims().back());
                 size_type rhs_num_pages = arr.header().numel()
-                    / ((*std::next(arr.header().dims().cbegin(), arr.header().dims().size() - 2)) * arr.header().dims().back());
+                    / ((*std::next(arr.header().dims().cbegin(), arr.header().dims().size() - 2))
+                        * arr.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto arr_pages = arr.pages<Level>();
+                auto arr_pages = arr.pages<Level>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
                 return pageop<Level>([&](auto page) {
@@ -5840,7 +5843,8 @@ namespace details {
 
         template <std::int64_t Level, std::integral U>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
+        [[nodiscard]] constexpr auto expand(
+            U axis, size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
 
@@ -5854,7 +5858,8 @@ namespace details {
             typename expanded_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(axis, division);
+                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(
+                    axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
             }
 
             return res;
@@ -5862,7 +5867,8 @@ namespace details {
 
         template <std::int64_t Level, std::integral U>
             requires(Level == 0)
-        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
+        [[nodiscard]] constexpr auto expand(
+            U axis, size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             using expanded_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
 
@@ -5871,7 +5877,20 @@ namespace details {
             }
 
             assert(axis >= 0 && axis < hdr_.dims().size());
-            auto axis_dim = *std::next(hdr_.dims().cbegin(), axis);
+
+            auto fixed_axis = axis;
+            if (find_closest_axis_dim_bigger_than_one_to_the_left) {
+                if (*std::next(hdr_.dims().cbegin(), fixed_axis) == 1) {
+                    for (size_type i = axis - 1; i >= 0; --i) {
+                        if (*std::next(hdr_.dims().cbegin(), i) > 1) {
+                            fixed_axis = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            auto axis_dim = *std::next(hdr_.dims().cbegin(), fixed_axis);
 
             assert(division <= axis_dim);
             auto fixed_div = division > 0 ? std::min(axis_dim, division) : axis_dim;
@@ -5879,7 +5898,7 @@ namespace details {
             // TODO: new dimensions creation should be in arrnd_header class
             typename expanded_type::header_type::storage_type new_dims(hdr_.dims().size());
             std::fill(new_dims.begin(), new_dims.end(), 1);
-            *std::next(new_dims.begin(), axis) = fixed_div;
+            *std::next(new_dims.begin(), fixed_axis) = fixed_div;
 
             expanded_type res(new_dims);
             typename expanded_type::indexer_type res_gen(res.header());
@@ -5895,7 +5914,7 @@ namespace details {
 
             auto count = 0;
 
-            ranger_type rgr(hdr_, axis, interval<size_type>(0, curr_ival_width - 1), true);
+            ranger_type rgr(hdr_, fixed_axis, interval<size_type>(0, curr_ival_width - 1), true);
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -5934,9 +5953,10 @@ namespace details {
         }
 
         template <std::integral U>
-        [[nodiscard]] constexpr auto expand(U axis, size_type division = 0) const
+        [[nodiscard]] constexpr auto expand(
+            U axis, size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
-            return expand<this_type::depth>(axis, division);
+            return expand<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
         }
 
         template <std::int64_t Level>
@@ -6166,7 +6186,9 @@ namespace details {
         }
 
         template <std::int64_t Level>
-        requires(Level > 0) [[nodiscard]] constexpr auto pages() const
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
+            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             using pages_type = inner_replaced_type<arrnd_inner_t<this_type, Level>, Level>;
 
@@ -6180,14 +6202,16 @@ namespace details {
             typename pages_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template pages<Level - 1>();
+                res[*res_gen] = (*this)[*gen].template pages<Level - 1>(
+                    axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
             }
 
             return res;
         }
         template <std::int64_t Level>
-        requires(Level == 0)
-        constexpr auto pages() const
+            requires(Level == 0)
+        constexpr auto pages(size_type axis, size_type division = 0,
+            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             using page_type = this_type;
             using pages_type = inner_replaced_type<page_type, Level>;
@@ -6196,31 +6220,33 @@ namespace details {
                 return pages_type();
             }
 
-            assert(hdr_.dims().size() >= 2);
+            //assert(hdr_.dims().size() >= 2);
 
-            if (hdr_.is_matrix()) {
-                return pages_type({1}, {*this});
-            }
+            //if (hdr_.is_matrix()) {
+            //    return pages_type({1}, {*this});
+            //}
 
             // find axis
             // the first axis from the end bigger than one, and after the page
-            auto assumed_axis = hdr_.dims().size() - 3;
-            if (*std::next(hdr_.dims().cbegin(), assumed_axis) == 1) {
-                for (size_type i = hdr_.dims().size() - 4; i >= 0; --i) {
-                    if (*std::next(hdr_.dims().cbegin(), i) > 1) {
-                        assumed_axis = i;
-                        break;
-                    }
-                }
-            }
 
-            pages_type pages = expand<Level>(assumed_axis);
-            
+            pages_type pages = expand<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+
+            //auto fixed_axis = axis;
+            //if (find_closest_axis_dim_bigger_than_one_to_the_left) {
+            //    if (*std::next(hdr_.dims().cbegin(), fixed_axis) == 1) {
+            //        for (size_type i = axis - 1; i >= 0; --i) {
+            //            if (*std::next(hdr_.dims().cbegin(), i) > 1) {
+            //                fixed_axis = i;
+            //                break;
+            //            }
+            //        }
+            //    }
+            //}
+
             for (typename pages_type::indexer_type pgen(pages.header()); pgen; ++pgen) {
                 //size_type cycles_until_page = pages[*pgen].header().dims().size() - 2;
-
-                while (pages[*pgen].header().dims().size() > 2) {
-                    assert(pages[*pgen].header().dims().front() == 1);
+                int count = axis + 1;
+                while (count-- > 0 && pages[*pgen].header().dims().front() == 1) {
                     pages[*pgen] = pages[*pgen][interval<size_type>::full()];
                 }
                 //for (size_type i = 0; i < cycles_until_page; ++i) {
@@ -6229,11 +6255,13 @@ namespace details {
                 //}
             }
 
-            return pages.reshape<Level>(hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2));
+            return pages.reshape<Level>(
+                pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
-        constexpr auto pages() const
+        constexpr auto pages(size_type axis, size_type division = 0,
+            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
-            return pages<this_type::depth>();
+            return pages<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
         }
 
         template <std::int64_t Level>
@@ -9015,14 +9043,16 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0)
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0,
+        bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return arr.template expand<Level>(axis, division);
+        return arr.template expand<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
     template <arrnd_compliant ArCo, std::integral U>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0)
+    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, U axis, typename ArCo::size_type division = 0,
+        bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return expand<ArCo::depth>(arr, axis, division);
+        return expand<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -9037,15 +9067,17 @@ namespace details {
         return collapse<ArCo::depth>(arr);
     }
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pages(const ArCo& arr)
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
+        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return arr.template pages<Level>();
+        return arr.template pages<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pages(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
+        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return pages<ArCo::depth>(arr);
+        return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>

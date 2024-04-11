@@ -1181,23 +1181,28 @@ TEST(arrnd_test, pages)
     using namespace oc;
 
     {
-        EXPECT_TRUE(all_equal(pages(arrnd<int>{}), arrnd<arrnd<int>>{}));
+        EXPECT_TRUE(all_equal(pages(arrnd<int>{}, 100), arrnd<arrnd<int>>{}));
     }
 
     {
-        arrnd<int> mat({2, 3}, {1, 2, 3, 4, 5, 6});
-        auto p = pages(mat);
-        EXPECT_TRUE(all_equal(p, arrnd<arrnd<int>>({1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})));
-        p[0][0] = 100;
-        EXPECT_EQ(100, mat[0]);
+        // already a page
+        //arrnd<int> mat({2, 3}, {1, 2, 3, 4, 5, 6});
+        //auto p = pages(mat);
+        //EXPECT_TRUE(all_equal(p, arrnd<arrnd<int>>({1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})));
+        //p[0][0] = 100;
+        //EXPECT_EQ(100, mat[0]);
     }
 
     {
         arrnd<int> arr({3, 1, 1, 2}, {1, 2, 3, 4, 5, 6});
-        auto p = pages(arr);
+        auto p = pages(arr, 1, 0, true);
         EXPECT_TRUE(all_equal(p,
             arrnd<arrnd<int>>(
                 {3, 1}, {arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {3, 4}), arrnd<int>({1, 2}, {5, 6})})));
+        //EXPECT_TRUE(all_equal(pages(arr, false),
+        //    arrnd<arrnd<int>>({3, 1},
+        //        {arrnd<int>({1, 1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 1, 2}, {3, 4}),
+        //            arrnd<int>({1, 1, 1, 2}, {5, 6})})));
         p[0][0] = 100;
         EXPECT_EQ(100, arr[0]);
     }
@@ -1206,7 +1211,8 @@ TEST(arrnd_test, pages)
         arrnd<arrnd<int>> narr({3, 1, 2},
             {arrnd<int>({2}, {1, 2}), arrnd<int>({2}, {3, 4}), arrnd<int>({2}, {5, 6}), arrnd<int>({2}, {7, 8}),
                 arrnd<int>({2}, {9, 10}), arrnd<int>({2}, {11, 12})});
-        auto p = pages<0>(narr);
+        auto p = pages<0>(narr, 0, 0, true);
+
         EXPECT_TRUE(all_equal(p,
             arrnd<arrnd<arrnd<int>>>({3},
                 {arrnd<arrnd<int>>({1, 2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({2}, {3, 4})}),
@@ -1214,6 +1220,29 @@ TEST(arrnd_test, pages)
                     arrnd<arrnd<int>>({1, 2}, {arrnd<int>({2}, {9, 10}), arrnd<int>({2}, {11, 12})})})));
         p[0][0][0] = 100;
         EXPECT_EQ(100, narr[0][0]);
+    }
+
+    // e.g. difference between expand and pages functions
+    {
+        arrnd<int> arr({5, 1, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+
+        int axis = 0;
+        int division = 3;
+        bool no_axis_norm = false;
+
+        auto exp = expand(arr, axis, division, no_axis_norm);
+
+        EXPECT_TRUE(all_equal(exp,
+            arrnd<arrnd<int>>({3, 1, 1},
+                {arrnd<int>({2, 1, 4}, {1, 2, 3, 4, 5, 6, 7, 8}),
+                    arrnd<int>({2, 1, 4}, {9, 10, 11, 12, 13, 14, 15, 16}), arrnd<int>({1, 1, 4}, {17, 18, 19, 20})})));
+
+        auto pgs = pages(arr, axis, division, no_axis_norm);
+
+        EXPECT_TRUE(all_equal(pgs,
+            arrnd<arrnd<int>>({3},
+                {arrnd<int>({2, 1, 4}, {1, 2, 3, 4, 5, 6, 7, 8}),
+                    arrnd<int>({2, 1, 4}, {9, 10, 11, 12, 13, 14, 15, 16}), arrnd<int>({1, 4}, {17, 18, 19, 20})})));
     }
 }
 
