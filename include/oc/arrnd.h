@@ -5664,28 +5664,30 @@ namespace details {
 
             assert(hdr_.dims().size() >= 2 && arr.header().dims().size() >= 2);
 
-            if (arr.header().is_matrix()) {
-                return pageop<Level>([&](auto page) {
-                    auto lhs = page;
-                    auto rhs = arr;
-                    //auto matmul = [](const auto& lhs, const auto& rhs) {
-                    assert(lhs.header().is_matrix() && rhs.header().is_matrix());
-                    assert(lhs.header().dims().back() == rhs.header().dims().front());
+            auto matmul = [](const auto& lhs, const auto& rhs) {
+                assert(lhs.header().is_matrix() && rhs.header().is_matrix());
+                assert(lhs.header().dims().back() == rhs.header().dims().front());
 
-                    ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
+                ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
 
-                    size_type ind = 0;
-                    auto trhs = rhs.template transpose<Level>({1, 0});
-                    std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
-                        std::for_each(
-                            trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
-                                auto dot = row * col;
-                                auto mag = dot.template reduce<Level>(std::plus<>{});
-                                res[ind++] = mag;
-                            });
+                size_type ind = 0;
+                auto trhs = rhs.template transpose<Level>({1, 0});
+                std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
+                    std::for_each(trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
+                        res[ind++] = (row * col).template reduce<Level>(std::plus<>{});
                     });
+                });
 
-                    return res;
+                return res;
+            };
+
+            if (hdr_.is_matrix() && arr.header().is_matrix()) {
+                return matmul(*this, arr);
+            }
+
+            if (arr.header().is_matrix()) {
+                return pageop<Level>([&arr, matmul](auto page) {
+                    return matmul(page, arr);
                 });
             } else {
                 size_type lhs_num_pages
@@ -5698,28 +5700,8 @@ namespace details {
                 auto arr_pages = arr.pages<Level>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return pageop<Level>([&](auto page) {
-                    auto lhs = page;
-                    auto rhs = arr_pages[*arr_pages_gen];
-                    ++arr_pages_gen;
-                    //auto matmul = [](const auto& lhs, const auto& rhs) {
-                    assert(lhs.header().is_matrix() && rhs.header().is_matrix());
-                    assert(lhs.header().dims().back() == rhs.header().dims().front());
-
-                    ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
-
-                    size_type ind = 0;
-                    auto trhs = rhs.template transpose<Level>({1, 0});
-                    std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
-                        std::for_each(
-                            trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
-                                auto dot = row * col;
-                                auto mag = dot.template reduce<Level>(std::plus<>{});
-                                res[ind++] = mag;
-                            });
-                    });
-
-                    return res;
+                return pageop<Level>([&arr_pages, &arr_pages_gen, &matmul](auto page) {
+                    return matmul(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
             //};
