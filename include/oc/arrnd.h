@@ -4456,16 +4456,16 @@ namespace details {
             return append<this_type::depth, ArCosOrTuples...>(std::forward<ArCosOrTuples>(arrs_or_tuples)...);
         }
 
-        template <std::int64_t Level, arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        template </*std::int64_t Level, */arrnd_compliant ArCo, arrnd_compliant... ArCos>
         [[nodiscard]] constexpr auto mtimes(const ArCo& arr, ArCos&&... others) const
         {
-            return mtimes<Level>(arr).template mtimes<ArCos...>(std::forward<ArCos>(others)...);
+            return mtimes(arr).mtimes(std::forward<ArCos>(others)...);
         }
-        template <arrnd_compliant... ArCos>
-        [[nodiscard]] constexpr auto mtimes(ArCos&&... others) const
-        {
-            return mtimes<this_type::depth>(std::forward<ArCos>(others)...);
-        }
+        //template <arrnd_compliant... ArCos>
+        //[[nodiscard]] constexpr auto mtimes(ArCos&&... others) const
+        //{
+        //    return mtimes<this_type::depth>(std::forward<ArCos>(others)...);
+        //}
 
         template <std::int64_t Level, arrnd_compliant ArCo>
             requires(Level == 0)
@@ -5600,11 +5600,11 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
-            requires(Level > 0) [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
+            requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat) [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
         {
             return transform<0>(arr, [](const auto& a, const auto& b) {
-                return a.mtimes<Level - 1>(b);
+                return a.mtimes(b);
             });
             /*using ret_type = inner_replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{} * (typename arrnd_inner_t<ArCo, Level>::value_type{})), Level>;
 
@@ -5623,8 +5623,8 @@ namespace details {
 
             return res;*/
         }
-        template <std::int64_t Level, arrnd_compliant ArCo>
-            requires(Level == 0)
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
+            requires(/*Level == 0*/ this_type::is_flat && ArCo::is_flat)
         [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
         {
             using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
@@ -5638,10 +5638,10 @@ namespace details {
                 ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
 
                 size_type ind = 0;
-                auto trhs = rhs.template transpose<Level>({1, 0});
+                auto trhs = rhs.template transpose<0>({1, 0});
                 std::for_each(lhs.cbegin_subarray(), lhs.cend_subarray(), [&res, &trhs, &ind](const auto& row) {
                     std::for_each(trhs.cbegin_subarray(), trhs.cend_subarray(), [&res, &ind, &row](const auto& col) {
-                        res[ind++] = (row * col).template reduce<Level>(std::plus<>{});
+                        res[ind++] = (row * col).template reduce<0>(std::plus<>{});
                     });
                 });
 
@@ -5653,7 +5653,7 @@ namespace details {
             }
 
             if (arr.header().is_matrix()) {
-                return pageop<Level>(2, [&arr, matmul](auto page) {
+                return pageop<0>(2, [&arr, matmul](auto page) {
                     return matmul(page, arr);
                 });
             } else {
@@ -5664,10 +5664,10 @@ namespace details {
                         * arr.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto arr_pages = arr.pages<Level>(arr.header().dims().size() - 3, 0, true);
+                auto arr_pages = arr.pages<0>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return pageop<Level>(2, [&arr_pages, &arr_pages_gen, &matmul](auto page) {
+                return pageop<0>(2, [&arr_pages, &arr_pages_gen, &matmul](auto page) {
                     return matmul(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
@@ -5677,11 +5677,11 @@ namespace details {
             //    return matmul(page, arr);
             //});
         }
-        template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
-        {
-            return mtimes<this_type::depth>(arr);
-        }
+        //template <arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        //{
+        //    return mtimes<this_type::depth>(arr);
+        //}
 
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
@@ -7741,27 +7741,27 @@ namespace details {
         return append<ArCo::depth>(arr, tuple, std::forward<Tuples>(others)...);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    [[nodiscard]] inline constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.mtimes<Level>(rhs);
+        return lhs.mtimes(rhs);
     }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
-    {
-        return mtimes<ArCo1::depth>(lhs, rhs);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    //{
+    //    return mtimes<ArCo1::depth>(lhs, rhs);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    [[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    [[nodiscard]] inline constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     {
-        return arr1.template mtimes<Level>(arr2, std::forward<ArCos>(others)...);
+        return arr1.mtimes(arr2, std::forward<ArCos>(others)...);
     }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    [[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
-    {
-        return mtimes<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    //[[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    //{
+    //    return mtimes<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
