@@ -5601,11 +5601,12 @@ namespace details {
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo>
-            requires(Level > 0)
-        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+            requires(Level > 0) [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
         {
-            using ret_type = replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{}
-                * (typename arrnd_inner_t<ArCo, Level>::value_type{}))>;
+            return transform<0>(arr, [](const auto& a, const auto& b) {
+                return a.mtimes<Level - 1>(b);
+            });
+            /*using ret_type = inner_replaced_type<decltype(typename arrnd_inner_t<this_type, Level>::value_type{} * (typename arrnd_inner_t<ArCo, Level>::value_type{})), Level>;
 
             if (empty()) {
                 return ret_type();
@@ -5620,7 +5621,7 @@ namespace details {
                 res[*res_gen] = (*this)[*gen].template mtimes<Level - 1>(arr);
             }
 
-            return res;
+            return res;*/
         }
         template <std::int64_t Level, arrnd_compliant ArCo>
             requires(Level == 0)
