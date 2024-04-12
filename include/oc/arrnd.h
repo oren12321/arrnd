@@ -57,8 +57,87 @@ namespace details {
 
 namespace oc {
 namespace details {
+    template <template <typename...> typename T, typename... Args>
+    [[nodiscard]] static inline constexpr std::true_type is_template_type_impl(T<Args...>)
+    {
+        return std::true_type{};
+    }
+    template <template <typename...> typename T>
+    [[nodiscard]] static inline constexpr std::false_type is_template_type_impl(...)
+    {
+        return std::false_type{};
+    }
+    template <template <typename...> typename T, typename U>
+    using is_template_type = decltype(is_template_type_impl<T>(std::declval<typename std::decay_t<U>>()));
+    template <typename U, template <typename...> typename T>
+    concept template_type = is_template_type<T, U>::value;
+
+    template <typename Iter>
+    using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
+    template <typename Iter, typename T>
+    concept iterator_of_type = std::input_iterator<Iter>&& std::is_same_v<T, iterator_value_type<Iter>>;
+
+        template <typename Cont>
+    concept iterable = requires(Cont&& c)
+    {
+        {std::begin(c)};
+        {std::end(c)};
+    }
+    &&!std::is_array_v<Cont>;
+    template <typename Cont, typename T>
+    concept iterable_of_type = iterable<Cont>&& requires(Cont&& c)
+    {
+        {
+            std::remove_cvref_t<decltype(*std::begin(c))> { }
+        }
+        ->std::same_as<T>;
+    };
+
+        template <typename T>
+    concept random_access_type = std::random_access_iterator<typename T::iterator>;
+
+    template <typename T, std::size_t... Ns>
+    constexpr std::size_t array_elements_count(std::index_sequence<Ns...>)
+    {
+        return (1 * ... * std::extent<T, Ns>{});
+    }
     template <typename T>
-    //requires(!std::is_reference_v<T>)
+    constexpr std::size_t array_elements_count()
+    {
+        return array_elements_count<T>(std::make_index_sequence<std::rank<T>{}>());
+    }
+
+    template <typename T, typename U>
+    T (&array_cast(U& u))
+    [array_elements_count<U>()]
+    {
+        auto ptr = reinterpret_cast<T*>(u);
+        T(&res)[array_elements_count<U>()] = *reinterpret_cast<T(*)[array_elements_count<U>()]>(ptr);
+        return res;
+    }
+
+    template <typename T, typename U>
+    const T (&const_array_cast(const U& u))[array_elements_count<U>()]
+    {
+        auto ptr = reinterpret_cast<const T*>(u);
+        const T(&res)[array_elements_count<U>()] = *reinterpret_cast<const T(*)[array_elements_count<U>()]>(ptr);
+        return res;
+    }
+}
+
+using details::iterator_value_type;
+using details::iterator_of_type;
+using details::iterable;
+using details::iterable_of_type;
+using details::random_access_type;
+
+using details::array_cast;
+using details::const_array_cast;
+}
+
+namespace oc {
+namespace details {
+    template <typename T>
     class lightweight_allocator {
     public:
         using value_type = T;
@@ -77,7 +156,6 @@ namespace details {
         constexpr ~lightweight_allocator() = default;
 
         template <typename U>
-        //requires(!std::is_reference_v<U>)
         constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept
         { }
 
@@ -105,7 +183,6 @@ using details::lightweight_allocator;
 namespace oc {
 namespace details {
     template <typename T, template <typename> typename Allocator = lightweight_allocator>
-    //requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
     class simple_dynamic_vector final {
     public:
         using value_type = T;
@@ -344,7 +421,6 @@ namespace details {
     }
 
     template <typename T, std::int64_t Size>
-    //requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)
     class simple_static_vector final {
         static_assert(Size >= 0);
 
@@ -734,25 +810,7 @@ using details::forward;
 
 namespace oc {
 namespace details {
-    template <template <typename...> typename T, typename... Args>
-    [[nodiscard]] static inline constexpr std::true_type is_template_type_impl(T<Args...>)
-    {
-        return std::true_type{};
-    }
-    template <template <typename...> typename T>
-    [[nodiscard]] static inline constexpr std::false_type is_template_type_impl(...)
-    {
-        return std::false_type{};
-    }
-    template <template <typename...> typename T, typename U>
-    using is_template_type = decltype(is_template_type_impl<T>(std::declval<typename std::decay_t<U>>()));
-    template <typename U, template <typename...> typename T>
-    concept template_type = is_template_type<T, U>::value;
 
-    template <typename Iter>
-    using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
-    template <typename Iter, typename T>
-    concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter>
     concept signed_integral_type_iterator
         = std::input_iterator<Iter> && std::signed_integral<iterator_value_type<Iter>>;
@@ -760,22 +818,7 @@ namespace details {
     concept interval_type_iterator
         = std::input_iterator<Iter> && is_template_type<interval, iterator_value_type<Iter>>::value;
 
-    template <typename Cont>
-    concept iterable = requires(Cont&& c) {
-                           {
-                               std::begin(c)
-                           };
-                           {
-                               std::end(c)
-                           };
-                       } && !
-    std::is_array_v<Cont>;
-    template <typename Cont, typename T>
-    concept iterable_of_type = iterable<Cont> && requires(Cont&& c) {
-                                                     {
-                                                         std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                         } -> std::same_as<T>;
-                                                 };
+
     template <typename Cont>
     concept signed_integral_type_iterable = iterable<Cont> && requires(Cont&& c) {
                                                                   {
@@ -789,50 +832,13 @@ namespace details {
                                                                } -> template_type<interval>;
                                                        };
 
-    template <typename T>
-    concept random_access_type = std::random_access_iterator<typename T::iterator>;
 
-    template <typename T, std::size_t... Ns>
-    constexpr std::size_t array_elements_count(std::index_sequence<Ns...>)
-    {
-        return (1 * ... * std::extent<T, Ns>{});
-    }
-    template <typename T>
-    constexpr std::size_t array_elements_count()
-    {
-        return array_elements_count<T>(std::make_index_sequence<std::rank<T>{}>());
-    }
-
-    template <typename T, typename U>
-    T (&array_cast(U& u))
-    [array_elements_count<U>()]
-    {
-        auto ptr = reinterpret_cast<T*>(u);
-        T(&res)[array_elements_count<U>()] = *reinterpret_cast<T(*)[array_elements_count<U>()]>(ptr);
-        return res;
-    }
-
-    template <typename T, typename U>
-    const T (&const_array_cast(const U& u))[array_elements_count<U>()]
-    {
-        auto ptr = reinterpret_cast<const T*>(u);
-        const T(&res)[array_elements_count<U>()] = *reinterpret_cast<const T(*)[array_elements_count<U>()]>(ptr);
-        return res;
-    }
 }
 
-using details::iterator_value_type;
-using details::iterator_of_type;
 using details::signed_integral_type_iterator;
 using details::interval_type_iterator;
-using details::iterable;
-using details::iterable_of_type;
-using details::interval_type_iterable;
 using details::signed_integral_type_iterable;
-using details::random_access_type;
-
-using details::array_cast;
-using details::const_array_cast;
+using details::interval_type_iterable;
 }
 
 namespace oc {
@@ -962,9 +968,6 @@ namespace details {
                     auto nr = r.align(d);
                     return static_cast<size_type>(std::ceil(static_cast<double>(nr.stop() - nr.start()) / nr.step()));
                 });
-            //std::transform(first_range, std::next(first_range, nranges), res.dims_.begin(), [](const auto& r) {
-            //    return static_cast<size_type>(std::ceil(static_cast<double>(r.stop() - r.start()) / r.step()));
-            //});
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
             if (std::equal(res.dims_.cbegin(), res.dims_.cend(), dims_.cbegin(), dims_.cend())) {
@@ -974,10 +977,7 @@ namespace details {
             res.numel_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), size_type{1}, std::multiplies<>{});
 
             res.strides_ = storage_type(res.dims_.size());
-            //std::transform(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range, res.strides_.begin(),
-            //    [](auto s, const auto& r) {
-            //        return s * r.step();
-            //    });
+
             res.offset_ = offset_;
             for (size_type i = 0; i < nranges; ++i) {
                 auto s = *std::next(strides_.cbegin(), i);
@@ -986,12 +986,6 @@ namespace details {
                 res.offset_ += s * nr.start();
             }
             std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
-
-            //res.offset_ = offset_
-            //    + std::transform_reduce(strides_.cbegin(), std::next(strides_.cbegin(), nranges), first_range,
-            //        size_type{0}, std::plus<>{}, [](auto s, const auto& r) {
-            //            return s * r.start();
-            //        });
 
             res.last_index_ = res.offset_
                 + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
@@ -1097,7 +1091,6 @@ namespace details {
                 *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
             }
-            //res.is_reordered_ = true;
 
             return res;
         }
@@ -1148,8 +1141,6 @@ namespace details {
 
             res.dims_.front() = main_dim;
             res.strides_.front() = main_stride;
-
-            //res.is_reordered_ = true;
 
             return res;
         }
@@ -1261,11 +1252,6 @@ namespace details {
             return is_slice_;
         }
 
-        //[[nodiscard]] constexpr bool is_reordered() const noexcept // deprecated
-        //{
-        //    return is_reordered_;
-        //}
-
         [[nodiscard]] constexpr bool empty() const noexcept
         {
             return dims_.empty();
@@ -1308,7 +1294,6 @@ namespace details {
         size_type offset_{0};
         size_type last_index_{0};
         bool is_slice_{false};
-        //bool is_reordered_{false};
     };
 
     template <arrnd_header_compliant ArHdrCo>
@@ -1599,275 +1584,6 @@ namespace details {
         size_type rel_pos_ = 0;
     };
 
-    //template <arrnd_header_compliant Header = arrnd_header<>> // deprecated
-    //class arrnd_fast_indexer final {
-    //public:
-    //    using header_type = Header;
-    //    using size_type = typename Header::size_type;
-    //    using value_type = typename Header::value_type;
-
-    //    explicit constexpr arrnd_fast_indexer(
-    //        const header_type& hdr, arrnd_indexer_position pos = arrnd_indexer_position::begin)
-    //        : arrnd_fast_indexer(hdr, 0, pos)
-    //    { }
-
-    //    explicit constexpr arrnd_fast_indexer(
-    //        const header_type& hdr, size_type axis, arrnd_indexer_position pos = arrnd_indexer_position::begin)
-    //    {
-    //        assert(!hdr.is_slice() && !hdr.is_reordered());
-    //        assert(axis >= 0 && axis < hdr.dims().size());
-
-    //        last_index_ = hdr.last_index();
-
-    //        num_super_groups_ = *std::next(hdr.dims().cbegin(), axis);
-    //        step_size_between_super_groups_ = *std::next(hdr.strides().cbegin(), axis);
-
-    //        num_groups_in_super_group_ = std::accumulate(hdr.dims().cbegin(), std::next(hdr.dims().cbegin(), axis + 1),
-    //                                         value_type{1}, std::multiplies<>{})
-    //            / num_super_groups_;
-    //        group_size_ = *std::next(hdr.strides().cbegin(), axis);
-    //        step_size_inside_group_ = hdr.strides().back();
-    //        step_size_between_groups_ = num_super_groups_ * step_size_between_super_groups_;
-
-    //        bool backward = (pos == arrnd_indexer_position::rbegin || pos == arrnd_indexer_position::end);
-
-    //        if (!backward) {
-    //            group_indices_counter_ = 0;
-    //            groups_counter_ = 0;
-    //            super_groups_counter_ = 0;
-
-    //            super_group_start_index_ = 0;
-    //            group_start_index_ = 0;
-
-    //            current_index_ = 0;
-    //            rel_pos_ = 0;
-    //        } else {
-    //            group_indices_counter_ = group_size_ - 1;
-    //            groups_counter_ = num_groups_in_super_group_ - 1;
-    //            super_groups_counter_ = num_super_groups_ - 1;
-
-    //            super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
-    //            group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
-
-    //            current_index_ = last_index_;
-    //            rel_pos_ = hdr.numel() - 1;
-    //        }
-
-    //        if (pos == arrnd_indexer_position::end) {
-    //            ++(*this);
-    //        } else if (pos == arrnd_indexer_position::rend) {
-    //            --(*this);
-    //        }
-    //    }
-
-    //    constexpr arrnd_fast_indexer() = default;
-
-    //    constexpr arrnd_fast_indexer(const arrnd_fast_indexer& other) = default;
-    //    constexpr arrnd_fast_indexer& operator=(const arrnd_fast_indexer& other) = default;
-
-    //    constexpr arrnd_fast_indexer(arrnd_fast_indexer&& other) noexcept = default;
-    //    constexpr arrnd_fast_indexer& operator=(arrnd_fast_indexer&& other) noexcept = default;
-
-    //    constexpr ~arrnd_fast_indexer() = default;
-
-    //    constexpr arrnd_fast_indexer& operator++() noexcept
-    //    {
-    //        if (current_index_ > last_index_) {
-    //            return *this;
-    //        }
-
-    //        ++group_indices_counter_;
-
-    //        current_index_ += step_size_inside_group_;
-
-    //        if (group_indices_counter_ < group_size_) {
-    //            ++rel_pos_;
-    //            return *this;
-    //        }
-
-    //        group_indices_counter_ = 0;
-    //        ++groups_counter_;
-    //        group_start_index_ += step_size_between_groups_;
-
-    //        current_index_ = group_start_index_;
-
-    //        if (groups_counter_ < num_groups_in_super_group_) {
-    //            ++rel_pos_;
-    //            return *this;
-    //        }
-
-    //        groups_counter_ = 0;
-    //        ++super_groups_counter_;
-    //        super_group_start_index_ += step_size_between_super_groups_;
-    //        group_start_index_ = super_group_start_index_;
-
-    //        current_index_ = group_start_index_;
-
-    //        if (super_groups_counter_ < num_super_groups_) {
-    //            ++rel_pos_;
-    //            return *this;
-    //        }
-
-    //        group_indices_counter_ = group_size_;
-    //        groups_counter_ = num_groups_in_super_group_ - 1;
-    //        super_groups_counter_ = num_super_groups_ - 1;
-    //        super_group_start_index_ = super_groups_counter_ * step_size_between_super_groups_;
-    //        group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
-
-    //        current_index_ = last_index_ + 1;
-
-    //        ++rel_pos_;
-    //        return *this;
-    //    }
-
-    //    constexpr arrnd_fast_indexer operator++(int) noexcept
-    //    {
-    //        arrnd_fast_indexer<header_type> temp{*this};
-    //        ++(*this);
-    //        return temp;
-    //    }
-
-    //    constexpr arrnd_fast_indexer& operator+=(size_type count) noexcept
-    //    {
-    //        for (size_type i = 0; i < count; ++i) {
-    //            ++(*this);
-    //        }
-    //        return *this;
-    //    }
-
-    //    constexpr arrnd_fast_indexer operator+(size_type count) const noexcept
-    //    {
-    //        arrnd_fast_indexer<header_type> temp{*this};
-    //        temp += count;
-    //        return temp;
-    //    }
-
-    //    constexpr arrnd_fast_indexer& operator--() noexcept
-    //    {
-    //        if (current_index_ < 0) {
-    //            return *this;
-    //        }
-
-    //        --group_indices_counter_;
-
-    //        current_index_ -= step_size_inside_group_;
-
-    //        if (group_indices_counter_ >= 0) {
-    //            --rel_pos_;
-    //            return *this;
-    //        }
-
-    //        group_indices_counter_ = group_size_ - 1;
-    //        --groups_counter_;
-    //        group_start_index_ -= step_size_between_groups_;
-
-    //        current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
-
-    //        if (groups_counter_ >= 0) {
-    //            --rel_pos_;
-    //            return *this;
-    //        }
-
-    //        groups_counter_ = num_groups_in_super_group_ - 1;
-    //        --super_groups_counter_;
-    //        super_group_start_index_ -= step_size_between_super_groups_;
-    //        group_start_index_ = super_group_start_index_ + groups_counter_ * step_size_between_groups_;
-
-    //        current_index_ = group_start_index_ + (group_size_ - 1) * step_size_inside_group_;
-
-    //        if (super_groups_counter_ >= 0) {
-    //            --rel_pos_;
-    //            return *this;
-    //        }
-
-    //        group_indices_counter_ = -1;
-    //        groups_counter_ = 0;
-    //        super_groups_counter_ = 0;
-    //        super_group_start_index_ = 0;
-    //        group_start_index_ = 0;
-
-    //        current_index_ = -1;
-
-    //        --rel_pos_;
-    //        return *this;
-    //    }
-
-    //    constexpr arrnd_fast_indexer operator--(int) noexcept
-    //    {
-    //        arrnd_fast_indexer<header_type> temp{*this};
-    //        --(*this);
-    //        return temp;
-    //    }
-
-    //    constexpr arrnd_fast_indexer& operator-=(size_type count) noexcept
-    //    {
-    //        for (size_type i = 0; i < count; ++i) {
-    //            --(*this);
-    //        }
-    //        return *this;
-    //    }
-
-    //    constexpr arrnd_fast_indexer operator-(size_type count) const noexcept
-    //    {
-    //        arrnd_fast_indexer<header_type> temp{*this};
-    //        temp -= count;
-    //        return temp;
-    //    }
-
-    //    [[nodiscard]] explicit constexpr operator bool() const noexcept
-    //    {
-    //        return static_cast<std::make_unsigned_t<value_type>>(current_index_)
-    //            <= static_cast<std::make_unsigned_t<value_type>>(last_index_);
-    //    }
-
-    //    [[nodiscard]] constexpr value_type operator*() const noexcept
-    //    {
-    //        return current_index_;
-    //    }
-
-    //    [[nodiscard]] constexpr value_type operator[](size_type index) const noexcept
-    //    {
-    //        assert(index >= 0 && index < num_super_groups_ * num_groups_in_super_group_ * group_size_);
-
-    //        size_type advance_count = index - rel_pos_;
-    //        if (advance_count > 0) {
-    //            return ((*this) + advance_count).current_index_;
-    //        }
-    //        if (advance_count < 0) {
-    //            return ((*this) - (-advance_count)).current_index_;
-    //        }
-    //        return current_index_;
-    //    }
-
-    //private:
-    //    value_type current_index_ = 0;
-
-    //    // data
-
-    //    value_type last_index_ = 0;
-
-    //    size_type num_super_groups_ = 0;
-    //    value_type step_size_between_super_groups_ = 0;
-
-    //    size_type num_groups_in_super_group_ = 0;
-    //    size_type group_size_ = 0;
-    //    value_type step_size_inside_group_ = 0;
-    //    value_type step_size_between_groups_ = 0;
-
-    //    // counters
-
-    //    size_type super_groups_counter_ = 0;
-
-    //    size_type group_indices_counter_ = 0;
-    //    size_type groups_counter_ = 0;
-
-    //    value_type super_group_start_index_ = 0;
-
-    //    value_type group_start_index_ = 0;
-
-    //    size_type rel_pos_ = 0;
-    //};
-
     template <arrnd_header_compliant Header = arrnd_header<>>
     class arrnd_fixed_axis_ranger final {
     public:
@@ -2043,7 +1759,7 @@ namespace details {
         }
 
     private:
-        // Calculate current interval window according to current index
+        // calculate current interval window according to current index
         [[nodiscard]] constexpr interval<size_type> compute_current_index_interval() const noexcept
         {
             if (current_index_ < 0 || current_index_ > last_index_) {
@@ -2053,20 +1769,17 @@ namespace details {
             // calculate normalized forward neigh
             size_type norm_window_stop = (current_index_ + right_window_size_ <= last_index_)
                 ? right_window_size_
-                : last_index_ - current_index_; //(current_index_ + right_window_size_ - last_index_);
+                : last_index_ - current_index_;
 
             // calculate normalized backward neigh
             size_type norm_window_start
                 = (current_index_ - left_window_size_ >= 0) ? left_window_size_ : current_index_;
-            // (left_window_size_ - current_index_ - 1);
 
-            // set interval
             return interval<size_type>{
                 current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_step_};
         }
 
         size_type fixed_axis_;
-        //size_type interval_width_;
         size_type fixed_axis_dim_;
         size_type left_window_size_;
         size_type right_window_size_;
@@ -2080,7 +1793,6 @@ namespace details {
 
 using details::arrnd_indexer_position;
 using details::arrnd_general_indexer;
-//using details::arrnd_fast_indexer;
 using details::arrnd_fixed_axis_ranger;
 }
 
@@ -2538,7 +2250,7 @@ namespace details {
         using value_type = Arrnd;
         using reference = Arrnd&;
 
-        using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
+        using ranger_type = typename Arrnd::ranger_type;
 
         explicit constexpr arrnd_axis_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -2653,7 +2365,7 @@ namespace details {
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
-        using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
+        using ranger_type = typename Arrnd::ranger_type;
 
         explicit constexpr arrnd_axis_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -2768,7 +2480,7 @@ namespace details {
         using value_type = Arrnd;
         using reference = Arrnd&;
 
-        using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
+        using ranger_type = typename Arrnd::ranger_type;
 
         explicit constexpr arrnd_axis_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -2883,7 +2595,7 @@ namespace details {
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
-        using ranger_type = arrnd_fixed_axis_ranger<typename Arrnd::header_type>;
+        using ranger_type = typename Arrnd::ranger_type;
 
         explicit constexpr arrnd_axis_reverse_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -3438,7 +3150,7 @@ namespace details {
 
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
-        arrnd_header_compliant Header = arrnd_header<>, template <typename> typename Indexer = arrnd_general_indexer>
+        arrnd_header_compliant Header = arrnd_header<>, template <typename> typename Indexer = arrnd_general_indexer, template <typename> typename Ranger = arrnd_fixed_axis_ranger>
     class arrnd {
     public:
         using value_type = T;
@@ -3456,12 +3168,12 @@ namespace details {
         using shared_ref_allocator_type = SharedRefAllocator<T>;
         using header_type = Header;
         using indexer_type = Indexer<Header>;
-        using ranger_type = arrnd_fixed_axis_ranger<Header>;
+        using ranger_type = Ranger<Header>;
 
-        using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer>;
+        using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer, Ranger>;
         template <typename U>
         using replaced_type
-            = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer>;
+            = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer, Ranger>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -9489,7 +9201,7 @@ namespace details {
     inline constexpr std::ostream& operator<<(std::ostream& os, const ArCo& arco)
     {
         arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
-            typename ArCo::header_type, arrnd_general_indexer>
+            typename ArCo::header_type, arrnd_general_indexer, arrnd_fixed_axis_ranger>
             carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
         typename ArCo::size_type ndepth_spaces = 0;
@@ -9512,7 +9224,7 @@ namespace details {
         friend std::ostream& operator<<(const arrnd_json_manip& ajm, const ArCo& arco)
         {
             arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
-                typename ArCo::header_type, arrnd_general_indexer>
+                typename ArCo::header_type, arrnd_general_indexer, arrnd_fixed_axis_ranger>
                 carco = arco;
             typename ArCo::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";
