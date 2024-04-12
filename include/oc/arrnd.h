@@ -3177,9 +3177,9 @@ namespace details {
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
-        template <std::int64_t Level = this_type::depth>
+        template <std::int64_t Level>
         using inner_this_type = arrnd_inner_t<this_type, Level>;
-        template <std::int64_t Level = this_type::depth>
+        template <std::int64_t Level>
         using inner_value_type = typename inner_this_type<Level>::value_type;
 
         template <typename U>
@@ -4604,7 +4604,7 @@ namespace details {
         }
 
         template <typename Func, typename... Args>
-            requires invocable_no_arrnd<Func, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>, Args...>
         [[nodiscard]] constexpr auto transform(Func&& func, Args&&... args) const
         {
             return transform<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
@@ -4669,7 +4669,7 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, typename Func, typename... Args>
-            requires invocable_no_arrnd<Func, inner_value_type<>, typename ArCo::value_type, Args...>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>, typename ArCo::value_type, Args...>
         [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args) const
         {
             return transform<this_type::depth, ArCo, Func, Args...>(
@@ -4708,7 +4708,7 @@ namespace details {
         }
 
         template <typename Func, typename... Args>
-            requires invocable_no_arrnd<Func, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>, Args...>
         constexpr this_type& apply(Func&& func, Args&&... args)
         {
             return apply<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
@@ -4761,7 +4761,8 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, typename Func, typename... Args>
-            requires invocable_no_arrnd<Func, inner_value_type<>, typename ArCo::template inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>,
+                typename ArCo::template inner_value_type<ArCo::depth>, Args...>
         constexpr this_type& apply(const ArCo& arr, Func&& func, Args&&... args)
         {
             return apply<this_type::depth, ArCo, Func, Args...>(
@@ -4814,7 +4815,8 @@ namespace details {
             return res;
         }
         template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, inner_value_type<>, inner_value_type<>, Args...>)
+            requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>,
+                Args...>)
         [[nodiscard]] constexpr auto reduce(Func&& func, Args&&... args) const
         {
             return reduce<this_type::depth, Func, Args...>(std::forward<Func>(func), std::forward<Args>(args)...);
@@ -4861,7 +4863,7 @@ namespace details {
             return res;
         }
         template <typename U, typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, U, inner_value_type<>, Args...>)
+            requires(invocable_no_arrnd<Func, U, inner_value_type<this_type::depth>, Args...>)
         [[nodiscard]] constexpr auto fold(const U& init, Func&& func, Args&&... args) const
         {
             return fold<this_type::depth, U, Func, Args...>(
@@ -4931,7 +4933,8 @@ namespace details {
             return res;
         }
         template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, inner_value_type<>, inner_value_type<>, Args...>)
+            requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>,
+                Args...>)
         [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func, Args&&... args) const
         {
             return reduce<this_type::depth, Func, Args...>(axis, std::forward<Func>(func), std::forward<Args>(args)...);
@@ -5004,7 +5007,7 @@ namespace details {
             return res;
         }
         template <arrnd_compliant ArCo, typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<>, Args...>)
+            requires(invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<this_type::depth>, Args...>)
         [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func, Args&&... args) const
         {
             return fold<this_type::depth, ArCo, Func, Args...>(
@@ -5066,7 +5069,7 @@ namespace details {
             return res;
         }
         template <typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, Args...>
         [[nodiscard]] constexpr this_type filter(Pred&& pred, Args&&... args) const
         {
             return filter<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
@@ -5195,7 +5198,7 @@ namespace details {
             return res;
         }
         template <typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, Args...>
         [[nodiscard]] constexpr auto find(Pred&& pred, Args&&... args) const
         {
             return find<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
@@ -5334,7 +5337,7 @@ namespace details {
                         * arr.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto arr_pages = arr.pages<0>(arr.header().dims().size() - 3, 0, true);
+                auto arr_pages = arr.template pages<0>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
                 return pageop<0>(2, [&arr_pages, &arr_pages_gen, &matmul](auto page) {
@@ -5767,7 +5770,7 @@ namespace details {
         }
 
         template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, inner_this_type<>, Args...>)
+            requires(invocable_no_arrnd<Func, inner_this_type<this_type::depth>, Args...>)
         [[nodiscard]] constexpr auto movop(
             size_type axis, interval<size_type> window, bool bounded, Func&& func, Args&&... args) const
         {
@@ -5849,9 +5852,10 @@ namespace details {
         }
 
         template <typename ReduceFunc, typename TransformFunc, typename... Args>
-            requires(invocable_no_arrnd<TransformFunc, inner_this_type<>, Args...>
-                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<>, Args...>,
-                    std::invoke_result_t<TransformFunc, inner_this_type<>, Args...>>)
+            requires(invocable_no_arrnd<TransformFunc, inner_this_type<this_type::depth>, Args...>
+                && invocable_no_arrnd<ReduceFunc,
+                    std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>,
+                    std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>>)
         [[nodiscard]] constexpr auto cumop(size_type axis, interval<size_type> window, bool bounded, ReduceFunc&& rfunc,
             TransformFunc&& tfunc, Args&&... args) const
         {
@@ -6018,7 +6022,7 @@ namespace details {
                 //}
             }
 
-            return pages.reshape<Level>(
+            return pages.template reshape<Level>(
                 pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
         constexpr auto pages(size_type axis, size_type division = 0,
@@ -6101,7 +6105,8 @@ namespace details {
             return res;
         }
         template <typename Comp, typename... Args>
-            requires invocable_no_arrnd<Comp, inner_value_type<>, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Comp, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>,
+                Args...>
         [[nodiscard]] constexpr this_type sort(Comp&& comp, Args&&... args) const
         {
             return sort<this_type::depth, Comp, Args...>(std::forward<Comp>(comp), std::forward<Args>(args)...);
@@ -6148,7 +6153,8 @@ namespace details {
             return res;
         }
         template <typename Comp, typename... Args>
-            requires invocable_no_arrnd<Comp, inner_this_type<>, inner_this_type<>, Args...>
+            requires invocable_no_arrnd<Comp, inner_this_type<this_type::depth>, inner_this_type<this_type::depth>,
+                Args...>
         [[nodiscard]] constexpr this_type sort(size_type axis, Comp&& comp, Args&&... args) const
         {
             return sort<this_type::depth, Comp, Args...>(axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
@@ -6189,7 +6195,8 @@ namespace details {
             return res;
         }
         template <typename Comp, typename... Args>
-            requires invocable_no_arrnd<Comp, inner_value_type<>, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Comp, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>,
+                Args...>
         [[nodiscard]] constexpr auto is_sorted(Comp&& comp, Args&&... args) const
         {
             return is_sorted<this_type::depth, Comp, Args...>(std::forward<Comp>(comp), std::forward<Args>(args)...);
@@ -6240,7 +6247,8 @@ namespace details {
             return res;
         }
         template <typename Comp, typename... Args>
-            requires invocable_no_arrnd<Comp, inner_this_type<>, inner_this_type<>, Args...>
+            requires invocable_no_arrnd<Comp, inner_this_type<this_type::depth>, inner_this_type<this_type::depth>,
+                Args...>
         [[nodiscard]] constexpr auto is_sorted(size_type axis, Comp&& comp, Args&&... args) const
         {
             return is_sorted<this_type::depth, Comp, Args...>(
@@ -6283,7 +6291,7 @@ namespace details {
         }
 
         template <typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, Args...>
         [[nodiscard]] constexpr bool all_match(Pred&& pred, Args&&... args) const
         {
             return all_match<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
@@ -6351,7 +6359,8 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, typename ArCo::template inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
+                typename ArCo::template inner_value_type<ArCo::depth>, Args...>
         [[nodiscard]] constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args) const
         {
             return all_match<this_type::depth, Pred, ArCo, Args...>(
@@ -6394,7 +6403,7 @@ namespace details {
         }
 
         template <typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, Args...>
         [[nodiscard]] constexpr bool any_match(Pred&& pred, Args&&... args) const
         {
             return any_match<this_type::depth, Pred, Args...>(std::forward<Pred>(pred), std::forward<Args>(args)...);
@@ -6462,7 +6471,8 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, inner_value_type<>, typename ArCo::template inner_value_type<>, Args...>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
+                typename ArCo::template inner_value_type<ArCo::depth>, Args...>
         [[nodiscard]] constexpr bool any_match(const ArCo& arr, Pred&& pred, Args&&... args) const
         {
             return any_match<this_type::depth, Pred, ArCo, Args...>(
@@ -9243,7 +9253,7 @@ namespace details {
             typename ArCo::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";
             ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
-                    << type_name<typename ArCo::template inner_value_type<>>() << "\"\n";
+                    << type_name<typename ArCo::template inner_value_type<ArCo::depth>>() << "\"\n";
             to_json(ajm.os_, carco, nvertical_spaces);
             ajm.os_ << "}";
             return ajm.os_;
