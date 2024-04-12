@@ -1014,25 +1014,40 @@ namespace details {
             return subheader(std::begin(ranges), std::end(ranges));
         }
 
-        [[nodiscard]] constexpr arrnd_header subheader(interval<size_type> range) const
+        [[nodiscard]] constexpr arrnd_header subheader(
+            interval<size_type> range, bool track_current_dimension_depth = false) const
         {
-            std::initializer_list<interval<size_type>> ranges = {range.align(dims_.front())};
+            if (!track_current_dimension_depth) {
+                std::initializer_list<interval<size_type>> ranges = {range.align(dims_.front())};
 
-            auto res = subheader(ranges.begin(), ranges.end());
-            if (res.empty() || res.dims_.front() != 1) {
+                auto res = subheader(ranges.begin(), ranges.end());
+                if (res.empty() || res.dims_.front() != 1) {
+                    return res;
+                }
+
+                res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
+                res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
+                res.last_index_ = res.offset_
+                    + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
+                        std::plus<>{}, [](auto d, auto s) {
+                            return (d - 1) * s;
+                        });
+                res.is_slice_ = true;
+
+                return res;
+            } else {
+                assert(current_dims_depth_ < dims_.size());
+
+                typename storage_type::template replaced_type<interval<size_type>> ranges(current_dims_depth_ + 1);
+
+                std::fill(ranges.begin(), ranges.end(), interval<size_type>::full());
+                ranges[ranges.size() - 1] = range.align(dims_.front());
+
+                auto res = subheader(ranges.begin(), ranges.end());
+                res.current_dims_depth_ = current_dims_depth_ + 1;
+
                 return res;
             }
-
-            res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
-            res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
-            res.last_index_ = res.offset_
-                + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
-                    std::plus<>{}, [](auto d, auto s) {
-                        return (d - 1) * s;
-                    });
-            res.is_slice_ = true;
-
-            return res;
         }
 
         [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
@@ -1293,6 +1308,8 @@ namespace details {
         size_type offset_{0};
         size_type last_index_{0};
         bool is_slice_{false};
+
+        size_type current_dims_depth_ = 0;
     };
 
     template <arrnd_header_compliant ArHdrCo>
@@ -3641,6 +3658,23 @@ namespace details {
         {
             this_type slice{};
             slice.hdr_ = hdr_.subheader(range);
+            slice.buffsp_ = buffsp_;
+            return slice;
+        }
+
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range) const&
+        {
+            this_type slice{};
+            slice.hdr_ = hdr_.subheader(range, true);
+            slice.buffsp_ = buffsp_;
+            slice.is_creator_valid_ = original_valid_creator_;
+            slice.creator_ = this;
+            return slice;
+        }
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range) const&&
+        {
+            this_type slice{};
+            slice.hdr_ = hdr_.subheader(range, true);
             slice.buffsp_ = buffsp_;
             return slice;
         }
