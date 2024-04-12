@@ -83,7 +83,7 @@
 //
 //    arrnd_header<> hdr({6, 10, 4});
 //
-//    arrnd_fixed_axis_ranger<> rgr(hdr, 1, false, 4, 2, 2, true);
+//    arrnd_axis_ranger<> rgr(hdr, 1, false, 4, 2, 2, true);
 //
 //    for (; rgr; ++rgr) {
 //        auto ival = (*rgr)[1];
@@ -400,7 +400,7 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_TRUE(!hdr6.is_vector() && !hdr6.is_matrix() && !hdr6.is_row() && !hdr6.is_column() && !hdr6.is_scalar());
 }
 
-TEST(arrnd_general_indexer, simple_forward_backward_iterations)
+TEST(arrnd_indexer, simple_forward_backward_iterations)
 {
     using namespace oc;
 
@@ -411,7 +411,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_general_indexer gen(hdr);
+    arrnd_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -427,7 +427,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_general_indexer, simple_backward_forward_iterations)
+TEST(arrnd_indexer, simple_backward_forward_iterations)
 {
     using namespace oc;
 
@@ -438,7 +438,7 @@ TEST(arrnd_general_indexer, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_general_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -454,7 +454,7 @@ TEST(arrnd_general_indexer, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(arrnd_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace oc;
 
@@ -465,7 +465,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_general_indexer gen(hdr);
+    arrnd_indexer gen(hdr);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -481,7 +481,7 @@ TEST(arrnd_general_indexer, simple_forward_backward_iterations_with_steps_bigger
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
+TEST(arrnd_indexer, forward_backward_iterations_by_axis_order)
 {
     using namespace oc;
 
@@ -493,7 +493,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_general_indexer gen(hdr, order);
+    arrnd_indexer gen(hdr, order);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -509,7 +509,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_axis_order)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
+TEST(arrnd_indexer, forward_backward_iterations_by_specific_major_axis)
 {
     using namespace oc;
 
@@ -525,7 +525,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
 
     for (std::int64_t axis = 0; axis <= 2; ++axis) {
         std::int64_t generated_subs_counter{0};
-        arrnd_general_indexer gen(hdr, axis);
+        arrnd_indexer gen(hdr, axis);
 
         while (gen) {
             EXPECT_EQ(expected_inds_list[axis][generated_subs_counter], *gen);
@@ -542,7 +542,7 @@ TEST(arrnd_general_indexer, forward_backward_iterations_by_specific_major_axis)
     }
 }
 
-TEST(arrnd_general_indexer, random_access)
+TEST(arrnd_indexer, random_access)
 {
     using namespace oc;
 
@@ -551,7 +551,7 @@ TEST(arrnd_general_indexer, random_access)
 
     const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 
-    arrnd_general_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
     EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -600,7 +600,7 @@ TEST(arrnd_general_indexer, random_access)
 //    const std::int64_t expected_generated_subs{6};
 //
 //    std::int64_t generated_subs_counter{0};
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
 //
 //    while (gen) {
 //        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -685,7 +685,7 @@ TEST(arrnd_general_indexer, random_access)
 //
 //    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 //
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_indexer_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
 //
 //    EXPECT_EQ(expected_inds_list[0], gen[0]);
 //    EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -695,7 +695,7 @@ TEST(arrnd_general_indexer, random_access)
 //    EXPECT_EQ(expected_inds_list[5], gen[3]);
 //}
 
-TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
+TEST(arrnd_axis_ranger, simple_forward_backward_iterations)
 {
     using namespace oc;
     using namespace oc::details;
@@ -707,7 +707,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2);
+    arrnd_axis_ranger gen(hdr, 2);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -723,8 +723,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(
-    arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_contained_window)
+TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_contained_window)
 {
     using namespace oc;
     using namespace oc::details;
@@ -736,7 +735,7 @@ TEST(
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 2}, true);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 2}, true);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -752,8 +751,7 @@ TEST(
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger,
-    simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_none_contained_window)
+TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_none_contained_window)
 {
     using namespace oc;
     using namespace oc::details;
@@ -766,7 +764,7 @@ TEST(arrnd_fixed_axis_ranger,
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{-2, 2}, false);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{-2, 2}, false);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -782,7 +780,7 @@ TEST(arrnd_fixed_axis_ranger,
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
+TEST(arrnd_axis_ranger, simple_backward_forward_iterations)
 {
     using namespace oc;
     using namespace oc::details;
@@ -794,7 +792,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 0}, true, arrnd_indexer_position::rbegin);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 0}, true, arrnd_iterator_start_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -810,7 +808,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations)
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_width_bigger_than_one)
+TEST(arrnd_axis_ranger, simple_backward_forward_iterations_with_interval_width_bigger_than_one)
 {
     using namespace oc;
     using namespace oc::details;
@@ -822,7 +820,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_w
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2, interval<>{0, 2}, true, arrnd_indexer_position::rbegin);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 2}, true, arrnd_iterator_start_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -838,7 +836,7 @@ TEST(arrnd_fixed_axis_ranger, simple_backward_forward_iterations_with_interval_w
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_steps_bigger_than_one)
+TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
     using namespace oc;
     using namespace oc::details;
@@ -850,7 +848,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_steps_bigg
     const std::int64_t expected_generated_subs{2};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_fixed_axis_ranger gen(hdr, 2);
+    arrnd_axis_ranger gen(hdr, 2);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -866,7 +864,7 @@ TEST(arrnd_fixed_axis_ranger, simple_forward_backward_iterations_with_steps_bigg
     EXPECT_EQ(0, generated_subs_counter);
 }
 
-TEST(arrnd_fixed_axis_ranger, random_access)
+TEST(arrnd_axis_ranger, random_access)
 {
     using namespace oc;
     using namespace oc::details;
@@ -876,11 +874,35 @@ TEST(arrnd_fixed_axis_ranger, random_access)
 
     const interval<> expected_inds_list[3]{interval<>{0, 1}, interval<>{2, 3}, interval<>{1, 2}};
 
-    arrnd_fixed_axis_ranger gen(hdr, 2);
+    arrnd_axis_ranger gen(hdr, 2);
 
     EXPECT_EQ(expected_inds_list[0], gen[0][2]);
     EXPECT_EQ(expected_inds_list[1], gen[2][2]);
     EXPECT_EQ(expected_inds_list[2], gen[1][2]);
+}
+
+TEST(arrnd_test, indexer)
+{
+    using namespace oc;
+
+    auto indexer = arrnd<int>({3, 1, 2}).indexer(2);
+    std::vector<int> indices;
+    for (; indexer; ++indexer) {
+        indices.push_back(*indexer);
+    }
+    std::vector<int> result{0, 2, 4, 1, 3, 5};
+
+    EXPECT_EQ(result, indices);
+}
+
+TEST(arrnd_test, ranger)
+{
+    using namespace oc;
+
+    auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
+    std::vector<interval<>> fisrt_ranges{{0, 3}, {0, 1}, {0, 1}};
+
+    EXPECT_TRUE(std::equal(fisrt_ranges.cbegin(), fisrt_ranges.cend(), (*ranger).cbegin()));
 }
 
 TEST(arrnd_test, iterators_and_inserters)
