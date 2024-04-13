@@ -6067,6 +6067,91 @@ namespace details {
 
         template <std::int64_t Level>
             requires(Level > 0)
+        [[nodiscard]] constexpr auto exclude(size_type pivot_axis) const
+        {
+            using exclude_type = inner_replaced_type<inner_this_type<Level>, Level>;
+
+            if (empty()) {
+                return exclude_type();
+            }
+
+            exclude_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename exclude_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template exclude<Level - 1>(pivot_axis);
+            }
+
+            return res;
+        }
+        template <std::int64_t Level>
+            requires(Level == 0)
+        constexpr auto exclude(size_type pivot_axis) const
+        {
+            using exclude_type = replaced_type<this_type>;
+
+            if (empty()) {
+                return exclude_type();
+            }
+
+            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [pivot_axis](size_type d) {
+                return pivot_axis >= 0 && pivot_axis < d;
+            }));
+
+            size_type assumed_num_slices = static_cast<size_type>(std::pow(2, hdr_.dims().size()));
+
+            exclude_type slices({assumed_num_slices});
+            typename exclude_type::indexer_type slc_gen(slices.header());
+
+            size_type actual_num_slices = 0;
+
+            std::function<void(this_type, size_type)> split;
+
+            split = [&/*&slices, &slc_gen, &actual_num_slices, pivot_axis*/](
+                        this_type arr, size_type current_depth) -> void {
+                if (arr.empty()) {
+                    return;
+                }
+
+                if (current_depth == 0) {
+                    assert(static_cast<bool>(slc_gen));
+
+                    slices[*slc_gen] = arr;
+                    ++slc_gen;
+                    ++actual_num_slices;
+                    return;
+                }
+
+                size_type current_dim
+                    = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
+
+                if (pivot_axis - 1 >= 0 && pivot_axis <= current_dim) {
+                    split(arr(interval<size_type>{0, pivot_axis}), current_depth - 1);
+                }
+
+                if (pivot_axis + 1 < current_dim) {
+                    split(arr(interval<size_type>{pivot_axis + 1, current_dim}), current_depth - 1);
+                }
+            };
+
+            split(*this, hdr_.dims().size());
+
+            assert(assumed_num_slices >= actual_num_slices);
+
+            if (assumed_num_slices > actual_num_slices) {
+                return slices.template resize<Level>({actual_num_slices});
+            }
+            return slices;
+        }
+        constexpr auto exclude(size_type pivot_axis) const
+        {
+            return exclude<this_type::depth>(pivot_axis);
+        }
+
+        template <std::int64_t Level>
+            requires(Level > 0)
         [[nodiscard]] constexpr this_type squeeze() const
         {
             if (empty()) {
@@ -8872,6 +8957,17 @@ namespace details {
         return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_axis)
+    {
+        return arr.template exclude<Level>(pivot_axis);
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_axis)
+    {
+        return exclude<ArCo::depth>(arr, pivot_axis);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     [[nodiscard]] constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
@@ -9409,6 +9505,7 @@ using details::empty;
 using details::expand;
 using details::collapse;
 using details::pages;
+using details::exclude;
 using details::movop;
 using details::cumop;
 using details::pageop;

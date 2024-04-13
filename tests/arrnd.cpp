@@ -1213,6 +1213,55 @@ TEST(arrnd_test, access_slice_and_track_dimensions)
         arr[{interval<>{1, 3}, interval<>{0, 2}, interval<>{0, 2}}]));
 }
 
+TEST(arrnd_test, exclude)
+{
+    using namespace oc;
+
+    // empty
+    {
+        arrnd<int> arr;
+
+        EXPECT_TRUE(exclude(arr, 100).empty());
+    }
+
+    // 1d
+    {
+        arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
+
+        EXPECT_TRUE(
+            all_equal(exclude(arr, 2), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({3}, {4, 5, 6})})));
+        EXPECT_TRUE(all_equal(exclude(arr, 5), arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {1, 2, 3, 4, 5})})));
+
+        auto exc = exclude(arr, 0);
+        EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {2, 3, 4, 5, 6})})));
+        exc[0](0) = 100;
+        EXPECT_EQ(100, arr[1]);
+    }
+
+    // 2d
+    {
+        arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+
+        EXPECT_TRUE(all_equal(exclude(arr, 2),
+            arrnd<arrnd<int>>({4},
+                {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
+                    arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})})));
+    }
+
+    // 3d
+    {
+        oc::arrnd<int> arr({3, 4, 3},
+            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                30, 31, 32, 33, 34, 35, 36});
+
+        EXPECT_TRUE(all_equal(exclude(arr, 1),
+            arrnd<arrnd<int>>({8},
+                {arrnd<int>({1, 1, 1}, {1}), arrnd<int>({1, 1, 1}, {3}), arrnd<int>({1, 2, 1}, {7, 10}),
+                    arrnd<int>({1, 2, 1}, {9, 12}), arrnd<int>({1, 1, 1}, {25}), arrnd<int>({1, 1, 1}, {27}),
+                    arrnd<int>({1, 2, 1}, {31, 34}), arrnd<int>({1, 2, 1}, {33, 36})})));
+    }
+}
+
 TEST(arrnd_test, pages)
 {
     using namespace oc;
