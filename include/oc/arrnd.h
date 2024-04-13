@@ -6067,91 +6067,6 @@ namespace details {
 
         template <std::int64_t Level>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto exclude(size_type pivot_ind) const
-        {
-            using exclude_type = inner_replaced_type<inner_this_type<Level>, Level>;
-
-            if (empty()) {
-                return exclude_type();
-            }
-
-            exclude_type res(hdr_.dims());
-
-            indexer_type gen(hdr_);
-            typename exclude_type::indexer_type res_gen(res.header());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template exclude<Level - 1>(pivot_ind);
-            }
-
-            return res;
-        }
-        template <std::int64_t Level>
-            requires(Level == 0)
-        constexpr auto exclude(size_type pivot_ind) const
-        {
-            using exclude_type = replaced_type<this_type>;
-
-            if (empty()) {
-                return exclude_type();
-            }
-
-            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [pivot_ind](size_type d) {
-                return pivot_ind >= 0 && pivot_ind < d;
-            }));
-
-            size_type assumed_num_slices = static_cast<size_type>(std::pow(2, hdr_.dims().size()));
-
-            exclude_type slices({assumed_num_slices});
-            typename exclude_type::indexer_type slc_gen(slices.header());
-
-            size_type actual_num_slices = 0;
-
-            std::function<void(this_type, size_type)> split_impl;
-
-            split_impl = [&/*&slices, &slc_gen, &actual_num_slices, pivot_ind*/](
-                             this_type arr, size_type current_depth) -> void {
-                if (arr.empty()) {
-                    return;
-                }
-
-                if (current_depth == 0) {
-                    assert(static_cast<bool>(slc_gen));
-
-                    slices[*slc_gen] = arr;
-                    ++slc_gen;
-                    ++actual_num_slices;
-                    return;
-                }
-
-                size_type current_dim
-                    = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
-
-                if (pivot_ind - 1 >= 0 && pivot_ind <= current_dim) {
-                    split_impl(arr(interval<size_type>{0, pivot_ind}), current_depth - 1);
-                }
-
-                if (pivot_ind + 1 < current_dim) {
-                    split_impl(arr(interval<size_type>{pivot_ind + 1, current_dim}), current_depth - 1);
-                }
-            };
-
-            split_impl(*this, hdr_.dims().size());
-
-            assert(assumed_num_slices >= actual_num_slices);
-
-            if (assumed_num_slices > actual_num_slices) {
-                return slices.template resize<Level>({actual_num_slices});
-            }
-            return slices;
-        }
-        constexpr auto exclude(size_type pivot_ind) const
-        {
-            return exclude<this_type::depth>(pivot_ind);
-        }
-
-        template <std::int64_t Level>
-            requires(Level > 0)
         [[nodiscard]] constexpr auto split(size_type division) const
         {
             using split_type = inner_replaced_type<inner_this_type<Level>, Level>;
@@ -6310,7 +6225,9 @@ namespace details {
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
-                    split_impl(arr(interval<size_type>{prev_ind, current_ind}), current_depth - 1);
+                    if (prev_ind < current_ind) {
+                        split_impl(arr(interval<size_type>{prev_ind, current_ind}), current_depth - 1);
+                    }
                     prev_ind = current_ind;
                 }
                 if (current_ind < current_dim) {
@@ -6360,6 +6277,136 @@ namespace details {
         [[nodiscard]] constexpr auto split(const U (&inds)[M]) const
         {
             return split<this_type::depth>(std::begin(inds), std::end(inds));
+        }
+
+        template <std::int64_t Level, signed_integral_type_iterator IndsIt>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto exclude(IndsIt first_ind, IndsIt last_ind) const
+        {
+            using exclude_type = inner_replaced_type<inner_this_type<Level>, Level>;
+
+            if (empty()) {
+                return exclude_type();
+            }
+
+            exclude_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename exclude_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template exclude<Level - 1>(first_ind, last_ind);
+            }
+
+            return res;
+        }
+        template <std::int64_t Level, signed_integral_type_iterator IndsIt>
+            requires(Level == 0)
+        constexpr auto exclude(IndsIt first_ind, IndsIt last_ind) const
+        {
+            using exclude_type = replaced_type<this_type>;
+
+            if (empty()) {
+                return exclude_type();
+            }
+
+            assert(std::is_sorted(first_ind, last_ind));
+            assert(std::adjacent_find(first_ind, last_ind) == last_ind);
+
+            size_type assumed_num_slices
+                = static_cast<size_type>(std::pow(std::distance(first_ind, last_ind) + 1, hdr_.dims().size()));
+
+            exclude_type slices({assumed_num_slices});
+            typename exclude_type::indexer_type slc_gen(slices.header());
+
+            size_type actual_num_slices = 0;
+
+            std::function<void(this_type, size_type)> exclude_impl;
+
+            exclude_impl
+                = [&/*&slices, &slc_gen, &actual_num_slices, ind*/](this_type arr, size_type current_depth) -> void {
+                if (arr.empty()) {
+                    return;
+                }
+
+                if (current_depth == 0) {
+                    assert(static_cast<bool>(slc_gen));
+
+                    slices[*slc_gen] = arr;
+                    ++slc_gen;
+                    ++actual_num_slices;
+                    return;
+                }
+
+                size_type current_dim
+                    = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
+
+                assert(std::distance(first_ind, last_ind) > 0 && std::distance(first_ind, last_ind) <= current_dim);
+                assert(std::all_of(first_ind, last_ind, [current_dim](size_type ind) {
+                    return ind >= 0 && ind < current_dim;
+                }));
+
+                size_type prev_ind = *first_ind;
+                auto ind_it = first_ind;
+                ++ind_it;
+                if (prev_ind > 0) {
+                    exclude_impl(arr(interval<size_type>{0, prev_ind}), current_depth - 1);
+                }
+                size_type current_ind = prev_ind;
+                for (; ind_it != last_ind; ++ind_it) {
+                    current_ind = *ind_it;
+                    if (prev_ind + 1 < current_ind) {
+                        exclude_impl(arr(interval<size_type>{prev_ind + 1, current_ind}), current_depth - 1);
+                    }
+                    prev_ind = current_ind;
+                }
+                if (current_ind + 1 < current_dim) {
+                    exclude_impl(arr(interval<size_type>{current_ind + 1, current_dim}), current_depth - 1);
+                }
+            };
+
+            exclude_impl(*this, hdr_.dims().size());
+
+            assert(assumed_num_slices >= actual_num_slices);
+
+            if (assumed_num_slices > actual_num_slices) {
+                return slices.template resize<Level>({actual_num_slices});
+            }
+            return slices;
+        }
+        template <signed_integral_type_iterator IndsIt>
+        constexpr auto exclude(IndsIt first_ind, IndsIt last_ind) const
+        {
+            return exclude<this_type::depth>(first_ind, last_ind);
+        }
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto exclude(const Cont& inds) const
+        {
+            return exclude<Level>(std::begin(inds), std::end(inds));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> inds) const
+        {
+            return exclude<Level>(inds.begin(), inds.end());
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto exclude(const U (&inds)[M]) const
+        {
+            return exclude<Level>(std::begin(inds), std::end(inds));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto exclude(const Cont& inds) const
+        {
+            return exclude<this_type::depth>(std::begin(inds), std::end(inds));
+        }
+        [[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> inds) const
+        {
+            return exclude<this_type::depth>(inds.begin(), inds.end());
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto exclude(const U (&inds)[M]) const
+        {
+            return exclude<this_type::depth>(std::begin(inds), std::end(inds));
         }
 
         template <std::int64_t Level>
@@ -9170,17 +9217,6 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_ind)
-    {
-        return arr.template exclude<Level>(pivot_ind);
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_ind)
-    {
-        return exclude<ArCo::depth>(arr, pivot_ind);
-    }
-
-    template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type division)
     {
         return arr.template split<Level>(division);
@@ -9230,6 +9266,47 @@ namespace details {
     [[nodiscard]] constexpr auto split(const ArCo& arr, const U (&inds)[M])
     {
         return split<ArCo::depth>(arr, std::begin(inds), std::end(inds));
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
+    constexpr auto exclude(const ArCo& arr, IndsIt first_ind, IndsIt last_ind)
+    {
+        return arr.exclude<Level>(first_ind, last_ind);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const Cont& inds)
+    {
+        return exclude<Level>(arr, std::begin(inds), std::end(inds));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> inds)
+    {
+        return exclude<Level>(arr, inds.begin(), inds.end());
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const U (&inds)[M])
+    {
+        return exclude<Level>(arr, std::begin(inds), std::end(inds));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
+    constexpr auto exclude(const ArCo& arr, IndsIt first_ind, IndsIt last_ind)
+    {
+        return exclude<ArCo::depth>(arr, first_ind, last_ind);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const Cont& inds)
+    {
+        return exclude<ArCo::depth>(arr, std::begin(inds), std::end(inds));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> inds)
+    {
+        return exclude<ArCo::depth>(arr, inds.begin(), inds.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const U (&inds)[M])
+    {
+        return exclude<ArCo::depth>(arr, std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
