@@ -6065,9 +6065,9 @@ namespace details {
             return pages<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
         }
 
-        template <std::int64_t Level>
+        template <std::int64_t Level, signed_integral_type_iterator AxesIt>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto split(size_type division) const
+        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             using split_type = inner_replaced_type<inner_this_type<Level>, Level>;
 
@@ -6081,20 +6081,27 @@ namespace details {
             typename split_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template split<Level - 1>(division);
+                res[*res_gen] = (*this)[*gen].template split<Level - 1>(first_axis, last_axis, division);
             }
 
             return res;
         }
-        template <std::int64_t Level>
-            requires(Level == 0)
-        constexpr auto split(size_type division) const
+        template <std::int64_t Level, signed_integral_type_iterator AxesIt>
+            requires(Level == 0) constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             using split_type = replaced_type<this_type>;
 
             if (empty()) {
                 return split_type();
             }
+
+            assert(std::is_sorted(first_axis, last_axis));
+            assert(std::adjacent_find(first_axis, last_axis) == last_axis);
+            assert(
+                std::distance(first_axis, last_axis) >= 0 && std::distance(first_axis, last_axis) <= hdr_.dims().size());
+            assert(std::all_of(first_axis, last_axis, [&](size_type axis) {
+                return axis >= 0 && axis < hdr_.dims().size();
+            }));
 
             assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [division](size_type d) {
                 return division > 0 && division <= d;
@@ -6124,6 +6131,12 @@ namespace details {
                     return;
                 }
 
+                if (std::distance(first_axis, last_axis) > 0
+                    && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
+                    split_impl(arr(interval<size_type>::full()), current_depth - 1);
+                    return;
+                }
+
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
@@ -6144,9 +6157,39 @@ namespace details {
             }
             return slices;
         }
-        constexpr auto split(size_type division) const
+        template <signed_integral_type_iterator AxesIt>
+        constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
-            return split<this_type::depth>(division);
+            return split<this_type::depth>(first_axis, last_axis, division);
+        }
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto split(const Cont& axes, size_type division) const
+        {
+            return split<Level>(std::begin(axes), std::end(axes), division);
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, size_type division) const
+        {
+            return split<Level>(axes.begin(), axes.end(), division);
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto split(const U (&axes)[M], size_type division) const
+        {
+            return split<Level>(std::begin(axes), std::end(axes), division);
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto split(const Cont& axes, size_type division) const
+        {
+            return split<this_type::depth>(std::begin(axes), std::end(axes), division);
+        }
+        [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, size_type division) const
+        {
+            return split<this_type::depth>(axes.begin(), axes.end(), division);
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto split(const U (&axes)[M], size_type division) const
+        {
+            return split<this_type::depth>(std::begin(axes), std::end(axes), division);
         }
 
         template <std::int64_t Level, signed_integral_type_iterator IndsIt>
@@ -9216,16 +9259,56 @@ namespace details {
         return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type division)
+    
+
+
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
+    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
     {
-        return arr.template split<Level>(division);
+        return arr.split<Level>(first_axis, last_axis, division);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
+    {
+        return split<Level>(arr, std::begin(axes), std::end(axes), division);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] constexpr auto split(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
+    {
+        return split<Level>(arr, axes.begin(), axes.end(), division);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
+    {
+        return split<Level>(arr, std::begin(axes), std::end(axes), division);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
+    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
+    {
+        return split<ArCo::depth>(arr, first_axis, last_axis, division);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
+    {
+        return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), division);
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type division)
+    [[nodiscard]] constexpr auto split(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
     {
-        return split<ArCo::depth>(arr, division);
+        return split<ArCo::depth>(arr, axes.begin(), axes.end(), division);
     }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
+    {
+        return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), division);
+    }
+
+
+
+
+
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
     constexpr auto split(const ArCo& arr, IndsIt first_ind, IndsIt last_ind)

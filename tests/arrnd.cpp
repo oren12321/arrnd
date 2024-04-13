@@ -1343,7 +1343,7 @@ TEST(arrnd_test, split)
     {
         arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        EXPECT_TRUE(all_equal(split(arr, 2),
+        EXPECT_TRUE(all_equal(split(arr, {}, 2),
             arrnd<arrnd<int>>({4},
                 {arrnd<int>({3, 2}, {1, 2, 5, 6, 9, 10}), arrnd<int>({3, 2}, {3, 4, 7, 8, 11, 12}),
                     arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 2}, {15, 16, 19, 20, 23, 24})})));
