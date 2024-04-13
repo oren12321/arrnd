@@ -6067,7 +6067,7 @@ namespace details {
 
         template <std::int64_t Level>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto exclude(size_type pivot_axis) const
+        [[nodiscard]] constexpr auto exclude(size_type pivot_ind) const
         {
             using exclude_type = inner_replaced_type<inner_this_type<Level>, Level>;
 
@@ -6081,14 +6081,14 @@ namespace details {
             typename exclude_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template exclude<Level - 1>(pivot_axis);
+                res[*res_gen] = (*this)[*gen].template exclude<Level - 1>(pivot_ind);
             }
 
             return res;
         }
         template <std::int64_t Level>
             requires(Level == 0)
-        constexpr auto exclude(size_type pivot_axis) const
+        constexpr auto exclude(size_type pivot_ind) const
         {
             using exclude_type = replaced_type<this_type>;
 
@@ -6096,8 +6096,8 @@ namespace details {
                 return exclude_type();
             }
 
-            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [pivot_axis](size_type d) {
-                return pivot_axis >= 0 && pivot_axis < d;
+            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [pivot_ind](size_type d) {
+                return pivot_ind >= 0 && pivot_ind < d;
             }));
 
             size_type assumed_num_slices = static_cast<size_type>(std::pow(2, hdr_.dims().size()));
@@ -6109,7 +6109,7 @@ namespace details {
 
             std::function<void(this_type, size_type)> split_impl;
 
-            split_impl = [&/*&slices, &slc_gen, &actual_num_slices, pivot_axis*/](
+            split_impl = [&/*&slices, &slc_gen, &actual_num_slices, pivot_ind*/](
                              this_type arr, size_type current_depth) -> void {
                 if (arr.empty()) {
                     return;
@@ -6127,12 +6127,12 @@ namespace details {
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
-                if (pivot_axis - 1 >= 0 && pivot_axis <= current_dim) {
-                    split_impl(arr(interval<size_type>{0, pivot_axis}), current_depth - 1);
+                if (pivot_ind - 1 >= 0 && pivot_ind <= current_dim) {
+                    split_impl(arr(interval<size_type>{0, pivot_ind}), current_depth - 1);
                 }
 
-                if (pivot_axis + 1 < current_dim) {
-                    split_impl(arr(interval<size_type>{pivot_axis + 1, current_dim}), current_depth - 1);
+                if (pivot_ind + 1 < current_dim) {
+                    split_impl(arr(interval<size_type>{pivot_ind + 1, current_dim}), current_depth - 1);
                 }
             };
 
@@ -6145,14 +6145,14 @@ namespace details {
             }
             return slices;
         }
-        constexpr auto exclude(size_type pivot_axis) const
+        constexpr auto exclude(size_type pivot_ind) const
         {
-            return exclude<this_type::depth>(pivot_axis);
+            return exclude<this_type::depth>(pivot_ind);
         }
 
         template <std::int64_t Level>
             requires(Level > 0)
-        [[nodiscard]] constexpr auto split(size_type axis) const
+        [[nodiscard]] constexpr auto split(size_type ind) const
         {
             using split_type = inner_replaced_type<inner_this_type<Level>, Level>;
 
@@ -6166,14 +6166,14 @@ namespace details {
             typename split_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template split<Level - 1>(axis);
+                res[*res_gen] = (*this)[*gen].template split<Level - 1>(ind);
             }
 
             return res;
         }
         template <std::int64_t Level>
             requires(Level == 0)
-        constexpr auto split(size_type axis) const
+        constexpr auto split(size_type ind) const
         {
             using split_type = replaced_type<this_type>;
 
@@ -6181,8 +6181,8 @@ namespace details {
                 return split_type();
             }
 
-            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [axis](size_type d) {
-                return axis >= 0 && axis < d;
+            assert(std::all_of(hdr_.dims().cbegin(), hdr_.dims().cend(), [ind](size_type d) {
+                return ind >= 0 && ind < d;
             }));
 
             size_type assumed_num_slices = static_cast<size_type>(std::pow(2, hdr_.dims().size()));
@@ -6195,7 +6195,7 @@ namespace details {
             std::function<void(this_type, size_type)> split_impl;
 
             split_impl
-                = [&/*&slices, &slc_gen, &actual_num_slices, axis*/](this_type arr, size_type current_depth) -> void {
+                = [&/*&slices, &slc_gen, &actual_num_slices, ind*/](this_type arr, size_type current_depth) -> void {
                 if (arr.empty()) {
                     return;
                 }
@@ -6212,12 +6212,12 @@ namespace details {
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
-                if (axis >= 0 && axis + 1 <= current_dim) {
-                    split_impl(arr(interval<size_type>{0, axis + 1}), current_depth - 1);
+                if (ind > 0 && ind <= current_dim) {
+                    split_impl(arr(interval<size_type>{0, ind}), current_depth - 1);
                 }
 
-                if (axis + 1 < current_dim) {
-                    split_impl(arr(interval<size_type>{axis + 1, current_dim}), current_depth - 1);
+                if (ind >= 0 && ind < current_dim) {
+                    split_impl(arr(interval<size_type>{ind, current_dim}), current_depth - 1);
                 }
             };
 
@@ -6230,9 +6230,9 @@ namespace details {
             }
             return slices;
         }
-        constexpr auto split(size_type axis) const
+        constexpr auto split(size_type ind) const
         {
-            return split<this_type::depth>(axis);
+            return split<this_type::depth>(ind);
         }
 
         template <std::int64_t Level>
@@ -9043,25 +9043,25 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_axis)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_ind)
     {
-        return arr.template exclude<Level>(pivot_axis);
+        return arr.template exclude<Level>(pivot_ind);
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_axis)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, typename ArCo::size_type pivot_ind)
     {
-        return exclude<ArCo::depth>(arr, pivot_axis);
+        return exclude<ArCo::depth>(arr, pivot_ind);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type ind)
     {
-        return arr.template split<Level>(axis);
+        return arr.template split<Level>(ind);
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, typename ArCo::size_type ind)
     {
-        return split<ArCo::depth>(arr, axis);
+        return split<ArCo::depth>(arr, ind);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>

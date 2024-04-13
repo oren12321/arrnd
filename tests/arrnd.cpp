@@ -1281,11 +1281,12 @@ TEST(arrnd_test, split)
         arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
 
         EXPECT_TRUE(
-            all_equal(split(arr, 2), arrnd<arrnd<int>>({2}, {arrnd<int>({3}, {1, 2, 3}), arrnd<int>({3}, {4, 5, 6})})));
-        EXPECT_TRUE(all_equal(split(arr, 5), arrnd<arrnd<int>>({1}, {arrnd<int>({6}, {1, 2, 3, 4, 5, 6})})));
+            all_equal(split(arr, 2), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({4}, {3, 4, 5, 6})})));
+        EXPECT_TRUE(all_equal(split(arr, 5),
+            arrnd<arrnd<int>>({2}, {arrnd<int>({5}, {1, 2, 3, 4, 5}), arrnd<int>({1}, {6})})));
 
         auto exc = split(arr, 0);
-        EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({2}, {arrnd<int>({1}, {1}), arrnd<int>({5}, {2, 3, 4, 5, 6})})));
+        EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({1}, {arrnd<int>({6}, {1, 2, 3, 4, 5, 6})})));
         exc[0](0) = 100;
         EXPECT_EQ(100, arr[0]);
     }
@@ -1299,8 +1300,8 @@ TEST(arrnd_test, split)
         EXPECT_TRUE(all_equal(split(arr, 2),
             arrnd<arrnd<arrnd<int>>>({1},
                 arrnd<arrnd<int>>({4},
-                    {arrnd<int>({3, 3}, {1, 2, 3, 5, 6, 7, 9, 10, 11}), arrnd<int>({3, 1}, {4, 8, 12}),
-                        arrnd<int>({3, 3}, {13, 14, 15, 17, 18, 19, 21, 22, 23}), arrnd<int>({3, 1}, {16, 20, 24})}))));
+                    {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 2}, {3, 4, 7, 8}),
+                        arrnd<int>({4, 2}, {9, 10, 13, 14, 17, 18, 21, 22}), arrnd<int>({4, 2}, {11, 12, 15, 16, 19, 20, 23, 24})}))));
     }
 
     // 3d
@@ -1309,7 +1310,7 @@ TEST(arrnd_test, split)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        EXPECT_TRUE(all_equal(split(arr, 1),
+        EXPECT_TRUE(all_equal(split(arr, 2),
             arrnd<arrnd<int>>({8},
                 {arrnd<int>({2, 2, 2}, {1, 2, 4, 5, 13, 14, 16, 17}), arrnd<int>({2, 2, 1}, {3, 6, 15, 18}),
                     arrnd<int>({2, 2, 2}, {7, 8, 10, 11, 19, 20, 22, 23}), arrnd<int>({2, 2, 1}, {9, 12, 21, 24}),
