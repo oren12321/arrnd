@@ -1240,12 +1240,15 @@ TEST(arrnd_test, exclude)
 
     // 2d
     {
-        arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<arrnd<int>> arr({1},
+            {arrnd<int>(
+                {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
         EXPECT_TRUE(all_equal(exclude(arr, 2),
-            arrnd<arrnd<int>>({4},
-                {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
-                    arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})})));
+            arrnd<arrnd<arrnd<int>>>({1},
+                arrnd<arrnd<int>>({4},
+                    {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
+                        arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})}))));
     }
 
     // 3d
@@ -1259,6 +1262,59 @@ TEST(arrnd_test, exclude)
                 {arrnd<int>({1, 1, 1}, {1}), arrnd<int>({1, 1, 1}, {3}), arrnd<int>({1, 2, 1}, {7, 10}),
                     arrnd<int>({1, 2, 1}, {9, 12}), arrnd<int>({1, 1, 1}, {25}), arrnd<int>({1, 1, 1}, {27}),
                     arrnd<int>({1, 2, 1}, {31, 34}), arrnd<int>({1, 2, 1}, {33, 36})})));
+    }
+}
+
+TEST(arrnd_test, split)
+{
+    using namespace oc;
+
+    // empty
+    {
+        arrnd<int> arr;
+
+        EXPECT_TRUE(split(arr, 100).empty());
+    }
+
+    // 1d
+    {
+        arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
+
+        EXPECT_TRUE(
+            all_equal(split(arr, 2), arrnd<arrnd<int>>({2}, {arrnd<int>({3}, {1, 2, 3}), arrnd<int>({3}, {4, 5, 6})})));
+        EXPECT_TRUE(all_equal(split(arr, 5), arrnd<arrnd<int>>({1}, {arrnd<int>({6}, {1, 2, 3, 4, 5, 6})})));
+
+        auto exc = split(arr, 0);
+        EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({2}, {arrnd<int>({1}, {1}), arrnd<int>({5}, {2, 3, 4, 5, 6})})));
+        exc[0](0) = 100;
+        EXPECT_EQ(100, arr[0]);
+    }
+
+    // 2d
+    {
+        arrnd<arrnd<int>> arr({1},
+            {arrnd<int>(
+                {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
+
+        EXPECT_TRUE(all_equal(split(arr, 2),
+            arrnd<arrnd<arrnd<int>>>({1},
+                arrnd<arrnd<int>>({4},
+                    {arrnd<int>({3, 3}, {1, 2, 3, 5, 6, 7, 9, 10, 11}), arrnd<int>({3, 1}, {4, 8, 12}),
+                        arrnd<int>({3, 3}, {13, 14, 15, 17, 18, 19, 21, 22, 23}), arrnd<int>({3, 1}, {16, 20, 24})}))));
+    }
+
+    // 3d
+    {
+        oc::arrnd<int> arr({3, 4, 3},
+            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                30, 31, 32, 33, 34, 35, 36});
+
+        EXPECT_TRUE(all_equal(split(arr, 1),
+            arrnd<arrnd<int>>({8},
+                {arrnd<int>({2, 2, 2}, {1, 2, 4, 5, 13, 14, 16, 17}), arrnd<int>({2, 2, 1}, {3, 6, 15, 18}),
+                    arrnd<int>({2, 2, 2}, {7, 8, 10, 11, 19, 20, 22, 23}), arrnd<int>({2, 2, 1}, {9, 12, 21, 24}),
+                    arrnd<int>({1, 2, 2}, {25, 26, 28, 29}), arrnd<int>({1, 2, 1}, {27, 30}),
+                    arrnd<int>({1, 2, 2}, {31, 32, 34, 35}), arrnd<int>({1, 2, 1}, {33, 36})})));
     }
 }
 
