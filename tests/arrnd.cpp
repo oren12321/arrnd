@@ -1221,7 +1221,7 @@ TEST(arrnd_test, exclude)
     {
         arrnd<int> arr;
 
-        EXPECT_TRUE(exclude(arr, {100}).empty());
+        EXPECT_TRUE(exclude(arr, {}, {100}).empty());
     }
 
     // 1d
@@ -1229,10 +1229,10 @@ TEST(arrnd_test, exclude)
         arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
 
         EXPECT_TRUE(all_equal(
-            exclude(arr, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({3}, {4, 5, 6})})));
-        EXPECT_TRUE(all_equal(exclude(arr, {5}), arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {1, 2, 3, 4, 5})})));
+            exclude(arr, {}, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({3}, {4, 5, 6})})));
+        EXPECT_TRUE(all_equal(exclude(arr, {}, {5}), arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {1, 2, 3, 4, 5})})));
 
-        auto exc = exclude(arr, {0});
+        auto exc = exclude(arr, {}, {0});
         EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {2, 3, 4, 5, 6})})));
         exc[0](0) = 100;
         EXPECT_EQ(100, arr[1]);
@@ -1244,7 +1244,7 @@ TEST(arrnd_test, exclude)
             {arrnd<int>(
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {2}),
+        EXPECT_TRUE(all_equal(exclude(arr, {}, {2}),
             arrnd<arrnd<arrnd<int>>>({1},
                 arrnd<arrnd<int>>({4},
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
@@ -1257,7 +1257,7 @@ TEST(arrnd_test, exclude)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {1}),
+        EXPECT_TRUE(all_equal(exclude(arr, {}, {1}),
             arrnd<arrnd<int>>({8},
                 {arrnd<int>({1, 1, 1}, {1}), arrnd<int>({1, 1, 1}, {3}), arrnd<int>({1, 2, 1}, {7, 10}),
                     arrnd<int>({1, 2, 1}, {9, 12}), arrnd<int>({1, 1, 1}, {25}), arrnd<int>({1, 1, 1}, {27}),
@@ -1268,7 +1268,7 @@ TEST(arrnd_test, exclude)
     {
         arrnd<int> arr({12}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {0, 4, 11}),
+        EXPECT_TRUE(all_equal(exclude(arr, {}, {0, 4, 11}),
             arrnd<arrnd<int>>({2}, {arrnd<int>({3}, {2, 3, 4}), arrnd<int>({6}, {6, 7, 8, 9, 10, 11})})));
     }
 }
