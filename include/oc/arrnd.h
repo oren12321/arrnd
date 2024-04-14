@@ -6155,7 +6155,7 @@ namespace details {
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
-                auto exp = arr.expand<0>(arr.header().dims().size() - current_depth, division);
+                auto exp = arr.template expand<0>(arr.header().dims().size() - current_depth, division);
                 typename decltype(exp)::indexer_type exp_gen(exp.header());
 
                 for (; exp_gen; ++exp_gen) {
@@ -9627,7 +9627,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
     {
-        return arr.split<Level>(first_axis, last_axis, division);
+        return arr.template split<Level>(first_axis, last_axis, division);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
     [[nodiscard]] inline constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
@@ -9673,7 +9673,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
-        return arr.split<Level>(first_axis, last_axis, first_ind, last_ind);
+        return arr.template split<Level>(first_axis, last_axis, first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
     [[nodiscard]] inline constexpr auto split(
@@ -9862,7 +9862,7 @@ namespace details {
     [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
-        return arr.exclude<Level>(first_axis, last_axis, first_ind, last_ind);
+        return arr.template exclude<Level>(first_axis, last_axis, first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
     [[nodiscard]] inline constexpr auto exclude(
