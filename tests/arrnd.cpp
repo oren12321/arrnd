@@ -1246,7 +1246,7 @@ TEST(arrnd_test, exclude)
 
         EXPECT_TRUE(all_equal(exclude(arr, {}, {2}),
             arrnd<arrnd<arrnd<int>>>({1},
-                arrnd<arrnd<int>>({4},
+                arrnd<arrnd<int>>({2, 2},
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
                         arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})}))));
     }
@@ -1257,11 +1257,10 @@ TEST(arrnd_test, exclude)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {}, {1}),
-            arrnd<arrnd<int>>({8},
-                {arrnd<int>({1, 1, 1}, {1}), arrnd<int>({1, 1, 1}, {3}), arrnd<int>({1, 2, 1}, {7, 10}),
-                    arrnd<int>({1, 2, 1}, {9, 12}), arrnd<int>({1, 1, 1}, {25}), arrnd<int>({1, 1, 1}, {27}),
-                    arrnd<int>({1, 2, 1}, {31, 34}), arrnd<int>({1, 2, 1}, {33, 36})})));
+        EXPECT_TRUE(all_equal(exclude(arr, {0, 2}, {1}),
+            arrnd<arrnd<int>>({2, 1, 2},
+                {arrnd<int>({1, 4, 1}, {1, 4, 7, 10}), arrnd<int>({1, 4, 1}, {3, 6, 9, 12}),
+                    arrnd<int>({1, 4, 1}, {25, 28, 31, 34}), arrnd<int>({1, 4, 1}, {27, 30, 33, 36})})));
     }
 
     // multiple indices
@@ -1307,7 +1306,7 @@ TEST(arrnd_test, split)
 
         EXPECT_TRUE(all_equal(split(arr, {}, {2}),
             arrnd<arrnd<arrnd<int>>>({1},
-                arrnd<arrnd<int>>({4},
+                arrnd<arrnd<int>>({2, 2},
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 2}, {3, 4, 7, 8}),
                         arrnd<int>({4, 2}, {9, 10, 13, 14, 17, 18, 21, 22}),
                         arrnd<int>({4, 2}, {11, 12, 15, 16, 19, 20, 23, 24})}))));
@@ -1320,7 +1319,7 @@ TEST(arrnd_test, split)
                 30, 31, 32, 33, 34, 35, 36});
 
         EXPECT_TRUE(all_equal(split(arr, {}, {2}),
-            arrnd<arrnd<int>>({8},
+            arrnd<arrnd<int>>({2, 2, 2},
                 {arrnd<int>({2, 2, 2}, {1, 2, 4, 5, 13, 14, 16, 17}), arrnd<int>({2, 2, 1}, {3, 6, 15, 18}),
                     arrnd<int>({2, 2, 2}, {7, 8, 10, 11, 19, 20, 22, 23}), arrnd<int>({2, 2, 1}, {9, 12, 21, 24}),
                     arrnd<int>({1, 2, 2}, {25, 26, 28, 29}), arrnd<int>({1, 2, 1}, {27, 30}),
@@ -1331,25 +1330,23 @@ TEST(arrnd_test, split)
     {
         arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        std::vector<int> axes{};
+        std::vector<int> axes{1};
         int inds[]{0, 2, 3};
 
         EXPECT_TRUE(all_equal(split(arr, axes, inds),
-            arrnd<arrnd<int>>({9},
-                {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {3, 7}), arrnd<int>({2, 1}, {4, 8}),
-                    arrnd<int>({1, 2}, {9, 10}), arrnd<int>({1, 1}, {11}), arrnd<int>({1, 1}, {12}),
-                    arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {15, 19, 23}),
-                    arrnd<int>({3, 1}, {16, 20, 24})})));
+            arrnd<arrnd<int>>({1, 3},
+                {arrnd<int>({6, 2}, {1, 2, 5, 6, 9, 10, 13, 14, 17, 18, 21, 22}),
+                    arrnd<int>({6, 1}, {3, 7, 11, 15, 19, 23}), arrnd<int>({6, 1}, {4, 8, 12, 16, 20, 24})})));
     }
 
     // specific slices division
     {
         arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        EXPECT_TRUE(all_equal(split(arr, {}, 2),
-            arrnd<arrnd<int>>({4},
-                {arrnd<int>({3, 2}, {1, 2, 5, 6, 9, 10}), arrnd<int>({3, 2}, {3, 4, 7, 8, 11, 12}),
-                    arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 2}, {15, 16, 19, 20, 23, 24})})));
+        EXPECT_TRUE(all_equal(split(arr, {0}, 2),
+            arrnd<arrnd<int>>({2, 1},
+                {arrnd<int>({3, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
+                    arrnd<int>({3, 4}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})})));
     }
 }
 

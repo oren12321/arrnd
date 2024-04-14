@@ -1215,12 +1215,12 @@ namespace details {
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr size_type subs2ind(const Cont& subs) const
         {
-            return sub2ind(std::begin(subs), std::end(subs));
+            return subs2ind(std::begin(subs), std::end(subs));
         }
 
         [[nodiscard]] constexpr size_type subs2ind(std::initializer_list<size_type> subs) const
         {
-            return sub2ind(subs.begin(), subs.end());
+            return subs2ind(subs.begin(), subs.end());
         }
 
         constexpr arrnd_header(arrnd_header&& other) = default;
@@ -6059,7 +6059,7 @@ namespace details {
             return pages.template reshape<Level>(
                 pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
-        constexpr auto pages(size_type axis, size_type division = 0,
+        [[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
             bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             return pages<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
@@ -6088,7 +6088,7 @@ namespace details {
         }
         template <std::int64_t Level, signed_integral_type_iterator AxesIt>
             requires(Level == 0)
-        constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
+        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             using split_type = replaced_type<this_type>;
 
@@ -6108,9 +6108,23 @@ namespace details {
                 return division > 0 && division <= d;
             }));
 
-            size_type assumed_num_slices = static_cast<size_type>(std::pow(division, hdr_.dims().size()));
+            // calculate dimensions according to number of slices in each dimension
 
-            split_type slices({assumed_num_slices});
+            typename header_type::storage_type new_dims(hdr_.dims().size());
+            if (std::distance(first_axis, last_axis) == 0) {
+                std::fill(new_dims.begin(), new_dims.end(), division);
+            } else {
+                std::fill(new_dims.begin(), new_dims.end(), 1);
+                std::for_each(first_axis, last_axis, [&](size_type axis) {
+                    *std::next(new_dims.begin(), axis) = division;
+                });
+            }
+
+            // --------------------------------------------------------------------
+
+            //size_type assumed_num_slices = static_cast<size_type>(std::pow(division, hdr_.dims().size()));
+
+            split_type slices(new_dims);
             typename split_type::indexer_type slc_gen(slices.header());
 
             size_type actual_num_slices = 0;
@@ -6151,15 +6165,15 @@ namespace details {
 
             split_impl(*this, hdr_.dims().size());
 
-            assert(assumed_num_slices >= actual_num_slices);
+            assert(/*assumed_num_slices >= actual_num_slices*/ actual_num_slices == slices.header().numel());
 
-            if (assumed_num_slices > actual_num_slices) {
-                return slices.template resize<Level>({actual_num_slices});
-            }
+            //if (assumed_num_slices > actual_num_slices) {
+            //return slices.template resize<Level>(new_dims/*{actual_num_slices}*/);
+            //}
             return slices;
         }
         template <signed_integral_type_iterator AxesIt>
-        constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
+        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             return split<this_type::depth>(first_axis, last_axis, division);
         }
@@ -6216,7 +6230,7 @@ namespace details {
         }
         template <std::int64_t Level, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
             requires(Level == 0)
-        constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             using split_type = replaced_type<this_type>;
 
@@ -6235,10 +6249,32 @@ namespace details {
                 return axis >= 0 && axis < hdr_.dims().size();
             }));
 
-            size_type assumed_num_slices
-                = static_cast<size_type>(std::pow(std::distance(first_ind, last_ind) + 1, hdr_.dims().size()));
+            // calculate dimensions according to number of slices in each dimension
 
-            split_type slices({assumed_num_slices});
+            typename header_type::storage_type new_dims(hdr_.dims().size());
+            std::fill(new_dims.begin(), new_dims.end(), 1);
+            auto calc_num_slices_at_dim = [&](auto indf, auto indl) {
+                if (*indf == 0) {
+                    return std::distance(indf, indl);
+                }
+                return std::distance(indf, indl) + 1;
+            };
+            if (std::distance(first_axis, last_axis) == 0) {
+                std::for_each(new_dims.begin(), new_dims.end(), [&](size_type& d) {
+                    d = calc_num_slices_at_dim(first_ind, last_ind);
+                });
+            } else {
+                std::for_each(first_axis, last_axis, [&](size_type axis) {
+                    *std::next(new_dims.begin(), axis) = calc_num_slices_at_dim(first_ind, last_ind);
+                });
+            }
+
+            // --------------------------------------------------------------------
+
+            /*size_type assumed_num_slices
+                = static_cast<size_type>(std::pow(std::distance(first_ind, last_ind) + 1, hdr_.dims().size()));*/
+
+            split_type slices(new_dims);
             typename split_type::indexer_type slc_gen(slices.header());
 
             size_type actual_num_slices = 0;
@@ -6295,15 +6331,15 @@ namespace details {
 
             split_impl(*this, hdr_.dims().size());
 
-            assert(assumed_num_slices >= actual_num_slices);
+            assert(/*assumed_num_slices >= actual_num_slices*/ actual_num_slices == slices.header().numel());
 
-            if (assumed_num_slices > actual_num_slices) {
-                return slices.template resize<Level>({actual_num_slices});
-            }
+            //if (assumed_num_slices > actual_num_slices) {
+            //return slices.template resize<Level>(new_dims/*{actual_num_slices}*/);
+            //}
             return slices;
         }
         template <signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-        constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             return split<this_type::depth>(first_axis, last_axis, first_ind, last_ind);
         }
@@ -6341,7 +6377,7 @@ namespace details {
         }
 
         template <std::int64_t Level, signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-        constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split<Level>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6361,7 +6397,7 @@ namespace details {
             return split<Level>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
         template <signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-        constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split<this_type::depth>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6382,7 +6418,8 @@ namespace details {
         }
 
         template <std::int64_t Level, signed_integral_type_iterator IndsIt>
-        constexpr auto split(std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(
+            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split<Level>(axes.begin(), axes.end(), first_ind, last_ind);
         }
@@ -6403,7 +6440,8 @@ namespace details {
             return split<Level>(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
         }
         template <signed_integral_type_iterator IndsIt>
-        constexpr auto split(std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(
+            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split<this_type::depth>(axes.begin(), axes.end(), first_ind, last_ind);
         }
@@ -6424,7 +6462,7 @@ namespace details {
         }
 
         template <std::int64_t Level, std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-        constexpr auto split(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
         {
             return split<Level>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6444,7 +6482,7 @@ namespace details {
             return split<Level>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
         template <std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-        constexpr auto split(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto split(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
         {
             return split<this_type::depth>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6488,7 +6526,8 @@ namespace details {
         }
         template <std::int64_t Level, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
             requires(Level == 0)
-        constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(
+            AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             using exclude_type = replaced_type<this_type>;
 
@@ -6507,10 +6546,47 @@ namespace details {
                 return axis >= 0 && axis < hdr_.dims().size();
             }));
 
-            size_type assumed_num_slices
-                = static_cast<size_type>(std::pow(std::distance(first_ind, last_ind) + 1, hdr_.dims().size()));
+            // calculate dimensions according to number of slices in each dimension
 
-            exclude_type slices({assumed_num_slices});
+            typename header_type::storage_type new_dims(hdr_.dims().size());
+            std::fill(new_dims.begin(), new_dims.end(), 1);
+            auto calc_num_slices_at_dim = [&](auto indf, auto indl, size_type dim) {
+                size_type num_slices = 0;
+                size_type prev = *indf;
+                if (prev > 0) {
+                    ++num_slices;
+                }
+                ++indf;
+                size_type current_ind = prev;
+                for (auto it = indf; it != indl; ++it) {
+                    current_ind = *it;
+                    if (prev < current_ind + 1) {
+                        ++num_slices;
+                    }
+                    prev = current_ind;
+                }
+                if (current_ind + 1 < dim) {
+                    ++num_slices;
+                }
+                return num_slices;
+            };
+            if (std::distance(first_axis, last_axis) == 0) {
+                std::transform(hdr_.dims().cbegin(), hdr_.dims().cend(), new_dims.begin(), [&](size_type dim) {
+                    return calc_num_slices_at_dim(first_ind, last_ind, dim);
+                });
+            } else {
+                std::for_each(first_axis, last_axis, [&](size_type axis) {
+                    *std::next(new_dims.begin(), axis)
+                        = calc_num_slices_at_dim(first_ind, last_ind, *std::next(hdr_.dims().cbegin(), axis));
+                });
+            }
+
+            // --------------------------------------------------------------------
+
+            /*size_type assumed_num_slices
+                = static_cast<size_type>(std::pow(std::distance(first_ind, last_ind) + 1, hdr_.dims().size()));*/
+
+            exclude_type slices(new_dims);
             typename exclude_type::indexer_type slc_gen(slices.header());
 
             size_type actual_num_slices = 0;
@@ -6529,6 +6605,7 @@ namespace details {
                     slices[*slc_gen] = arr;
                     ++slc_gen;
                     ++actual_num_slices;
+
                     return;
                 }
 
@@ -6567,15 +6644,16 @@ namespace details {
 
             exclude_impl(*this, hdr_.dims().size());
 
-            assert(assumed_num_slices >= actual_num_slices);
+            assert(/*assumed_num_slices >= actual_num_slices*/ actual_num_slices == slices.header().numel());
 
-            if (assumed_num_slices > actual_num_slices) {
-                return slices.template resize<Level>({actual_num_slices});
-            }
+            //if (assumed_num_slices > actual_num_slices) {
+            //return slices.template resize<Level>(new_dims/*{actual_num_slices}*/);
+            //}
             return slices;
         }
         template <signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(
+            AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<this_type::depth>(first_axis, last_axis, first_ind, last_ind);
         }
@@ -6613,7 +6691,7 @@ namespace details {
         }
 
         template <std::int64_t Level, signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<Level>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6633,7 +6711,7 @@ namespace details {
             return exclude<Level>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
         template <signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<this_type::depth>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6654,7 +6732,8 @@ namespace details {
         }
 
         template <std::int64_t Level, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(
+            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<Level>(axes.begin(), axes.end(), first_ind, last_ind);
         }
@@ -6675,7 +6754,8 @@ namespace details {
             return exclude<Level>(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
         }
         template <signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(
+            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<this_type::depth>(axes.begin(), axes.end(), first_ind, last_ind);
         }
@@ -6696,7 +6776,7 @@ namespace details {
         }
 
         template <std::int64_t Level, std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<Level>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -6716,7 +6796,7 @@ namespace details {
             return exclude<Level>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
         template <std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-        constexpr auto exclude(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
+        [[nodiscard]] constexpr auto exclude(const V (&axes)[N], IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude<this_type::depth>(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
@@ -9544,184 +9624,188 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
     {
         return arr.split<Level>(first_axis, last_axis, division);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), division);
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
     {
         return split<Level>(arr, axes.begin(), axes.end(), division);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), division);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
     {
         return split<ArCo::depth>(arr, first_axis, last_axis, division);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), division);
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
     {
         return split<ArCo::depth>(arr, axes.begin(), axes.end(), division);
     }
     template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), division);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
         signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
         return arr.split<Level>(first_axis, last_axis, first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
         return split<ArCo::depth>(arr, first_axis, last_axis, first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
     {
         return split<Level>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<Level>(arr, first_axis, last_axis, inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
     {
         return split<Level>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
     {
         return split<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<ArCo::depth>(arr, first_axis, last_axis, inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
     {
         return split<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
         signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
     {
         return split<Level>(arr, axes.begin(), axes.end(), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
     {
         return split<Level>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
         std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<Level>(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
     {
         return split<Level>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
     {
         return split<ArCo::depth>(arr, axes.begin(), axes.end(), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
     {
         return split<ArCo::depth>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
         std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<ArCo::depth>(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
     {
         return split<ArCo::depth>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
@@ -9729,186 +9813,192 @@ namespace details {
 
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N,
         signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const V (&axes)[N], const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], const Cont& inds)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, const V (&axes)[N], std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
     {
         return split<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-    constexpr auto split(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const V (&axes)[N], const Cont& inds)
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], const Cont& inds)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N>
-    [[nodiscard]] constexpr auto split(
+    [[nodiscard]] inline constexpr auto split(
         const ArCo& arr, const V (&axes)[N], std::initializer_list<typename ArCo::size_type> inds)
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto split(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
     {
         return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
         signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
         return arr.exclude<Level>(first_axis, last_axis, first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<ArCo::depth>(arr, first_axis, last_axis, first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
     {
         return exclude<Level>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<Level>(arr, first_axis, last_axis, inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
     {
         return exclude<Level>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
     {
         return exclude<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<ArCo::depth>(arr, first_axis, last_axis, inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
     {
         return exclude<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
         signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(
+        const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<Level>(arr, axes.begin(), axes.end(), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
     {
         return exclude<Level>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
         std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<Level>(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
     {
         return exclude<Level>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<ArCo::depth>(arr, axes.begin(), axes.end(), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
     {
         return exclude<ArCo::depth>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
         std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<ArCo::depth>(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
     {
         return exclude<ArCo::depth>(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
@@ -9916,66 +10006,66 @@ namespace details {
 
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N,
         signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N,
         signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const Cont& inds)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, const V (&axes)[N], std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral V, std::int64_t N, std::integral U,
         std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
     {
         return exclude<Level>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, signed_integral_type_iterator IndsIt>
-    constexpr auto exclude(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], IndsIt first_ind, IndsIt last_ind)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, signed_integral_type_iterable Cont>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const Cont& inds)
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const Cont& inds)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N>
-    [[nodiscard]] constexpr auto exclude(
+    [[nodiscard]] inline constexpr auto exclude(
         const ArCo& arr, const V (&axes)[N], std::initializer_list<typename ArCo::size_type> inds)
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
     }
     template <arrnd_compliant ArCo, std::integral V, std::int64_t N, std::integral U, std::int64_t M>
-    [[nodiscard]] constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
+    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const V (&axes)[N], const U (&inds)[M])
     {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
-    [[nodiscard]] constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
+    [[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
     {
         return arr.template movop<Level>(axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <arrnd_compliant ArCo, typename Func, typename... Args>
-    [[nodiscard]] constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
+    [[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
     {
         return movop<ArCo::depth>(arr, axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
-    [[nodiscard]] constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
+    [[nodiscard]] inline constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc,
         Args&&... args)
     {
@@ -9984,7 +10074,7 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
-    [[nodiscard]] constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
+    [[nodiscard]] inline constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc,
         Args&&... args)
     {
