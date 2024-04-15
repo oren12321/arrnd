@@ -1742,6 +1742,21 @@ TEST(arrnd_test, det)
     EXPECT_TRUE(all_equal(det(arr), arrnd<arrnd<int>>({2}, {arrnd<int>({2, 1}, {-240, -16}), arrnd<int>({1}, {49})})));
 }
 
+TEST(arrnd_test, inverse)
+{
+    using namespace oc;
+
+    arrnd<arrnd<double>> arr({3},
+        {arrnd<double>({2, 2, 2}, {1, 2, 5, 6, 9, 10, 13, 14}), arrnd<double>({2, 2}, {1, 0, 0, 1}),
+            arrnd<double>({3, 3}, {3, 0, 2, 2, 0, -2, 0, 1, 1})});
+
+    EXPECT_TRUE(all_close(inverse(arr),
+        arrnd<arrnd<double>>({3},
+            {arrnd<double>({2, 2, 2}, {-1.5, 0.5, 1.25, -0.25, -3.5, 2.5, 3.25, -2.25}),
+                arrnd<double>({2, 2}, {1, 0, 0, 1}),
+                arrnd<double>({3, 3}, {0.2, 0.2, 0, -0.2, 0.3, 1, 0.2, -0.3, 0})})));
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;

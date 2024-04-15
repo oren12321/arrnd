@@ -5442,6 +5442,55 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto inverse() const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.inverse();
+            });
+        }
+
+        [[nodiscard]] constexpr auto inverse() const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<this_type(this_type)> inverse_impl;
+
+            inverse_impl = [&](this_type arr) {
+                //std::cout << "calc:\n" << arr << "\n\n";
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
+
+                value_type d = arr.det()(0);
+                assert(d != value_type{0});
+                size_type n = arr.header().dims().front();
+
+                this_type res(arr.header().dims());
+
+                for (size_type i = 0; i < n; ++i) {
+                    value_type sign = (i + 1) % 2 == 0 ? value_type{-1} : value_type{1};
+                    for (size_type j = 0; j < n; ++j) {
+                        /*std::cout << "det for:\n"
+                                  << exclude({0}, {i}).exclude({1}, {j}) << "\n\n";*/
+                        res[{i, j}]
+                            = sign * arr.exclude({0}, {i}).exclude({1}, {j}).template merge<0>().merge().det()(0);
+                        sign *= value_type{-1};
+                    }
+                }
+
+                return (value_type{1} / d) * res.transpose({1, 0});
+            };
+
+            if (hdr_.is_matrix()) {
+                return inverse_impl(*this);
+            }
+
+            return pageop<0>(2, [inverse_impl](auto page) {
+                return inverse_impl(page);
+            });
+        }
+
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
@@ -8339,6 +8388,12 @@ namespace details {
         return arr.det();
     }
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto inverse(const ArCo& arr)
+    {
+        return arr.inverse();
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     {
@@ -10739,6 +10794,7 @@ using details::sum;
 using details::prod;
 using details::mtimes;
 using details::det;
+using details::inverse;
 using details::filter;
 using details::find;
 using details::transpose;
