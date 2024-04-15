@@ -1213,7 +1213,7 @@ TEST(arrnd_test, access_slice_and_track_dimensions)
         arr[{interval<>{1, 3}, interval<>{0, 2}, interval<>{0, 2}}]));
 }
 
-TEST(arrnd_test, exclude)
+TEST(arrnd_test, exclude_and_merge)
 {
     using namespace oc;
 
@@ -1222,6 +1222,8 @@ TEST(arrnd_test, exclude)
         arrnd<int> arr;
 
         EXPECT_TRUE(exclude(arr, {}, {100}).empty());
+
+        EXPECT_TRUE(merge(exclude(arr, {}, {100})).empty());
     }
 
     // 1d
@@ -1244,11 +1246,16 @@ TEST(arrnd_test, exclude)
             {arrnd<int>(
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {}, {2}),
+        auto exc = exclude(arr, {}, {2});
+
+        EXPECT_TRUE(all_equal(exc,
             arrnd<arrnd<arrnd<int>>>({1},
                 arrnd<arrnd<int>>({2, 2},
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
                         arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})}))));
+
+        EXPECT_TRUE(all_equal(merge(exc),
+            arrnd<arrnd<int>>({1}, {arrnd<int>({5, 3}, {1, 2, 4, 5, 6, 8, 13, 14, 16, 17, 18, 20, 21, 22, 24})})));
     }
 
     // 3d
@@ -1257,10 +1264,15 @@ TEST(arrnd_test, exclude)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {0, 2}, {1}),
+        auto exc = exclude(arr, {0, 2}, {1});
+
+        EXPECT_TRUE(all_equal(exc,
             arrnd<arrnd<int>>({2, 1, 2},
                 {arrnd<int>({1, 4, 1}, {1, 4, 7, 10}), arrnd<int>({1, 4, 1}, {3, 6, 9, 12}),
                     arrnd<int>({1, 4, 1}, {25, 28, 31, 34}), arrnd<int>({1, 4, 1}, {27, 30, 33, 36})})));
+
+        EXPECT_TRUE(
+            all_equal(merge(exc), arrnd<int>({2, 4, 2}, {1, 3, 4, 6, 7, 9, 10, 12, 25, 27, 28, 30, 31, 33, 34, 36})));
     }
 
     // multiple indices

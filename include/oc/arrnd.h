@@ -4211,10 +4211,17 @@ namespace details {
             return append<Level>(std::get<0>(arr_axis_tuple), std::get<1>(arr_axis_tuple))
                 .template append<ArCoAxisTuples...>(std::forward<ArCoAxisTuples>(others)...);
         }
-        template <typename... ArCosOrTuples>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(ArCosOrTuples&&... arrs_or_tuples) const
+        template <arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, ArCos&&... others) const
         {
-            return append<this_type::depth, ArCosOrTuples...>(std::forward<ArCosOrTuples>(arrs_or_tuples)...);
+            return append<this_type::depth, ArCo, ArCos...>(arr, std::forward<ArCos>(others)...);
+        }
+        template <template_type<std::tuple> Tuple, typename... ArCoAxisTuples>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(
+            Tuple&& arr_axis_tuple, ArCoAxisTuples&&... others) const
+        {
+            return append<this_type::depth, Tuple, ArCoAxisTuples...>(
+                std::forward<Tuple>(arr_axis_tuple), std::forward<ArCoAxisTuples>(others)...);
         }
 
         template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
@@ -6814,6 +6821,53 @@ namespace details {
         [[nodiscard]] constexpr auto exclude(const V (&axes)[N], const U (&inds)[M]) const
         {
             return exclude<this_type::depth>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
+        }
+
+        template <std::int64_t Level>
+            requires(Level > 0 && this_type::depth > 1)
+        [[nodiscard]] constexpr value_type merge() const
+        {
+            if (empty()) {
+                return value_type();
+            }
+
+            value_type res(hdr_.dims());
+
+            indexer_type gen(hdr_);
+            typename value_type::indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template merge<Level - 1>();
+            }
+
+            return res;
+        }
+        template <std::int64_t Level>
+            requires(Level == 0 && !this_type::is_flat)
+        [[nodiscard]] constexpr value_type merge() const
+        {
+            if (empty()) {
+                return value_type();
+            }
+
+            this_type res = reduce<Level>(hdr_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
+                return a.template append<Level>(b, hdr_.dims().size() - 1);
+            });
+
+            for (size_type axis = hdr_.dims().size() - 2; axis >= 0; --axis) {
+                res = res.template reduce<Level>(axis, [axis](const value_type& a, const value_type& b) {
+                    return a.template append<Level>(b, axis);
+                });
+            }
+
+            assert(res.header().numel() == 1);
+
+            return res(0);
+        }
+        [[nodiscard]] constexpr auto merge() const
+            requires(!this_type::is_flat)
+        {
+            return merge<this_type::depth - 1>();
         }
 
         template <std::int64_t Level>
@@ -10050,6 +10104,19 @@ namespace details {
         return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo>
+        requires(!ArCo::is_flat)
+    [[nodiscard]] inline constexpr auto merge(const ArCo& arr)
+    {
+        return arr.template merge<Level>();
+    }
+    template <arrnd_compliant ArCo>
+        requires(!ArCo::is_flat)
+    [[nodiscard]] inline constexpr auto merge(const ArCo& arr)
+    {
+        return merge<ArCo::depth - 1>(arr);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
         interval<typename ArCo::size_type> window, bool bounded, Func&& func, Args&&... args)
@@ -10587,7 +10654,9 @@ using details::empty;
 using details::expand;
 using details::collapse;
 using details::pages;
+using details::split;
 using details::exclude;
+using details::merge;
 using details::movop;
 using details::cumop;
 using details::pageop;
