@@ -4294,7 +4294,7 @@ namespace details {
             }
 
             if (arr.empty()) {
-                return *this;
+                return clone(); //*this;
             }
 
             header_type new_header(hdr_.subheader(arr.header().dims()[axis], axis));
@@ -5391,6 +5391,56 @@ namespace details {
         //{
         //    return mtimes<this_type::depth>(arr);
         //}
+
+        [[nodiscard]] constexpr auto det() const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.det();
+            });
+        }
+
+        [[nodiscard]] constexpr auto det() const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<value_type(this_type)> det_impl;
+
+            det_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
+                size_type n = arr.header().dims().front();
+
+                if (n == 1) {
+                    return arr(0);
+                }
+
+                if (n == 2) {
+                    return arr(0) * arr(3) - arr(1) * arr(2);
+                }
+
+                value_type sign{1};
+                value_type d{0};
+
+                for (size_type j = 0; j < n; ++j) {
+                    value_type p{arr[{0, j}]};
+                    if (p != value_type{0}) {
+                        d += sign * p * det_impl(arr.exclude({0}, {0}).exclude({1}, {j}).template merge<0>().merge());
+                    }
+                    sign *= value_type{-1};
+                }
+                return d;
+            };
+
+            if (hdr_.is_matrix()) {
+                return this_type({1}, det_impl(*this));
+            }
+
+            return pageop<0>(2, [det_impl](auto page) {
+                return det_impl(page);
+            });
+        }
 
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
@@ -8283,6 +8333,12 @@ namespace details {
     //    return mtimes<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
     //}
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto det(const ArCo& arr)
+    {
+        return arr.det();
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     {
@@ -10682,6 +10738,7 @@ using details::any;
 using details::sum;
 using details::prod;
 using details::mtimes;
+using details::det;
 using details::filter;
 using details::find;
 using details::transpose;
