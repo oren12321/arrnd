@@ -1014,40 +1014,37 @@ namespace details {
             return subheader(std::begin(ranges), std::end(ranges));
         }
 
-        [[nodiscard]] constexpr arrnd_header subheader(
-            interval<size_type> range, bool track_current_dimension_depth = false) const
+        [[nodiscard]] constexpr arrnd_header subheader(interval<size_type> range) const
         {
-            if (!track_current_dimension_depth) {
-                std::initializer_list<interval<size_type>> ranges = {range.align(dims_.front())};
+            std::initializer_list<interval<size_type>> ranges = {range.align(dims_.front())};
 
-                auto res = subheader(ranges.begin(), ranges.end());
-                if (res.empty() || res.dims_.front() != 1) {
-                    return res;
-                }
-
-                res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
-                res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
-                res.last_index_ = res.offset_
-                    + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
-                        std::plus<>{}, [](auto d, auto s) {
-                            return (d - 1) * s;
-                        });
-                res.is_slice_ = true;
-
-                return res;
-            } else {
-                assert(current_dims_depth_ < dims_.size());
-
-                typename storage_type::template replaced_type<interval<size_type>> ranges(current_dims_depth_ + 1);
-
-                std::fill(ranges.begin(), ranges.end(), interval<size_type>::full());
-                ranges[ranges.size() - 1] = range.align(*std::next(dims_.cbegin(), current_dims_depth_));
-
-                auto res = subheader(ranges.begin(), ranges.end());
-                res.current_dims_depth_ = current_dims_depth_ + 1;
-
+            auto res = subheader(ranges.begin(), ranges.end());
+            if (res.empty() || res.dims_.front() != 1) {
                 return res;
             }
+
+            res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
+            res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
+            res.last_index_ = res.offset_
+                + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
+                    std::plus<>{}, [](auto d, auto s) {
+                        return (d - 1) * s;
+                    });
+            res.is_slice_ = true;
+
+            return res;
+        }
+
+        [[nodiscard]] constexpr arrnd_header subheader(interval<size_type> range, size_type axis) const
+        {
+            assert(axis < dims_.size());
+
+            typename storage_type::template replaced_type<interval<size_type>> ranges(axis + 1);
+
+            std::fill(ranges.begin(), ranges.end(), interval<size_type>::full());
+            ranges[ranges.size() - 1] = range.align(*std::next(dims_.cbegin(), axis));
+
+            return subheader(ranges.begin(), ranges.end());
         }
 
         [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
@@ -1308,8 +1305,6 @@ namespace details {
         size_type offset_{0};
         size_type last_index_{0};
         bool is_slice_{false};
-
-        size_type current_dims_depth_ = 0;
     };
 
     template <arrnd_header_compliant ArHdrCo>
@@ -3662,19 +3657,19 @@ namespace details {
             return slice;
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range, size_type axis) const&
         {
             this_type slice{};
-            slice.hdr_ = hdr_.subheader(range, true);
+            slice.hdr_ = hdr_.subheader(range, axis);
             slice.buffsp_ = buffsp_;
             slice.is_creator_valid_ = original_valid_creator_;
             slice.creator_ = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval<size_type> range, size_type axis) const&&
         {
             this_type slice{};
-            slice.hdr_ = hdr_.subheader(range, true);
+            slice.hdr_ = hdr_.subheader(range, axis);
             slice.buffsp_ = buffsp_;
             return slice;
         }
@@ -6155,7 +6150,8 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(interval<size_type>::full()), current_depth - 1);
+                    split_impl(arr(interval<size_type>::full(), arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                     return;
                 }
 
@@ -6305,7 +6301,8 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(interval<size_type>::full()), current_depth - 1);
+                    split_impl(arr(interval<size_type>::full(), arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                     return;
                 }
 
@@ -6321,18 +6318,23 @@ namespace details {
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    split_impl(arr(interval<size_type>{0, prev_ind}), current_depth - 1);
+                    split_impl(arr(interval<size_type>{0, prev_ind}, arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind < current_ind) {
-                        split_impl(arr(interval<size_type>{prev_ind, current_ind}), current_depth - 1);
+                        split_impl(
+                            arr(interval<size_type>{prev_ind, current_ind}, arr.header().dims().size() - current_depth),
+                            current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind < current_dim) {
-                    split_impl(arr(interval<size_type>{current_ind, current_dim}), current_depth - 1);
+                    split_impl(
+                        arr(interval<size_type>{current_ind, current_dim}, arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                 }
             };
 
@@ -6618,7 +6620,8 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    exclude_impl(arr(interval<size_type>::full()), current_depth - 1);
+                    exclude_impl(arr(interval<size_type>::full(), arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                     return;
                 }
 
@@ -6634,18 +6637,23 @@ namespace details {
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    exclude_impl(arr(interval<size_type>{0, prev_ind}), current_depth - 1);
+                    exclude_impl(arr(interval<size_type>{0, prev_ind}, arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind + 1 < current_ind) {
-                        exclude_impl(arr(interval<size_type>{prev_ind + 1, current_ind}), current_depth - 1);
+                        exclude_impl(arr(interval<size_type>{prev_ind + 1, current_ind},
+                                         arr.header().dims().size() - current_depth),
+                            current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind + 1 < current_dim) {
-                    exclude_impl(arr(interval<size_type>{current_ind + 1, current_dim}), current_depth - 1);
+                    exclude_impl(arr(interval<size_type>{current_ind + 1, current_dim},
+                                     arr.header().dims().size() - current_depth),
+                        current_depth - 1);
                 }
             };
 

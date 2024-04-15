@@ -1206,7 +1206,7 @@ TEST(arrnd_test, access_slice_and_track_dimensions)
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
             31, 32, 33, 34, 35, 36});
 
-    EXPECT_TRUE(all_equal(arr(interval<>{1, 3})(interval<>{0, 2})(interval<>{0, 2}),
+    EXPECT_TRUE(all_equal(arr(interval<>{1, 3}, 0)(interval<>{0, 2}, 1)(interval<>{0, 2}, 2),
         arr[{interval<>{1, 3}, interval<>{0, 2}, interval<>{0, 2}}]));
 
     EXPECT_FALSE(all_equal(arr[interval<>{1, 3}][interval<>{0, 2}][interval<>{0, 2}],
