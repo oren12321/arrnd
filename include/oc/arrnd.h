@@ -5536,6 +5536,62 @@ namespace details {
         //    });
         //}
 
+        [[nodiscard]] constexpr auto cholesky() const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.cholesky();
+            });
+        }
+
+        [[nodiscard]] constexpr auto cholesky() const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<this_type(this_type)> cholesky_impl;
+
+            cholesky_impl = [&](this_type arr) {
+                //std::cout << "calc:\n" << arr << "\n\n";
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
+
+                size_type n = arr.header().dims().front();
+
+                this_type res(arr.header().dims(), value_type{0});
+
+                using std::sqrt;
+
+                for (size_type i = 0; i < n; ++i) {
+                    for (size_type j = 0; j <= i; ++j) {
+                        value_type sum{0};
+
+                        if (j == i) {
+                            for (size_type k = 0; k < j; ++k) {
+                                sum += res[{j, k}] * res[{j, k}];
+                            }
+                            res[{j, j}] = sqrt(arr[{j, j}] - sum);
+                        } else {
+                            for (size_type k = 0; k < j; ++k) {
+                                sum += res[{i, k}] * res[{j, k}];
+                            }
+                            res[{i, j}] = (arr[{i, j}] - sum) / res[{j, j}];
+                        }
+                    }
+                }
+
+                return res;
+            };
+
+            if (hdr_.is_matrix()) {
+                return cholesky_impl(*this);
+            }
+
+            return pageop<0>(2, [cholesky_impl](auto page) {
+                return cholesky_impl(page);
+            });
+        }
+
         template <arrnd_compliant ArCo>
             requires(same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
         [[nodiscard]] constexpr auto solve(const ArCo& b) const
@@ -8245,6 +8301,14 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto conj() const
+        {
+            return transform([](const auto& a) {
+                using std::conj;
+                return conj(a);
+            });
+        }
+
     private:
         header_type hdr_{};
         std::shared_ptr<storage_type> buffsp_{nullptr};
@@ -8490,6 +8554,12 @@ namespace details {
     [[nodiscard]] inline constexpr auto inverse(const ArCo& arr)
     {
         return arr.inverse();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
+    {
+        return arr.cholesky();
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -10899,6 +10969,7 @@ using details::prod;
 using details::mtimes;
 using details::det;
 using details::inverse;
+using details::cholesky;
 using details::solve;
 using details::filter;
 using details::find;

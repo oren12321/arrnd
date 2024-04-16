@@ -1772,6 +1772,16 @@ TEST(arrnd_test, solve)
     EXPECT_TRUE(all_close(solve(arr, b), x));
 }
 
+TEST(arrnd_test, cholesky)
+{
+    using namespace oc;
+
+    arrnd<double> arr({3, 3}, {4, 12, -16, 12, 37, -43, -16, -43, 98});
+    arrnd<double> l({3, 3}, {2, 0, 0, 6, 1, 0, -8, 5, 3});
+
+    EXPECT_TRUE(all_close(cholesky(arr), l));
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
