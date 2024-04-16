@@ -1782,6 +1782,21 @@ TEST(arrnd_test, cholesky)
     EXPECT_TRUE(all_close(cholesky(arr), l));
 }
 
+TEST(arrnd_test, lu)
+{
+    using namespace oc;
+
+    arrnd<double> arr({3, 3}, {2, -1, -2, -4, 6, 3, -4, -2, 8});
+
+    auto res = lu(arr)(0);
+
+    arrnd<double> l({3, 3}, {1, 0, 0, -2, 1, 0, -2, -1, 1});
+    arrnd<double> u({3, 3}, {2, -1, -2, 0, 4, -1, 0, 0, 3});
+
+    EXPECT_TRUE(all_close(std::get<0>(res), l));
+    EXPECT_TRUE(all_close(std::get<1>(res), u));
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;

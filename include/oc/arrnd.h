@@ -5491,50 +5491,67 @@ namespace details {
             });
         }
 
-        //[[nodiscard]] constexpr auto qrdecomp() const requires(!this_type::is_flat)
-        //{
-        //    return transform<0>([](const auto& a) {
-        //        return a.qrdecomp();
-        //    });
-        //}
+        [[nodiscard]] constexpr auto lu() const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.lu();
+            });
+        }
 
-        //[[nodiscard]] constexpr auto qrdecomp() const requires(this_type::is_flat)
-        //{
-        //    assert(hdr_.dims().size() >= 2);
+        [[nodiscard]] constexpr auto lu() const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
 
-        //    std::function<std::tuple<this_type, this_type>(this_type)> qrdecomp_impl;
+            std::function<std::tuple<this_type, this_type>(this_type)> lu_impl;
 
-        //    qrdecomp_impl = [&](this_type arr) {
-        //        assert(arr.header().is_matrix());
+            lu_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
 
-        //        value_type d = arr.det()(0);
-        //        assert(d != value_type{0});
-        //        size_type n = arr.header().dims().front();
+                this_type l(arr.header().dims(), value_type{0});
+                this_type u(arr.header().dims(), value_type{0});
 
-        //        this_type res(arr.header().dims());
+                size_type n = arr.header().dims().front();
 
-        //        for (size_type i = 0; i < n; ++i) {
-        //            value_type sign = (i + 1) % 2 == 0 ? value_type{-1} : value_type{1};
-        //            for (size_type j = 0; j < n; ++j) {
-        //                /*std::cout << "det for:\n"
-        //                          << exclude({0}, {i}).exclude({1}, {j}) << "\n\n";*/
-        //                res[{i, j}]
-        //                    = sign * arr.exclude({0}, {i}).exclude({1}, {j}).template merge<0>().merge().det()(0);
-        //                sign *= value_type{-1};
-        //            }
-        //        }
+                for (size_type i = 0; i < n; ++i) {
+                    // l
+                    for (size_type k = i; k < n; ++k) {
+                        value_type sum{0};
+                        for (size_type j = 0; j < i; ++j) {
+                            sum += l[{i, j}] * u[{j, k}];
+                        }
 
-        //        return (value_type{1} / d) * res.transpose({1, 0});
-        //    };
+                        u[{i, k}] = arr[{i, k}] - sum;
+                    }
 
-        //    if (hdr_.is_matrix()) {
-        //        return qrdecomp_impl(*this);
-        //    }
+                    // u
+                    for (size_type k = i; k < n; ++k) {
+                        if (i == k) {
+                            l[{i, i}] = value_type{1};
+                        } else {
+                            value_type sum{0};
+                            for (size_type j = 0; j < i; ++j) {
+                                sum += l[{k, j}] * u[{j, i}];
+                            }
 
-        //    return pageop<0>(2, [qrdecomp_impl](auto page) {
-        //        return qrdecomp_impl(page);
-        //    });
-        //}
+                            l[{k, i}] = (arr[{k, i}] - sum) / u[{i, i}];
+                        }
+                    }
+                }
+
+                return std::make_tuple(l, u);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, lu_impl(*this));
+            }
+
+            return pageop<0>(2, [lu_impl](auto page) {
+                return lu_impl(page);
+            });
+        }
 
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
@@ -8562,6 +8579,12 @@ namespace details {
         return arr.cholesky();
     }
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
+    {
+        return arr.lu();
+    }
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
     {
@@ -10970,6 +10993,7 @@ using details::mtimes;
 using details::det;
 using details::inverse;
 using details::cholesky;
+using details::lu;
 using details::solve;
 using details::filter;
 using details::find;
