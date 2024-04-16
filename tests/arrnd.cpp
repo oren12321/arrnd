@@ -1797,6 +1797,36 @@ TEST(arrnd_test, lu)
     EXPECT_TRUE(all_close(std::get<1>(res), u));
 }
 
+TEST(arrnd_test, qr)
+{
+    using namespace oc;
+
+    {
+        arrnd<double> arr({4, 3}, {-1, -1, 1, 1, 3, 3, -1, -1, 5, 1, 3, 7});
+
+        auto res = qr(arr)(0);
+
+        arrnd<double> q({4, 3}, {-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5});
+        arrnd<double> r({3, 3}, {2, 4, 2, 0, 2, 8, 0, 0, 4});
+
+        EXPECT_TRUE(all_close(std::get<0>(res), q));
+        EXPECT_TRUE(all_close(std::get<1>(res), r));
+    }
+
+    {
+        arrnd<double> arr({3, 3}, {3, 2, 4, 2, 0, 2, 4, 2, 3});
+
+        auto res = qr(arr)(0);
+
+        arrnd<double> q(
+            {3, 3}, {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667});
+        arrnd<double> r({3, 3}, {5.38516, 2.59973, 5.19947, 0, 1.11417, 0.433289, 0, 0, 1.33333});
+
+        EXPECT_TRUE(all_close(std::get<0>(res), q));
+        EXPECT_TRUE(all_close(std::get<1>(res), r));
+    }
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;

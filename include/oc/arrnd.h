@@ -5553,6 +5553,57 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto qr() const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.qr();
+            });
+        }
+
+        [[nodiscard]] constexpr auto qr() const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<std::tuple<this_type, this_type>(this_type)> qr_impl;
+
+            qr_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                //assert(arr.header().dims().front() == arr.header().dims().back());
+
+                using std::sqrt;
+
+                size_type rows = arr.header().dims().front();
+                size_type cols = arr.header().dims().back();
+
+                this_type q({rows, cols}, value_type{0});
+                this_type r({cols, cols}, value_type{0});
+
+                for (size_type k = 1; k < cols + 1; ++k) {
+                    size_type c = k - 1;
+                    r[{interval<size_type>::to(k), interval<size_type>::at(c)}]
+                        = q[{interval<size_type>::full(), interval<size_type>::to(k)}].transpose({1, 0}).mtimes(
+                            arr[{interval<size_type>::full(), interval<size_type>::at(c)}]);
+                    this_type v = arr[{interval<size_type>::full(), interval<size_type>::at(c)}]
+                        - q[{interval<size_type>::full(), interval<size_type>::to(k)}].mtimes(
+                            r[{interval<size_type>::to(k), interval<size_type>::at(c)}]);
+                    r[{c, c}] = sqrt(v.transpose({1, 0}).mtimes(v)(0));
+                    q[{interval<size_type>::full(), interval<size_type>::at(c)}] = v / r[{c, c}];
+                }
+
+                return std::make_tuple(q, r);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, qr_impl(*this));
+            }
+
+            return pageop<0>(2, [qr_impl](auto page) {
+                return qr_impl(page);
+            });
+        }
+
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
         {
@@ -8585,6 +8636,12 @@ namespace details {
         return arr.lu();
     }
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto qr(const ArCo& arr)
+    {
+        return arr.qr();
+    }
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
     {
@@ -10994,6 +11051,7 @@ using details::det;
 using details::inverse;
 using details::cholesky;
 using details::lu;
+using details::qr;
 using details::solve;
 using details::filter;
 using details::find;
