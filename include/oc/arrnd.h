@@ -5491,6 +5491,104 @@ namespace details {
             });
         }
 
+        //[[nodiscard]] constexpr auto qrdecomp() const requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.qrdecomp();
+        //    });
+        //}
+
+        //[[nodiscard]] constexpr auto qrdecomp() const requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> qrdecomp_impl;
+
+        //    qrdecomp_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+
+        //        value_type d = arr.det()(0);
+        //        assert(d != value_type{0});
+        //        size_type n = arr.header().dims().front();
+
+        //        this_type res(arr.header().dims());
+
+        //        for (size_type i = 0; i < n; ++i) {
+        //            value_type sign = (i + 1) % 2 == 0 ? value_type{-1} : value_type{1};
+        //            for (size_type j = 0; j < n; ++j) {
+        //                /*std::cout << "det for:\n"
+        //                          << exclude({0}, {i}).exclude({1}, {j}) << "\n\n";*/
+        //                res[{i, j}]
+        //                    = sign * arr.exclude({0}, {i}).exclude({1}, {j}).template merge<0>().merge().det()(0);
+        //                sign *= value_type{-1};
+        //            }
+        //        }
+
+        //        return (value_type{1} / d) * res.transpose({1, 0});
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return qrdecomp_impl(*this);
+        //    }
+
+        //    return pageop<0>(2, [qrdecomp_impl](auto page) {
+        //        return qrdecomp_impl(page);
+        //    });
+        //}
+
+        template <arrnd_compliant ArCo>
+            requires(same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
+        [[nodiscard]] constexpr auto solve(const ArCo& b) const
+        {
+            return transform<0>(b, [](const auto& a, const auto& b) {
+                return a.solve(b);
+            });
+        }
+        template <arrnd_compliant ArCo>
+            requires(this_type::is_flat && ArCo::is_flat)
+        [[nodiscard]] constexpr auto solve(const ArCo& b) const
+        {
+            using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
+
+            assert(hdr_.dims().size() >= 2 && b.header().dims().size() >= 2);
+
+            auto solve_impl = [](const auto& lhs, const auto& rhs) {
+                assert(lhs.header().is_matrix() && rhs.header().is_matrix());
+                assert(lhs.header().dims().back() == rhs.header().dims().front());
+
+                return lhs.inverse().mtimes(rhs);
+            };
+
+            if (hdr_.is_matrix() && b.header().is_matrix()) {
+                return solve_impl(*this, b);
+            }
+
+            if (b.header().is_matrix()) {
+                return pageop<0>(2, [&b, solve_impl](auto page) {
+                    return solve_impl(page, b);
+                });
+            } else {
+                size_type lhs_num_pages
+                    = hdr_.numel() / ((*std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2)) * hdr_.dims().back());
+                size_type rhs_num_pages = b.header().numel()
+                    / ((*std::next(b.header().dims().cbegin(), b.header().dims().size() - 2))
+                        * b.header().dims().back());
+                assert(lhs_num_pages == rhs_num_pages);
+
+                auto b_pages = b.template pages<0>(b.header().dims().size() - 3, 0, true);
+                typename decltype(b_pages)::indexer_type b_pages_gen(b_pages.header());
+
+                return pageop<0>(2, [&b_pages, &b_pages_gen, &solve_impl](auto page) {
+                    return solve_impl(page, b_pages[*(b_pages_gen++)]);
+                });
+            }
+            //};
+
+            //return pageop([&arr, &matmul](const auto& page) {
+            //    return matmul(page, arr);
+            //});
+        }
+
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
@@ -8394,6 +8492,12 @@ namespace details {
         return arr.inverse();
     }
 
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
+    {
+        return arr.solve(b);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     {
@@ -10795,6 +10899,7 @@ using details::prod;
 using details::mtimes;
 using details::det;
 using details::inverse;
+using details::solve;
 using details::filter;
 using details::find;
 using details::transpose;

@@ -1757,6 +1757,21 @@ TEST(arrnd_test, inverse)
                 arrnd<double>({3, 3}, {0.2, 0.2, 0, -0.2, 0.3, 1, 0.2, -0.3, 0})})));
 }
 
+TEST(arrnd_test, solve)
+{
+    using namespace oc;
+
+    arrnd<arrnd<double>> arr({2},
+        {arrnd<double>({2, 2}, {1, 2, 3, 5}),
+            arrnd<double>({2, 3, 3}, {2, 1, 1, -1, 1, -1, 1, 2, 3, 1, 2, -2, 2, 1, -5, 1, -4, 1})});
+
+    arrnd<arrnd<double>> b({2}, {arrnd<double>({2, 1}, {1, 2}), arrnd<double>({2, 3, 1}, {2, 3, -10, -15, -21, 18})});
+
+    arrnd<arrnd<double>> x({2}, {arrnd<double>({2, 1}, {-1, 1}), arrnd<double>({2, 3, 1}, {3, 1, -5, -1, -4, 3})});
+
+    EXPECT_TRUE(all_close(solve(arr, b), x));
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
