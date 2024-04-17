@@ -5604,6 +5604,55 @@ namespace details {
             });
         }
 
+        //        [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.hess();
+        //    });
+        //}
+
+        //[[nodiscard]] constexpr auto hess() const requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> hess_impl;
+
+        //    hess_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        using std::shesst;
+
+        //        size_type rows = arr.header().dims().front();
+        //        size_type cols = arr.header().dims().back();
+
+        //        this_type q({rows, cols}, value_type{0});
+        //        this_type r({cols, cols}, value_type{0});
+
+        //        for (size_type k = 1; k < cols + 1; ++k) {
+        //            size_type c = k - 1;
+        //            r[{interval<size_type>::to(k), interval<size_type>::at(c)}]
+        //                = q[{interval<size_type>::full(), interval<size_type>::to(k)}].transpose({1, 0}).mtimes(
+        //                    arr[{interval<size_type>::full(), interval<size_type>::at(c)}]);
+        //            this_type v = arr[{interval<size_type>::full(), interval<size_type>::at(c)}]
+        //                - q[{interval<size_type>::full(), interval<size_type>::to(k)}].mtimes(
+        //                    r[{interval<size_type>::to(k), interval<size_type>::at(c)}]);
+        //            r[{c, c}] = shesst(v.transpose({1, 0}).mtimes(v)(0));
+        //            q[{interval<size_type>::full(), interval<size_type>::at(c)}] = v / r[{c, c}];
+        //        }
+
+        //        return std::make_tuple(q, r);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
+        //    }
+
+        //    return pageop<0>(2, [hess_impl](auto page) {
+        //        return hess_impl(page);
+        //    });
+        //}
+
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
         {
@@ -10006,6 +10055,74 @@ namespace details {
         return old;
     }
 
+    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
+    [[nodiscard]] inline constexpr auto zeros(DimsIt first_dim, DimsIt last_dim)
+    {
+        return ArCo(first_dim, last_dim, 0);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto zeros(const Cont& dims)
+    {
+        return zeros<ArCo>(std::begin(dims), std::end(dims));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto zeros(std::initializer_list<typename ArCo::size_type> dims)
+    {
+        return zeros<ArCo>(dims.begin(), dims.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto zeros(const U (&dims)[M])
+    {
+        return zeros<ArCo>(std::begin(dims), std::end(dims));
+    }
+
+    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
+    [[nodiscard]] inline constexpr auto eye(DimsIt first_dim, DimsIt last_dim)
+    {
+        auto ndims = std::distance(first_dim, last_dim);
+        assert(ndims >= 2);
+
+        auto eye_impl = [](typename ArCo::size_type r, typename ArCo::size_type c) {
+            ArCo res({r, c}, typename ArCo::value_type{0});
+            assert(res.header().is_matrix());
+
+            auto n = std::min(r, c);
+
+            typename ArCo::size_type one_ind = 0;
+
+            for (typename ArCo::size_type i = 0; i < n; ++i) {
+                res[one_ind] = typename ArCo::value_type{1};
+                one_ind += c + 1;
+            }
+
+            return res;
+        };
+
+        if (ndims == 2) {
+            return eye_impl(*first_dim, *std::next(first_dim, 1));
+        }
+
+        ArCo res(first_dim, last_dim, typename ArCo::value_type{0});
+        return res.pageop<0>(2, [eye_impl](auto page) {
+            return eye_impl(page.header().dims().front(), page.header().dims().back());
+        });
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto eye(const Cont& dims)
+    {
+        return eye<ArCo>(std::begin(dims), std::end(dims));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto eye(std::initializer_list<typename ArCo::size_type> dims)
+    {
+        return eye<ArCo>(dims.begin(), dims.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto eye(const U (&dims)[M])
+    {
+        return eye<ArCo>(std::begin(dims), std::end(dims));
+    }
+
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto operator--(ArCo&& arr, int)
     {
@@ -11026,6 +11143,8 @@ using details::remove;
 using details::empty;
 using details::expand;
 using details::collapse;
+using details::zeros;
+using details::eye;
 using details::pages;
 using details::split;
 using details::exclude;

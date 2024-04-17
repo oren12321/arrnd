@@ -1827,6 +1827,25 @@ TEST(arrnd_test, qr)
     }
 }
 
+TEST(arrnd_test, zeros)
+{
+    using namespace oc;
+
+    EXPECT_TRUE(all_equal(zeros<arrnd<int>>({3, 1, 2}), arrnd<int>({3, 1, 2}, 0)));
+}
+
+TEST(arrnd_test, eye)
+{
+    using namespace oc;
+
+    EXPECT_TRUE(all_equal(eye<arrnd<int>>({3, 3}), arrnd<int>({3, 3}, {1, 0, 0, 0, 1, 0, 0, 0, 1})));
+
+    EXPECT_TRUE(all_equal(eye<arrnd<int>>({3, 4}), arrnd<int>({3, 4}, {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0})));
+    EXPECT_TRUE(all_equal(eye<arrnd<int>>({4, 3}), arrnd<int>({4, 3}, {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0})));
+
+    EXPECT_TRUE(all_equal(eye<arrnd<int>>({2, 2, 2}), arrnd<int>({2, 2, 2}, {1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1})));
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
