@@ -8418,11 +8418,51 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto real() const
+        {
+            return transform([](const auto& a) {
+                using std::real;
+                return real(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto imag() const
+        {
+            return transform([](const auto& a) {
+                using std::imag;
+                return imag(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto arg() const
+        {
+            return transform([](const auto& a) {
+                using std::arg;
+                return arg(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto norm() const
+        {
+            return transform([](const auto& a) {
+                using std::norm;
+                return norm(a);
+            });
+        }
+
         [[nodiscard]] constexpr auto conj() const
         {
             return transform([](const auto& a) {
                 using std::conj;
                 return conj(a);
+            });
+        }
+
+        [[nodiscard]] constexpr auto proj() const
+        {
+            return transform([](const auto& a) {
+                using std::proj;
+                return proj(a);
             });
         }
 
@@ -9939,6 +9979,60 @@ namespace details {
         return arr.floor();
     }
 
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto real(const ArCo& arr)
+    {
+        return arr.real();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto imag(const ArCo& arr)
+    {
+        return arr.imag();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto arg(const ArCo& arr)
+    {
+        return arr.arg();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto norm(const ArCo& arr)
+    {
+        return arr.norm();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto conj(const ArCo& arr)
+    {
+        return arr.conj();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto proj(const ArCo& arr)
+    {
+        return arr.proj();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto polar(const ArCo& rs)
+    {
+        return transform(rs, [](const auto& r) {
+            using std::polar;
+            return polar(r);
+        });
+    }
+
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    [[nodiscard]] inline constexpr auto polar(const ArCo1& rs, const ArCo2& thetas)
+    {
+        return transform(rs, thetas, [](const auto& r, const auto& theta) {
+            using std::polar;
+            return polar(r, theta);
+        });
+    }
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto operator&&(const ArCo1& lhs, const ArCo2& rhs)
     {
@@ -11203,6 +11297,13 @@ using details::tanh;
 using details::round;
 using details::ceil;
 using details::floor;
+using details::real;
+using details::imag;
+using details::arg;
+using details::norm;
+using details::conj;
+using details::proj;
+using details::polar;
 }
 
 #endif // OC_ARRAY_H
