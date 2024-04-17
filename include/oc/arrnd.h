@@ -670,7 +670,8 @@ namespace details {
     }
 
     template <typename T>
-    [[nodiscard]] inline constexpr auto sign(const T& value) {
+    [[nodiscard]] inline constexpr auto sign(const T& value)
+    {
         return (T{0} < value) - (value < T{0});
     }
 }
@@ -4656,8 +4657,9 @@ namespace details {
             requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::value_type, Args...>)
         [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args) const
         {
-            using transformed_type = inner_replaced_type<
-                std::invoke_result_t<Func, inner_value_type<Level>, typename ArCo::value_type, Args...>, Level>;
+            using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
+                                                             typename ArCo::template inner_value_type<Level>, Args...>,
+                Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -4671,10 +4673,11 @@ namespace details {
 
             indexer_type gen(hdr_);
             typename transformed_type::indexer_type res_gen(res.header());
+            typename transformed_type::indexer_type arr_gen(arr.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template transform<Level - 1, ArCo, Func, Args...>(
-                    arr, std::forward<Func>(func), std::forward<Args>(args)...);
+            for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
+                res[*res_gen] = (*this)[*gen].template transform<Level - 1, typename ArCo::value_type, Func, Args...>(
+                    arr[*arr_gen], std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
             return res;
@@ -4795,7 +4798,7 @@ namespace details {
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen].template apply<Level - 1, ArCo, Func, Args...>(
+                (*this)[*gen].template apply<Level - 1, typename ArCo::value_type, Func, Args...>(
                     arr, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -5314,6 +5317,90 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
+        template <std::int64_t Level>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+        {
+            using ret_type = this_type;
+
+            if (empty()) {
+                return ret_type();
+            }
+
+            assert(hdr_.is_matrix());
+
+            size_type r = hdr_.dims().front();
+            size_type c = hdr_.dims().back();
+
+            assert(offset > -r && offset < c);
+
+            size_type n = std::min(r, c);
+
+            size_type abs_offset = static_cast<size_type>(std::abs(offset));
+
+            size_type numel = 0;
+            //abs_offset + 1 <= n ? n : n - abs_offset;
+            if (r == c) {
+                numel = n - abs_offset;
+            } else if (c > r) {
+                if (offset > 0) {
+                    if (offset < n) {
+                        numel = n;
+                    } else {
+                        numel = n - abs_offset;
+                    }
+                } else {
+                    numel = n - abs_offset;
+                }
+            } else {
+                if (offset < 0) {
+                    if (abs_offset < n) {
+                        numel = n;
+                    } else {
+                        numel = n - abs_offset;
+                    }
+                } else {
+                    numel = n - abs_offset;
+                }
+            }
+
+            this_type res({numel});
+
+            size_type current_ind = offset >= 0 ? offset : -offset * c;
+
+            for (size_type i = 0; i < numel; ++i) {
+                res[i] = (*this)(current_ind);
+                current_ind += c + 1;
+            }
+
+            return res;
+        }
+        template <std::int64_t Level>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+        {
+            using ret_type = this_type;
+
+            if (empty()) {
+                return ret_type();
+            }
+
+            ret_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template diag<Level - 1>(offset);
+            }
+
+            return res;
+        }
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+        {
+            return diag<this_type::depth>(offset);
+        }
+
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
         [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
@@ -5610,14 +5697,16 @@ namespace details {
             });
         }
 
-                [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
+        [[nodiscard]] constexpr auto hess() const
+            requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.hess();
             });
         }
 
-        [[nodiscard]] constexpr auto hess() const requires(this_type::is_flat)
+        [[nodiscard]] constexpr auto hess() const
+            requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -5644,7 +5733,8 @@ namespace details {
                         using std::pow;
                         using namespace std::complex_literals;
 
-                        u[{0, 0}] = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5})(0);
+                        u[{0, 0}]
+                            = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5})(0);
                     } else {
                         u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
                             * std::pow((r.transpose({1, 0}).mtimes(r)(0)), value_type{0.5});
@@ -5677,14 +5767,6 @@ namespace details {
             });
         }
 
-
-
-
-
-
-
-
-
         //                [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
         //{
         //    return transform<0>([](const auto& a) {
@@ -5708,8 +5790,6 @@ namespace details {
 
         //        using ival = interval<size_type>;
 
-
-
         //        return std::make_tuple(u, s);
         //    };
 
@@ -5722,11 +5802,106 @@ namespace details {
         //    });
         //}
 
+        [[nodiscard]] constexpr auto tril(size_type offset = 0) const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([offset](const auto& a) {
+                return a.tril(offset);
+            });
+        }
 
+        [[nodiscard]] constexpr auto tril(size_type offset = 0) const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
 
+            std::function<this_type(this_type)> tril_impl;
 
+            tril_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
 
+                size_type r = arr.header().dims().front();
+                size_type c = arr.header().dims().back();
+                assert(offset >= -r && offset <= c);
 
+                this_type res(arr.header().dims(), value_type{0});
+
+                size_type current_row_size = offset <= 0 ? 1 : offset + 1;
+                size_type tril_rows_count = offset >= 0 ? r : r + offset;
+
+                size_type current_ind = (r - tril_rows_count) * c;
+
+                while (tril_rows_count--) {
+                    for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
+                        res[i] = arr(i);
+                    }
+
+                    current_row_size = std::min(c, current_row_size + 1);
+                    current_ind += c;
+                }
+
+                return res;
+            };
+
+            if (hdr_.is_matrix()) {
+                return tril_impl(*this);
+            }
+
+            return pageop<0>(2, [tril_impl](auto page) {
+                return tril_impl(page);
+            });
+        }
+
+        [[nodiscard]] constexpr auto triu(size_type offset = 0) const
+            requires(!this_type::is_flat)
+        {
+            return transform<0>([offset](const auto& a) {
+                return a.triu(offset);
+            });
+        }
+
+        [[nodiscard]] constexpr auto triu(size_type offset = 0) const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<this_type(this_type)> triu_impl;
+
+            triu_impl = [&](this_type arr) {
+                return arr - arr.tril(offset - 1);
+                /*assert(arr.header().is_matrix());
+
+                size_type r = arr.header().dims().front();
+                size_type c = arr.header().dims().back();
+                assert(offset > -r && offset < c);
+
+                this_type res = arr.clone();
+
+                size_type current_row_size = offset <= 0 ? 1 : offset + 1;
+                size_type tril_rows_count = offset >= 0 ? r : r + offset;
+
+                size_type current_ind = (r - tril_rows_count) * c;
+
+                while (tril_rows_count--) {
+                    for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
+                        res[i] = value_type{0};
+                    }
+
+                    current_row_size = std::min(c, current_row_size + 1);
+                    current_ind += c;
+                }
+
+                return res;*/
+            };
+
+            if (hdr_.is_matrix()) {
+                return triu_impl(*this);
+            }
+
+            return pageop<0>(2, [triu_impl](auto page) {
+                return triu_impl(page);
+            });
+        }
 
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
@@ -8796,6 +8971,18 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto tril(const ArCo& arr, typename ArCo::size_type offset = 0)
+    {
+        return arr.tril(offset);
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto triu(const ArCo& arr, typename ArCo::size_type offset = 0)
+    {
+        return arr.triu(offset);
+    }
+
+    template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
     {
         return arr.cholesky();
@@ -8813,7 +9000,7 @@ namespace details {
         return arr.qr();
     }
 
-        template <arrnd_compliant ArCo>
+    template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
     {
         return arr.hess();
@@ -9212,6 +9399,17 @@ namespace details {
     [[nodiscard]] inline constexpr auto find(const ArCo1& arr, const ArCo2& mask)
     {
         return find<ArCo1::depth>(arr, mask);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
+    {
+        return arr.template diag<Level>(offset);
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
+    {
+        return diag<ArCo::depth>(arr, offset);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
@@ -10127,7 +10325,7 @@ namespace details {
         });
     }
 
-        template <arrnd_compliant ArCo>
+    template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto sign(const ArCo& arr)
     {
         return arr.sign();
@@ -11362,6 +11560,8 @@ using details::prod;
 using details::mtimes;
 using details::det;
 using details::inverse;
+using details::tril;
+using details::triu;
 using details::cholesky;
 using details::lu;
 using details::qr;
@@ -11370,6 +11570,7 @@ using details::hess;
 using details::solve;
 using details::filter;
 using details::find;
+using details::diag;
 using details::transpose;
 //using details::nest; // deprecated
 using details::close;
