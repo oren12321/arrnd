@@ -2843,6 +2843,9 @@ TEST(arrnd_test, basic_math_and_trigo)
         all_equal(polar(arrnd<double>({1, 2}, {3.0, 6.0})), comparrnd({1, 2}, {std::polar(3.0), std::polar(6.0)})));
     EXPECT_TRUE(all_equal(polar(arrnd<double>({1, 2}, {3.0, 6.0}), arrnd<double>({1, 2}, {0.3, 0.6})),
         comparrnd({1, 2}, {std::polar(3.0, 0.3), std::polar(6.0, 0.6)})));
+
+    EXPECT_TRUE(
+        all_equal(sign(arrnd<double>({1, 5}, {-1.5, -1, 0.0, 1, 1.5})), arrnd<double>({1, 5}, {-1, -1, 0, 1, 1})));
 }
 
 TEST(arrnd_test, filter_elements_by_condition)

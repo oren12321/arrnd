@@ -668,6 +668,11 @@ namespace details {
     {
         return ((value % modulus) + modulus) % modulus;
     }
+
+    template <typename T>
+    [[nodiscard]] inline constexpr auto sign(const T& value) {
+        return (T{0} < value) - (value < T{0});
+    }
 }
 
 using details::default_atol;
@@ -675,6 +680,7 @@ using details::default_rtol;
 
 using details::close;
 using details::modulo;
+using details::sign;
 }
 
 namespace oc {
@@ -5604,54 +5610,57 @@ namespace details {
             });
         }
 
-        //        [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
-        //{
-        //    return transform<0>([](const auto& a) {
-        //        return a.hess();
-        //    });
-        //}
+        /*        [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.hess();
+            });
+        }
 
-        //[[nodiscard]] constexpr auto hess() const requires(this_type::is_flat)
-        //{
-        //    assert(hdr_.dims().size() >= 2);
+        [[nodiscard]] constexpr auto hess() const requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
 
-        //    std::function<std::tuple<this_type, this_type>(this_type)> hess_impl;
+            std::function<std::tuple<this_type, this_type>(this_type)> hess_impl;
 
-        //    hess_impl = [&](this_type arr) {
-        //        assert(arr.header().is_matrix());
-        //        assert(arr.header().dims().front() == arr.header().dims().back());
+            hess_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
 
-        //        using std::shesst;
+                size_type n = arr.header().dims().front();
 
-        //        size_type rows = arr.header().dims().front();
-        //        size_type cols = arr.header().dims().back();
+                auto q = eye<this_type>({n, n});
+                auto h = arr;
 
-        //        this_type q({rows, cols}, value_type{0});
-        //        this_type r({cols, cols}, value_type{0});
+                using ival = interval<size_type>;
 
-        //        for (size_type k = 1; k < cols + 1; ++k) {
-        //            size_type c = k - 1;
-        //            r[{interval<size_type>::to(k), interval<size_type>::at(c)}]
-        //                = q[{interval<size_type>::full(), interval<size_type>::to(k)}].transpose({1, 0}).mtimes(
-        //                    arr[{interval<size_type>::full(), interval<size_type>::at(c)}]);
-        //            this_type v = arr[{interval<size_type>::full(), interval<size_type>::at(c)}]
-        //                - q[{interval<size_type>::full(), interval<size_type>::to(k)}].mtimes(
-        //                    r[{interval<size_type>::to(k), interval<size_type>::at(c)}]);
-        //            r[{c, c}] = shesst(v.transpose({1, 0}).mtimes(v)(0));
-        //            q[{interval<size_type>::full(), interval<size_type>::at(c)}] = v / r[{c, c}];
-        //        }
+                for (size_type k = 0; k < n - 2; ++k) {
+                    auto r = h[{ival::between(k + 1, n), ival::at(k)}];
+                    auto u = zeros<this_type>({n - (k + 1), 1});
 
-        //        return std::make_tuple(q, r);
-        //    };
+                    if constexpr (template_type<value_type, std::complex>) {
+                        using std::exp;
+                        using std::arg;
+                        using std::pow;
+                        using namespace std::complex_literals;
 
-        //    if (hdr_.is_matrix()) {
-        //        return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
-        //    }
+                        u[{0, 0}] = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5});
+                    } else {
+                        u[{0,0}] = 
+                    }
+                }
 
-        //    return pageop<0>(2, [hess_impl](auto page) {
-        //        return hess_impl(page);
-        //    });
-        //}
+                return std::make_tuple(q, h);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
+            }
+
+            return pageop<0>(2, [hess_impl](auto page) {
+                return hess_impl(page);
+            });
+        }*/
 
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
@@ -8466,6 +8475,13 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto sign() const
+        {
+            return transform([](const auto& a) {
+                return oc::sign(a);
+            });
+        }
+
     private:
         header_type hdr_{};
         std::shared_ptr<storage_type> buffsp_{nullptr};
@@ -10033,6 +10049,12 @@ namespace details {
         });
     }
 
+        template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto sign(const ArCo& arr)
+    {
+        return arr.sign();
+    }
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto operator&&(const ArCo1& lhs, const ArCo2& rhs)
     {
@@ -11304,6 +11326,7 @@ using details::norm;
 using details::conj;
 using details::proj;
 using details::polar;
+using details::sign;
 }
 
 #endif // OC_ARRAY_H
