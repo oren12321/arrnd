@@ -1827,6 +1827,18 @@ TEST(arrnd_test, qr)
     }
 }
 
+TEST(arrnd_test, hess)
+{
+    using namespace oc;
+
+    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+
+    auto [q, h] = hess(arr)(0);
+
+    //std::cout << q << "\n";
+    //std::cout << h << "\n";
+}
+
 TEST(arrnd_test, zeros)
 {
     using namespace oc;

@@ -5610,7 +5610,7 @@ namespace details {
             });
         }
 
-        /*        [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
+                [[nodiscard]] constexpr auto hess() const requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.hess();
@@ -5644,10 +5644,25 @@ namespace details {
                         using std::pow;
                         using namespace std::complex_literals;
 
-                        u[{0, 0}] = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5});
+                        u[{0, 0}] = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5})(0);
                     } else {
-                        u[{0,0}] = 
+                        u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
+                            * std::pow((r.transpose({1, 0}).mtimes(r)(0)), value_type{0.5});
                     }
+
+                    auto v = r - u;
+                    v /= std::pow((v.transpose({1, 0}).mtimes(v)(0)), value_type{0.5});
+
+                    auto w1 = eye<this_type>({k + 1, k + 1}).append(zeros<this_type>({k + 1, n - (k + 1)}), 1);
+                    auto w2 = zeros<this_type>({n - (k + 1), k + 1})
+                                  .append(eye<this_type>({n - (k + 1), n - (k + 1)})
+                                          - value_type{2} * (v.mtimes(v.transpose({1, 0}))),
+                                      1);
+
+                    auto w = w1.append(w2, 0);
+
+                    h = w.mtimes(h, w.transpose({1, 0}));
+                    q = q.mtimes(w.transpose({1, 0}));
                 }
 
                 return std::make_tuple(q, h);
@@ -5660,7 +5675,58 @@ namespace details {
             return pageop<0>(2, [hess_impl](auto page) {
                 return hess_impl(page);
             });
-        }*/
+        }
+
+
+
+
+
+
+
+
+
+        //                [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.schur();
+        //    });
+        //}
+
+        //[[nodiscard]] constexpr auto schur() const requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
+
+        //    schur_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        size_type n = arr.header().dims().front();
+
+        //        auto [p, s] = arr.hess()(0);
+
+        //        using ival = interval<size_type>;
+
+
+
+        //        return std::make_tuple(u, s);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
+        //    }
+
+        //    return pageop<0>(2, [schur_impl](auto page) {
+        //        return schur_impl(page);
+        //    });
+        //}
+
+
+
+
+
+
 
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
@@ -8747,6 +8813,18 @@ namespace details {
         return arr.qr();
     }
 
+        template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
+    {
+        return arr.hess();
+    }
+
+    //    template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto schur(const ArCo& arr)
+    //{
+    //    return arr.schur();
+    //}
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
     {
@@ -11287,6 +11365,8 @@ using details::inverse;
 using details::cholesky;
 using details::lu;
 using details::qr;
+using details::hess;
+//using details::schur;
 using details::solve;
 using details::filter;
 using details::find;
