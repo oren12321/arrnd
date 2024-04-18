@@ -5917,7 +5917,7 @@ namespace details {
         }
 
         [[nodiscard]] constexpr auto cholesky() const
-            requires(this_type::is_flat)
+            requires(this_type::is_flat && (template_type<value_type, std::complex> || std::is_floating_point_v<value_type>))
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -5930,29 +5930,38 @@ namespace details {
 
                 size_type n = arr.header().dims().front();
 
-                this_type res(arr.header().dims(), value_type{0});
+                this_type l(arr.header().dims(), value_type{0});
 
-                using std::sqrt;
+                using ival = interval<size_type>;
 
-                for (size_type i = 0; i < n; ++i) {
-                    for (size_type j = 0; j <= i; ++j) {
-                        value_type sum{0};
-
-                        if (j == i) {
-                            for (size_type k = 0; k < j; ++k) {
-                                sum += res[{j, k}] * res[{j, k}];
-                            }
-                            res[{j, j}] = sqrt(arr[{j, j}] - sum);
-                        } else {
-                            for (size_type k = 0; k < j; ++k) {
-                                sum += res[{i, k}] * res[{j, k}];
-                            }
-                            res[{i, j}] = (arr[{i, j}] - sum) / res[{j, j}];
+                for (size_type i = 1; i <= n; ++i) {
+                    for (size_type j = 1; j <= i; ++j) {
+                        if (i == j) {
+                            auto sumsq
+                                = l[{ival::at(i - 1), ival::to(j - 1)}].fold(value_type{0}, [](value_type acc, value_type val) {
+                                      return acc + val * val;
+                                  });
+                            l[{i - 1, j - 1}] = std::sqrt(arr[{i - 1, j - 1}] - sumsq);
                         }
+                        else {
+                            if constexpr (template_type<value_type, std::complex>) {
+                                l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
+                                                        - (l[{ival::at(i - 1), ival::to(j - 1)}]
+                                                            * l[{ival::at(j - 1), ival::to(j - 1)}].conj()).sum())
+                                    / l[{j - 1, j - 1}];
+                            }
+                            else {
+                                l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
+                                                        - (l[{ival::at(i - 1), ival::to(j - 1)}]
+                                                            * l[{ival::at(j - 1), ival::to(j - 1)}]).sum())
+                                    / l[{j - 1, j - 1}];
+                            }
+                        }
+                        std::cout << "L:\n" << l << "\n\n";
                     }
                 }
 
-                return res;
+                return l;
             };
 
             if (hdr_.is_matrix()) {
