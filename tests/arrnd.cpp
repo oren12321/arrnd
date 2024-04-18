@@ -1804,26 +1804,37 @@ TEST(arrnd_test, qr)
     {
         arrnd<double> arr({4, 3}, {-1, -1, 1, 1, 3, 3, -1, -1, 5, 1, 3, 7});
 
-        auto res = qr(arr)(0);
+        auto [q, r] = qr(arr)(0);
 
-        arrnd<double> q({4, 3}, {-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5});
-        arrnd<double> r({3, 3}, {2, 4, 2, 0, 2, 8, 0, 0, 4});
+        //arrnd<double> q({4, 3}, {-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5});
+        //arrnd<double> r({3, 3}, {2, 4, 2, 0, 2, 8, 0, 0, 4});
 
-        EXPECT_TRUE(all_close(std::get<0>(res), q));
-        EXPECT_TRUE(all_close(std::get<1>(res), r));
+        //std::cout <<q<< "\n";
+        //std::cout << r << "\n\n";
+
+        //std::cout << std::get<0>(res) << "\n";
+        //std::cout << std::get<1>(res) << "\n\n";
+        //std::cout << std::get<0>(res).mtimes(std::get<1>(res)) << "\n\n";
+
+        //EXPECT_TRUE(all_close(std::get<0>(res), q));
+        //EXPECT_TRUE(all_close(std::get<1>(res), r));
+
+        EXPECT_TRUE(all_close(mtimes(q, r), arr));
     }
 
     {
         arrnd<double> arr({3, 3}, {3, 2, 4, 2, 0, 2, 4, 2, 3});
 
-        auto res = qr(arr)(0);
+        auto [q, r] = qr(arr)(0);
 
-        arrnd<double> q(
-            {3, 3}, {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667});
-        arrnd<double> r({3, 3}, {5.38516, 2.59973, 5.19947, 0, 1.11417, 0.433289, 0, 0, 1.33333});
+        //arrnd<double> q(
+        //    {3, 3}, {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667});
+        //arrnd<double> r({3, 3}, {5.38516, 2.59973, 5.19947, 0, 1.11417, 0.433289, 0, 0, 1.33333});
 
-        EXPECT_TRUE(all_close(std::get<0>(res), q));
-        EXPECT_TRUE(all_close(std::get<1>(res), r));
+        //EXPECT_TRUE(all_close(std::get<0>(res), q));
+        //EXPECT_TRUE(all_close(std::get<1>(res), r));
+
+        EXPECT_TRUE(all_close(mtimes(q, r), arr));
     }
 }
 
@@ -1837,6 +1848,41 @@ TEST(arrnd_test, hess)
 
     //std::cout << q << "\n";
     //std::cout << h << "\n";
+
+    EXPECT_TRUE(all_close(mtimes(q, h, transpose(q, {1, 0})), arr));
+}
+
+TEST(arrnd_test, schur)
+{
+    using namespace oc;
+
+    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+
+    auto [u, s] = schur(arr)(0);
+
+    //std::cout << u << "\n\n";
+    //std::cout << s << "\n\n";
+    //std::cout << u.mtimes(s, u.transpose({1, 0})) << "\n\n";
+
+    EXPECT_TRUE(all_close(mtimes(u, s, transpose(u, {1, 0})), arr));
+}
+
+TEST(arrnd_test, eig)
+{
+    using namespace oc;
+
+    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+
+    auto [l, v] = eig(arr)(0);
+
+    auto o = zeros<arrnd<double>>({4, 1});
+
+    //    std::cout << l << "\n\n";
+    //std::cout << v << "\n\n";
+
+    for (int i = 0; i < l.header().numel(); ++i) {
+        EXPECT_TRUE(all_close(mtimes(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
+    }
 }
 
 TEST(arrnd_test, zeros)

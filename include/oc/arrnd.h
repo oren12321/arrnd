@@ -5651,15 +5651,15 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto qr() const
+        [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(!this_type::is_flat)
         {
-            return transform<0>([](const auto& a) {
-                return a.qr();
+            return transform<0>([/*permute*/](const auto& a) {
+                return a.qr(/*permute*/);
             });
         }
 
-        [[nodiscard]] constexpr auto qr() const
+        [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -5670,27 +5670,55 @@ namespace details {
                 assert(arr.header().is_matrix());
                 //assert(arr.header().dims().front() == arr.header().dims().back());
 
-                using std::sqrt;
+                size_type m = arr.header().dims().front();
+                size_type n = arr.header().dims().back();
 
-                size_type rows = arr.header().dims().front();
-                size_type cols = arr.header().dims().back();
+                this_type q = eye<this_type>({m, m});
+                this_type r = arr.clone();
 
-                this_type q({rows, cols}, value_type{0});
-                this_type r({cols, cols}, value_type{0});
+                using ival = interval<size_type>;
 
-                for (size_type k = 1; k < cols + 1; ++k) {
-                    size_type c = k - 1;
-                    r[{interval<size_type>::to(k), interval<size_type>::at(c)}]
-                        = q[{interval<size_type>::full(), interval<size_type>::to(k)}].transpose({1, 0}).mtimes(
-                            arr[{interval<size_type>::full(), interval<size_type>::at(c)}]);
-                    this_type v = arr[{interval<size_type>::full(), interval<size_type>::at(c)}]
-                        - q[{interval<size_type>::full(), interval<size_type>::to(k)}].mtimes(
-                            r[{interval<size_type>::to(k), interval<size_type>::at(c)}]);
-                    r[{c, c}] = sqrt(v.transpose({1, 0}).mtimes(v)(0));
-                    q[{interval<size_type>::full(), interval<size_type>::at(c)}] = v / r[{c, c}];
+                size_type loop_size = (m * (m < n) + n * (m >= n));
+
+                for (size_type k = 1; k <= loop_size; ++k) {
+                    auto a = r[{ival::between(k - 1, m), ival::at(k - 1)}];
+                    auto alpha = std::sqrt(a.fold(value_type{0}, [](value_type acc, value_type val) {
+                        return acc + val * val;
+                    }));
+                    if constexpr (template_type<value_type, std::complex>) {
+                        using namespace std::complex_literals;
+                        alpha *= std::exp(1i * std::arg(a[{0, 0}]));
+                    }
+                    auto e = eye<this_type>({m - k + 1, 1}) * alpha;
+                    auto u = a - e;
+                    auto sumsqu = u.fold(value_type{0}, [](value_type acc, value_type val) {
+                        return acc + val * val;
+                    });
+                    this_type v{};
+                    if (sumsqu != value_type{ 0 }) {
+                        v = u / std::sqrt(sumsqu);
+                    }
+                    else {
+                        v = u;
+                    }
+
+                    auto qk1 = eye<this_type>({k - 1, k - 1}).append(zeros<this_type>({k - 1, m - k + 1}), 1);
+                    auto qk2 = zeros<this_type>({m - k + 1, k - 1})
+                                   .append(eye<this_type>({m - k + 1, m - k + 1})
+                                           - value_type{2} * v.mtimes(v.transpose({1, 0})),
+                                       1);
+                    auto qk = qk1.append(qk2, 0);
+                    r = qk.mtimes(r);
+                    q = q.mtimes(qk);
+
+                    /*std::cout << "qk:" << qk << "\n";
+                    std::cout << "r:" << r << "\n";
+                    std::cout << "q:" << q << "\n\n";*/
                 }
 
-                return std::make_tuple(q, r);
+                //if (permute) {
+                    return std::make_tuple(q, r);
+                //}
             };
 
             if (hdr_.is_matrix()) {
@@ -5772,40 +5800,201 @@ namespace details {
             });
         }
 
-        //                [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
-        //{
-        //    return transform<0>([](const auto& a) {
-        //        return a.schur();
-        //    });
-        //}
+                        [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.schur();
+            });
+        }
 
-        //[[nodiscard]] constexpr auto schur() const requires(this_type::is_flat)
-        //{
-        //    assert(hdr_.dims().size() >= 2);
+        [[nodiscard]] constexpr auto schur() const requires(this_type::is_flat && std::is_floating_point_v<value_type>)
+        {
+            assert(hdr_.dims().size() >= 2);
 
-        //    std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
+            std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
 
-        //    schur_impl = [&](this_type arr) {
-        //        assert(arr.header().is_matrix());
-        //        assert(arr.header().dims().front() == arr.header().dims().back());
+            schur_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
 
-        //        size_type n = arr.header().dims().front();
+                size_type n = arr.header().dims().front();
 
-        //        auto [p, s] = arr.hess()(0);
+                auto [u, s] = arr.hess()(0);
 
-        //        using ival = interval<size_type>;
+                using ival = interval<size_type>;
 
-        //        return std::make_tuple(u, s);
-        //    };
+                auto k = n;
+                value_type tol = value_type{1e-20};
 
-        //    if (hdr_.is_matrix()) {
-        //        return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
-        //    }
+                while (k > 2) {
+                    //std::cout << "k=" << k << "\n";
+                    if (s[{k - 1, k - 2}]== value_type{0}
+                        && s[{k - 1, k - 3}]== value_type{0}) {
+                        --k;
+                    } else if (s[{k - 2, k - 3}]== value_type{0}
+                        && s[{k - 1, k - 3}]== value_type{0}
+                        && (k <= 3 || s[{k - 2, k - 4}]== value_type{0})) {
+                        k -= 2;
+                    }
+                    //std::cout << "k=" << k << "\n";
 
-        //    return pageop<0>(2, [schur_impl](auto page) {
-        //        return schur_impl(page);
-        //    });
-        //}
+                    if (k > 1) {
+                        auto stok = s[{ival::to(k), ival::to(k)}];
+                        //std::cout << "stok:\n" << stok << "\n";
+                        auto s_k_1 = s[{k - 2, k - 2}];
+                        auto s_k = s[{k - 1, k - 1}];
+                        auto s_kk_1 = s[{k-1, k-2}];
+                        auto s_k_1k = s[{k-2, k-1}];
+                        //std::cout << "stok2:\n" << stok.mtimes(stok) << "\n";
+                        //std::cout << "s_k_1:\n" << s_k_1 << "\n";
+                        //std::cout << "s_k:\n" << s_k << "\n";
+                        //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
+                        //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
+
+
+                        auto m = stok.mtimes(stok) - (s_k_1 + s_k) * stok
+                            + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
+                        //std::cout << "m:\n" << m << "\n";
+                        auto [q, r] = m.qr()(0);
+                        //std::cout << "q:\n" << q << "\n";
+                        //std::cout << "r:\n" << r << "\n";
+
+                        auto q1 = q.append(zeros<this_type>({k, n - k}), 1);
+                        auto q2 = zeros<this_type>({n - k, k}).append(eye<this_type>({n - k, n - k}), 1);
+                        q = q1.append(q2, 0);
+                        //std::cout << "q:\n" << q << "\n";
+
+                        u = u.mtimes(q);
+                        s = q.transpose({1, 0}).mtimes(s, q);
+                        
+
+                        auto m1 = s.abs() < tol;
+                        
+                        replaced_type<size_type> arng({n, n});
+                        std::iota(arng.begin(),arng.end(), size_type{1});
+                        auto m2 = arng.tril(-1) > size_type{0};
+
+                        auto mask = m1 && m2;
+                        //std::cout << "m1:\n" << m1 << "\n";
+                        //std::cout << "m2:\n" << m2 << "\n";
+                        //std::cout << "mask:\n" << mask << "\n";
+                        {
+                            auto sgen = s.indexer();
+                            auto mgen = mask.indexer();
+
+                            for (; sgen && mgen; ++sgen, ++mgen) {
+                                if (mask[*mgen]) {
+                                    s[*sgen] = value_type{0};
+                                }
+                            }
+                        }
+
+                        //std::cout << "u:\n" << u << "\n";
+                        //std::cout << "s:\n" << s << "\n";
+                    }
+                }
+
+                for (size_type k = 1; k <= n - 1; ++k) {
+                    if (s[{k, k - 1}]!= value_type{ 0 }) {
+                        auto f = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
+                        //std::cout << "f:\n" << f << "\n";
+                        auto trc = f.diag().sum();
+                        value_type t{};
+                        if (trc * trc - 4 * f.det() > value_type{0}) {
+                            t = std::atan(
+                                (-f[{0, 0}] + f[{1, 1}]
+                                        + std::sqrt(std::pow(f[{0, 0}], 2) - 2 * f[{0, 0}] * f[{1, 1}] + 4 * f[{0, 1}] * f[{1, 0}] + std::pow(f[{1, 1}], 2))
+                                    )
+                                / (2 * f[{0, 1}]));
+                        }
+                        else {
+                            t = .5 * std::atan((f[{1, 1}] - f[{0, 0}]) / (f[{0, 1}] + f[{1, 0}]));
+                        }
+                        auto q = this_type({2, 2}, {std::cos(t), -std::sin(t), std::sin(t), std::cos(t)});
+                        //std::cout << "q:\n" << q << "\n\n";
+                        auto qq = eye<this_type>({n, n});
+                        qq[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}].copy_from(q);
+                        //std::cout << "q:\n" << q << "\n\n";
+                        s = qq.transpose({1, 0}).mtimes(s, qq);
+                        u = u.mtimes(qq);
+                    }
+                }
+
+                return std::make_tuple(u, s);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
+            }
+
+            return pageop<0>(2, [schur_impl](auto page) {
+                return schur_impl(page);
+            });
+        }
+
+
+
+
+
+
+
+
+
+                                [[nodiscard]] constexpr auto eig() const requires(!this_type::is_flat)
+        {
+            return transform<0>([](const auto& a) {
+                return a.eig();
+            });
+        }
+
+        [[nodiscard]] constexpr auto eig() const requires(this_type::is_flat&& std::is_floating_point_v<value_type>)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<std::tuple<this_type, this_type>(this_type)> eig_impl;
+
+            eig_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
+
+                size_type n = arr.header().dims().front();
+
+                auto [u, s] = arr.schur()(0);
+                //std::cout << "u:\n" << u << "\n\n";
+                //std::cout << "s:\n" << s << "\n\n";
+
+                    
+                using ival = interval<size_type>;
+
+                auto lambda = s.diag()(arrnd_shape_preset::column);
+                auto v = zeros<this_type>({n, n});
+
+                for (size_type k = 1; k <= n; ++k) {
+                    auto [q, _] = (arr - eye<this_type>({n, n}) * lambda[k-1]).transpose({1, 0}).qr()(0);
+                    //std::cout << "q(m):\n" << q << "\n\n";
+                    v[{ival::full(), ival::at(k - 1)}].copy_from(q[{ival::full(), ival::at(n - 1)}]);
+                    //std::cout << "v(m):\n" << v << "\n\n";
+                }
+
+                return std::make_tuple(lambda, v);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, eig_impl(*this));
+            }
+
+            return pageop<0>(2, [eig_impl](auto page) {
+                return eig_impl(page);
+            });
+        }
+
+
+
+
+
+
+
+
 
         [[nodiscard]] constexpr auto tril(size_type offset = 0) const
             requires(!this_type::is_flat)
@@ -5957,7 +6146,7 @@ namespace details {
                                     / l[{j - 1, j - 1}];
                             }
                         }
-                        std::cout << "L:\n" << l << "\n\n";
+                        //std::cout << "L:\n" << l << "\n\n";
                     }
                 }
 
@@ -9009,9 +9198,9 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto qr(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto qr(const ArCo& arr/*, bool permute = false*/)
     {
-        return arr.qr();
+        return arr.qr(/*permute*/);
     }
 
     template <arrnd_compliant ArCo>
@@ -9020,11 +9209,17 @@ namespace details {
         return arr.hess();
     }
 
-    //    template <arrnd_compliant ArCo>
-    //[[nodiscard]] inline constexpr auto schur(const ArCo& arr)
-    //{
-    //    return arr.schur();
-    //}
+        template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
+    {
+        return arr.schur();
+    }
+
+        template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
+    {
+        return arr.eig();
+    }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
@@ -11583,7 +11778,8 @@ using details::cholesky;
 using details::lu;
 using details::qr;
 using details::hess;
-//using details::schur;
+using details::schur;
+using details::eig;
 using details::solve;
 using details::filter;
 using details::find;
