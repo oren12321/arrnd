@@ -9475,17 +9475,17 @@ namespace details {
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator==(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const auto& a, const auto& b) {
+        return lhs.transform([](const auto& a, const auto& b) {
             return a == b;
-        });
+        }, rhs);
     }
 
     template <typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto operator==(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const auto& b, const auto& a) {
+        return rhs.transform([](const auto& b, const auto& a) {
             return a == b;
-        });
+        }, lhs);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -9499,17 +9499,17 @@ namespace details {
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator!=(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform(rhs, [](const auto& a, const auto& b) {
+        return lhs.transform([](const auto& a, const auto& b) {
             return a != b;
-        });
+        }, rhs);
     }
 
     template <typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto operator!=(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform(lhs, [](const auto& b, const auto& a) {
+        return rhs.transform([](const auto& b, const auto& a) {
             return a != b;
-        });
+        }, lhs);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -10475,6 +10475,9 @@ namespace details {
         assert(ndims >= 2);
 
         auto eye_impl = [](typename ArCo::size_type r, typename ArCo::size_type c) {
+            if (r == 0 || c == 0) {
+                return ArCo();
+            }
             ArCo res({r, c}, typename ArCo::value_type{0});
             assert(res.header().is_matrix());
 
