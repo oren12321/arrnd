@@ -4593,6 +4593,19 @@ TEST(arrnd_test, copy_by_reference)
     }
 }
 
+TEST(arrnd_test, empty_slice)
+{
+    using namespace oc;
+
+    arrnd<int> arr({1, 5}, {1, 2, 3, 4, 5});
+
+    auto full_slice = arr[{interval<>::full(), interval<>::at(0)}];
+    auto empty_slice = arr[{interval<>::full(), interval<>::to(0)}];
+
+    EXPECT_TRUE(empty_slice.empty());
+    EXPECT_EQ(full_slice.creator(), empty_slice.creator());
+}
+
 TEST(arrnd_test, move_by_reference)
 {
     using Integer_array = oc::arrnd<int>;

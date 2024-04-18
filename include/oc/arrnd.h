@@ -961,7 +961,7 @@ namespace details {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
                     std::logical_and<>{}, [](const auto& r, auto d) {
                         auto nr = r.align(d);
-                        return (nr.start() < nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
+                        return (nr.start() <= nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
                     });
             };
             assert(valid_ranges());
@@ -981,6 +981,11 @@ namespace details {
             }
 
             res.numel_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), size_type{1}, std::multiplies<>{});
+            if (res.numel_ == 0) { // allow empty header for zero interval
+                arrnd_header empty_subheader{};
+                empty_subheader.is_slice_ = true;
+                return empty_subheader;
+            }
 
             res.strides_ = storage_type(res.dims_.size());
 
