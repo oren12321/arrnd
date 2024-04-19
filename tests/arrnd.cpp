@@ -2003,6 +2003,27 @@ TEST(arrnd_test, tril_and_triu)
     EXPECT_TRUE(all_equal(triu(arr, -2) + tril(arr, -3), arr));
 }
 
+TEST(arrnd_test, is_banded)
+{
+    using namespace oc;
+
+    {
+        arrnd<int> arr1({5, 5}, {2, 3, 0, 0, 0, 1, -2, -3, 0, 0, 0, -1, 2, 3, 0, 0, 0, 1, -2, -3, 0, 0, 0, -1, 2});
+
+        EXPECT_TRUE(is_banded(arr1, 1, 1)(0));
+        EXPECT_FALSE(is_banded(arr1, 0, 1)(0));
+        EXPECT_TRUE(is_banded(arr1, 1, 2)(0));
+    }
+
+    {
+        arrnd<double> arr1({5, 5}, {2, 3, 0, 1e-15, 0, 1, -2, -3, 0, 0, 0, -1, 2, 3, 0, -1e-20, 0, 1, -2, -3, 0, 0, 0, -1, 2});
+
+        EXPECT_TRUE(is_banded(arr1, 1, 1)(0));
+        EXPECT_FALSE(is_banded(arr1, 0, 1)(0));
+        EXPECT_TRUE(is_banded(arr1, 1, 2)(0));
+    }
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;

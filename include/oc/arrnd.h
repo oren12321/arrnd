@@ -6098,6 +6098,53 @@ namespace details {
 
 
 
+                        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
+            requires(!this_type::is_flat)
+        {
+                            return transform<0>([lower, upper](const auto& a) {
+                return a.is_banded(lower, upper);
+            });
+        }
+        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
+            requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<bool(this_type)> is_banded_impl;
+
+            is_banded_impl = [&](this_type arr) {
+                if (arr.empty()) {
+                    return true;
+                }
+
+                assert(arr.header().is_matrix());
+
+                auto required = arr.tril(upper) && arr.triu(-lower);
+                //std::cout << required << "\n";
+
+                auto actual = arr.transform([](const value_type& val) {
+                    if constexpr (std::is_floating_point_v<value_type>) {
+                        return !oc::close(val, value_type{0});
+                    } else {
+                        return static_cast<bool>(val);
+                    }
+                });
+                //std::cout << actual << "\n";
+
+                return required.all_equal(actual);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<bool>({1}, {is_banded_impl(*this)});
+            }
+
+            return pageop<0>(2, [is_banded_impl](auto page) {
+                return is_banded_impl(page);
+            });
+        }
+
+
+
 
 
         [[nodiscard]] constexpr auto cholesky() const
@@ -9619,6 +9666,13 @@ namespace details {
         return arr.diag(offset);
     }
 
+        template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto is_banded(
+        const ArCo& arr, typename ArCo::size_type lower = 0, typename ArCo::size_type upper = 0)
+    {
+            return arr.is_banded(lower, upper);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto transpose(
         const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
@@ -11782,6 +11836,7 @@ using details::solve;
 using details::filter;
 using details::find;
 using details::diag;
+using details::is_banded;
 using details::transpose;
 //using details::nest; // deprecated
 using details::close;
