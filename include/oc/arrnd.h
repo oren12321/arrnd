@@ -5322,89 +5322,7 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-        template <std::int64_t Level>
-            requires(Level == 0)
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
-        {
-            using ret_type = this_type;
-
-            if (empty()) {
-                return ret_type();
-            }
-
-            assert(hdr_.is_matrix());
-
-            size_type r = hdr_.dims().front();
-            size_type c = hdr_.dims().back();
-
-            assert(offset > -r && offset < c);
-
-            size_type n = std::min(r, c);
-
-            size_type abs_offset = static_cast<size_type>(std::abs(offset));
-
-            size_type numel = 0;
-            //abs_offset + 1 <= n ? n : n - abs_offset;
-            if (r == c) {
-                numel = n - abs_offset;
-            } else if (c > r) {
-                if (offset > 0) {
-                    if (offset < n) {
-                        numel = n;
-                    } else {
-                        numel = n - abs_offset;
-                    }
-                } else {
-                    numel = n - abs_offset;
-                }
-            } else {
-                if (offset < 0) {
-                    if (abs_offset < n) {
-                        numel = n;
-                    } else {
-                        numel = n - abs_offset;
-                    }
-                } else {
-                    numel = n - abs_offset;
-                }
-            }
-
-            this_type res({numel});
-
-            size_type current_ind = offset >= 0 ? offset : -offset * c;
-
-            for (size_type i = 0; i < numel; ++i) {
-                res[i] = (*this)(current_ind);
-                current_ind += c + 1;
-            }
-
-            return res;
-        }
-        template <std::int64_t Level>
-            requires(Level > 0)
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
-        {
-            using ret_type = this_type;
-
-            if (empty()) {
-                return ret_type();
-            }
-
-            ret_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
-
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.header());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template diag<Level - 1>(offset);
-            }
-
-            return res;
-        }
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
-        {
-            return diag<this_type::depth>(offset);
-        }
+        
 
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
@@ -6096,6 +6014,91 @@ namespace details {
                 return triu_impl(page);
             });
         }
+
+
+
+
+
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const requires(!this_type::is_flat)
+        {
+            return transform<0>([offset](const auto& a) {
+                return a.diag(offset);
+            });
+        }
+                [[nodiscard]] constexpr auto diag(size_type offset = 0) const requires(this_type::is_flat)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<this_type(this_type)> diag_impl;
+
+            diag_impl = [&](this_type arr) {
+                if (arr.empty()) {
+                    return this_type();
+                }
+
+                assert(arr.header().is_matrix());
+
+                size_type r = arr.header().dims().front();
+                size_type c = arr.header().dims().back();
+
+                assert(offset > -r && offset < c);
+
+                size_type n = std::min(r, c);
+
+                size_type abs_offset = static_cast<size_type>(std::abs(offset));
+
+                size_type numel = 0;
+                //abs_offset + 1 <= n ? n : n - abs_offset;
+                if (r == c) {
+                    numel = n - abs_offset;
+                } else if (c > r) {
+                    if (offset > 0) {
+                        if (offset < n) {
+                            numel = n;
+                        } else {
+                            numel = n - abs_offset;
+                        }
+                    } else {
+                        numel = n - abs_offset;
+                    }
+                } else {
+                    if (offset < 0) {
+                        if (abs_offset < n) {
+                            numel = n;
+                        } else {
+                            numel = n - abs_offset;
+                        }
+                    } else {
+                        numel = n - abs_offset;
+                    }
+                }
+
+                this_type res({numel});
+
+                size_type current_ind = offset >= 0 ? offset : -offset * c;
+
+                for (size_type i = 0; i < numel; ++i) {
+                    res[i] = (*this)(current_ind);
+                    current_ind += c + 1;
+                }
+
+                return res;
+            };
+
+            if (hdr_.is_matrix()) {
+                return diag_impl(*this);
+            }
+
+            return pageop<0>(2, [diag_impl](auto page) {
+                return diag_impl(page);
+            });
+        }
+
+
+
+
+
+
 
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
@@ -9610,15 +9613,10 @@ namespace details {
         return find<ArCo1::depth>(arr, mask);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
-    {
-        return arr.template diag<Level>(offset);
-    }
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
     {
-        return diag<ArCo::depth>(arr, offset);
+        return arr.diag(offset);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
