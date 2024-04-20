@@ -2024,6 +2024,98 @@ TEST(arrnd_test, is_banded)
     }
 }
 
+TEST(arrnd_test, arrnd_filter_proxy)
+{
+    using namespace oc;
+
+    // indices
+    {
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+        
+        arr({0, 2, 4}) = 0;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {0, 2, 0, 4, 0, 6})));
+
+        arr({0, 4, 2}) = arrnd<double>({5}, {1.1, 2.2, 3.3, 4.4, 5.5});
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {1, 2, 3, 4, 2, 6})));
+    }
+
+    // mask
+    {
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+
+        arr(arr > 3) = 0;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {1, 2, 3, 0, 0, 0})));
+        
+        arr(arr <= 3 && arr > 0) = arrnd<int>({6}, {6, 5, 4, 3, 2, 1});
+        //std::cout << arr << "\n";
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {6, 5, 4, 0, 0, 0})));
+    }
+
+    // predicate
+    {
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+
+        arr([](int n) {
+            return n >= 5;
+        }) = 0;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {1, 2, 3, 4, 0, 0})));
+
+        arr([](int n) {
+            return n <= 1;
+        }) = arrnd<int>({6}, {6, 5, 4, 3, 2, 1});
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {6, 2, 3, 4, 5, 4})));
+    }
+
+
+    //arrnd<int> arr({1, 5}, {1, 2, 3, 4, 5});
+    //arrnd<int> inds({1, 2}, {2, 0});
+    //arrnd<int> vals({2, 2}, {1000, 2000, 3000, 4000});
+
+    //arrnd_filter_proxy(arr, inds) = vals;
+    //arr(
+    //    [](int n, int factor) {
+    //        return n * factor > 1000;
+    //    },
+    //    10)
+    //    = vals;
+    //std::cout << arr << "\n";
+
+    //cg[{0, 0}] = 100;
+    //apply(cg, [](int n) {
+    //    return n * 2;
+    //});
+
+    // requirements:
+    // - arr(filter) creates arrnd_proxy (no option for additional filter)
+    //   filter could be indices or mask
+    // - any cast from arrnd_proxy to its arrnd activates the proxy filter and returns an arrnd
+    // - what about the case that arrnd_proxy is begin passed to function?
+    //   - arrnd_proxy is not arrnd_compliant, so it shouldn't be passed to a function
+    //   - it can't be copied or assigned to, and can only be used as an assigned rvalue
+    //   - in case that it should be used in function, it should be casted to Arrnd,
+    //     which should activate the arrnd_proxy constraint
+    // - proxy is mostly being used for assignment according to filter
+    // - if assignment is not required, the recommended way is to use find
+    //   e.g.
+    //          arr(filter) = 100 -> arrnd
+    //          arr(filter) -> proxy => to activate: arrnd arr = arr(filter) or static_cast<arrnd>(arr(filter))
+    // - how 
+    // 
+    // 
+    // options
+    // - arr(filter) -> acg
+    // - auto x = arr(filter) => decltype(x) == acg
+    // - arrnd x = arr(filter) => decltype(x) == acg::Arrnd (filter result, i.e cast result from acg to Arrnd)
+    // - auto x = arr(filter) = <value,array> => decltype(x) == acg::Arrnd
+
+    //arrnd_filter_proxy(arr, inds) = vals;
+    // cg = 100; // only rvalue assignment
+    //auto x = arrnd_filter_proxy(arr, arr > 10) = 1000)(arr > 2);
+    //arrnd<int> p = arr(arr > 10);
+    //std::cout << arr << "\n";
+    //std::cout << p << "\n";
+}
+
 TEST(arrnd_test, squeeze)
 {
     using namespace oc;
@@ -3186,7 +3278,7 @@ TEST(arrnd_test, select_elements_indices_by_condition)
         oc::arrnd<std::int64_t> rvals1{{3}, {12, 14, 15}}; // deprecated
 
         oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1(not_zeros_inds)));
+        EXPECT_TRUE(oc::all_equal(rvals1, static_cast<decltype(rallvals1)>(rallvals1(not_zeros_inds))));
     }
 
     // nested array
@@ -3246,7 +3338,7 @@ TEST(arrnd_test, select_elements_indices_by_maks)
         oc::arrnd<std::int64_t> rvals1{{2}, {13, 15}}; // deprecated
 
         oc::arrnd rallvals1{{3, 1, 2}, {10, 11, 12, 13, 14, 15}};
-        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1(not_zeros_inds)));
+        EXPECT_TRUE(oc::all_equal(rvals1, rallvals1(not_zeros_inds)()));
     }
 
     // nested array
@@ -3270,12 +3362,12 @@ TEST(arrnd_test, callable_operator)
     arrnd arr({3, 2, 2}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
 
     {
-        auto r = arr({0, 5, 3, 2});
+        auto r = arr({0, 5, 3, 2})();
         EXPECT_TRUE(all_equal(r, arrnd({4}, {5, 6, 2, 10})));
     }
 
     {
-        auto r = arr(arr <= 5);
+        auto r = arr(arr <= 5)();
         EXPECT_TRUE(all_equal(r, arrnd({6}, {5, 2, 1, 0, 3, 4})));
     }
 
@@ -3284,7 +3376,7 @@ TEST(arrnd_test, callable_operator)
             [](int a, int factor) {
                 return a <= 5 - factor;
             },
-            1);
+            1)();
         EXPECT_TRUE(all_equal(r, arrnd({5}, {2, 1, 0, 3, 4})));
     }
 

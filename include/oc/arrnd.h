@@ -3171,6 +3171,116 @@ namespace details {
 
     enum class arrnd_shape_preset { vector, row, column };
 
+
+
+
+
+            template <arrnd_compliant Arrnd, typename Constraint>
+    class arrnd_filter_proxy {
+    public:
+        constexpr arrnd_filter_proxy() = delete;
+
+        explicit constexpr arrnd_filter_proxy(Arrnd arr_ref, Constraint constraint)
+            : arr_ref_(arr_ref)
+            , constraint_(constraint)
+        { }
+
+        [[nodiscard]] constexpr operator Arrnd() const {
+            return arr_ref_.filter(constraint_);
+        }
+
+        [[nodiscard]] constexpr Arrnd operator()() const {
+            return arr_ref_.filter(constraint_);
+        }
+
+        constexpr arrnd_filter_proxy(arrnd_filter_proxy&& other) = delete;
+        constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy&& other) = delete;
+        //constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy&& other) & = default;
+        //constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy&& other) &&
+        //{
+        //    if (&other == this) {
+        //        return *this;
+        //    }
+
+        //    copy_from(other, constraint_);
+        //    (void)arrnd_filter_proxy(std::move(other));
+        //    return *this;
+        //}
+        //template <arrnd_compliant ArCo>
+        //constexpr arrnd_filter_proxy& operator=(ArCo&& other) &&
+        //{
+        //    arr_ref_.copy_from(other, constraint_);
+        //    return *this;
+        //}
+
+        constexpr arrnd_filter_proxy(const arrnd_filter_proxy& other) = delete;
+        constexpr arrnd_filter_proxy& operator=(const arrnd_filter_proxy& other) = delete;
+        //constexpr arrnd_filter_proxy& operator=(const arrnd_filter_proxy& other) & = default;
+        //constexpr arrnd_filter_proxy& operator=(const arrnd_filter_proxy& other) &&
+        //{
+        //    if (&other == this) {
+        //        return *this;
+        //    }
+
+        //    copy_from(other, constraint_);
+        //    return *this;
+        //}
+
+        template <arrnd_compliant ArCo>
+        constexpr arrnd_filter_proxy& operator=(const ArCo& other) &&
+        {
+            arr_ref_.copy_from(other, constraint_);
+            return *this;
+        }
+
+        template <typename U>
+        requires(!arrnd_compliant<U>) constexpr arrnd_filter_proxy& operator=(const U& value) &&
+        {
+            if (arr_ref_.empty()) {
+                return *this;
+            }
+
+            if constexpr (arrnd_compliant<Constraint>) {
+                if constexpr (std::is_same_v<typename Constraint::value_type, bool>) {
+                    assert(constraint_.header().dims() == arr_ref_.header().dims()
+                        && "boolean constraint considered as mask");
+
+                    typename Arrnd::indexer_type gen(arr_ref_.header());
+                    typename Constraint::indexer_type cgen(constraint_.header());
+
+                    for (; gen && cgen; ++gen, ++cgen) {
+                        if (constraint_[*cgen]) {
+                            arr_ref_[*gen] = value;
+                        }
+                    }
+
+                } else {
+                    for (typename Constraint::indexer_type gen(constraint_.header()); gen; ++gen) {
+                        arr_ref_[constraint_[*gen]] = value;
+                    }
+                }
+            } else { // might be predicator type
+                typename Arrnd::indexer_type gen(arr_ref_.header());
+
+                for (; gen; ++gen) {
+                    if (constraint_(arr_ref_[*gen])) {
+                        arr_ref_[*gen] = value;
+                    }
+                }
+            }
+
+            return *this;
+        }
+
+        virtual constexpr ~arrnd_filter_proxy() = default;
+
+    private:
+        Arrnd arr_ref_;
+        Constraint constraint_;
+    };
+
+
+
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
         arrnd_header_compliant Header = arrnd_header<>, template <typename> typename Indexer = arrnd_indexer,
@@ -3698,62 +3808,57 @@ namespace details {
             return hdr_.is_slice() ? buffsp_->data()[*(indexer() + relative_index)] : buffsp_->data()[relative_index];
         }
 
-        template <signed_integral_type_iterator InputIt>
+
+
+                template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto operator()(std::pair<InputIt, InputIt> indices) const
         {
-            auto num_indices = std::distance(indices.first, indices.second);
-
-            this_type res({num_indices});
-
-            indexer_type res_gen(res.hdr_);
-            auto inds_it = indices.first;
-
-            for (; res_gen && inds_it != indices.second; ++res_gen, ++inds_it) {
-                res[*res_gen] = (*this)[*inds_it];
-            }
-
-            return res;
+            return std::move(*this)(replaced_type<size_type>(
+                {std::distance(indices.first, indices.second)}, indices.first, indices.second));
         }
         template <signed_integral_type_iterable Cont>
-            requires(!arrnd_compliant<Cont>)
-        [[nodiscard]] constexpr auto operator()(const Cont& indices) const
+        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto operator()(const Cont& indices) const
         {
-            return (*this)(std::make_pair(std::begin(indices), std::end(indices)));
+            return (*this)(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
         }
         /**
         * @note more strict function than filter. in case of logical type arrnd, its being treated as mask
         */
         template <arrnd_compliant ArCo>
-            requires(std::integral<typename ArCo::value_type>)
-        [[nodiscard]] constexpr auto operator()(const ArCo& selector) const
+        requires(std::integral<typename ArCo::value_type>) [[nodiscard]] constexpr auto operator()(
+            const ArCo& selector) const
         {
-            // in case that indices isn't a vector treat it as a mask
-            if constexpr (std::is_same_v<bool, typename ArCo::value_type>) {
-                return filter<0>(selector);
-            } else {
-                return (*this)(std::make_pair(std::begin(selector), std::end(selector)));
-            }
+            return arrnd_filter_proxy(*this, selector);
         }
         [[nodiscard]] constexpr auto operator()(std::initializer_list<size_type> indices) const
         {
-            return (*this)(std::make_pair(indices.begin(), indices.end()));
+            return (*this)(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
         }
         template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto operator()(const U (&indices)[M]) const
         {
-            return (*this)(std::make_pair(std::begin(indices), std::end(indices)));
+            return (*this)(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
         }
+
+
+
 
         [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
         {
             return reshape<0>(shape);
         }
 
-        template <typename Func, typename... Args>
-            requires invocable_no_arrnd<Func, value_type, Args...>
-        [[nodiscard]] constexpr auto operator()(Func&& func, Args&&... args) const
+        template <typename Pred, typename... Args>
+            requires invocable_no_arrnd<Pred, value_type, Args...>
+        [[nodiscard]] constexpr auto operator()(Pred&& pred, Args&&... args) const
         {
-            return filter<0>(std::forward<Func>(func), std::forward<Args>(args)...);
+            auto selector = std::bind(std::forward<Pred>(pred), std::placeholders::_1, std::forward<Args>(args)...);
+
+            /*    auto selector = [&args](const value_type& vt) {
+                    return
+            };*/
+
+            return arrnd_filter_proxy(*this, selector);
         }
 
         [[nodiscard]] constexpr bool empty() const noexcept
@@ -3854,6 +3959,31 @@ namespace details {
             return copy_to(std::forward<ArCo>(dst), std::make_pair(std::begin(indices), std::end(indices)));
         }
 
+        template <arrnd_compliant ArCo, typename Pred, typename... Args>
+        requires invocable_no_arrnd<Pred, value_type, Args...> constexpr const this_type& copy_to(
+            ArCo&& dst, Pred&& pred, Args&&... args) const
+        {
+            if (empty() || dst.empty()) {
+                return *this;
+            }
+
+            indexer_type gen(hdr_);
+            typename std::remove_cvref_t<ArCo>::indexer_type dst_gen(dst.header());
+
+            for (; gen && dst_gen; ++dst_gen) {
+                if (pred(dst[*dst_gen])) {
+                    if constexpr (arrnd_compliant<value_type>) {
+                        (*this)[*gen].copy_to(dst[*dst_gen]); // deep copying
+                    } else {
+                        dst[*dst_gen] = (*this)[*gen];
+                    }
+                    ++gen;
+                }
+            }
+
+            return *this;
+        }
+
         template <arrnd_compliant ArCo, interval_type_iterator InputIt>
         constexpr const this_type& copy_to(ArCo&& dst, const InputIt& first_range, const InputIt& last_range) const
         {
@@ -3939,6 +4069,16 @@ namespace details {
         {
             return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
         }
+
+
+        template <arrnd_compliant ArCo, typename Pred, typename... Args>
+        requires invocable_no_arrnd<Pred, value_type, Args...> constexpr const this_type& copy_from(
+            const ArCo& src, Pred&& pred, Args&&... args)
+        {
+            src.copy_to(*this, std::forward<Pred>(pred), std::forward<Args>(args)...);
+            return *this;
+        }
+
 
         template <arrnd_compliant ArCo, interval_type_iterator InputIt>
         constexpr this_type& copy_from(const ArCo& src, const InputIt& first_range, const InputIt& last_range)
@@ -9046,6 +9186,8 @@ namespace details {
         const this_type* creator_ = nullptr;
     };
 
+
+
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
     {
@@ -9094,6 +9236,13 @@ namespace details {
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const interval<U> (&ranges)[M])
     {
         return copy(src, dst, std::begin(ranges), std::end(ranges));
+    }
+
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Pred, typename... Args>
+    requires invocable_no_arrnd<Pred, typename ArCo2::value_type, Args...> inline constexpr auto& copy(
+        const ArCo1& src, ArCo2&& dst, Pred&& pred, Args&&... args)
+    {
+        return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -11895,6 +12044,7 @@ using details::arrnd_axis_front_inserter;
 using details::arrnd_axis_inserter;
 
 using details::arrnd_shape_preset;
+using details::arrnd_filter_proxy;
 using details::arrnd;
 
 using details::copy;
