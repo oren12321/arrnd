@@ -5127,46 +5127,60 @@ namespace details {
 
         template <std::int64_t Level, arrnd_compliant ArCo>
             requires(Level == 0)
-        [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
+        [[nodiscard]] constexpr this_type filter(const ArCo& selector) const
         {
             if (empty()) {
                 return this_type();
             }
 
-            assert(hdr_.dims() == mask.header().dims());
+            if constexpr (std::is_same_v<bool, typename ArCo::value_type>) {
+                assert(hdr_.dims() == selector.header().dims());
 
-            this_type res({hdr_.numel()});
+                this_type res({hdr_.numel()});
 
-            indexer_type gen(hdr_);
-            typename ArCo::indexer_type mask_gen(mask.header());
+                indexer_type gen(hdr_);
+                typename ArCo::indexer_type selector_gen(selector.header());
 
-            indexer_type res_gen(res.hdr_);
+                indexer_type res_gen(res.hdr_);
 
-            size_type res_count{0};
+                size_type res_count{0};
 
-            while (gen && mask_gen && res_gen) {
-                if (mask[*mask_gen]) {
-                    res[*res_gen] = (*this)[*gen];
-                    ++res_count;
-                    ++res_gen;
+                while (gen && selector_gen && res_gen) {
+                    if (selector[*selector_gen]) {
+                        res[*res_gen] = (*this)[*gen];
+                        ++res_count;
+                        ++res_gen;
+                    }
+                    ++gen;
+                    ++selector_gen;
                 }
-                ++gen;
-                ++mask_gen;
-            }
 
-            if (res_count == 0) {
-                return this_type();
-            }
+                if (res_count == 0) {
+                    return this_type();
+                }
 
-            if (res_count < hdr_.numel()) {
-                return res.template resize<Level>({res_count});
-            }
+                if (res_count < hdr_.numel()) {
+                    return res.template resize<Level>({res_count});
+                }
 
-            return res;
+                return res;
+            }
+            else {
+                this_type res(selector.header().dims());
+
+                indexer_type res_gen(res.hdr_);
+                typename ArCo::indexer_type slc_gen(selector.header());
+
+                for (; res_gen && slc_gen; ++res_gen, ++slc_gen) {
+                    res[*res_gen] = (*this)[selector[*slc_gen]];
+                }
+
+                return res;
+            }
         }
         template <std::int64_t Level, arrnd_compliant ArCo>
             requires(Level > 0)
-        [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
+        [[nodiscard]] constexpr this_type filter(const ArCo& selector) const
         {
             if (empty()) {
                 return this_type();
@@ -5178,16 +5192,64 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template filter<Level - 1, ArCo>(mask);
+                res[*res_gen] = (*this)[*gen].template filter<Level - 1, ArCo>(selector);
             }
 
             return res;
         }
         template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr this_type filter(const ArCo& mask) const
+        [[nodiscard]] constexpr this_type filter(const ArCo& selector) const
         {
-            return filter<this_type::depth, ArCo>(mask);
+            return filter<this_type::depth, ArCo>(selector);
         }
+
+
+
+
+                template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
+        {
+            return filter<Level>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+        }
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto filter(const Cont& indices) const
+        {
+            return filter<Level>(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
+        {
+            return filter<Level>(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto filter(const U (&indices)[M]) const
+        {
+            return filter<Level>(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
+        }
+
+
+                        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
+        {
+            return filter<this_type::depth>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+        }
+        template <signed_integral_type_iterable Cont>
+        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto filter(const Cont& indices) const
+        {
+            return filter<this_type::depth>(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+        }
+        [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
+        {
+            return filter<this_type::depth>(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto filter(const U (&indices)[M]) const
+        {
+            return filter<this_type::depth>(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
+        }
+
+
+
 
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>, Args...>)
@@ -9628,14 +9690,14 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
+    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& selector)
     {
-        return arr.template filter<Level>(mask);
+        return arr.template filter<Level>(selector);
     }
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& mask)
+    [[nodiscard]] inline constexpr auto filter(const ArCo1& arr, const ArCo2& selector)
     {
-        return filter<ArCo1::depth>(arr, mask);
+        return filter<ArCo1::depth>(arr, selector);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred, typename... Args>
@@ -9659,6 +9721,55 @@ namespace details {
     {
         return find<ArCo1::depth>(arr, mask);
     }
+
+
+
+
+
+            template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
+    {
+            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    requires(!arrnd_compliant<Cont>) [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
+    {
+            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
+    {
+            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, indices.begin(), indices.end()));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
+    {
+            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({M}, std::begin(indices), std::end(indices)));
+    }
+
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
+    {
+            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    requires(!arrnd_compliant<Cont>) [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
+    {
+            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
+    {
+            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, indices.begin(), indices.end()));
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
+    {
+            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({M}, std::begin(indices), std::end(indices)));
+    }
+
+
+
 
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)

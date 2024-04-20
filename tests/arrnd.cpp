@@ -3085,17 +3085,17 @@ TEST(arrnd_test, filter_elements_by_maks)
 
     //EXPECT_TRUE(oc::empty(oc::filter(iarr, oc::arrnd<int>{}))); // assertion failure
 
-    const int imask_data0[]{1, 0, 0, 1, 0, 1};
+    const bool imask_data0[]{1, 0, 0, 1, 0, 1};
     oc::arrnd imask0{dims, imask_data0};
     const int rdata0[]{1, 4, 6};
     oc::arrnd rarr0{{3}, rdata0};
     EXPECT_TRUE(oc::all_equal(rarr0, oc::filter(iarr, imask0)));
 
-    const int imask_data1[]{0, 0, 0, 0, 0, 0};
+    const bool imask_data1[]{0, 0, 0, 0, 0, 0};
     oc::arrnd imask1{dims, imask_data1};
     EXPECT_TRUE(oc::all_equal(oc::arrnd<int>{}, oc::filter(iarr, imask1)));
 
-    const int imask_data2[]{1, 1, 1, 1, 1, 1};
+    const bool imask_data2[]{1, 1, 1, 1, 1, 1};
     oc::arrnd imask2{dims, imask_data2};
     const int rdata2[]{1, 2, 3, 4, 5, 6};
     oc::arrnd rarr2{{6}, rdata2};
@@ -3108,13 +3108,29 @@ TEST(arrnd_test, filter_elements_by_maks)
         oc::arrnd<oc::arrnd<int>> inarr(
             {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
 
-        auto r1 = oc::filter(inarr, oc::arrnd<int>({3, 1, 2}, {0, 0, 1, 0, 0, 1}));
+        auto r1 = oc::filter(inarr, oc::arrnd<bool>({3, 1, 2}, {0, 0, 1, 0, 0, 1}));
         EXPECT_TRUE(oc::all_equal(
             r1, oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({2}, {3, 6}), oc::arrnd<int>({2}, {9, 12})})));
 
-        auto r2 = oc::filter<0>(inarr, oc::arrnd<int>({1, 2}, {1, 0}));
+        auto r2 = oc::filter<0>(inarr, oc::arrnd<bool>({1, 2}, {1, 0}));
         EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})})));
     }
+}
+
+TEST(arrnd_test, filter_elements_by_indices)
+{
+    using namespace oc;
+
+    std::int64_t dims[]{3, 1, 2};
+
+    const int idata[]{1, 2, 3, 4, 5, 6};
+    arrnd iarr{dims, idata};
+
+    //EXPECT_TRUE(oc::empty(oc::filter(iarr, oc::arrnd<int>{}))); // assertion failure
+
+    EXPECT_TRUE(all_equal(filter(iarr, {0, 4}), arrnd<int>({2}, {1, 5})));
+
+    EXPECT_TRUE(all_equal(filter(iarr, arrnd<int>({1, 2}, {0, 4})), arrnd<int>({1, 2}, {1, 5})));
 }
 
 TEST(arrnd_test, select_elements_indices_by_condition)
