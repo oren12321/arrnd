@@ -12008,9 +12008,9 @@ namespace details {
         std::ostream& os_;
     };
 
-    struct arrnd_json_manip_tag {
-    } arrnd_json;
-    arrnd_json_manip operator<<(std::ostream& os, arrnd_json_manip_tag)
+    static constexpr struct arrnd_json_manip_tag {
+    } arrnd_json{};
+    inline arrnd_json_manip operator<<(std::ostream& os, arrnd_json_manip_tag)
     {
         return arrnd_json_manip(os);
     }
