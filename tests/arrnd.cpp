@@ -1029,6 +1029,41 @@ TEST(arrnd_test, iterators_and_inserters)
     }
 }
 
+TEST(arrnd_test, zip)
+{
+    using namespace oc;
+    using namespace oc::details;
+
+    std::vector<int> indices{0, 2, 1, 3, 5, 4};
+    std::vector<int> values{10, 20, 30, 40, 50, 60};
+    arrnd<int> arr({3, 1, 2}, {10, 20, 30, 40, 50, 60});
+    
+    auto expanded = arr.expand(0);
+
+    //for (auto [i, v] : zip(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //    std::cout << i << ", " << v << "\n";
+    //}
+    //zip pack(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}});
+    //auto t1 = begin(pack);
+    ////swap(*t1, *t1);
+    //std::sort(pack.begin(), pack.end(), [](auto a, auto b) {
+    //    return std::get<0>(a) < std::get<0>(b);
+    //});
+
+    //for (auto [i, v] : zip(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //    std::cout << i << ", " << v << "\n";
+    //    /*i = 10;
+    //    v[{0,0}] = 100;*/
+    //}
+
+    //zip z(iter_pack{indices}, iter_pack{arr, 0, arrnd_returned_slice_iterator_tag{}});
+
+    //std::for_each(z.rbegin(), z.rend(), [](const auto& t) {
+    //    auto [i, v] = t;
+    //    //std::cout << i << ", " << v << "\n";
+    //});
+}
+
 TEST(arrnd_test, basic_sorting_using_std_sort_and_iterators)
 {
     oc::arrnd<int> arr({3, 1, 4}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
