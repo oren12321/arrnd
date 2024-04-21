@@ -914,10 +914,10 @@ TEST(arrnd_test, iterators_and_inserters)
     EXPECT_EQ(earr.cbegin(), earr.cend());
     EXPECT_EQ(earr.rbegin(), earr.rend());
     EXPECT_EQ(earr.crbegin(), earr.crend());
-    EXPECT_EQ(earr.begin_subarray(), earr.end_subarray());
-    EXPECT_EQ(earr.cbegin_subarray(), earr.cend_subarray());
-    EXPECT_EQ(earr.rbegin_subarray(), earr.rend_subarray());
-    EXPECT_EQ(earr.crbegin_subarray(), earr.crend_subarray());
+    EXPECT_EQ(earr.begin(arrnd_returned_slice_iterator_tag{}), earr.end(arrnd_returned_slice_iterator_tag{}));
+    EXPECT_EQ(earr.cbegin(arrnd_returned_slice_iterator_tag{}), earr.cend(arrnd_returned_slice_iterator_tag{}));
+    EXPECT_EQ(earr.rbegin(arrnd_returned_slice_iterator_tag{}), earr.rend(arrnd_returned_slice_iterator_tag{}));
+    EXPECT_EQ(earr.crbegin(arrnd_returned_slice_iterator_tag{}), earr.crend(arrnd_returned_slice_iterator_tag{}));
 
     const arrnd<int> arr1{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
     arrnd<int> arr2{{3, 1, 2}, {0, 1, 2, 3, 4, 5}};
@@ -960,7 +960,8 @@ TEST(arrnd_test, iterators_and_inserters)
 
     for (int axis = 0; axis < 3; ++axis) {
         std::vector<int> res;
-        std::copy(arr.cbegin(axis), arr.cend(axis), std::back_inserter(res));
+        std::copy(arr.cbegin(axis, arrnd_returned_element_iterator_tag{}),
+            arr.cend(axis, arrnd_returned_element_iterator_tag{}), std::back_inserter(res));
 
         EXPECT_TRUE(std::equal(inds[axis].begin(), inds[axis].end(), res.begin()));
     }
@@ -973,9 +974,9 @@ TEST(arrnd_test, iterators_and_inserters)
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
 
     // axis iterators
-    std::for_each(arr.begin_subarray(), arr.end_subarray(), [](const auto& sa) {
+    std::for_each(arr.begin(arrnd_returned_slice_iterator_tag{}), arr.end(arrnd_returned_slice_iterator_tag{}), [](const auto& sa) {
         auto exsa = sa[interval<std::int64_t>{0, 1}];
-        std::for_each(exsa.rbegin_subarray(), exsa.rend_subarray(), [](auto& sa) {
+        std::for_each(exsa.rbegin(arrnd_returned_slice_iterator_tag{}), exsa.rend(arrnd_returned_slice_iterator_tag{}), [](auto& sa) {
             sa *= 2;
         });
     });
