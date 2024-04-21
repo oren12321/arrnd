@@ -1004,6 +1004,29 @@ TEST(arrnd_test, iterators_and_inserters)
 
         EXPECT_EQ(std::vector<int>({4, 8, 12}), vec1);
     }
+
+    // free arrnd iterator functions compilation
+    {
+        arrnd<int> arr{};
+
+        begin(arr);
+        cbegin(arr);
+        end(arr);
+        cend(arr);
+        rbegin(arr);
+        crbegin(arr);
+        rend(arr);
+        crend(arr);
+
+        begin(arr, arrnd_returned_element_iterator_tag{});
+        cbegin(arr, arrnd_returned_element_iterator_tag{});
+        end(arr, arrnd_returned_element_iterator_tag{});
+        cend(arr, arrnd_returned_element_iterator_tag{});
+        rbegin(arr, arrnd_returned_element_iterator_tag{});
+        crbegin(arr, arrnd_returned_element_iterator_tag{});
+        rend(arr, arrnd_returned_element_iterator_tag{});
+        crend(arr, arrnd_returned_element_iterator_tag{});
+    }
 }
 
 TEST(arrnd_test, basic_sorting_using_std_sort_and_iterators)

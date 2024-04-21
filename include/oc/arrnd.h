@@ -8662,8 +8662,7 @@ namespace details {
         }
         [[nodiscard]] constexpr auto begin() const
         {
-            return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_iterator_start_position::begin));
+            return begin(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto cbegin() const
         {
@@ -8676,8 +8675,7 @@ namespace details {
         }
         [[nodiscard]] constexpr auto end() const
         {
-            return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_iterator_start_position::end));
+            return end(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto cend() const
         {
@@ -8690,9 +8688,7 @@ namespace details {
         }
         [[nodiscard]] constexpr auto rbegin() const
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_iterator_start_position::rbegin));
+            return rbegin(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto crbegin() const
         {
@@ -8705,9 +8701,7 @@ namespace details {
         }
         [[nodiscard]] constexpr auto rend() const
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(buffsp_->data(), indexer_type(hdr_, 0, arrnd_iterator_start_position::rend));
+            return rend(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto crend() const
         {
@@ -8720,11 +8714,19 @@ namespace details {
         {
             return begin(0, arrnd_returned_element_iterator_tag{});
         }
+        [[nodiscard]] constexpr auto begin(arrnd_returned_element_iterator_tag) const
+        {
+            return begin(0, arrnd_returned_element_iterator_tag{});
+        }
         [[nodiscard]] constexpr auto cbegin(arrnd_returned_element_iterator_tag) const
         {
             return cbegin(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_element_iterator_tag)
+        {
+            return end(0, arrnd_returned_element_iterator_tag{});
+        }
+        [[nodiscard]] constexpr auto end(arrnd_returned_element_iterator_tag) const
         {
             return end(0, arrnd_returned_element_iterator_tag{});
         }
@@ -8736,11 +8738,19 @@ namespace details {
         {
             return rbegin(0, arrnd_returned_element_iterator_tag{});
         }
+        [[nodiscard]] constexpr auto rbegin(arrnd_returned_element_iterator_tag) const
+        {
+            return rbegin(0, arrnd_returned_element_iterator_tag{});
+        }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_element_iterator_tag) const
         {
             return crbegin(0, arrnd_returned_element_iterator_tag{});
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_element_iterator_tag)
+        {
+            return rend(0, arrnd_returned_element_iterator_tag{});
+        }
+        [[nodiscard]] constexpr auto rend(arrnd_returned_element_iterator_tag) const
         {
             return rend(0, arrnd_returned_element_iterator_tag{});
         }
@@ -8758,6 +8768,11 @@ namespace details {
             return empty() ? iterator()
                            : iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::begin));
         }
+        [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_element_iterator_tag) const
+        {
+            return empty() ? iterator()
+                           : iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::begin));
+        }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty()
@@ -8765,6 +8780,11 @@ namespace details {
                 : const_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_element_iterator_tag)
+        {
+            return empty() ? iterator()
+                           : iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::end));
+        }
+        [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty() ? iterator()
                            : iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::end));
@@ -8781,6 +8801,12 @@ namespace details {
                 ? reverse_iterator()
                 : reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::rbegin));
         }
+        [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_element_iterator_tag) const
+        {
+            return empty()
+                ? reverse_iterator()
+                : reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::rbegin));
+        }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty() ? const_reverse_iterator()
@@ -8788,6 +8814,12 @@ namespace details {
                                buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_element_iterator_tag)
+        {
+            return empty()
+                ? reverse_iterator()
+                : reverse_iterator(buffsp_->data(), indexer_type(hdr_, axis, arrnd_iterator_start_position::rend));
+        }
+        [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty()
                 ? reverse_iterator()
@@ -8808,6 +8840,11 @@ namespace details {
             return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
         }
         template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order) const
+        {
+            return empty() ? iterator() : iterator(buffsp_->data(), indexer_type(hdr_, first_order, last_order));
+        }
+        template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_iterator()
@@ -8815,6 +8852,13 @@ namespace details {
         }
         template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
+        {
+            return empty() ? iterator()
+                           : iterator(buffsp_->data(),
+                               indexer_type(hdr_, first_order, last_order, arrnd_iterator_start_position::end));
+        }
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? iterator()
                            : iterator(buffsp_->data(),
@@ -8835,6 +8879,13 @@ namespace details {
                                indexer_type(hdr_, first_order, last_order, arrnd_iterator_start_position::rbegin));
         }
         template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order) const
+        {
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(buffsp_->data(),
+                               indexer_type(hdr_, first_order, last_order, arrnd_iterator_start_position::rbegin));
+        }
+        template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? const_reverse_iterator()
@@ -8843,6 +8894,13 @@ namespace details {
         }
         template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
+        {
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(buffsp_->data(),
+                               indexer_type(hdr_, first_order, last_order, arrnd_iterator_start_position::rend));
+        }
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? reverse_iterator()
                            : reverse_iterator(buffsp_->data(),
@@ -8860,11 +8918,19 @@ namespace details {
         {
             return begin(order.begin(), order.end());
         }
+        [[nodiscard]] constexpr auto begin(std::initializer_list<size_type> order) const
+        {
+            return begin(order.begin(), order.end());
+        }
         [[nodiscard]] constexpr auto cbegin(std::initializer_list<size_type> order) const
         {
             return cbegin(order.begin(), order.end());
         }
         [[nodiscard]] constexpr auto end(std::initializer_list<size_type> order)
+        {
+            return end(order.begin(), order.end());
+        }
+        [[nodiscard]] constexpr auto end(std::initializer_list<size_type> order) const
         {
             return end(order.begin(), order.end());
         }
@@ -8876,11 +8942,19 @@ namespace details {
         {
             return rbegin(order.begin(), order.end());
         }
+        [[nodiscard]] constexpr auto rbegin(std::initializer_list<size_type> order) const
+        {
+            return rbegin(order.begin(), order.end());
+        }
         [[nodiscard]] constexpr auto crbegin(std::initializer_list<size_type> order) const
         {
             return crbegin(order.begin(), order.end());
         }
         [[nodiscard]] constexpr auto rend(std::initializer_list<size_type> order)
+        {
+            return rend(order.begin(), order.end());
+        }
+        [[nodiscard]] constexpr auto rend(std::initializer_list<size_type> order) const
         {
             return rend(order.begin(), order.end());
         }
@@ -8895,12 +8969,22 @@ namespace details {
             return begin(std::begin(order), std::end(order));
         }
         template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto begin(const Cont& order) const
+        {
+            return begin(std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto cbegin(const Cont& order) const
         {
             return cbegin(std::begin(order), std::end(order));
         }
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto end(const Cont& order)
+        {
+            return end(std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto end(const Cont& order) const
         {
             return end(std::begin(order), std::end(order));
         }
@@ -8915,12 +8999,22 @@ namespace details {
             return rbegin(std::begin(order), std::end(order));
         }
         template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto rbegin(const Cont& order) const
+        {
+            return rbegin(std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto crbegin(const Cont& order) const
         {
             return crbegin(std::begin(order), std::end(order));
         }
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto rend(const Cont& order)
+        {
+            return rend(std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto rend(const Cont& order) const
         {
             return rend(std::begin(order), std::end(order));
         }
@@ -8936,12 +9030,22 @@ namespace details {
             return begin(std::begin(order), std::end(order));
         }
         template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto begin(const U (&order)[M]) const
+        {
+            return begin(std::begin(order), std::end(order));
+        }
+        template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto cbegin(const U (&order)[M]) const
         {
             return cbegin(std::begin(order), std::end(order));
         }
         template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto end(const U (&order)[M])
+        {
+            return end(std::begin(order), std::end(order));
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto end(const U (&order)[M]) const
         {
             return end(std::begin(order), std::end(order));
         }
@@ -8956,12 +9060,22 @@ namespace details {
             return rbegin(std::begin(order), std::end(order));
         }
         template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto rbegin(const U (&order)[M]) const
+        {
+            return rbegin(std::begin(order), std::end(order));
+        }
+        template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto crbegin(const U (&order)[M]) const
         {
             return crbegin(std::begin(order), std::end(order));
         }
         template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto rend(const U (&order)[M])
+        {
+            return rend(std::begin(order), std::end(order));
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto rend(const U (&order)[M]) const
         {
             return rend(std::begin(order), std::end(order));
         }
@@ -8987,6 +9101,13 @@ namespace details {
                 : slice_iterator(*this,
                     ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::begin));
         }
+        [[nodiscard]] constexpr auto begin(arrnd_returned_slice_iterator_tag) const
+        {
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(*this,
+                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::begin));
+        }
         [[nodiscard]] constexpr auto cbegin(arrnd_returned_slice_iterator_tag) const
         {
             return empty()
@@ -9001,6 +9122,13 @@ namespace details {
                 : slice_iterator(*this,
                     ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
+        [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag) const
+        {
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
+        }
         [[nodiscard]] constexpr auto cend(arrnd_returned_slice_iterator_tag) const
         {
             return empty()
@@ -9009,6 +9137,13 @@ namespace details {
                     ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag)
+        {
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(*this,
+                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rbegin));
+        }
+        [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? reverse_slice_iterator()
@@ -9029,6 +9164,13 @@ namespace details {
                 : reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
+        [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
+        {
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
+        }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
         {
             return empty()
@@ -9047,6 +9189,13 @@ namespace details {
                                ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
                                    arrnd_iterator_start_position::begin));
         }
+        [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag) const
+        {
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::begin));
+        }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? const_slice_iterator()
@@ -9060,6 +9209,13 @@ namespace details {
                            : slice_iterator(*this,
                                ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
                                    arrnd_iterator_start_position::end));
+        }
+        [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag) const
+        {
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto cend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
@@ -9075,6 +9231,13 @@ namespace details {
                                ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
                                    arrnd_iterator_start_position::rbegin));
         }
+        [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
+        {
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
+                                   arrnd_iterator_start_position::rbegin));
+        }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? const_reverse_slice_iterator()
@@ -9083,6 +9246,13 @@ namespace details {
                                    arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag)
+        {
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
+                                   arrnd_iterator_start_position::rend));
+        }
+        [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? reverse_slice_iterator()
                            : reverse_slice_iterator(*this,
@@ -9339,6 +9509,71 @@ namespace details {
         const this_type* creator_ = nullptr;
     };
 
+    // free arrnd iterator functions
+
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto begin(ArCo& c, Args&&... args)
+    {
+        return c.begin(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto begin(const ArCo& c, Args&&... args)
+    {
+        return c.begin(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto cbegin(const ArCo& c, Args&&... args)
+    {
+        return c.cbegin(std::forward<Args>(args)...);
+    }
+
+        template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto end(ArCo& c, Args&&... args)
+    {
+        return c.end(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto end(const ArCo& c, Args&&... args)
+    {
+        return c.end(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto cend(const ArCo& c, Args&&... args)
+    {
+        return c.cend(std::forward<Args>(args)...);
+    }
+
+        template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto rbegin(ArCo& c, Args&&... args)
+    {
+        return c.rbegin(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto rbegin(const ArCo& c, Args&&... args)
+    {
+        return c.rbegin(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto crbegin(const ArCo& c, Args&&... args)
+    {
+        return c.crbegin(std::forward<Args>(args)...);
+    }
+
+        template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto rend(ArCo& c, Args&&... args)
+    {
+        return c.rend(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto rend(const ArCo& c, Args&&... args)
+    {
+        return c.rend(std::forward<Args>(args)...);
+    }
+    template <arrnd_compliant ArCo, typename... Args>
+    inline constexpr auto crend(const ArCo& c, Args&&... args)
+    {
+        return c.crend(std::forward<Args>(args)...);
+    }
 
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -12202,6 +12437,15 @@ using details::arrnd_slice_inserter;
 using details::arrnd_shape_preset;
 using details::arrnd_filter_proxy;
 using details::arrnd;
+
+using details::begin;
+using details::cbegin;
+using details::end;
+using details::cend;
+using details::rbegin;
+using details::crbegin;
+using details::rend;
+using details::crend;
 
 using details::copy;
 using details::set;
