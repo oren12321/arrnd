@@ -3232,6 +3232,398 @@ namespace details {
 
 
 
+
+                // zip class
+
+    template <typename... _Tp>
+    bool variadic_or(_Tp&&... args)
+    {
+        return (... || args);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool any_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_or(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename... _Tp>
+    bool variadic_and(_Tp&&... args)
+    {
+        return (... && args);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool all_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool all_lesseq(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) <= std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    constexpr auto tuple_max(Tuple&& t, std::index_sequence<I...>)
+    {
+        return std::max({
+            std::get<I>(std::forward<Tuple>(t))...,
+        });
+    }
+
+    template <typename Cont, typename... Args>
+    class iter_pack {
+    public:
+        using cont_type = Cont;
+        using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
+        using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
+
+        constexpr iter_pack(Cont& cont, Args&&... args)
+            : cont_(cont)
+            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
+        { }
+
+        constexpr iter_pack(const iter_pack&) = default;
+        constexpr iter_pack(iter_pack&&) = default;
+
+        constexpr iter_pack& operator=(const iter_pack&) = default;
+        constexpr iter_pack& operator=(iter_pack&&) = default;
+
+        constexpr virtual ~iter_pack() = default;
+
+        constexpr auto& cont() noexcept
+        {
+            return cont_;
+        }
+        constexpr const auto& cont() const noexcept
+        {
+            return cont_;
+        }
+
+        constexpr auto& args() noexcept
+        {
+            return args_;
+        }
+        constexpr const auto& args() const
+        {
+            return args_;
+        }
+
+    private:
+        Cont& cont_;
+        std::tuple<Args...> args_ = std::tuple<>{};
+    };
+
+    template <typename... ItPack>
+    class zip {
+    public:
+        struct iterator {
+            using iterator_category = std::random_access_iterator_tag;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::iter_type>...>;
+            using difference_type = std::int64_t;
+            //std::tuple<std::iter_difference_t<typename ItPack::iter_type>...>;
+            // using pointer = std::tuple<typename std::iterator_traits<std::ranges::iterator_t<T>>::pointer...>;
+
+            [[nodiscard]] constexpr reference operator*() const
+            {
+                return std::apply(
+                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
+            }
+
+            constexpr iterator& operator++()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
+                return *this;
+            }
+
+            constexpr iterator operator++(int)
+            {
+                iterator temp{*this};
+                ++(*this);
+                return temp;
+            }
+
+            constexpr iterator& operator+=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr iterator operator+(std::int64_t count) const
+            {
+                iterator temp{*this};
+                temp += count;
+                return temp;
+            }
+
+            constexpr iterator& operator--()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
+                return *this;
+            }
+
+            constexpr iterator operator--(int)
+            {
+                iterator temp{*this};
+                --(*this);
+                return temp;
+            }
+
+            constexpr iterator& operator-=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr iterator operator-(std::int64_t count) const
+            {
+                iterator temp{*this};
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr auto operator!=(const iterator& iter) const
+            {
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr auto operator==(const iterator& iter) const
+            {
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
+            {
+                return std::apply(
+                    [index]<typename... Ts>(
+                        Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); },
+                    data_);
+            }
+
+            [[nodiscard]] constexpr bool operator<(const iterator& iter) const noexcept
+            {
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
+            {
+                auto impl =
+                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
+                {
+                    return std::forward_as_tuple(
+                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                };
+
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            std::tuple<typename ItPack::iter_type...> data_;
+        };
+
+        struct reverse_iterator {
+            using iterator_category = std::random_access_iterator_tag;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::riter_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::riter_type>...>;
+            using difference_type = std::int64_t;
+            //std::tuple<std::iter_difference_t<typename ItPack::riter_type>...>;
+            // using pointer = std::tuple<typename std::reverse_iterator_traits<std::ranges::reverse_iterator_t<T>>::pointer...>;
+
+            [[nodiscard]] constexpr reference operator*() const
+            {
+                return std::apply(
+                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
+            }
+
+            constexpr reverse_iterator& operator++()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
+                return *this;
+            }
+
+            constexpr reverse_iterator operator++(int)
+            {
+                reverse_iterator temp{*this};
+                ++(*this);
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator+=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr reverse_iterator operator+(std::int64_t count) const
+            {
+                reverse_iterator temp{*this};
+                temp += count;
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator--()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
+                return *this;
+            }
+
+            constexpr reverse_iterator operator--(int)
+            {
+                reverse_iterator temp{*this};
+                --(*this);
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator-=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr reverse_iterator operator-(std::int64_t count) const
+            {
+                reverse_iterator temp{*this};
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr auto operator!=(const reverse_iterator& iter) const
+            {
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr auto operator==(const reverse_iterator& iter) const
+            {
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
+            {
+                return std::apply(
+                    [index]<typename... Ts>(
+                        Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); },
+                    data_);
+            }
+
+            [[nodiscard]] constexpr bool operator<(const reverse_iterator& iter) const noexcept
+            {
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
+            {
+                auto impl =
+                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
+                {
+                    return std::forward_as_tuple(
+                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                };
+
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            std::tuple<typename ItPack::riter_type...> data_;
+        };
+
+        zip(ItPack... packs)
+            : packs_(std::forward_as_tuple(packs...))
+        { }
+
+        auto begin()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
+            {
+                using std::begin;
+                return begin(ip.cont(), std::get<I>(ip.args())...);
+            };
+
+            return iterator(std::apply(
+                [&]<typename... Ts>(Ts && ... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_));
+        }
+
+        auto end()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
+            {
+                using std::end;
+                return end(ip.cont(), std::get<I>(ip.args())...);
+            };
+
+            return iterator{std::apply(
+                [&]<typename... Ts>(Ts && ... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_)};
+        }
+
+        auto rbegin()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
+            {
+                using std::rbegin;
+                return rbegin(ip.cont(), std::get<I>(ip.args())...);
+            };
+
+            return reverse_iterator(std::apply(
+                [&]<typename... Ts>(Ts && ... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_));
+        }
+
+        auto rend()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
+            {
+                using std::rend;
+                return rend(ip.cont(), std::get<I>(ip.args())...);
+            };
+
+            return reverse_iterator{std::apply(
+                [&]<typename... Ts>(Ts && ... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_)};
+        }
+
+    private:
+        std::tuple<ItPack...> packs_;
+    };
+
+    // ---------
+
+
+
+
+
+
             template <arrnd_compliant Arrnd, typename Constraint>
     class arrnd_filter_proxy {
     public:
@@ -8234,6 +8626,118 @@ namespace details {
                 axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
         }
 
+
+
+
+                            template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        requires(Level == 0) [[nodiscard]] constexpr this_type
+            reorder(const InputIt& first_order, const InputIt& last_order) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            assert(std::distance(first_order, last_order) == hdr_.numel());
+
+            replaced_type<size_type> order({std::distance(first_order, last_order)}, first_order, last_order);
+
+            auto reordered = clone();
+
+            auto z = zip(iter_pack(order), iter_pack(reordered));
+            std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
+                return std::get<0>(t1) < std::get<0>(t2);
+            });
+
+            return reordered;
+
+            //return reduced.template reshape<Level>(hdr_.dims());
+        }
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        requires(Level > 0) [[nodiscard]] constexpr this_type
+            reorder(const InputIt& first_order, const InputIt& last_order) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template reorder<Level - 1, InputIt>(first_order, last_order);
+            }
+
+            return res;
+        }
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr this_type reorder(
+            const InputIt& first_order, const InputIt& last_order) const
+        {
+            return reorder<this_type::depth, InputIt>(first_order, last_order);
+        }
+
+
+
+
+                template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        requires(Level == 0)
+            [[nodiscard]] constexpr this_type reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            assert(axis >= 0 && axis < hdr_.dims().size());
+            assert(std::distance(first_order, last_order) == *std::next(hdr_.dims().cbegin(), axis));
+
+            replaced_type<size_type> order({std::distance(first_order, last_order)}, first_order, last_order);
+
+            auto expanded = expand<Level>(axis);
+
+            auto z = zip(iter_pack(order), iter_pack(expanded));
+            std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
+                return std::get<0>(t1) < std::get<0>(t2);
+            });
+
+            auto reordered = expanded.template reduce<Level>([axis](const auto& acc, const auto& cur) {
+                return acc.template append<Level>(cur, axis);
+            });
+
+            return reordered;
+            //return reduced.template reshape<Level>(hdr_.dims());
+        }
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        requires(Level > 0)
+            [[nodiscard]] constexpr this_type reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template reorder<Level - 1, InputIt>(axis, first_order, last_order);
+            }
+
+            return res;
+        }
+        template <signed_integral_type_iterator InputIt>
+         [[nodiscard]] constexpr this_type
+        reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        {
+            return reorder<this_type::depth, InputIt>(axis, first_order, last_order);
+        }
+
+
+
+
+
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>, Args...>)
         [[nodiscard]] constexpr bool all_match(Pred&& pred, Args&&... args) const
@@ -9613,409 +10117,6 @@ namespace details {
     {
         return c.crend(std::forward<Args>(args)...);
     }
-
-
-
-
-
-
-            // zip class
-
-    template <typename... _Tp>
-    bool variadic_or(_Tp&&... args)
-    {
-        return (... || args);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool any_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_or(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename... _Tp>
-    bool variadic_and(_Tp&&... args)
-    {
-        return (... && args);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool all_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool all_lesseq(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) <= std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    constexpr auto tuple_max(Tuple&& t, std::index_sequence<I...>)
-    {
-        return std::max({
-            std::get<I>(std::forward<Tuple>(t))...,
-        });
-            
-    }
-
-    template <typename Cont, typename... Args>
-    class iter_pack {
-    public:
-        using cont_type = Cont;
-        using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
-        using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
-
-        constexpr iter_pack(Cont& cont, Args&&... args)
-            : cont_(cont)
-            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
-        { }
-
-        constexpr iter_pack(const iter_pack&) = default;
-        constexpr iter_pack(iter_pack&&) = default;
-
-        constexpr iter_pack& operator=(const iter_pack&) = default;
-        constexpr iter_pack& operator=(iter_pack&&) = default;
-
-        constexpr virtual ~iter_pack() = default;
-
-        constexpr auto& cont() noexcept
-        {
-            return cont_;
-        }
-        constexpr const auto& cont() const noexcept
-        {
-            return cont_;
-        }
-
-        constexpr auto& args() noexcept
-        {
-            return args_;
-        }
-        constexpr const auto& args() const
-        {
-            return args_;
-        }
-
-    private:
-        Cont& cont_;
-        std::tuple<Args...> args_ = std::tuple<>{};
-    };
-
-    template <typename... ItPack>
-    class zip {
-    public:
-        struct iterator {
-            using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::iter_type>...>;
-            using difference_type = std::int64_t;
-            //std::tuple<std::iter_difference_t<typename ItPack::iter_type>...>;
-            // using pointer = std::tuple<typename std::iterator_traits<std::ranges::iterator_t<T>>::pointer...>;
-
-            [[nodiscard]] constexpr reference operator*() const
-            {
-                return std::apply(
-                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
-            }
-
-            constexpr iterator& operator++()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
-                return *this;
-            }
-
-            constexpr iterator operator++(int)
-            {
-                iterator temp{*this};
-                ++(*this);
-                return temp;
-            }
-
-            constexpr iterator& operator+=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); }, data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr iterator operator+(std::int64_t count) const
-            {
-                iterator temp{*this};
-                temp += count;
-                return temp;
-            }
-
-                        constexpr iterator& operator--()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
-                return *this;
-            }
-
-            constexpr iterator operator--(int)
-            {
-                iterator temp{*this};
-                --(*this);
-                return temp;
-            }
-
-            constexpr iterator& operator-=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr iterator operator-(std::int64_t count) const
-            {
-                iterator temp{*this};
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] constexpr auto operator!=(const iterator& iter) const
-            {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr auto operator==(const iterator& iter) const
-            {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
-            {
-                return std::apply(
-                    [index]<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); }, data_);
-            }
-
-            [[nodiscard]] constexpr bool operator<(const iterator& iter) const noexcept
-            {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
-            {
-                auto impl =
-                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
-                {
-                    return std::forward_as_tuple(
-                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
-                };
-                
-                auto diffs
-                    = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            std::tuple<typename ItPack::iter_type...> data_;
-        };
-
-
-
-        struct reverse_iterator {
-            using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::riter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::riter_type>...>;
-            using difference_type = std::int64_t;
-            //std::tuple<std::iter_difference_t<typename ItPack::riter_type>...>;
-            // using pointer = std::tuple<typename std::reverse_iterator_traits<std::ranges::reverse_iterator_t<T>>::pointer...>;
-
-            [[nodiscard]] constexpr reference operator*() const
-            {
-                return std::apply(
-                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
-            }
-
-            constexpr reverse_iterator& operator++()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
-                return *this;
-            }
-
-            constexpr reverse_iterator operator++(int)
-            {
-                reverse_iterator temp{*this};
-                ++(*this);
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator+=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr reverse_iterator operator+(std::int64_t count) const
-            {
-                reverse_iterator temp{*this};
-                temp += count;
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator--()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
-                return *this;
-            }
-
-            constexpr reverse_iterator operator--(int)
-            {
-                reverse_iterator temp{*this};
-                --(*this);
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator-=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr reverse_iterator operator-(std::int64_t count) const
-            {
-                reverse_iterator temp{*this};
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] constexpr auto operator!=(const reverse_iterator& iter) const
-            {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr auto operator==(const reverse_iterator& iter) const
-            {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
-            {
-                return std::apply(
-                    [index]<typename... Ts>(
-                        Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); },
-                    data_);
-            }
-
-            [[nodiscard]] constexpr bool operator<(const reverse_iterator& iter) const noexcept
-            {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
-            {
-                auto impl =
-                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
-                {
-                    return std::forward_as_tuple(
-                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
-                };
-
-                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            std::tuple<typename ItPack::riter_type...> data_;
-        };
-
-
-
-        zip(ItPack... packs)
-            : packs_(std::forward_as_tuple(packs...))
-        { }
-
-        auto begin()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
-                using std::begin;
-                return begin(ip.cont(), std::get<I>(ip.args())...);
-            };
-
-            return iterator(std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_));
-        }
-
-        auto end()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
-                using std::end;
-                return end(ip.cont(), std::get<I>(ip.args())...);
-            };
-
-            return iterator{std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_)};
-        }
-
-        auto rbegin()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
-                using std::rbegin;
-                return rbegin(ip.cont(), std::get<I>(ip.args())...);
-            };
-
-            return reverse_iterator(std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_));
-        }
-
-        auto rend()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
-                using std::rend;
-                return rend(ip.cont(), std::get<I>(ip.args())...);
-            };
-
-            return reverse_iterator{std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_)};
-        }
-
-    private:
-        std::tuple<ItPack...> packs_;
-    };
-
-    // ---------
-
-
-
-
-
-
-
-
-
 
 
 
@@ -12457,6 +12558,107 @@ namespace details {
         return is_sorted<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
     }
 
+
+
+
+
+        template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, InputIt first_order, InputIt last_order)
+    {
+        return arr.template reorder<Level>(first_order, last_order);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const Cont& order)
+    {
+        return reorder<Level>(arr, std::begin(order), std::end(order));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    {
+        return reorder<Level>(arr, order.begin(), order.end());
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const U (&order)[M])
+    {
+        return reorder<Level>(arr, std::begin(order), std::end(order));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, InputIt first_order, InputIt last_order)
+    {
+        return reorder<ArCo::depth>(arr, first_order, last_order);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const Cont& order)
+    {
+        return reorder<ArCo::depth>(arr, std::begin(order), std::end(order));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    {
+        return reorder<ArCo::depth>(arr, order.begin(), order.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const U (&order)[M])
+    {
+        return reorder<ArCo::depth>(arr, std::begin(order), std::end(order));
+    }
+
+
+
+
+
+        template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, typename ArCo::size_type axis, InputIt first_order, InputIt last_order)
+    {
+        return arr.template reorder<Level>(axis, first_order, last_order);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const Cont& order)
+    {
+        return reorder<Level>(arr, axis, std::begin(order), std::end(order));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, typename ArCo::size_type axis, std::initializer_list<typename ArCo::size_type> order)
+    {
+        return reorder<Level>(arr, axis, order.begin(), order.end());
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const U (&order)[M])
+    {
+        return reorder<Level>(arr, axis, std::begin(order), std::end(order));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, typename ArCo::size_type axis, InputIt first_order, InputIt last_order)
+    {
+        return reorder<ArCo::depth>(arr, axis, first_order, last_order);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const Cont& order)
+    {
+        return reorder<ArCo::depth>(arr, axis, std::begin(order), std::end(order));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto reorder(
+        const ArCo& arr, typename ArCo::size_type axis, std::initializer_list<typename ArCo::size_type> order)
+    {
+        return reorder<ArCo::depth>(arr, axis, order.begin(), order.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const U (&order)[M])
+    {
+        return reorder<ArCo::depth>(arr, axis, std::begin(order), std::end(order));
+    }
+
+
+
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred, typename... Args>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
     {
@@ -12918,6 +13120,7 @@ using details::pageop;
 using details::squeeze;
 using details::sort;
 using details::is_sorted;
+using details::reorder;
 using details::all_match;
 using details::any_match;
 using details::transform;

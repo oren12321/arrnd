@@ -1084,6 +1084,26 @@ TEST(arrnd_test, zip)
         EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {1, 3, 2, 4, 6, 5})));
     }
 
+    // using reorder, sort an array by indices
+    {
+        std::vector<int> order{0, 2, 1, 3, 5, 4};
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto res = reorder(arr, order);
+
+        EXPECT_TRUE(all_equal(res, arrnd<int>({3, 2}, {1, 3, 2, 4, 6, 5})));
+    }
+
+    // using reorder, sort an array by axis and indices
+    {
+        std::vector<int> order{0, 2, 3, 1};
+        arrnd<int> arr({4, 2}, {1, 2, 3, 4, 5, 6, 7, 8});
+
+        auto res = reorder(arr, 0, order);
+
+        EXPECT_TRUE(all_equal(res, arrnd<int>({4, 2}, {1, 2, 7, 8, 3, 4, 5, 6})));
+    }
+
     //std::vector<int> indices{0, 2, 1, 3, 5, 4};
     //std::vector<int> values{10, 20, 30, 40, 50, 60};
     //arrnd<int> arr({3, 1, 2}, {10, 20, 30, 40, 50, 60});
