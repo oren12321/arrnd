@@ -1032,13 +1032,63 @@ TEST(arrnd_test, iterators_and_inserters)
 TEST(arrnd_test, zip)
 {
     using namespace oc;
-    using namespace oc::details;
 
-    std::vector<int> indices{0, 2, 1, 3, 5, 4};
-    std::vector<int> values{10, 20, 30, 40, 50, 60};
-    arrnd<int> arr({3, 1, 2}, {10, 20, 30, 40, 50, 60});
-    
-    auto expanded = arr.expand(0);
+    // collect vector of tuples from two arrays in reverse iteration
+    {
+        std::vector<std::tuple<int, int>> pairs;
+
+        arrnd<int> arr1({3, 2}, {1, 2, 3, 4, 5, 6});
+        arrnd<int> arr2({6, 1}, {1, 2, 3, 4, 5, 6});
+
+        auto z = zip(iter_pack(arr1, 1, arrnd_returned_element_iterator_tag{}), iter_pack(arr2));
+
+        std::for_each(z.rbegin(), z.rend(), [&pairs](const auto& t) {
+            auto [a, b] = t;
+            pairs.push_back(std::make_tuple(a, b));
+        });
+
+        EXPECT_EQ(pairs,
+            (std::vector{std::make_tuple(6, 6), std::make_tuple(4, 5), std::make_tuple(2, 4), std::make_tuple(5, 3),
+                std::make_tuple(3, 2), std::make_tuple(1, 1)}));
+    }
+
+    // reduce sum of array only on even indices
+    {
+        std::vector<int> inds{0, 1, 2, 3, 4, 5};
+        arrnd<int> vals({3, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto z = zip(iter_pack(inds), iter_pack(vals));
+
+        int s = std::reduce(z.begin(), z.end(), 0, [](int acc, const auto& t) {
+            auto [ind, val] = t;
+            return ind % 2 == 0 ? acc + val : acc;
+        });
+
+        EXPECT_EQ(s, 9);
+    }
+
+    // sort vector and array by indices
+    {
+        std::vector<int> indices{0, 2, 1, 3, 5, 4};
+        std::vector<std::string> vec{"a", "b", "c", "d", "e", "f"};
+        arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
+
+        auto z = zip(iter_pack(indices), iter_pack(vec), iter_pack(arr));
+
+        std::sort(z.begin(), z.end(), [](const auto& a, const auto& b) {
+            return std::get<0>(a) < std::get<0>(b);
+        });
+
+        EXPECT_EQ(vec, (std::vector<std::string>{"a", "c", "b", "d", "f", "e"}));
+
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {1, 3, 2, 4, 6, 5})));
+    }
+
+    //std::vector<int> indices{0, 2, 1, 3, 5, 4};
+    //std::vector<int> values{10, 20, 30, 40, 50, 60};
+    //arrnd<int> arr({3, 1, 2}, {10, 20, 30, 40, 50, 60});
+    //
+    //auto expanded = arr.expand(0);
 
     //for (auto [i, v] : zip(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
