@@ -83,7 +83,7 @@ TEST(arrnd_test, inverse)
                 arrnd<double>({3, 3}, {0.2, 0.2, 0, -0.2, 0.3, 1, 0.2, -0.3, 0})})));
 }
 
-TEST(arrnd_test, DISABLED_solve)
+TEST(arrnd_test, solve)
 {
     using namespace oc;
 
@@ -416,6 +416,25 @@ TEST(arrnd_test, arrnd_filter_proxy)
             return n <= 1;
         }) = arrnd<int>({6}, {6, 5, 4, 3, 2, 1});
         EXPECT_TRUE(all_equal(arr, arrnd<int>({3, 2}, {6, 2, 3, 4, 5, 4})));
+    }
+
+    // math operations
+    {
+        arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
+
+        arr({0, 2, 4}) += 1;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({6}, {2, 2, 4, 4, 6, 6})));
+
+        arr(arr > 4) -= 1;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({6}, {2, 2, 4, 4, 5, 5})));
+
+        arr([](int n) {
+            return n == 2;
+        }) *= 1.2;
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({6}, {2, 2, 4, 4, 5, 5})));
+
+        arr(arr == 4) += arrnd<int>({2}, {1, 2});
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({6}, {2, 2, 5, 6, 5, 5})));
     }
 
     //arrnd<int> arr({1, 5}, {1, 2, 3, 4, 5});
