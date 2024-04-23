@@ -9213,6 +9213,42 @@ namespace details {
             });
         }
 
+                template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto min() const
+        {
+            return reduce<Level>([](const auto& a, const auto& b) {
+                using std::min;
+                return min(a, b);
+            });
+        }
+
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto min(size_type axis) const
+        {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
+                using std::min;
+                return min(a, b);
+            });
+        }
+
+                        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto max() const
+        {
+            return reduce<Level>([](const auto& a, const auto& b) {
+                using std::max;
+                return max(a, b);
+            });
+        }
+
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr auto max(size_type axis) const
+        {
+            return reduce<Level>(axis, [](const auto& a, const auto& b) {
+                using std::max;
+                return max(a, b);
+            });
+        }
+
         template <std::int64_t Level = this_type::depth>
         [[nodiscard]] constexpr auto prod() const
         {
@@ -10862,6 +10898,54 @@ namespace details {
     [[nodiscard]] inline constexpr auto sum(const ArCo& arr, typename ArCo::size_type axis)
     {
         return sum<ArCo::depth>(arr, axis);
+    }
+
+        template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto min(const ArCo& arr)
+    {
+        return arr.template min<Level>();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto min(const ArCo& arr)
+    {
+        return min<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto min(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.template min<Level>(axis);
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto min(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return min<ArCo::depth>(arr, axis);
+    }
+
+        template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto max(const ArCo& arr)
+    {
+        return arr.template max<Level>();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto max(const ArCo& arr)
+    {
+        return max<ArCo::depth>(arr);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto max(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.template max<Level>(axis);
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto max(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return max<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -13340,6 +13424,8 @@ using details::all;
 using details::any;
 using details::sum;
 using details::prod;
+using details::min;
+using details::max;
 using details::mtimes;
 using details::det;
 using details::inverse;

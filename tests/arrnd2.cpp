@@ -1370,3 +1370,16 @@ TEST(arrnd_test, prod)
 
     EXPECT_TRUE(all_equal(arrnd<int>({2}, {2, 12}), prod(arr, 1)));
 }
+
+TEST(arrnd_test, min_max)
+{
+    using namespace oc;
+
+    arrnd<int> arr({2, 2}, {1, 4, 3, 2});
+
+    EXPECT_EQ(1, min(arr));
+    EXPECT_TRUE(all_equal(arrnd<int>({2}, {1, 2}), min(arr, 0)));
+
+        EXPECT_EQ(4, max(arr));
+    EXPECT_TRUE(all_equal(arrnd<int>({2}, {3, 4}), max(arr, 0)));
+}
