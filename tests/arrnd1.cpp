@@ -33,7 +33,7 @@ TEST(arrnd_test, basic_math_and_trigo)
     EXPECT_TRUE(all_close(
         arrnd<double>({1, 5}, {std::atan(0.1), std::atan(0.2), std::atan(0.3), std::atan(0.4), std::atan(0.5)}),
         atan(arr1)));
-
+    
     EXPECT_TRUE(
         all_close(arrnd<double>({1, 5}, {std::acosh(1), std::acosh(2), std::acosh(3), std::acosh(4), std::acosh(5)}),
             acosh(arr2)));

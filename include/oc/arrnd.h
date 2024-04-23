@@ -6372,6 +6372,7 @@ namespace details {
             });
         }
 
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto lu() const
             requires(!this_type::is_flat)
         {
@@ -6379,7 +6380,7 @@ namespace details {
                 return a.lu();
             });
         }
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto lu() const
             requires(this_type::is_flat)
         {
@@ -6434,6 +6435,7 @@ namespace details {
             });
         }
 
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(!this_type::is_flat)
         {
@@ -6441,7 +6443,7 @@ namespace details {
                 return a.qr(/*permute*/);
             });
         }
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(this_type::is_flat)
         {
@@ -6513,6 +6515,7 @@ namespace details {
             });
         }
 
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto hess() const
             requires(!this_type::is_flat)
         {
@@ -6520,7 +6523,7 @@ namespace details {
                 return a.hess();
             });
         }
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto hess() const
             requires(this_type::is_flat)
         {
@@ -6583,13 +6586,14 @@ namespace details {
             });
         }
 
+        [[deprecated("not fully cheked")]]
                         [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.schur();
             });
         }
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto schur() const
             requires(this_type::is_flat&& !template_type<value_type, std::complex>)
         {
@@ -6720,7 +6724,7 @@ namespace details {
 
 
 
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto schur() const requires(this_type::is_flat&& template_type<value_type, std::complex>)
         {
             assert(hdr_.dims().size() >= 2);
@@ -6795,7 +6799,7 @@ namespace details {
 
 
 
-
+        [[deprecated("not fully cheked")]]
                                 [[nodiscard]] constexpr auto eig() const requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
@@ -6803,6 +6807,7 @@ namespace details {
             });
         }
 
+                                [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto eig() const requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -6849,7 +6854,7 @@ namespace details {
 
 
 
-
+        [[deprecated("not fully cheked")]]
                                 [[nodiscard]] constexpr auto svd() const requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
@@ -6857,6 +6862,7 @@ namespace details {
             });
         }
 
+                                [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto svd() const requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -7181,7 +7187,7 @@ namespace details {
 
 
 
-
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
         {
@@ -7190,6 +7196,7 @@ namespace details {
             });
         }
 
+        [[deprecated("not fully cheked")]]
         [[nodiscard]] constexpr auto cholesky() const
             requires(this_type::is_flat)
         {
@@ -10829,42 +10836,49 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
     {
         return arr.cholesky();
     }
 
     template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
     {
         return arr.lu();
     }
 
     template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto qr(const ArCo& arr/*, bool permute = false*/)
     {
         return arr.qr(/*permute*/);
     }
 
     template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
     {
         return arr.hess();
     }
 
         template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
     {
         return arr.schur();
     }
 
             template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto svd(const ArCo& arr)
     {
         return arr.svd();
     }
 
         template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]]
     [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
     {
         return arr.eig();
@@ -13644,15 +13658,6 @@ using details::solve;
 using details::tril;
 using details::triu;
 
-using details::cholesky;
-using details::lu;
-using details::qr;
-using details::hess;
-using details::schur;
-using details::svd;
-using details::eig;
-
-
 using details::filter;
 using details::find;
 using details::diag;
@@ -13694,6 +13699,19 @@ using details::conj;
 using details::proj;
 using details::polar;
 using details::sign;
+
+// the functions in the experimental namespace may still be reachable
+// from the oc namespace due to ADL
+namespace experimental {
+    using details::cholesky;
+    using details::lu;
+    using details::qr;
+    using details::hess;
+    using details::schur;
+    using details::svd;
+    using details::eig;
+}
+
 }
 
 // swap function for zip class iterator usage in std algorithms
