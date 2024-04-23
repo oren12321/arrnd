@@ -6376,7 +6376,8 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto schur() const requires(this_type::is_flat && std::is_floating_point_v<value_type>)
+        [[nodiscard]] constexpr auto schur() const
+            requires(this_type::is_flat&& !template_type<value_type, std::complex>)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6588,7 +6589,7 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto eig() const requires(this_type::is_flat&& std::is_floating_point_v<value_type>)
+        [[nodiscard]] constexpr auto eig() const requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6947,11 +6948,7 @@ namespace details {
                 //std::cout << required << "\n";
 
                 auto actual = arr.transform([](const value_type& val) {
-                    if constexpr (std::is_floating_point_v<value_type>) {
-                        return !oc::close(val, value_type{0});
-                    } else {
-                        return static_cast<bool>(val);
-                    }
+                    return !oc::close(val, value_type{0});
                 });
                 //std::cout << actual << "\n";
 
@@ -6980,7 +6977,7 @@ namespace details {
         }
 
         [[nodiscard]] constexpr auto cholesky() const
-            requires(this_type::is_flat && (template_type<value_type, std::complex> || std::is_floating_point_v<value_type>))
+            requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
