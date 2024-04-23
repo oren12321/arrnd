@@ -1941,7 +1941,7 @@ namespace details {
             return *gen_ <= *(iter.gen_);
         }
 
-        [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
             return data_[gen_[index]];
         }
@@ -2055,7 +2055,7 @@ namespace details {
             return *gen_ <= *(iter.gen_);
         }
 
-        [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr const reference operator[](difference_type index) const noexcept
         {
             return data_[gen_[index]];
         }
@@ -2169,7 +2169,7 @@ namespace details {
             return *gen_ >= *(iter.gen_);
         }
 
-        [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
             return data_[gen_[index]];
         }
@@ -2283,7 +2283,7 @@ namespace details {
             return *gen_ >= *(iter.gen_);
         }
 
-        [[nodiscard]] constexpr const reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr const reference operator[](difference_type index) const noexcept
         {
             return data_[gen_[index]];
         }
@@ -2401,7 +2401,7 @@ namespace details {
             return far_ <= iter.far_;
         }
 
-        [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
             auto ranges = far_[index];
             return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
@@ -2522,7 +2522,7 @@ namespace details {
             return far_ <= iter.far_;
         }
 
-        [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr const_reference operator[](difference_type index) const noexcept
         {
             auto ranges = far_[index];
             return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
@@ -2643,7 +2643,7 @@ namespace details {
             return far_ >= iter.far_;
         }
 
-        [[nodiscard]] constexpr reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
             auto ranges = far_[index];
             return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
@@ -2766,7 +2766,7 @@ namespace details {
             return far_ >= iter.far_;
         }
 
-        [[nodiscard]] constexpr const_reference operator[](difference_type index) noexcept
+        [[nodiscard]] constexpr const_reference operator[](difference_type index) const noexcept
         {
             auto ranges = far_[index];
             return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
@@ -3962,6 +3962,77 @@ namespace details {
         Constraint constraint_;
     };
 
+    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
+    [[nodiscard]] inline constexpr auto zeros(DimsIt first_dim, DimsIt last_dim)
+    {
+        return ArCo(first_dim, last_dim, 0);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto zeros(const Cont& dims)
+    {
+        return zeros<ArCo>(std::begin(dims), std::end(dims));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto zeros(std::initializer_list<typename ArCo::size_type> dims)
+    {
+        return zeros<ArCo>(dims.begin(), dims.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto zeros(const U (&dims)[M])
+    {
+        return zeros<ArCo>(std::begin(dims), std::end(dims));
+    }
+
+    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
+    [[nodiscard]] inline constexpr auto eye(DimsIt first_dim, DimsIt last_dim)
+    {
+        auto ndims = std::distance(first_dim, last_dim);
+        assert(ndims >= 2);
+
+        auto eye_impl = [](typename ArCo::size_type r, typename ArCo::size_type c) {
+            if (r == 0 || c == 0) {
+                return ArCo();
+            }
+            ArCo res({r, c}, typename ArCo::value_type{0});
+            assert(res.header().is_matrix());
+
+            auto n = std::min(r, c);
+
+            typename ArCo::size_type one_ind = 0;
+
+            for (typename ArCo::size_type i = 0; i < n; ++i) {
+                res[one_ind] = typename ArCo::value_type{1};
+                one_ind += c + 1;
+            }
+
+            return res;
+        };
+
+        if (ndims == 2) {
+            return eye_impl(*first_dim, *std::next(first_dim, 1));
+        }
+
+        ArCo res(first_dim, last_dim, typename ArCo::value_type{0});
+        return res.template pageop<0>(2, [eye_impl](auto page) {
+            return eye_impl(page.header().dims().front(), page.header().dims().back());
+        });
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto eye(const Cont& dims)
+    {
+        return eye<ArCo>(std::begin(dims), std::end(dims));
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto eye(std::initializer_list<typename ArCo::size_type> dims)
+    {
+        return eye<ArCo>(dims.begin(), dims.end());
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto eye(const U (&dims)[M])
+    {
+        return eye<ArCo>(std::begin(dims), std::end(dims));
+    }
+
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
         arrnd_header_compliant Header = arrnd_header<>, template <typename> typename Indexer = arrnd_indexer,
@@ -4499,7 +4570,7 @@ namespace details {
             requires(!arrnd_compliant<Cont>)
         [[nodiscard]] constexpr auto operator()(const Cont& indices) const
         {
-            return (*this)(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+            return (*this)(replaced_type<size_type>({std::ssize(indices)}, std::begin(indices), std::end(indices)));
         }
         /**
         * @note more strict function than filter. in case of logical type arrnd, its being treated as mask
@@ -4512,7 +4583,7 @@ namespace details {
         }
         [[nodiscard]] constexpr auto operator()(std::initializer_list<size_type> indices) const
         {
-            return (*this)(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
+            return (*this)(replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
         }
         template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto operator()(const U (&indices)[M]) const
@@ -6026,12 +6097,13 @@ namespace details {
             requires(!arrnd_compliant<Cont>)
         [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
-            return filter<Level>(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+            return filter<Level>(
+                replaced_type<size_type>({std::ssize(indices)}, std::begin(indices), std::end(indices)));
         }
         template <std::int64_t Level>
         [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
         {
-            return filter<Level>(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
+            return filter<Level>(replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
         }
         template <std::int64_t Level, std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto filter(const U (&indices)[M]) const
@@ -6050,11 +6122,12 @@ namespace details {
         [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
             return filter<this_type::depth>(
-                replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+                replaced_type<size_type>({std::ssize(indices)}, std::begin(indices), std::end(indices)));
         }
         [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
         {
-            return filter<this_type::depth>(replaced_type<size_type>({indices.size()}, indices.begin(), indices.end()));
+            return filter<this_type::depth>(
+                replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
         }
         template <std::integral U, std::int64_t M>
         [[nodiscard]] constexpr auto filter(const U (&indices)[M]) const
@@ -11265,14 +11338,14 @@ namespace details {
     {
         return filter<Level>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
-                {indices.size()}, std::begin(indices), std::end(indices)));
+                {std::ssize(indices)}, std::begin(indices), std::end(indices)));
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
     {
         return filter<Level>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
-                {indices.size()}, indices.begin(), indices.end()));
+                {std::ssize(indices)}, indices.begin(), indices.end()));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
@@ -11295,14 +11368,14 @@ namespace details {
     {
         return filter<ArCo::depth>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
-                {indices.size()}, std::begin(indices), std::end(indices)));
+                {std::ssize(indices)}, std::begin(indices), std::end(indices)));
     }
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
     {
         return filter<ArCo::depth>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
-                {indices.size()}, indices.begin(), indices.end()));
+                {std::ssize(indices)}, indices.begin(), indices.end()));
     }
     template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
@@ -12366,77 +12439,6 @@ namespace details {
         ArCo old = clone(arr);
         operator--(arr);
         return old;
-    }
-
-    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
-    [[nodiscard]] inline constexpr auto zeros(DimsIt first_dim, DimsIt last_dim)
-    {
-        return ArCo(first_dim, last_dim, 0);
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto zeros(const Cont& dims)
-    {
-        return zeros<ArCo>(std::begin(dims), std::end(dims));
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto zeros(std::initializer_list<typename ArCo::size_type> dims)
-    {
-        return zeros<ArCo>(dims.begin(), dims.end());
-    }
-    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] inline constexpr auto zeros(const U (&dims)[M])
-    {
-        return zeros<ArCo>(std::begin(dims), std::end(dims));
-    }
-
-    template <arrnd_compliant ArCo, signed_integral_type_iterator DimsIt>
-    [[nodiscard]] inline constexpr auto eye(DimsIt first_dim, DimsIt last_dim)
-    {
-        auto ndims = std::distance(first_dim, last_dim);
-        assert(ndims >= 2);
-
-        auto eye_impl = [](typename ArCo::size_type r, typename ArCo::size_type c) {
-            if (r == 0 || c == 0) {
-                return ArCo();
-            }
-            ArCo res({r, c}, typename ArCo::value_type{0});
-            assert(res.header().is_matrix());
-
-            auto n = std::min(r, c);
-
-            typename ArCo::size_type one_ind = 0;
-
-            for (typename ArCo::size_type i = 0; i < n; ++i) {
-                res[one_ind] = typename ArCo::value_type{1};
-                one_ind += c + 1;
-            }
-
-            return res;
-        };
-
-        if (ndims == 2) {
-            return eye_impl(*first_dim, *std::next(first_dim, 1));
-        }
-
-        ArCo res(first_dim, last_dim, typename ArCo::value_type{0});
-        return res.pageop<0>(2, [eye_impl](auto page) {
-            return eye_impl(page.header().dims().front(), page.header().dims().back());
-        });
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto eye(const Cont& dims)
-    {
-        return eye<ArCo>(std::begin(dims), std::end(dims));
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto eye(std::initializer_list<typename ArCo::size_type> dims)
-    {
-        return eye<ArCo>(dims.begin(), dims.end());
-    }
-    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    [[nodiscard]] inline constexpr auto eye(const U (&dims)[M])
-    {
-        return eye<ArCo>(std::begin(dims), std::end(dims));
     }
 
     template <arrnd_compliant ArCo>
@@ -13653,7 +13655,7 @@ namespace experimental {
 // because its operator* not returning reference
 namespace std {
 template <typename Tuple>
-void swap(Tuple&& lhs, typename Tuple&& rhs)
+void swap(Tuple&& lhs, Tuple&& rhs)
 {
     lhs.swap(rhs);
 }

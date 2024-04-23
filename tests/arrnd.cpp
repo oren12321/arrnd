@@ -1061,12 +1061,12 @@ TEST(arrnd_test, zip)
 
         auto z = zip(iter_pack(inds), iter_pack(vals));
 
-        int s = std::reduce(z.begin(), z.end(), 0, [](int acc, const auto& t) {
+        auto [_, sum] = std::reduce(z.begin(), z.end(), std::make_tuple(0, 0), [](std::tuple<int, int> acc, auto t) {
             auto [ind, val] = t;
-            return ind % 2 == 0 ? acc + val : acc;
+            return std::make_tuple(0, ind % 2 == 0 ? std::get<1>(acc) + val : std::get<1>(acc));
         });
 
-        EXPECT_EQ(s, 9);
+        EXPECT_EQ(sum, 9);
     }
 
     // sort vector and array by indices
