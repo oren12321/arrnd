@@ -974,12 +974,14 @@ TEST(arrnd_test, iterators_and_inserters)
     EXPECT_TRUE(std::equal(inds[3].begin(), inds[3].end(), res.begin()));
 
     // axis iterators
-    std::for_each(arr.begin(arrnd_returned_slice_iterator_tag{}), arr.end(arrnd_returned_slice_iterator_tag{}), [](const auto& sa) {
-        auto exsa = sa[interval<std::int64_t>{0, 1}];
-        std::for_each(exsa.rbegin(arrnd_returned_slice_iterator_tag{}), exsa.rend(arrnd_returned_slice_iterator_tag{}), [](auto& sa) {
-            sa *= 2;
+    std::for_each(arr.begin(arrnd_returned_slice_iterator_tag{}), arr.end(arrnd_returned_slice_iterator_tag{}),
+        [](const auto& sa) {
+            auto exsa = sa[interval<std::int64_t>{0, 1}];
+            std::for_each(exsa.rbegin(arrnd_returned_slice_iterator_tag{}),
+                exsa.rend(arrnd_returned_slice_iterator_tag{}), [](auto& sa) {
+                    sa *= 2;
+                });
         });
-    });
 
     arrnd<int> axis_iter_res{
         {3, 2, 4}, {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48}};

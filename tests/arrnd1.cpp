@@ -33,7 +33,7 @@ TEST(arrnd_test, basic_math_and_trigo)
     EXPECT_TRUE(all_close(
         arrnd<double>({1, 5}, {std::atan(0.1), std::atan(0.2), std::atan(0.3), std::atan(0.4), std::atan(0.5)}),
         atan(arr1)));
-    
+
     EXPECT_TRUE(
         all_close(arrnd<double>({1, 5}, {std::acosh(1), std::acosh(2), std::acosh(3), std::acosh(4), std::acosh(5)}),
             acosh(arr2)));
@@ -2575,16 +2575,15 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({5}, 0);
-        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}),
-            arr.cend(2, arrnd_returned_slice_iterator_tag{}),
+        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}), arr.cend(2, arrnd_returned_slice_iterator_tag{}),
             oc::arrnd_back_inserter(res));
         EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 0, 0, 0, 0, 1, 3, 5, 2, 4, 6}), res));
     }
 
     {
         arrnd<int> res({5}, 0);
-        std::transform(
-            arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}), oc::arrnd_front_inserter(res), [](const auto& slice) {
+        std::transform(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}),
+            oc::arrnd_front_inserter(res), [](const auto& slice) {
                 return slice * 2;
             });
         EXPECT_TRUE(all_equal(arrnd<int>({11}, {10, 12, 6, 8, 2, 4, 0, 0, 0, 0, 0}), res));
@@ -2592,22 +2591,22 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({5}, 0);
-        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}),
-            arr.cend(2, arrnd_returned_slice_iterator_tag{}),
+        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}), arr.cend(2, arrnd_returned_slice_iterator_tag{}),
             oc::arrnd_inserter(res, 1));
         EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 1, 3, 5, 2, 4, 6, 0, 0, 0, 0}), res));
     }
 
     {
         arrnd<int> res({1, 1, 2}, {0, 0});
-        std::copy(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}), oc::arrnd_slice_back_inserter(res, 2));
+        std::copy(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}),
+            oc::arrnd_slice_back_inserter(res, 2));
         EXPECT_TRUE(all_equal(arrnd<int>({1, 1, 8}, {0, 0, 1, 2, 3, 4, 5, 6}), res));
     }
 
     {
         arrnd<int> res({1, 1, 2}, {0, 0});
-        std::transform(
-            arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}), oc::arrnd_slice_front_inserter(res, 2), [](const auto& slice) {
+        std::transform(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}),
+            oc::arrnd_slice_front_inserter(res, 2), [](const auto& slice) {
                 return slice * 2;
             });
         EXPECT_TRUE(all_equal(arrnd<int>({1, 1, 8}, {10, 12, 6, 8, 2, 4, 0, 0}), res));
@@ -2615,7 +2614,8 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({1, 1, 2}, {0, 0});
-        std::copy(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}), oc::arrnd_slice_inserter(res, 1, 2));
+        std::copy(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}),
+            oc::arrnd_slice_inserter(res, 1, 2));
         EXPECT_TRUE(all_equal(arrnd<int>({1, 1, 8}, {0, 1, 2, 3, 4, 5, 6, 0}), res));
     }
 }

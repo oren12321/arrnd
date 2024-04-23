@@ -1839,7 +1839,7 @@ namespace details {
     concept invocable_no_arrnd = !
     arrnd_compliant<T>&& std::is_invocable_v<T, Args...>;
 
-    struct arrnd_returned_element_iterator_tag {};
+    struct arrnd_returned_element_iterator_tag { };
     struct arrnd_returned_slice_iterator_tag { };
 
     template <arrnd_compliant Arrnd>
@@ -1936,7 +1936,7 @@ namespace details {
             return *gen_ < *(iter.gen_);
         }
 
-                [[nodiscard]] constexpr bool operator<=(const arrnd_iterator& iter) const noexcept
+        [[nodiscard]] constexpr bool operator<=(const arrnd_iterator& iter) const noexcept
         {
             return *gen_ <= *(iter.gen_);
         }
@@ -2772,7 +2772,8 @@ namespace details {
             return arrnd_ref_[std::make_pair(ranges.cbegin(), ranges.cend())];
         }
 
-        [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_reverse_const_iterator& other) const noexcept
+        [[nodiscard]] constexpr difference_type operator-(
+            const arrnd_slice_reverse_const_iterator& other) const noexcept
         {
             return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
         }
@@ -3228,12 +3229,7 @@ namespace details {
 
     enum class arrnd_shape_preset { vector, row, column };
 
-
-
-
-
-
-                // zip class
+    // zip class
 
     template <typename... _Tp>
     bool variadic_or(_Tp&&... args)
@@ -3330,13 +3326,19 @@ namespace details {
             [[nodiscard]] constexpr reference operator*() const
             {
                 return std::apply(
-                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
+                    []<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                    },
+                    data_);
             }
 
             constexpr iterator& operator++()
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
+                    },
+                    data_);
                 return *this;
             }
 
@@ -3350,7 +3352,9 @@ namespace details {
             constexpr iterator& operator+=(std::int64_t count)
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); },
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
+                    },
                     data_);
                 return *this;
             }
@@ -3365,7 +3369,10 @@ namespace details {
             constexpr iterator& operator--()
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
+                    },
+                    data_);
                 return *this;
             }
 
@@ -3379,7 +3386,9 @@ namespace details {
             constexpr iterator& operator-=(std::int64_t count)
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
+                    },
                     data_);
                 return *this;
             }
@@ -3404,8 +3413,9 @@ namespace details {
             [[nodiscard]] constexpr reference operator[](std::int64_t index) const
             {
                 return std::apply(
-                    [index]<typename... Ts>(
-                        Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); },
+                    [index]<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                    },
                     data_);
             }
 
@@ -3416,12 +3426,11 @@ namespace details {
 
             [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
             {
-                auto impl =
-                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
-                {
-                    return std::forward_as_tuple(
-                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
-                };
+                auto impl
+                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
+                          return std::forward_as_tuple(
+                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                      };
 
                 auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
                 return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
@@ -3441,13 +3450,19 @@ namespace details {
             [[nodiscard]] constexpr reference operator*() const
             {
                 return std::apply(
-                    []<typename... Ts>(Ts && ... e) { return std::forward_as_tuple(*std::forward<Ts>(e)...); }, data_);
+                    []<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                    },
+                    data_);
             }
 
             constexpr reverse_iterator& operator++()
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(++std::forward<Ts>(e)...); }, data_);
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
+                    },
+                    data_);
                 return *this;
             }
 
@@ -3461,7 +3476,9 @@ namespace details {
             constexpr reverse_iterator& operator+=(std::int64_t count)
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) += count)...); },
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
+                    },
                     data_);
                 return *this;
             }
@@ -3476,7 +3493,10 @@ namespace details {
             constexpr reverse_iterator& operator--()
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple(--std::forward<Ts>(e)...); }, data_);
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
+                    },
+                    data_);
                 return *this;
             }
 
@@ -3490,7 +3510,9 @@ namespace details {
             constexpr reverse_iterator& operator-=(std::int64_t count)
             {
                 std::apply(
-                    [&]<typename... Ts>(Ts && ... e) { data_ = std::make_tuple((std::forward<Ts>(e) -= count)...); },
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
+                    },
                     data_);
                 return *this;
             }
@@ -3515,8 +3537,9 @@ namespace details {
             [[nodiscard]] constexpr reference operator[](std::int64_t index) const
             {
                 return std::apply(
-                    [index]<typename... Ts>(
-                        Ts && ... e) { return std::forward_as_tuple(std::forward<Ts>(e)[index]...); },
+                    [index]<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                    },
                     data_);
             }
 
@@ -3527,12 +3550,11 @@ namespace details {
 
             [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
             {
-                auto impl =
-                    []<typename T1, typename T2, std::size_t... I>(T1 && t1, T2 && t2, std::index_sequence<I...>)
-                {
-                    return std::forward_as_tuple(
-                        (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
-                };
+                auto impl
+                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
+                          return std::forward_as_tuple(
+                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                      };
 
                 auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
                 return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
@@ -3547,14 +3569,13 @@ namespace details {
 
         auto begin()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
                 using std::begin;
                 return begin(ip.cont(), std::get<I>(ip.args())...);
             };
 
             return iterator(std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
+                [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
                             std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
@@ -3564,14 +3585,13 @@ namespace details {
 
         auto end()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
                 using std::end;
                 return end(ip.cont(), std::get<I>(ip.args())...);
             };
 
             return iterator{std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
+                [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
                             std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
@@ -3581,14 +3601,13 @@ namespace details {
 
         auto rbegin()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
                 using std::rbegin;
                 return rbegin(ip.cont(), std::get<I>(ip.args())...);
             };
 
             return reverse_iterator(std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
+                [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
                             std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
@@ -3598,14 +3617,13 @@ namespace details {
 
         auto rend()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>)
-            {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
                 using std::rend;
                 return rend(ip.cont(), std::get<I>(ip.args())...);
             };
 
             return reverse_iterator{std::apply(
-                [&]<typename... Ts>(Ts && ... e) {
+                [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
                             std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
@@ -3619,12 +3637,7 @@ namespace details {
 
     // ---------
 
-
-
-
-
-
-            template <arrnd_compliant Arrnd, typename Constraint>
+    template <arrnd_compliant Arrnd, typename Constraint>
     class arrnd_filter_proxy {
     public:
         constexpr arrnd_filter_proxy() = delete;
@@ -3634,11 +3647,13 @@ namespace details {
             , constraint_(constraint)
         { }
 
-        [[nodiscard]] constexpr operator Arrnd() const {
+        [[nodiscard]] constexpr operator Arrnd() const
+        {
             return arr_ref_.filter(constraint_);
         }
 
-        [[nodiscard]] constexpr Arrnd operator()() const {
+        [[nodiscard]] constexpr Arrnd operator()() const
+        {
             return arr_ref_.filter(constraint_);
         }
 
@@ -3695,7 +3710,6 @@ namespace details {
             (void)arrnd_filter_proxy<OtherArrnd, OtherConstraint>(std::move(other));
 
             return *this;
-
         }
         //constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy&& other) & = default;
         //constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy&& other) &&
@@ -3763,7 +3777,7 @@ namespace details {
             return *this;
         }
 
-                template <arrnd_compliant ArCo>
+        template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator%=(const ArCo& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) % other, constraint_);
@@ -3791,7 +3805,7 @@ namespace details {
             return *this;
         }
 
-                template <arrnd_compliant ArCo>
+        template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator<<=(const ArCo& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) << other, constraint_);
@@ -3805,80 +3819,85 @@ namespace details {
             return *this;
         }
 
-
-
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator+=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ + value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator-=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ - value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator*=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ * value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator/=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ / value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator%=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ % value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator^=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ ^ value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator&=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ & value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator|=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ | value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator<<=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ << value, constraint_);
             return *this;
         }
 
-        template <typename U> requires (!arrnd_compliant<U>)
+        template <typename U>
+            requires(!arrnd_compliant<U>)
         constexpr arrnd_filter_proxy& operator>>=(const U& value) &&
         {
             *this = arrnd_filter_proxy(arr_ref_ >> value, constraint_);
             return *this;
         }
-
-
-
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator++() &&
@@ -3897,7 +3916,8 @@ namespace details {
         }
 
         template <typename U>
-        requires(!arrnd_compliant<U>) constexpr arrnd_filter_proxy& operator=(const U& value) &&
+            requires(!arrnd_compliant<U>)
+        constexpr arrnd_filter_proxy& operator=(const U& value) &&
         {
             if (arr_ref_.empty()) {
                 return *this;
@@ -3941,8 +3961,6 @@ namespace details {
         Arrnd arr_ref_;
         Constraint constraint_;
     };
-
-
 
     template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
@@ -4471,16 +4489,15 @@ namespace details {
             return hdr_.is_slice() ? buffsp_->data()[*(indexer() + relative_index)] : buffsp_->data()[relative_index];
         }
 
-
-
-                template <signed_integral_type_iterator InputIt>
+        template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto operator()(std::pair<InputIt, InputIt> indices) const
         {
             return std::move(*this)(replaced_type<size_type>(
                 {std::distance(indices.first, indices.second)}, indices.first, indices.second));
         }
         template <signed_integral_type_iterable Cont>
-        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto operator()(const Cont& indices) const
+            requires(!arrnd_compliant<Cont>)
+        [[nodiscard]] constexpr auto operator()(const Cont& indices) const
         {
             return (*this)(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
         }
@@ -4488,8 +4505,8 @@ namespace details {
         * @note more strict function than filter. in case of logical type arrnd, its being treated as mask
         */
         template <arrnd_compliant ArCo>
-        requires(std::integral<typename ArCo::value_type>) [[nodiscard]] constexpr auto operator()(
-            const ArCo& selector) const
+            requires(std::integral<typename ArCo::value_type>)
+        [[nodiscard]] constexpr auto operator()(const ArCo& selector) const
         {
             return arrnd_filter_proxy(*this, selector);
         }
@@ -4502,9 +4519,6 @@ namespace details {
         {
             return (*this)(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
         }
-
-
-
 
         [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
         {
@@ -4623,8 +4637,8 @@ namespace details {
         }
 
         template <arrnd_compliant ArCo, typename Pred, typename... Args>
-        requires invocable_no_arrnd<Pred, value_type, Args...> constexpr const this_type& copy_to(
-            ArCo&& dst, Pred&& pred, Args&&... args) const
+            requires invocable_no_arrnd<Pred, value_type, Args...>
+        constexpr const this_type& copy_to(ArCo&& dst, Pred&& pred, Args&&... args) const
         {
             if (empty() || dst.empty()) {
                 return *this;
@@ -4733,15 +4747,13 @@ namespace details {
             return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
         }
 
-
         template <arrnd_compliant ArCo, typename Pred, typename... Args>
-        requires invocable_no_arrnd<Pred, value_type, Args...> constexpr const this_type& copy_from(
-            const ArCo& src, Pred&& pred, Args&&... args)
+            requires invocable_no_arrnd<Pred, value_type, Args...>
+        constexpr const this_type& copy_from(const ArCo& src, Pred&& pred, Args&&... args)
         {
             src.copy_to(*this, std::forward<Pred>(pred), std::forward<Args>(args)...);
             return *this;
         }
-
 
         template <arrnd_compliant ArCo, interval_type_iterator InputIt>
         constexpr this_type& copy_from(const ArCo& src, const InputIt& first_range, const InputIt& last_range)
@@ -5967,8 +5979,7 @@ namespace details {
                 }
 
                 return res;
-            }
-            else {
+            } else {
                 this_type res(selector.header().dims());
 
                 indexer_type res_gen(res.hdr_);
@@ -6006,16 +6017,14 @@ namespace details {
             return filter<this_type::depth, ArCo>(selector);
         }
 
-
-
-
-                template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
         {
             return filter<Level>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
         }
         template <std::int64_t Level, signed_integral_type_iterable Cont>
-        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto filter(const Cont& indices) const
+            requires(!arrnd_compliant<Cont>)
+        [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
             return filter<Level>(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
         }
@@ -6030,16 +6039,18 @@ namespace details {
             return filter<Level>(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
         }
 
-
-                        template <signed_integral_type_iterator InputIt>
+        template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
         {
-            return filter<this_type::depth>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+            return filter<this_type::depth>(
+                replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
         }
         template <signed_integral_type_iterable Cont>
-        requires(!arrnd_compliant<Cont>) [[nodiscard]] constexpr auto filter(const Cont& indices) const
+            requires(!arrnd_compliant<Cont>)
+        [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
-            return filter<this_type::depth>(replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+            return filter<this_type::depth>(
+                replaced_type<size_type>({indices.size()}, std::begin(indices), std::end(indices)));
         }
         [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
         {
@@ -6050,9 +6061,6 @@ namespace details {
         {
             return filter<this_type::depth>(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
         }
-
-
-
 
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>, Args...>)
@@ -6187,8 +6195,6 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-        
-
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
         [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
@@ -6229,11 +6235,13 @@ namespace details {
 
                 size_type ind = 0;
                 auto trhs = rhs.template transpose<0>({1, 0});
-                std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}), lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
-                    std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}), trhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &ind, &row](const auto& col) {
-                        res[ind++] = (row * col).template reduce<0>(std::plus<>{});
+                std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}),
+                    lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
+                        std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}),
+                            trhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &ind, &row](const auto& col) {
+                                res[ind++] = (row * col).template reduce<0>(std::plus<>{});
+                            });
                     });
-                });
 
                 return res;
             };
@@ -6372,16 +6380,14 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto lu() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
             requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.lu();
             });
         }
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto lu() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -6435,16 +6441,14 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(!this_type::is_flat)
         {
             return transform<0>([/*permute*/](const auto& a) {
                 return a.qr(/*permute*/);
             });
         }
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -6480,10 +6484,9 @@ namespace details {
                         return acc + val * val;
                     });
                     this_type v{};
-                    if (sumsqu != value_type{ 0 }) {
+                    if (sumsqu != value_type{0}) {
                         v = u / std::sqrt(sumsqu);
-                    }
-                    else {
+                    } else {
                         v = u;
                     }
 
@@ -6502,7 +6505,7 @@ namespace details {
                 }
 
                 //if (permute) {
-                    return std::make_tuple(q, r);
+                return std::make_tuple(q, r);
                 //}
             };
 
@@ -6515,16 +6518,14 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto hess() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
             requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.hess();
             });
         }
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto hess() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -6586,16 +6587,15 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]]
-                        [[nodiscard]] constexpr auto schur() const requires(!this_type::is_flat)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+            requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.schur();
             });
         }
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto schur() const
-            requires(this_type::is_flat&& !template_type<value_type, std::complex>)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+            requires(this_type::is_flat && !template_type<value_type, std::complex>)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6616,12 +6616,10 @@ namespace details {
 
                 while (k > 2) {
                     //std::cout << "k=" << k << "\n";
-                    if (s[{k - 1, k - 2}]== value_type{0}
-                        && s[{k - 1, k - 3}]== value_type{0}) {
+                    if (s[{k - 1, k - 2}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}) {
                         --k;
-                    } else if (s[{k - 2, k - 3}]== value_type{0}
-                        && s[{k - 1, k - 3}]== value_type{0}
-                        && (k <= 3 || s[{k - 2, k - 4}]== value_type{0})) {
+                    } else if (s[{k - 2, k - 3}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}
+                        && (k <= 3 || s[{k - 2, k - 4}] == value_type{0})) {
                         k -= 2;
                     }
                     //std::cout << "k=" << k << "\n";
@@ -6631,14 +6629,13 @@ namespace details {
                         //std::cout << "stok:\n" << stok << "\n";
                         auto s_k_1 = s[{k - 2, k - 2}];
                         auto s_k = s[{k - 1, k - 1}];
-                        auto s_kk_1 = s[{k-1, k-2}];
-                        auto s_k_1k = s[{k-2, k-1}];
+                        auto s_kk_1 = s[{k - 1, k - 2}];
+                        auto s_k_1k = s[{k - 2, k - 1}];
                         //std::cout << "stok2:\n" << stok.mtimes(stok) << "\n";
                         //std::cout << "s_k_1:\n" << s_k_1 << "\n";
                         //std::cout << "s_k:\n" << s_k << "\n";
                         //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
                         //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
-
 
                         auto m = stok.mtimes(stok) - (s_k_1 + s_k) * stok
                             + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
@@ -6654,12 +6651,11 @@ namespace details {
 
                         u = u.mtimes(q);
                         s = q.transpose({1, 0}).mtimes(s, q);
-                        
 
                         auto m1 = s.abs() < tol;
-                        
+
                         replaced_type<size_type> arng({n, n});
-                        std::iota(arng.begin(),arng.end(), size_type{1});
+                        std::iota(arng.begin(), arng.end(), size_type{1});
                         auto m2 = arng.tril(-1) > size_type{0};
 
                         auto mask = m1 && m2;
@@ -6683,19 +6679,17 @@ namespace details {
                 }
 
                 for (size_type k = 1; k <= n - 1; ++k) {
-                    if (s[{k, k - 1}]!= value_type{ 0 }) {
+                    if (s[{k, k - 1}] != value_type{0}) {
                         auto f = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
                         //std::cout << "f:\n" << f << "\n";
                         auto trc = f.diag().sum();
                         value_type t{};
                         if (trc * trc - 4 * f.det() > value_type{0}) {
-                            t = std::atan(
-                                (-f[{0, 0}] + f[{1, 1}]
-                                        + std::sqrt(std::pow(f[{0, 0}], 2) - 2 * f[{0, 0}] * f[{1, 1}] + 4 * f[{0, 1}] * f[{1, 0}] + std::pow(f[{1, 1}], 2))
-                                    )
+                            t = std::atan((-f[{0, 0}] + f[{1, 1}]
+                                              + std::sqrt(std::pow(f[{0, 0}], 2) - 2 * f[{0, 0}] * f[{1, 1}]
+                                                  + 4 * f[{0, 1}] * f[{1, 0}] + std::pow(f[{1, 1}], 2)))
                                 / (2 * f[{0, 1}]));
-                        }
-                        else {
+                        } else {
                             t = .5 * std::atan((f[{1, 1}] - f[{0, 0}]) / (f[{0, 1}] + f[{1, 0}]));
                         }
                         auto q = this_type({2, 2}, {std::cos(t), -std::sin(t), std::sin(t), std::cos(t)});
@@ -6720,12 +6714,8 @@ namespace details {
             });
         }
 
-
-
-
-
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto schur() const requires(this_type::is_flat&& template_type<value_type, std::complex>)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+            requires(this_type::is_flat && template_type<value_type, std::complex>)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6749,7 +6739,7 @@ namespace details {
                 rtype tol = std::numeric_limits<rtype>::epsilon();
 
                 for (size_type k = 1; k <= n - 1; ++k) {
-                    if (std::abs(s[{k, k - 1}]) > tol* (std::abs(s[{k - 1, k - 1}] + std::abs(s[{k, k}])))) {
+                    if (std::abs(s[{k, k - 1}]) > tol * (std::abs(s[{k - 1, k - 1}] + std::abs(s[{k, k}])))) {
                         auto b = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
                         //std::cout << b << "\n\n";
                         auto mu = std::sqrt(b[{1, 0}] * b[{0, 1}]);
@@ -6763,7 +6753,7 @@ namespace details {
 
                         this_type g({2, 2}, {std::conj(c), -ss, ss, c});
                         //std::cout << g << "\n\n";
-                        
+
                         auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
                         s1.copy_from(g.transpose({1, 0}).conj().mtimes(s1)); // conj transpose
                         //std::cout << s << "\n\n";
@@ -6791,24 +6781,16 @@ namespace details {
             });
         }
 
-
-
-
-
-
-
-
-
-        [[deprecated("not fully cheked")]]
-                                [[nodiscard]] constexpr auto eig() const requires(!this_type::is_flat)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
+            requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.eig();
             });
         }
 
-                                [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto eig() const requires(this_type::is_flat)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
+            requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6824,14 +6806,13 @@ namespace details {
                 //std::cout << "u:\n" << u << "\n\n";
                 //std::cout << "s:\n" << s << "\n\n";
 
-                    
                 using ival = interval<size_type>;
 
                 auto lambda = s.diag()(arrnd_shape_preset::column);
                 auto v = zeros<this_type>({n, n});
 
                 for (size_type k = 1; k <= n; ++k) {
-                    auto [q, _] = (arr - eye<this_type>({n, n}) * lambda[k-1]).transpose({1, 0}).qr()(0);
+                    auto [q, _] = (arr - eye<this_type>({n, n}) * lambda[k - 1]).transpose({1, 0}).qr()(0);
                     //std::cout << "q(m):\n" << q << "\n\n";
                     v[{ival::full(), ival::at(k - 1)}].copy_from(q[{ival::full(), ival::at(n - 1)}]);
                     //std::cout << "v(m):\n" << v << "\n\n";
@@ -6849,21 +6830,16 @@ namespace details {
             });
         }
 
-
-
-
-
-
-        [[deprecated("not fully cheked")]]
-                                [[nodiscard]] constexpr auto svd() const requires(!this_type::is_flat)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
+            requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
                 return a.svd();
             });
         }
 
-                                [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto svd() const requires(this_type::is_flat)
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
+            requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -6883,16 +6859,14 @@ namespace details {
                 this_type u;
                 this_type v;
 
-                if constexpr (template_type<value_type, std::complex>)
-                {
+                if constexpr (template_type<value_type, std::complex>) {
                     auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}).conj())).eig()(0);
                     auto [vt, l2t] = (arr.transpose({1, 0}).conj().mtimes(arr)).eig()(0);
                     l1 = l1t;
                     l2 = l2t;
                     u = ut;
                     v = vt;
-                }
-                else {
+                } else {
                     auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}))).eig()(0);
                     auto [vt, l2t] = (arr.transpose({1, 0}).mtimes(arr)).eig()(0);
                     l1 = l1t;
@@ -6932,8 +6906,7 @@ namespace details {
 
                 if constexpr (template_type<value_type, std::complex>) {
                     v = ((arr.mtimes(v)).inverse().mtimes(u)).mtimes(s);
-                }
-                else {
+                } else {
                     auto mask = (arr.mtimes(v) - u.mtimes(s)).abs().reduce(1, [](value_type m, value_type v) {
                         return std::max({m, v});
                     }) > value_type{1e-8};
@@ -6951,13 +6924,6 @@ namespace details {
                 return svd_impl(page);
             });
         }
-
-
-
-
-
-
-
 
         [[nodiscard]] constexpr auto tril(size_type offset = 0) const
             requires(!this_type::is_flat)
@@ -7060,17 +7026,15 @@ namespace details {
             });
         }
 
-
-
-
-
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const requires(!this_type::is_flat)
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+            requires(!this_type::is_flat)
         {
             return transform<0>([offset](const auto& a) {
                 return a.diag(offset);
             });
         }
-                [[nodiscard]] constexpr auto diag(size_type offset = 0) const requires(this_type::is_flat)
+        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+            requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
@@ -7139,14 +7103,10 @@ namespace details {
             });
         }
 
-
-
-
-
-                        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
+        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
             requires(!this_type::is_flat)
         {
-                            return transform<0>([lower, upper](const auto& a) {
+            return transform<0>([lower, upper](const auto& a) {
                 return a.is_banded(lower, upper);
             });
         }
@@ -7184,11 +7144,7 @@ namespace details {
             });
         }
 
-
-
-
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto cholesky() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
             requires(!this_type::is_flat)
         {
             return transform<0>([](const auto& a) {
@@ -7196,8 +7152,7 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]]
-        [[nodiscard]] constexpr auto cholesky() const
+        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
@@ -7218,23 +7173,23 @@ namespace details {
                 for (size_type i = 1; i <= n; ++i) {
                     for (size_type j = 1; j <= i; ++j) {
                         if (i == j) {
-                            auto sumsq
-                                = l[{ival::at(i - 1), ival::to(j - 1)}].fold(value_type{0}, [](value_type acc, value_type val) {
-                                      return acc + val * val;
-                                  });
+                            auto sumsq = l[{ival::at(i - 1), ival::to(j - 1)}].fold(
+                                value_type{0}, [](value_type acc, value_type val) {
+                                    return acc + val * val;
+                                });
                             l[{i - 1, j - 1}] = std::sqrt(arr[{i - 1, j - 1}] - sumsq);
-                        }
-                        else {
+                        } else {
                             if constexpr (template_type<value_type, std::complex>) {
                                 l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
                                                         - (l[{ival::at(i - 1), ival::to(j - 1)}]
-                                                            * l[{ival::at(j - 1), ival::to(j - 1)}].conj()).sum())
+                                                            * l[{ival::at(j - 1), ival::to(j - 1)}].conj())
+                                                              .sum())
                                     / l[{j - 1, j - 1}];
-                            }
-                            else {
+                            } else {
                                 l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
                                                         - (l[{ival::at(i - 1), ival::to(j - 1)}]
-                                                            * l[{ival::at(j - 1), ival::to(j - 1)}]).sum())
+                                                            * l[{ival::at(j - 1), ival::to(j - 1)}])
+                                                              .sum())
                                     / l[{j - 1, j - 1}];
                             }
                         }
@@ -9017,12 +8972,9 @@ namespace details {
                 axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
         }
 
-
-
-
-                            template <std::int64_t Level, signed_integral_type_iterator InputIt>
-        requires(Level == 0) [[nodiscard]] constexpr this_type
-            reorder(const InputIt& first_order, const InputIt& last_order) const
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+            requires(Level == 0)
+        [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -9044,8 +8996,8 @@ namespace details {
             //return reduced.template reshape<Level>(hdr_.dims());
         }
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
-        requires(Level > 0) [[nodiscard]] constexpr this_type
-            reorder(const InputIt& first_order, const InputIt& last_order) const
+            requires(Level > 0)
+        [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -9063,18 +9015,15 @@ namespace details {
             return res;
         }
         template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr this_type reorder(
-            const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             return reorder<this_type::depth, InputIt>(first_order, last_order);
         }
 
-
-
-
-                template <std::int64_t Level, signed_integral_type_iterator InputIt>
-        requires(Level == 0)
-            [[nodiscard]] constexpr this_type reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+            requires(Level == 0)
+        [[nodiscard]] constexpr this_type
+            reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -9100,8 +9049,9 @@ namespace details {
             //return reduced.template reshape<Level>(hdr_.dims());
         }
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
-        requires(Level > 0)
-            [[nodiscard]] constexpr this_type reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+            requires(Level > 0)
+        [[nodiscard]] constexpr this_type
+            reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -9119,12 +9069,11 @@ namespace details {
             return res;
         }
         template <signed_integral_type_iterator InputIt>
-         [[nodiscard]] constexpr this_type
-        reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr this_type reorder(
+            size_type axis, const InputIt& first_order, const InputIt& last_order) const
         {
             return reorder<this_type::depth, InputIt>(axis, first_order, last_order);
         }
-
 
         template <std::int64_t Level, signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
@@ -9132,8 +9081,7 @@ namespace details {
             return reorder<Level>(axis, std::begin(order), std::end(order));
         }
         template <std::int64_t Level>
-        [[nodiscard]] constexpr auto reorder(
-            size_type axis, std::initializer_list<size_type> order) const
+        [[nodiscard]] constexpr auto reorder(size_type axis, std::initializer_list<size_type> order) const
         {
             return reorder<Level>(axis, order.begin(), order.end());
         }
@@ -9147,8 +9095,7 @@ namespace details {
         {
             return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
         }
-        [[nodiscard]] constexpr auto reorder(
-            size_type axis, std::initializer_list<size_type> order) const
+        [[nodiscard]] constexpr auto reorder(size_type axis, std::initializer_list<size_type> order) const
         {
             return reorder<this_type::depth>(axis, order.begin(), order.end());
         }
@@ -9157,7 +9104,6 @@ namespace details {
         {
             return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
         }
-
 
         template <std::int64_t Level, typename Pred, typename... Args>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>, Args...>)
@@ -9431,7 +9377,7 @@ namespace details {
             });
         }
 
-                template <std::int64_t Level = this_type::depth>
+        template <std::int64_t Level = this_type::depth>
         [[nodiscard]] constexpr auto min() const
         {
             return reduce<Level>([](const auto& a, const auto& b) {
@@ -9449,7 +9395,7 @@ namespace details {
             });
         }
 
-                        template <std::int64_t Level = this_type::depth>
+        template <std::int64_t Level = this_type::depth>
         [[nodiscard]] constexpr auto max() const
         {
             return reduce<Level>([](const auto& a, const auto& b) {
@@ -9715,8 +9661,6 @@ namespace details {
             return crend(0, arrnd_returned_element_iterator_tag{});
         }
 
-
-
         [[nodiscard]] constexpr auto begin(arrnd_returned_element_iterator_tag)
         {
             return begin(0, arrnd_returned_element_iterator_tag{});
@@ -9765,8 +9709,6 @@ namespace details {
         {
             return crend(0, arrnd_returned_element_iterator_tag{});
         }
-
-
 
         // by axis iterator functions
 
@@ -10119,8 +10061,8 @@ namespace details {
         {
             return empty()
                 ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
+                : slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag) const
         {
@@ -10133,8 +10075,8 @@ namespace details {
         {
             return empty()
                 ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
+                : const_slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag)
         {
@@ -10161,8 +10103,8 @@ namespace details {
         {
             return empty()
                 ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
         {
@@ -10175,19 +10117,16 @@ namespace details {
         {
             return empty()
                 ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
+                : const_reverse_slice_iterator(
+                    *this, ranger_type(hdr_, 0, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
-
-
-
 
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty() ? slice_iterator()
-                           : slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::begin));
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
@@ -10198,17 +10137,17 @@ namespace details {
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? const_slice_iterator()
-                           : const_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::begin));
+            return empty()
+                ? const_slice_iterator()
+                : const_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty() ? slice_iterator()
-                           : slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::end));
+            return empty()
+                ? slice_iterator()
+                : slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
@@ -10219,52 +10158,52 @@ namespace details {
         }
         [[nodiscard]] constexpr auto cend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? const_slice_iterator()
-                           : const_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::end));
+            return empty()
+                ? const_slice_iterator()
+                : const_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty() ? reverse_slice_iterator()
-                           : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rbegin));
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? reverse_slice_iterator()
-                           : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rbegin));
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? const_reverse_slice_iterator()
-                           : const_reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rbegin));
+            return empty()
+                ? const_reverse_slice_iterator()
+                : const_reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty() ? reverse_slice_iterator()
-                           : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rend));
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? reverse_slice_iterator()
-                           : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rend));
+            return empty()
+                ? reverse_slice_iterator()
+                : reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto crend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty() ? const_reverse_slice_iterator()
-                           : const_reverse_slice_iterator(*this,
-                               ranger_type(hdr_, axis, interval<size_type>{0, 0}, false,
-                                   arrnd_iterator_start_position::rend));
+            return empty()
+                ? const_reverse_slice_iterator()
+                : const_reverse_slice_iterator(*this,
+                    ranger_type(hdr_, axis, interval<size_type>{0, 0}, false, arrnd_iterator_start_position::rend));
         }
 
         [[nodiscard]] constexpr auto abs() const
@@ -10527,7 +10466,7 @@ namespace details {
         return c.cbegin(std::forward<Args>(args)...);
     }
 
-        template <arrnd_compliant ArCo, typename... Args>
+    template <arrnd_compliant ArCo, typename... Args>
     inline constexpr auto end(ArCo& c, Args&&... args)
     {
         return c.end(std::forward<Args>(args)...);
@@ -10543,7 +10482,7 @@ namespace details {
         return c.cend(std::forward<Args>(args)...);
     }
 
-        template <arrnd_compliant ArCo, typename... Args>
+    template <arrnd_compliant ArCo, typename... Args>
     inline constexpr auto rbegin(ArCo& c, Args&&... args)
     {
         return c.rbegin(std::forward<Args>(args)...);
@@ -10559,7 +10498,7 @@ namespace details {
         return c.crbegin(std::forward<Args>(args)...);
     }
 
-        template <arrnd_compliant ArCo, typename... Args>
+    template <arrnd_compliant ArCo, typename... Args>
     inline constexpr auto rend(ArCo& c, Args&&... args)
     {
         return c.rend(std::forward<Args>(args)...);
@@ -10574,8 +10513,6 @@ namespace details {
     {
         return c.crend(std::forward<Args>(args)...);
     }
-
-
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
@@ -10628,8 +10565,8 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Pred, typename... Args>
-    requires invocable_no_arrnd<Pred, typename ArCo2::value_type, Args...> inline constexpr auto& copy(
-        const ArCo1& src, ArCo2&& dst, Pred&& pred, Args&&... args)
+        requires invocable_no_arrnd<Pred, typename ArCo2::value_type, Args...>
+    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, Pred&& pred, Args&&... args)
     {
         return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
@@ -10836,50 +10773,44 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
     {
         return arr.cholesky();
     }
 
     template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
     {
         return arr.lu();
     }
 
     template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto qr(const ArCo& arr/*, bool permute = false*/)
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto qr(
+        const ArCo& arr /*, bool permute = false*/)
     {
         return arr.qr(/*permute*/);
     }
 
     template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
     {
         return arr.hess();
     }
 
-        template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
+    template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
     {
         return arr.schur();
     }
 
-            template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto svd(const ArCo& arr)
+    template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto svd(const ArCo& arr)
     {
         return arr.svd();
     }
 
-        template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]]
-    [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
+    template <arrnd_compliant ArCo>
+    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
     {
         return arr.eig();
     }
@@ -11125,7 +11056,7 @@ namespace details {
         return sum<ArCo::depth>(arr, axis);
     }
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+    template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto min(const ArCo& arr)
     {
         return arr.template min<Level>();
@@ -11149,7 +11080,7 @@ namespace details {
         return min<ArCo::depth>(arr, axis);
     }
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+    template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto max(const ArCo& arr)
     {
         return arr.template max<Level>();
@@ -11321,54 +11252,65 @@ namespace details {
         return find<ArCo1::depth>(arr, mask);
     }
 
-
-
-
-
-            template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
     {
-            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+        return filter<Level>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {std::distance(first_ind, last_ind)}, first_ind, last_ind));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    requires(!arrnd_compliant<Cont>) [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
+        requires(!arrnd_compliant<Cont>)
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
     {
-            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+        return filter<Level>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {indices.size()}, std::begin(indices), std::end(indices)));
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
     {
-            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, indices.begin(), indices.end()));
+        return filter<Level>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {indices.size()}, indices.begin(), indices.end()));
     }
     template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
     {
-            return filter<Level>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({M}, std::begin(indices), std::end(indices)));
+        return filter<Level>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {M}, std::begin(indices), std::end(indices)));
     }
 
     template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
     {
-            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
+        return filter<ArCo::depth>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {std::distance(first_ind, last_ind)}, first_ind, last_ind));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    requires(!arrnd_compliant<Cont>) [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
+        requires(!arrnd_compliant<Cont>)
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
     {
-            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, std::begin(indices), std::end(indices)));
+        return filter<ArCo::depth>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {indices.size()}, std::begin(indices), std::end(indices)));
     }
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
     {
-            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({indices.size()}, indices.begin(), indices.end()));
+        return filter<ArCo::depth>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {indices.size()}, indices.begin(), indices.end()));
     }
     template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const U (&indices)[M])
     {
-            return filter<ArCo::depth>(arr, typename ArCo::template replaced_type<typename ArCo::size_type>({M}, std::begin(indices), std::end(indices)));
+        return filter<ArCo::depth>(arr,
+            typename ArCo::template replaced_type<typename ArCo::size_type>(
+                {M}, std::begin(indices), std::end(indices)));
     }
-
-
-
 
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
@@ -11376,11 +11318,11 @@ namespace details {
         return arr.diag(offset);
     }
 
-        template <arrnd_compliant ArCo>
+    template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto is_banded(
         const ArCo& arr, typename ArCo::size_type lower = 0, typename ArCo::size_type upper = 0)
     {
-            return arr.is_banded(lower, upper);
+        return arr.is_banded(lower, upper);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
@@ -11446,17 +11388,21 @@ namespace details {
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator==(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform([](const auto& a, const auto& b) {
-            return a == b;
-        }, rhs);
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a == b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto operator==(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform([](const auto& b, const auto& a) {
-            return a == b;
-        }, lhs);
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a == b;
+            },
+            lhs);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -11470,17 +11416,21 @@ namespace details {
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto operator!=(const ArCo& lhs, const T& rhs)
     {
-        return lhs.transform([](const auto& a, const auto& b) {
-            return a != b;
-        }, rhs);
+        return lhs.transform(
+            [](const auto& a, const auto& b) {
+                return a != b;
+            },
+            rhs);
     }
 
     template <typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto operator!=(const T& lhs, const ArCo& rhs)
     {
-        return rhs.transform([](const auto& b, const auto& a) {
-            return a != b;
-        }, lhs);
+        return rhs.transform(
+            [](const auto& b, const auto& a) {
+                return a != b;
+            },
+            lhs);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -13076,13 +13026,8 @@ namespace details {
         return is_sorted<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
     }
 
-
-
-
-
-        template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, InputIt first_order, InputIt last_order)
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, InputIt first_order, InputIt last_order)
     {
         return arr.template reorder<Level>(first_order, last_order);
     }
@@ -13092,8 +13037,7 @@ namespace details {
         return reorder<Level>(arr, std::begin(order), std::end(order));
     }
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
     {
         return reorder<Level>(arr, order.begin(), order.end());
     }
@@ -13103,8 +13047,7 @@ namespace details {
         return reorder<Level>(arr, std::begin(order), std::end(order));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, InputIt first_order, InputIt last_order)
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, InputIt first_order, InputIt last_order)
     {
         return reorder<ArCo::depth>(arr, first_order, last_order);
     }
@@ -13114,8 +13057,7 @@ namespace details {
         return reorder<ArCo::depth>(arr, std::begin(order), std::end(order));
     }
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
     {
         return reorder<ArCo::depth>(arr, order.begin(), order.end());
     }
@@ -13125,11 +13067,7 @@ namespace details {
         return reorder<ArCo::depth>(arr, std::begin(order), std::end(order));
     }
 
-
-
-
-
-        template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto reorder(
         const ArCo& arr, typename ArCo::size_type axis, InputIt first_order, InputIt last_order)
     {
@@ -13173,9 +13111,6 @@ namespace details {
     {
         return reorder<ArCo::depth>(arr, axis, std::begin(order), std::end(order));
     }
-
-
-
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred, typename... Args>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)

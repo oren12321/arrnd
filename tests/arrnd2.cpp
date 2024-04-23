@@ -1399,6 +1399,6 @@ TEST(arrnd_test, min_max)
     EXPECT_EQ(1, min(arr));
     EXPECT_TRUE(all_equal(arrnd<int>({2}, {1, 2}), min(arr, 0)));
 
-        EXPECT_EQ(4, max(arr));
+    EXPECT_EQ(4, max(arr));
     EXPECT_TRUE(all_equal(arrnd<int>({2}, {3, 4}), max(arr, 0)));
 }
