@@ -6635,6 +6635,107 @@ namespace details {
 
 
 
+        //                        [[nodiscard]] constexpr auto svd() const requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.svd();
+        //    });
+        //}
+
+        //[[nodiscard]] constexpr auto svd() const requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type, this_type>(this_type)> svd_impl;
+
+        //    svd_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        //assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        using ival = interval<size_type>;
+
+        //        auto r = arr.header().dims().front();
+        //        auto c = arr.header().dims().back();
+
+        //        this_type l1;
+        //        this_type l2;
+        //        this_type u;
+        //        this_type v;
+
+        //        if constexpr (template_type<value_type, std::complex>)
+        //        {
+        //            auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}).conj())).eig()(0);
+        //            auto [vt, l2t] = (arr.transpose({1, 0}).conj().mtimes(arr)).eig()(0);
+        //            l1 = l1t;
+        //            l2 = l2t;
+        //            u = ut;
+        //            v = vt;
+        //        }
+        //        else {
+        //            auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}))).eig()(0);
+        //            auto [vt, l2t] = (arr.transpose({1, 0}).mtimes(arr)).eig()(0);
+        //            l1 = l1t;
+        //            l2 = l2t;
+        //            u = ut;
+        //            v = vt;
+        //        }
+
+        //        auto comp = [](const auto& t1, const auto& t2) {
+        //            return std::get<0>(t1) > std::get<0>(t2);
+        //        };
+
+        //        auto sl1 = l1.clone();
+        //        replaced_type<size_type> sl1i({l1.header().numel()});
+        //        std::iota(sl1i.begin(), sl1i.end(), size_type{0});
+        //        auto z1 = zip(iter_pack(sl1), iter_pack(sl1i));
+        //        std::sort(z1.begin(), z1.end(), comp);
+
+        //        auto sl2 = l2.clone();
+        //        replaced_type<size_type> sl2i({l2.header().numel()});
+        //        std::iota(sl2i.begin(), sl2i.end(), size_type{0});
+        //        auto z2 = zip(iter_pack(sl2), iter_pack(sl2i));
+        //        std::sort(z2.begin(), z2.end(), comp);
+
+        //        u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
+        //        v = v.reorder(1, sl2i.cbegin(), sl2i.cend());
+
+        //        auto s = zeros<this_type>({r, c});
+
+        //        auto arr_minsize = std::min({r, c});
+
+        //        auto slc1 = l1(sl1i)()[{ival::to(arr_minsize)}];
+        //        auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
+        //        auto sv = (slc1 + slc2) / 2;
+        //        sv(sv < value_type{0}) = value_type{0};
+        //        s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag());
+
+        //        if constexpr (template_type<value_type, std::complex>) {
+        //            v = ((arr.mtimes(v)).inverse().mtimes(u)).mtimes(s);
+        //        }
+        //        else {
+        //            auto mask = (arr.mtimes(v) - u.mtimes(s)).abs().reduce(1, [](value_type m, value_type v) {
+        //                return std::max({m, v});
+        //            }) > value_type{1e-8};
+        //            v(mask) = v * (value_type{-1});
+        //        }
+
+        //        return std::make_tuple(u, s, v);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type, this_type>>({1}, svd_impl(*this));
+        //    }
+
+        //    return pageop<0>(2, [svd_impl](auto page) {
+        //        return svd_impl(page);
+        //    });
+        //}
+
+
+
+
+
+
 
 
         [[nodiscard]] constexpr auto tril(size_type offset = 0) const
@@ -8807,7 +8908,37 @@ namespace details {
         }
 
 
-
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
+        {
+            return reorder<Level>(axis, std::begin(order), std::end(order));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto reorder(
+            size_type axis, std::initializer_list<size_type> order) const
+        {
+            return reorder<Level>(axis, order.begin(), order.end());
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto reorder(size_type axis, const U (&order)[M]) const
+        {
+            return reorder<Level>(axis, std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
+        {
+            return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
+        }
+        [[nodiscard]] constexpr auto reorder(
+            size_type axis, std::initializer_list<size_type> order) const
+        {
+            return reorder<this_type::depth>(axis, order.begin(), order.end());
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto reorder(size_type axis, const U (&order)[M]) const
+        {
+            return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
+        }
 
 
         template <std::int64_t Level, typename Pred, typename... Args>
@@ -10479,6 +10610,12 @@ namespace details {
     {
         return arr.schur();
     }
+
+    //        template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto svd(const ArCo& arr)
+    //{
+    //    return arr.svd();
+    //}
 
         template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
@@ -13213,6 +13350,7 @@ using details::lu;
 using details::qr;
 using details::hess;
 using details::schur;
+//using details::svd;
 using details::eig;
 using details::solve;
 using details::filter;
