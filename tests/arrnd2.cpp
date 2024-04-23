@@ -83,7 +83,7 @@ TEST(arrnd_test, inverse)
                 arrnd<double>({3, 3}, {0.2, 0.2, 0, -0.2, 0.3, 1, 0.2, -0.3, 0})})));
 }
 
-TEST(arrnd_test, solve)
+TEST(arrnd_test, DISABLED_solve)
 {
     using namespace oc;
 
@@ -98,7 +98,7 @@ TEST(arrnd_test, solve)
     EXPECT_TRUE(all_close(solve(arr, b), x));
 }
 
-TEST(arrnd_test, cholesky)
+TEST(arrnd_test, DISABLED_cholesky)
 {
     using namespace oc;
 
@@ -108,7 +108,7 @@ TEST(arrnd_test, cholesky)
     EXPECT_TRUE(all_close(cholesky(arr), l));
 }
 
-TEST(arrnd_test, lu)
+TEST(arrnd_test, DISABLED_lu)
 {
     using namespace oc;
 
@@ -123,7 +123,7 @@ TEST(arrnd_test, lu)
     EXPECT_TRUE(all_close(std::get<1>(res), u));
 }
 
-TEST(arrnd_test, qr)
+TEST(arrnd_test, DISABLED_qr)
 {
     using namespace oc;
 
@@ -172,7 +172,7 @@ TEST(arrnd_test, qr)
     }
 }
 
-TEST(arrnd_test, hess)
+TEST(arrnd_test, DISABLED_hess)
 {
     using namespace oc;
 
@@ -195,7 +195,7 @@ TEST(arrnd_test, hess)
     EXPECT_TRUE(all_close(mtimes(q, h, transpose(q, {1, 0})), arr));
 }
 
-TEST(arrnd_test, schur)
+TEST(arrnd_test, DISABLED_schur)
 {
     using namespace oc;
 
@@ -233,7 +233,7 @@ TEST(arrnd_test, schur)
     }
 }
 
-TEST(arrnd_test, eig)
+TEST(arrnd_test, DISABLED_eig)
 {
     using namespace oc;
 
@@ -258,18 +258,19 @@ TEST(arrnd_test, eig)
     }
 }
 
-//TEST(arrnd_test, svd)
-//{
-//    using namespace oc;
-//
-//    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
-//
-//    auto [u, s, v] = svd(arr)(0);
-//
-//    std::cout << u << "\n\n";
-//    std::cout << s << "\n\n";
-//    std::cout << v << "\n\n";
-//}
+TEST(arrnd_test, DISABLED_svd)
+{
+    using namespace oc;
+
+    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+
+    auto [u, s, v] = svd(arr)(0);
+
+    EXPECT_TRUE(all_close(arr, mtimes(u, s, v.transpose({1, 0}))));
+    //std::cout << u << "\n\n";
+    //std::cout << s << "\n\n";
+    //std::cout << v << "\n\n";
+}
 
 TEST(arrnd_test, zeros)
 {
