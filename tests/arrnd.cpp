@@ -2003,24 +2003,38 @@ TEST(arrnd_test, schur)
 {
     using namespace oc;
 
-    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+    {
+        arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
 
-    auto [u, s] = schur(arr)(0);
+        auto [u, s] = schur(arr)(0);
 
-    //std::cout << u << "\n\n";
-    //std::cout << s << "\n\n";
-    //std::cout << u.mtimes(s, u.transpose({1, 0})) << "\n\n";
+        //std::cout << u << "\n\n";
+        //std::cout << s << "\n\n";
+        //std::cout << u.mtimes(s, u.transpose({1, 0})) << "\n\n";
 
-    EXPECT_TRUE(all_close(u, arrnd<double>({4, 4}, {0.370278, 0.925419, -0.0802532, -0.00727113,
- 0.443715, -0.251355, -0.857434 ,0.0688785,
- 0.526578 ,-0.193754, 0.26634, -0.783733,
- 0.62348 ,-0.207072, 0.432931, 0.617224})));
-    EXPECT_TRUE(all_close(s, arrnd<double>({4, 4}, {19.7025, 1.45867, -2.84783, -2.11022,
- 8.00528e-15, -1.35476, 1.32379 ,0.801807,
- 0 ,0, -4.07002 ,-1.70698,
- 0, 0, 1.47042e-15, -6.27774})));
+        EXPECT_TRUE(all_close(u,
+            arrnd<double>({4, 4},
+                {0.370278, 0.925419, -0.0802532, -0.00727113, 0.443715, -0.251355, -0.857434, 0.0688785, 0.526578,
+                    -0.193754, 0.26634, -0.783733, 0.62348, -0.207072, 0.432931, 0.617224})));
+        EXPECT_TRUE(all_close(s,
+            arrnd<double>({4, 4},
+                {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0, 0, -4.07002,
+                    -1.70698, 0, 0, 1.47042e-15, -6.27774})));
 
-    EXPECT_TRUE(all_close(mtimes(u, s, transpose(u, {1, 0})), arr));
+        EXPECT_TRUE(all_close(mtimes(u, s, transpose(u, {1, 0})), arr));
+    }
+
+    {
+        arrnd<double> rarr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
+
+        auto [ur, sr] = schur(rarr)(0);
+
+        arrnd<std::complex<double>> carr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
+
+        auto [uc, sc] = schur(carr)(0);
+
+        EXPECT_TRUE(all_close(rarr, real(mtimes(uc, sc, conj(transpose(uc, {1, 0}))))));
+    }
 }
 
 TEST(arrnd_test, eig)

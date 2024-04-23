@@ -6506,6 +6506,78 @@ namespace details {
 
 
 
+        [[nodiscard]] constexpr auto schur() const requires(this_type::is_flat&& template_type<value_type, std::complex>)
+        {
+            assert(hdr_.dims().size() >= 2);
+
+            std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
+
+            schur_impl = [&](this_type arr) {
+                size_type n = arr.header().dims().front();
+
+                using rtype = typename value_type::value_type;
+
+                replaced_type<rtype> rarr = arr.real();
+                auto [ru, rs] = rarr.schur()(0);
+                this_type u = ru;
+                this_type s = rs;
+
+                //std::cout << u << "\n\n";
+                //std::cout << s << "\n\n";
+
+                using ival = interval<size_type>;
+
+                rtype tol = std::numeric_limits<rtype>::epsilon();
+
+                for (size_type k = 1; k <= n - 1; ++k) {
+                    if (std::abs(s[{k, k - 1}]) > tol* (std::abs(s[{k - 1, k - 1}] + std::abs(s[{k, k}])))) {
+                        auto b = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
+                        //std::cout << b << "\n\n";
+                        auto mu = std::sqrt(b[{1, 0}] * b[{0, 1}]);
+                        //std::cout << mu << "\n\n";
+                        auto r = std::sqrt(std::conj(mu) * mu + std::conj(b[{1, 0}]) * b[{1, 0}]); // conj transpose
+                        //std::cout << r << "\n\n";
+                        auto c = mu / r;
+                        //std::cout << c << "\n\n";
+                        auto ss = b[{1, 0}] / r;
+                        //std::cout << ss << "\n\n";
+
+                        this_type g({2, 2}, {std::conj(c), -ss, ss, c});
+                        //std::cout << g << "\n\n";
+                        
+                        auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
+                        s1.copy_from(g.transpose({1, 0}).conj().mtimes(s1)); // conj transpose
+                        //std::cout << s << "\n\n";
+
+                        auto s2 = s[{ival::between(0, k + 1), ival::between(k - 1, k + 1)}];
+                        s2.copy_from(s2.mtimes(g));
+                        //std::cout << s << "\n\n";
+
+                        auto u1 = u[{ival::between(0, n), ival::between(k - 1, k + 1)}];
+                        u1.copy_from(u1.mtimes(g));
+                        //std::cout << u << "\n\n";
+                    }
+                    s[{k, k - 1}] = 0;
+                }
+
+                return std::make_tuple(u, s);
+            };
+
+            if (hdr_.is_matrix()) {
+                return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
+            }
+
+            return pageop<0>(2, [schur_impl](auto page) {
+                return schur_impl(page);
+            });
+        }
+
+
+
+
+
+
+
 
 
 
