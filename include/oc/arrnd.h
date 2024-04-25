@@ -4051,7 +4051,7 @@ namespace details {
 
         using storage_type = Storage;
         template <typename U>
-        using shared_ref_allocator_type = SharedRefAllocator<T>;
+        using shared_ref_allocator_type = SharedRefAllocator<U>;
         using header_type = Header;
         using indexer_type = Indexer<Header>;
         using ranger_type = Ranger<Header>;
