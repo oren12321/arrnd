@@ -318,6 +318,20 @@ TEST(interval_test, presets)
     EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_type::none), i5.align(std::rand()));
 }
 
+//TEST(dummy, dummy)
+//{
+//    using namespace oc;
+//
+//    arrnd<int> arr({2, 3}, {1, 2, 3, 4, 5, 6});
+//    std::cout << arr << "\n\n";
+//    std::cout << resize(arr, {2, 5}) << "\n\n";
+//    std::cout << resize(arr, {3, 3}) << "\n\n";
+//    std::cout << resize(arr, {10}) << "\n\n";
+//    std::cout << resize(arr, {1, 3}) << "\n\n";
+//    std::cout << resize(arr, {2, 2}) << "\n\n";
+//    std::cout << resize(arr, {2, 1, 2}) << "\n\n";
+//}
+
 TEST(general_iterable_types_check, typed_iterator)
 {
     static_assert(std::is_same_v<int, oc::iterator_value_type<std::vector<int>::iterator>>);

@@ -5017,11 +5017,33 @@ namespace details {
 
             this_type res(first_new_dim, last_new_dim);
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
+            size_type n = std::min({std::distance(first_new_dim, last_new_dim), hdr_.dims().size()});
+
+            typename header_type::storage_type::template replaced_type<interval<size_type>> prev_ranges(
+                hdr_.dims().size());
+            std::fill(prev_ranges.begin(), prev_ranges.end(), interval<size_type>::full());
+
+            typename header_type::storage_type::template replaced_type<interval<size_type>> new_ranges(
+                std::distance(first_new_dim, last_new_dim));
+            std::fill(new_ranges.begin(), new_ranges.end(), interval<size_type>::full());
+
+            size_type pi = hdr_.dims().size() - 1;
+            size_type ni = std::distance(first_new_dim, last_new_dim) - 1;
+            for (int i = n - 1; i >= 0; --i) {
+                size_type prev_dim = *std::next(hdr_.dims().cbegin(), pi);
+                size_type new_dim = *std::next(first_new_dim, ni);
+                *std::next(prev_ranges.begin(), pi--) = interval<size_type>::to(std::min({prev_dim, new_dim}));
+                *std::next(new_ranges.begin(), ni--) = interval<size_type>::to(std::min({prev_dim, new_dim}));
+            }
+
+            auto sthis = (*this)[prev_ranges];
+            auto sres = res[new_ranges];
+
+            indexer_type gen(sthis.header());
+            indexer_type res_gen(sres.header());
 
             while (gen && res_gen) {
-                res[*res_gen] = (*this)[*gen];
+                sres[*res_gen] = sthis[*gen];
                 ++gen;
                 ++res_gen;
             }
