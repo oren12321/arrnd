@@ -400,6 +400,37 @@ TEST(arrnd_header_test, can_return_array_info)
     EXPECT_TRUE(!hdr6.is_vector() && !hdr6.is_matrix() && !hdr6.is_row() && !hdr6.is_column() && !hdr6.is_scalar());
 }
 
+TEST(arrnd_header_test, subscripts_and_indices_conversions)
+{
+    using namespace oc;
+
+    {
+        arrnd_header<> hdr({6, 2, 4});
+
+        for (typename arrnd_header<>::size_type i = 0; i < hdr.dims()[0]; ++i) {
+            for (typename arrnd_header<>::size_type j = 0; j < hdr.dims()[1]; ++j) {
+                for (typename arrnd_header<>::size_type k = 0; k < hdr.dims()[2]; ++k) {
+                    typename arrnd_header<>::size_type subs_data[]{i, j, k};
+                    typename arrnd_header<>::storage_type subs(3, subs_data);
+                    EXPECT_EQ(hdr.ind2subs(hdr.subs2ind(subs)), subs);
+                }
+            }
+        }
+
+        arrnd_header<> shdr = hdr.subheader({interval<>::between(1, 6, 2), interval<>::at(0), interval<>::from(2)});
+
+        for (typename arrnd_header<>::size_type i = 0; i < shdr.dims()[0]; ++i) {
+            for (typename arrnd_header<>::size_type j = 0; j < shdr.dims()[1]; ++j) {
+                for (typename arrnd_header<>::size_type k = 0; k < shdr.dims()[2]; ++k) {
+                    typename arrnd_header<>::size_type subs_data[]{i, j, k};
+                    typename arrnd_header<>::storage_type subs(3, subs_data);
+                    EXPECT_EQ(shdr.ind2subs(shdr.subs2ind(subs)), subs);
+                }
+            }
+        }
+    }
+}
+
 TEST(arrnd_indexer, simple_forward_backward_iterations)
 {
     using namespace oc;

@@ -1233,6 +1233,26 @@ namespace details {
             return subs2ind(subs.begin(), subs.end());
         }
 
+        [[nodiscard]] constexpr storage_type ind2subs(size_type ind) const
+        {
+            if (empty()) {
+                return storage_type();
+            }
+
+            storage_type subs(dims_.size());
+            ind -= offset_;
+            for (size_type i = dims_.size() - 1; i >= 0; --i) {
+                if (*std::next(dims_.cbegin(), i) > 1) {
+                    *std::next(subs.begin(), i)
+                        = (ind / *std::next(strides_.cbegin(), i)) % *std::next(dims_.cbegin(), i);
+                } else {
+                    *std::next(subs.begin(), i) = 0;
+                }
+            }
+
+            return subs;
+        }
+
         constexpr arrnd_header(arrnd_header&& other) = default;
         constexpr arrnd_header& operator=(arrnd_header&& other) = default;
 
