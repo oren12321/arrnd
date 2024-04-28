@@ -850,16 +850,35 @@ using details::interval_type_iterable;
 
 namespace oc {
 namespace details {
+    template <typename T, template <typename> typename Allocator = lightweight_allocator>
+    struct dynamic_storage_info {
+        using storage_type = simple_dynamic_vector<T, Allocator>;
+        static constexpr std::int64_t size = std::dynamic_extent;
+        template <typename U>
+        using replaced_type = dynamic_storage_info<U, Allocator>;
+    };
+
+    template <typename T, std::int64_t N>
+    struct static_storage_info {
+        using storage_type = simple_static_vector<T, N>;
+        static constexpr std::int64_t size = N;
+        template <typename U>
+        using replaced_type = static_storage_info<U, N>;
+    };
+
     struct arrnd_header_tag { };
     template <typename T>
     concept arrnd_header_compliant = std::is_same_v<typename T::tag, arrnd_header_tag>;
 
-    template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
+    //template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
+    template <typename StorageInfo = dynamic_storage_info<std::int64_t>>
     class arrnd_header {
     public:
-        using storage_type = Storage;
+        //using storage_type = Storage;
+        using storage_type = typename StorageInfo::storage_type;
 
-        using size_type = typename Storage::size_type;
+        //using size_type = typename Storage::size_type;
+        using size_type = typename storage_type::size_type;
         static_assert(std::signed_integral<size_type>);
 
         using tag = arrnd_header_tag;
@@ -1376,6 +1395,9 @@ namespace details {
 using details::arrnd_header_tag;
 using details::arrnd_header_compliant;
 using details::arrnd_header;
+
+using details::dynamic_storage_info;
+using details::static_storage_info;
 }
 
 namespace oc {
@@ -1862,7 +1884,7 @@ namespace details {
     struct arrnd_returned_element_iterator_tag { };
     struct arrnd_returned_slice_iterator_tag { };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -1976,7 +1998,7 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2090,7 +2112,7 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2204,7 +2226,7 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2318,7 +2340,7 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2439,7 +2461,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2560,7 +2582,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2681,7 +2703,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-    template <arrnd_compliant Arrnd>
+   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3184,9 +3206,11 @@ namespace details {
     struct arrnd_inner_impl<T, 0> {
         using type = T;
     };
-    template <arrnd_compliant ArCo, std::int64_t Level = ArCo::depth>
+    template </*arrnd_compliant*/ typename ArCo, std::int64_t Level = ArCo::depth>
+    requires std::is_same_v<typename ArCo::tag, arrnd_tag>
     using arrnd_inner = arrnd_inner_impl<ArCo, Level>;
-    template <arrnd_compliant ArCo, std::int64_t Level = ArCo::depth>
+    template </*arrnd_compliant*/ typename ArCo, std::int64_t Level = ArCo::depth>
+    requires std::is_same_v<typename ArCo::tag, arrnd_tag>
     using arrnd_inner_t = arrnd_inner<ArCo, Level>::type;
 
     template <typename T>
@@ -4053,10 +4077,14 @@ namespace details {
         return eye<ArCo>(std::begin(dims), std::end(dims));
     }
 
-    template <typename T, random_access_type Storage = simple_dynamic_vector<T>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator,
-        arrnd_header_compliant Header = arrnd_header<>, template <typename> typename Indexer = arrnd_indexer,
-        template <typename> typename Ranger = arrnd_axis_ranger>
+    //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
+    //    template <typename> typename SharedRefAllocator = lightweight_allocator,
+    //    arrnd_header_compliant Header = arrnd_header<>/*, template <typename> typename Indexer = arrnd_indexer,
+    //    template <typename> typename Ranger = arrnd_axis_ranger*/>
+    template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
+        arrnd_header_compliant Header = arrnd_header<>,
+        template <typename> typename SharedRefAllocator = lightweight_allocator/*, template <typename> typename Indexer = arrnd_indexer,
+        template <typename> typename Ranger = arrnd_axis_ranger*/>
     class arrnd {
     public:
         using value_type = T;
@@ -4069,17 +4097,23 @@ namespace details {
 
         using tag = arrnd_tag;
 
-        using storage_type = Storage;
+        using storage_info = StorageInfo;
+
+        using storage_type = /*Storage*/typename StorageInfo::storage_type;
         template <typename U>
         using shared_ref_allocator_type = SharedRefAllocator<U>;
         using header_type = Header;
-        using indexer_type = Indexer<Header>;
-        using ranger_type = Ranger<Header>;
+        using indexer_type = /*Indexer*/arrnd_indexer<Header>;
+        using ranger_type = /*Ranger*/arrnd_axis_ranger<Header>;
 
-        using this_type = arrnd<T, Storage, SharedRefAllocator, Header, Indexer, Ranger>;
+        //using this_type = arrnd<T, /*Storage*/StorageInfo, SharedRefAllocator, Header/*, Indexer, Ranger*/>;
+        //template <typename U>
+        //using replaced_type = arrnd<U, /*typename Storage*/ typename StorageInfo::template replaced_type<U>,
+        //    SharedRefAllocator, Header /*, Indexer, Ranger*/>;
+        using this_type = arrnd<T, /*Storage*/ StorageInfo, Header, SharedRefAllocator /*, Indexer, Ranger*/>;
         template <typename U>
-        using replaced_type
-            = arrnd<U, typename Storage::template replaced_type<U>, SharedRefAllocator, Header, Indexer, Ranger>;
+        using replaced_type = arrnd<U, /*typename Storage*/ typename StorageInfo::template replaced_type<U>, Header,
+            SharedRefAllocator /*, Indexer, Ranger*/>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -4895,7 +4929,8 @@ namespace details {
             }
 
             if (hdr_.is_slice()) {
-                return resize<Level>(first_new_dim, last_new_dim);
+                return clone().reshape(first_new_dim, last_new_dim);
+                //return resize<Level>(first_new_dim, last_new_dim);
             }
 
             this_type res(*this);
@@ -13439,8 +13474,11 @@ namespace details {
     template <arrnd_compliant ArCo>
     inline constexpr std::ostream& operator<<(std::ostream& os, const ArCo& arco)
     {
-        arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
-            typename ArCo::header_type, arrnd_indexer, arrnd_axis_ranger>
+        //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
+        //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
+        //    carco = arco;
+        arrnd<typename ArCo::value_type, typename ArCo::storage_info /*storage_type*/, typename ArCo::header_type,
+            ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
             carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
         typename ArCo::size_type ndepth_spaces = 0;
@@ -13462,8 +13500,11 @@ namespace details {
         template <arrnd_compliant ArCo>
         friend std::ostream& operator<<(const arrnd_json_manip& ajm, const ArCo& arco)
         {
-            arrnd<typename ArCo::value_type, typename ArCo::storage_type, ArCo::template shared_ref_allocator_type,
-                typename ArCo::header_type, arrnd_indexer, arrnd_axis_ranger>
+            //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
+            //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
+            //    carco = arco;
+            arrnd<typename ArCo::value_type, typename ArCo::storage_info /*storage_type*/, typename ArCo::header_type,
+                ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
                 carco = arco;
             typename ArCo::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";

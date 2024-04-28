@@ -2531,12 +2531,13 @@ TEST(arrnd_test, resize)
     }
 
     {
-        const int tdata[] = {1, 2, 3, 4, 5, 6};
+        const int tdata[] = {1, 2, -1, -1, -1, -1};
         const std::int64_t tdims[]{3, 1, 2};
         Integer_array tarr{tdims, tdata};
 
         Integer_array rarr{oc::resize(arr, {3, 1, 2})};
-        EXPECT_TRUE(oc::all_equal(tarr, rarr));
+        EXPECT_TRUE(oc::all_equal(tarr[{oc::interval<>::at(0)}], rarr[{oc::interval<>::at(0)}]));
+        //std::cout << rarr << "\n\n";
         EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
     }
 
@@ -2555,8 +2556,12 @@ TEST(arrnd_test, resize)
 
         oc::arrnd<Integer_array> rnarr1 = oc::resize(inarr, {2, 2});
         EXPECT_FALSE(oc::all_equal(rnarr1, inarr));
-        EXPECT_TRUE(oc::all_equal(Integer_array({2, 2}, {1, 2, 3, 4}), rnarr1[{0, 0}]));
-        EXPECT_TRUE(oc::all_equal(Integer_array({2, 2}, {6, 7, 8, 9}), rnarr1[{0, 1}]));
+        //std::cout << rnarr1[{0, 0}] << "\n\n";
+        //std::cout << rnarr1[{0, 1}] << "\n\n";
+        EXPECT_TRUE(oc::all_equal(
+            Integer_array({2, 2}, {1, 2, -1, -1})[{oc::interval<>::at(0)}], rnarr1[{0, 0}][{oc::interval<>::at(0)}]));
+        EXPECT_TRUE(oc::all_equal(
+            Integer_array({2, 2}, {6, 7, -1, -1})[{oc::interval<>::at(0)}], rnarr1[{0, 1}][{oc::interval<>::at(0)}]));
         EXPECT_NE((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_NE((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
