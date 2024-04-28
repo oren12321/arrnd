@@ -4081,8 +4081,12 @@ namespace details {
     //    template <typename> typename SharedRefAllocator = lightweight_allocator,
     //    arrnd_header_compliant Header = arrnd_header<>/*, template <typename> typename Indexer = arrnd_indexer,
     //    template <typename> typename Ranger = arrnd_axis_ranger*/>
-    template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
-        arrnd_header_compliant Header = arrnd_header<>,
+    //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
+    //    arrnd_header_compliant Header = arrnd_header<>,
+    //    template <typename> typename SharedRefAllocator = lightweight_allocator/*, template <typename> typename Indexer = arrnd_indexer,
+    //    template <typename> typename Ranger = arrnd_axis_ranger*/>
+    template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename DataStorageInfo = dynamic_storage_info<T>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = lightweight_allocator/*, template <typename> typename Indexer = arrnd_indexer,
         template <typename> typename Ranger = arrnd_axis_ranger*/>
     class arrnd {
@@ -4097,22 +4101,23 @@ namespace details {
 
         using tag = arrnd_tag;
 
-        using storage_info = StorageInfo;
+        using /*storage_info*/data_storage_info = /*StorageInfo*/DataStorageInfo;
+        using dims_storage_info = DimsStorageInfo;
 
-        using storage_type = /*Storage*/typename StorageInfo::storage_type;
+        using storage_type = /*Storage*/typename /*StorageInfo*/DataStorageInfo::storage_type;
         template <typename U>
         using shared_ref_allocator_type = SharedRefAllocator<U>;
-        using header_type = Header;
-        using indexer_type = /*Indexer*/arrnd_indexer<Header>;
-        using ranger_type = /*Ranger*/arrnd_axis_ranger<Header>;
+        using header_type = /*Header*/arrnd_header<DimsStorageInfo>;
+        using indexer_type = /*Indexer*/arrnd_indexer</*Header*/header_type>;
+        using ranger_type = /*Ranger*/arrnd_axis_ranger</*Header*/header_type>;
 
         //using this_type = arrnd<T, /*Storage*/StorageInfo, SharedRefAllocator, Header/*, Indexer, Ranger*/>;
         //template <typename U>
         //using replaced_type = arrnd<U, /*typename Storage*/ typename StorageInfo::template replaced_type<U>,
         //    SharedRefAllocator, Header /*, Indexer, Ranger*/>;
-        using this_type = arrnd<T, /*Storage*/ StorageInfo, Header, SharedRefAllocator /*, Indexer, Ranger*/>;
+        using this_type = arrnd<T, /*Storage*/ /*StorageInfo*/DataStorageInfo, /*Header*//*header_type*/DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
         template <typename U>
-        using replaced_type = arrnd<U, /*typename Storage*/ typename StorageInfo::template replaced_type<U>, Header,
+        using replaced_type = arrnd<U, /*typename Storage*/ typename /*StorageInfo*/DataStorageInfo::template replaced_type<U>, /*Header*//*header_type*/DimsStorageInfo,
             SharedRefAllocator /*, Indexer, Ranger*/>;
 
         template <typename U, std::int64_t Level>
@@ -13477,7 +13482,7 @@ namespace details {
         //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
         //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
         //    carco = arco;
-        arrnd<typename ArCo::value_type, typename ArCo::storage_info /*storage_type*/, typename ArCo::header_type,
+        arrnd<typename ArCo::value_type, typename ArCo::data_storage_info/*storage_info*/ /*storage_type*/, typename ArCo::dims_storage_info/*header_type*/,
             ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
             carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
@@ -13503,7 +13508,7 @@ namespace details {
             //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
             //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
             //    carco = arco;
-            arrnd<typename ArCo::value_type, typename ArCo::storage_info /*storage_type*/, typename ArCo::header_type,
+            arrnd<typename ArCo::value_type, typename ArCo::data_storage_info/*storage_info*/ /*storage_type*/, typename ArCo::dims_storage_info/*header_type*/,
                 ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
                 carco = arco;
             typename ArCo::size_type nvertical_spaces = 4;
