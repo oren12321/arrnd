@@ -4145,6 +4145,17 @@ namespace details {
         constexpr static std::int64_t depth = calc_arrnd_depth<T>();
         constexpr static bool is_flat = depth == 0;
 
+        template <std::int64_t Depth> requires (Depth >= 0)
+        struct nested {
+            using type = replaced_type<typename nested<Depth - 1>::type>;
+        };
+        template <>
+        struct nested<0> {
+            using type = this_type;
+        };
+        template <std::int64_t Depth>
+        using nested_t = typename nested<Depth>::type;
+
         template <typename U, std::int64_t Level = this_type::depth>
         using tol_type = decltype(inner_value_type<Level>{} - U{});
         template <arrnd_compliant ArCo, std::int64_t Level = this_type::depth>

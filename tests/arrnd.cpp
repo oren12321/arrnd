@@ -1864,3 +1864,14 @@ TEST(arrnd_test, pageop)
                     arrnd<arrnd<int>>({1}, {arrnd<int>({1, 2}, {5, 6})})})));
     }
 }
+
+TEST(arrnd_type, nested_type)
+{
+    using namespace oc;
+
+    static_assert(std::is_same_v<arrnd<int>::nested_t<0>, arrnd<int>>);
+    static_assert(std::is_same_v<arrnd<int>::nested_t<1>, arrnd<arrnd<int>>>);
+    static_assert(std::is_same_v<arrnd<int>::nested_t<2>, arrnd<arrnd<arrnd<int>>>>);
+    static_assert(std::is_same_v<arrnd<int>::nested_t<3>, arrnd<arrnd<arrnd<arrnd<int>>>>>);
+    static_assert(std::is_same_v<arrnd<int>::nested_t<4>, arrnd<arrnd<arrnd<arrnd<arrnd<int>>>>>>);
+}
