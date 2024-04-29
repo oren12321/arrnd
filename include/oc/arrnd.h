@@ -878,8 +878,8 @@ namespace details {
         using storage_type = typename StorageInfo::storage_type;
 
         //using size_type = typename Storage::size_type;
-        using size_type = typename storage_type::size_type;
-        static_assert(std::signed_integral<size_type>);
+        using size_type = std::make_signed_t<typename storage_type::size_type>;
+        //static_assert(std::signed_integral<size_type>);
 
         using tag = arrnd_header_tag;
 
@@ -904,7 +904,7 @@ namespace details {
 
             dims_ = storage_type(first_dim, last_dim);
 
-            strides_ = storage_type(dims_.size());
+            strides_ = storage_type(std::ssize(dims_));
             std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), size_type{1}, std::multiplies<>{});
 
             last_index_ = numel_ - 1;
@@ -937,10 +937,10 @@ namespace details {
                 return arrnd_header(first_dim, last_dim);
             }
 
-            storage_type new_dims(dims_.size() + std::distance(first_dim, last_dim));
+            storage_type new_dims(std::ssize(dims_) + std::distance(first_dim, last_dim));
 
             std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
-            std::copy(first_dim, last_dim, std::next(new_dims.begin(), dims_.size()));
+            std::copy(first_dim, last_dim, std::next(new_dims.begin(), std::ssize(dims_)));
 
             return arrnd_header(new_dims.cbegin(), new_dims.cend());
         }
@@ -975,7 +975,7 @@ namespace details {
                 return *this;
             }
 
-            size_type nranges = std::min(std::distance(first_range, last_range), dims_.size());
+            size_type nranges = std::min(std::distance(first_range, last_range), std::ssize(dims_));
 
             auto valid_ranges = [&]() {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
@@ -988,7 +988,7 @@ namespace details {
 
             arrnd_header res{};
 
-            res.dims_ = storage_type(dims_.size());
+            res.dims_ = storage_type(std::ssize(dims_));
             std::transform(first_range, std::next(first_range, nranges), dims_.cbegin(), res.dims_.begin(),
                 [](const auto& r, auto d) {
                     auto nr = r.align(d);
@@ -1007,7 +1007,7 @@ namespace details {
                 return empty_subheader;
             }
 
-            res.strides_ = storage_type(res.dims_.size());
+            res.strides_ = storage_type(std::ssize(res.dims_));
 
             res.offset_ = offset_;
             for (size_type i = 0; i < nranges; ++i) {
@@ -1069,27 +1069,27 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header subheader(interval<size_type> range, size_type axis) const
         {
-            assert(axis < dims_.size());
+            assert(axis < std::ssize(dims_));
 
             typename storage_type::template replaced_type<interval<size_type>> ranges(axis + 1);
 
             std::fill(ranges.begin(), ranges.end(), interval<size_type>::full());
-            ranges[ranges.size() - 1] = range.align(*std::next(dims_.cbegin(), axis));
+            ranges[std::ssize(ranges) - 1] = range.align(*std::next(dims_.cbegin(), axis));
 
             return subheader(ranges.begin(), ranges.end());
         }
 
         [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
         {
-            assert(omitted_axis >= 0 && omitted_axis < dims_.size());
+            assert(omitted_axis >= 0 && omitted_axis < std::ssize(dims_));
 
             if (empty()) {
                 return *this;
             }
 
-            storage_type new_dims(dims_.size() > 1 ? dims_.size() - 1 : 1);
+            storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
 
-            if (dims_.size() == 1) {
+            if (std::ssize(dims_) == 1) {
                 new_dims.front() = 1;
                 return arrnd_header(new_dims.cbegin(), new_dims.cend());
             }
@@ -1103,7 +1103,7 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header subheader(size_type count, size_type axis) const
         {
-            assert(axis >= 0 && axis < dims_.size());
+            assert(axis >= 0 && axis < std::ssize(dims_));
             assert(count >= -*std::next(dims_.cbegin(), axis));
 
             if (empty()) {
@@ -1119,18 +1119,18 @@ namespace details {
         template <signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr arrnd_header reorder(const InputIt& first_order, const InputIt& last_order) const
         {
-            assert(std::distance(first_order, last_order) == dims_.size());
+            assert(std::distance(first_order, last_order) == std::ssize(dims_));
             assert(std::all_of(first_order, last_order, [&](auto order) {
-                return order >= 0 && order < dims_.size();
+                return order >= 0 && order < std::ssize(dims_);
             }));
 
-            if (empty() || dims_.size() == 1) {
+            if (empty() || std::ssize(dims_) == 1) {
                 return *this;
             }
 
             arrnd_header res(*this);
 
-            for (size_type i = 0; i < dims_.size(); ++i) {
+            for (size_type i = 0; i < std::ssize(dims_); ++i) {
                 *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
             }
@@ -1157,11 +1157,11 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
         {
-            if (empty() || dims_.size() == 1 || main_axis == 0) {
+            if (empty() || std::ssize(dims_) == 1 || main_axis == 0) {
                 return *this;
             }
 
-            assert(main_axis >= 0 && main_axis < dims_.size());
+            assert(main_axis >= 0 && main_axis < std::ssize(dims_));
 
             arrnd_header res(*this);
 
@@ -1176,7 +1176,7 @@ namespace details {
                 ++j;
             }
 
-            for (size_type i = main_axis + 1; i < dims_.size(); ++i) {
+            for (size_type i = main_axis + 1; i < std::ssize(dims_); ++i) {
                 *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
                 *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
                 ++j;
@@ -1190,7 +1190,7 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header squeeze() const
         {
-            if (empty() || dims_.size() == 1) {
+            if (empty() || std::ssize(dims_) == 1) {
                 return *this;
             }
 
@@ -1201,14 +1201,14 @@ namespace details {
 
             arrnd_header res(*this);
 
-            res.dims_ = storage_type(dims_.size() - ones_count);
+            res.dims_ = storage_type(std::ssize(dims_) - ones_count);
             std::copy_if(dims_.cbegin(), dims_.cend(), res.dims_.begin(), [](auto d) {
                 return d != size_type{1};
             });
 
-            res.strides_ = storage_type(strides_.size() - ones_count);
+            res.strides_ = storage_type(std::ssize(strides_) - ones_count);
             size_type j = 0;
-            for (size_type i = 0; i < strides_.size(); ++i) {
+            for (size_type i = 0; i < std::ssize(strides_); ++i) {
                 if (*std::next(dims_.cbegin(), i) != size_type{1}) {
                     *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
                     ++j;
@@ -1226,10 +1226,10 @@ namespace details {
             assert(first_sub < last_sub); // at least one subscript is required
 
             size_type nsubs = std::distance(first_sub, last_sub);
-            assert(nsubs > 0 && nsubs <= dims_.size());
+            assert(nsubs > 0 && nsubs <= std::ssize(dims_));
 
             auto valid_subs = [&]() {
-                return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), dims_.size() - nsubs), true,
+                return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), std::ssize(dims_) - nsubs), true,
                     std::logical_and<>{}, [](auto s, auto d) {
                         return (s >= 0 && s < d);
                     });
@@ -1237,7 +1237,7 @@ namespace details {
             assert(valid_subs());
 
             return offset_
-                + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), strides_.size() - nsubs),
+                + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), std::ssize(strides_) - nsubs),
                     size_type{0}, std::plus<>{}, std::multiplies<>{});
         }
 
@@ -1258,9 +1258,9 @@ namespace details {
                 return storage_type();
             }
 
-            storage_type subs(dims_.size());
+            storage_type subs(std::ssize(dims_));
             ind -= offset_;
-            for (size_type i = dims_.size() - 1; i >= 0; --i) {
+            for (size_type i = std::ssize(dims_) - 1; i >= 0; --i) {
                 if (*std::next(dims_.cbegin(), i) > 1) {
                     *std::next(subs.begin(), i)
                         = (ind / *std::next(strides_.cbegin(), i)) % *std::next(dims_.cbegin(), i);
@@ -1327,22 +1327,22 @@ namespace details {
 
         [[nodiscard]] constexpr bool is_vector() const noexcept
         {
-            return dims_.size() == 1;
+            return std::ssize(dims_) == 1;
         }
 
         [[nodiscard]] constexpr bool is_row() const noexcept
         {
-            return dims_.size() == 2 && dims_.front() == 1;
+            return std::ssize(dims_) == 2 && dims_.front() == 1;
         }
 
         [[nodiscard]] constexpr bool is_column() const noexcept
         {
-            return dims_.size() == 2 && dims_.back() == 1;
+            return std::ssize(dims_) == 2 && dims_.back() == 1;
         }
 
         [[nodiscard]] constexpr bool is_matrix() const noexcept
         {
-            return dims_.size() == 2;
+            return std::ssize(dims_) == 2;
         }
 
         [[nodiscard]] constexpr bool is_scalar() const noexcept
