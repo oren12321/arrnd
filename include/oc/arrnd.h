@@ -1229,8 +1229,8 @@ namespace details {
             assert(nsubs > 0 && nsubs <= std::ssize(dims_));
 
             auto valid_subs = [&]() {
-                return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), std::ssize(dims_) - nsubs), true,
-                    std::logical_and<>{}, [](auto s, auto d) {
+                return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), std::ssize(dims_) - nsubs),
+                    true, std::logical_and<>{}, [](auto s, auto d) {
                         return (s >= 0 && s < d);
                     });
             };
@@ -1884,7 +1884,8 @@ namespace details {
     struct arrnd_returned_element_iterator_tag { };
     struct arrnd_returned_slice_iterator_tag { };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -1998,7 +1999,8 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2112,7 +2114,8 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2226,7 +2229,8 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2340,7 +2344,8 @@ namespace details {
         pointer data_ = nullptr;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2461,7 +2466,8 @@ namespace details {
         mutable value_type slice_;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2582,7 +2588,8 @@ namespace details {
         mutable value_type slice_;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -2703,7 +2710,8 @@ namespace details {
         mutable value_type slice_;
     };
 
-   template <typename Arrnd> requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    template <typename Arrnd>
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3207,10 +3215,10 @@ namespace details {
         using type = T;
     };
     template </*arrnd_compliant*/ typename ArCo, std::int64_t Level = ArCo::depth>
-    requires std::is_same_v<typename ArCo::tag, arrnd_tag>
+        requires std::is_same_v<typename ArCo::tag, arrnd_tag>
     using arrnd_inner = arrnd_inner_impl<ArCo, Level>;
     template </*arrnd_compliant*/ typename ArCo, std::int64_t Level = ArCo::depth>
-    requires std::is_same_v<typename ArCo::tag, arrnd_tag>
+        requires std::is_same_v<typename ArCo::tag, arrnd_tag>
     using arrnd_inner_t = arrnd_inner<ArCo, Level>::type;
 
     template <typename T>
@@ -4101,24 +4109,26 @@ namespace details {
 
         using tag = arrnd_tag;
 
-        using /*storage_info*/data_storage_info = /*StorageInfo*/DataStorageInfo;
+        using /*storage_info*/ data_storage_info = /*StorageInfo*/ DataStorageInfo;
         using dims_storage_info = DimsStorageInfo;
 
-        using storage_type = /*Storage*/typename /*StorageInfo*/DataStorageInfo::storage_type;
+        using storage_type = /*Storage*/ typename /*StorageInfo*/ DataStorageInfo::storage_type;
         template <typename U>
         using shared_ref_allocator_type = SharedRefAllocator<U>;
-        using header_type = /*Header*/arrnd_header<DimsStorageInfo>;
-        using indexer_type = /*Indexer*/arrnd_indexer</*Header*/header_type>;
-        using ranger_type = /*Ranger*/arrnd_axis_ranger</*Header*/header_type>;
+        using header_type = /*Header*/ arrnd_header<DimsStorageInfo>;
+        using indexer_type = /*Indexer*/ arrnd_indexer</*Header*/ header_type>;
+        using ranger_type = /*Ranger*/ arrnd_axis_ranger</*Header*/ header_type>;
 
         //using this_type = arrnd<T, /*Storage*/StorageInfo, SharedRefAllocator, Header/*, Indexer, Ranger*/>;
         //template <typename U>
         //using replaced_type = arrnd<U, /*typename Storage*/ typename StorageInfo::template replaced_type<U>,
         //    SharedRefAllocator, Header /*, Indexer, Ranger*/>;
-        using this_type = arrnd<T, /*Storage*/ /*StorageInfo*/DataStorageInfo, /*Header*//*header_type*/DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
+        using this_type = arrnd<T, /*Storage*/ /*StorageInfo*/ DataStorageInfo,
+            /*Header*/ /*header_type*/ DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
         template <typename U>
-        using replaced_type = arrnd<U, /*typename Storage*/ typename /*StorageInfo*/DataStorageInfo::template replaced_type<U>, /*Header*//*header_type*/DimsStorageInfo,
-            SharedRefAllocator /*, Indexer, Ranger*/>;
+        using replaced_type
+            = arrnd<U, /*typename Storage*/ typename /*StorageInfo*/ DataStorageInfo::template replaced_type<U>,
+                /*Header*/ /*header_type*/ DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -4145,7 +4155,8 @@ namespace details {
         constexpr static std::int64_t depth = calc_arrnd_depth<T>();
         constexpr static bool is_flat = depth == 0;
 
-        template <std::int64_t Depth> requires (Depth >= 0)
+        template <std::int64_t Depth>
+            requires(Depth >= 0)
         struct nested {
             using type = replaced_type<typename nested<Depth - 1>::type>;
         };
@@ -9186,6 +9197,36 @@ namespace details {
             return reorder<this_type::depth, InputIt>(first_order, last_order);
         }
 
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto reorder(const Cont& order) const
+        {
+            return reorder<Level>(std::begin(order), std::end(order));
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto reorder(std::initializer_list<size_type> order) const
+        {
+            return reorder<Level>(order.begin(), order.end());
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto reorder(const U (&order)[M]) const
+        {
+            return reorder<Level>(std::begin(order), std::end(order));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto reorder(const Cont& order) const
+        {
+            return reorder<this_type::depth>(std::begin(order), std::end(order));
+        }
+        [[nodiscard]] constexpr auto reorder(std::initializer_list<size_type> order) const
+        {
+            return reorder<this_type::depth>(order.begin(), order.end());
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto reorder(const U (&order)[M]) const
+        {
+            return reorder<this_type::depth>(std::begin(order), std::end(order));
+        }
+
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
         [[nodiscard]] constexpr this_type
@@ -9269,6 +9310,122 @@ namespace details {
         [[nodiscard]] constexpr auto reorder(size_type axis, const U (&order)[M]) const
         {
             return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
+        }
+
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+            requires(Level == 0)
+        [[nodiscard]] constexpr auto adjacent_indices(
+            const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
+        {
+            using returned_type = replaced_type<size_type>;
+
+            if (empty()) {
+                return returned_type();
+            }
+
+            assert(std::distance(first_sub, last_sub) == std::ssize(hdr_.dims()));
+            assert(offset > 0);
+
+            auto compute_num_adj = [](size_type ndims, size_type offset) {
+                size_type base1 = 3 + 2 * (offset - 1);
+                size_type base2 = 3 + 2 * (offset - 2);
+                return static_cast<size_type>(std::pow(base1, ndims) - std::pow(base2, ndims));
+            };
+
+            returned_type res({compute_num_adj(std::ssize(hdr_.dims()), offset)});
+            size_type actual_num_adj = 0;
+
+            std::function<void(returned_type, size_type, bool)> impl;
+
+            impl = [&](returned_type subs, size_type perm_pos, bool used_offset) {
+                if (perm_pos == std::ssize(hdr_.dims())) {
+                    return;
+                }
+
+                for (size_type i = -offset; i <= offset; ++i) {
+                    size_type abs_i = static_cast<size_type>(std::abs(i));
+
+                    if (abs_i > 0 && abs_i <= offset) {
+                        auto new_subs = subs.clone();
+                        new_subs[perm_pos] += i;
+                        if (new_subs[perm_pos] >= 0
+                            && new_subs[perm_pos] < *std::next(hdr_.dims().cbegin(), perm_pos)) {
+                            if (used_offset || abs_i == offset) {
+                                res[actual_num_adj++] = hdr_.subs2ind(new_subs.cbegin(), new_subs.cend());
+                            }
+                            impl(new_subs, perm_pos + 1, abs_i == offset);
+                        }
+                    } else {
+                        impl(subs, perm_pos + 1, used_offset);
+                    }
+                }
+            };
+
+            impl(returned_type({std::distance(first_sub, last_sub)}, first_sub, last_sub), 0, false);
+
+            if (res.header().numel() > actual_num_adj) {
+                return res.template resize<Level>({actual_num_adj});
+            }
+            return res;
+        }
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+            requires(Level > 0)
+        [[nodiscard]] constexpr auto adjacent_indices(
+            const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
+        {
+            using returned_type = inner_replaced_type<size_type, Level>;
+
+            if (empty()) {
+                return returned_type();
+            }
+
+            returned_type res(hdr_.subs().cbegin(), hdr_.subs().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen]
+                    = (*this)[*gen].template adjacent_indices<Level - 1, InputIt>(first_sub, last_sub, offset);
+            }
+
+            return res;
+        }
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr auto adjacent_indices(
+            const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
+        {
+            return adjacent_indices<this_type::depth, InputIt>(first_sub, last_sub, offset);
+        }
+
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto adjacent_indices(const Cont& subs, size_type offset = 1) const
+        {
+            return adjacent_indices<Level>(std::begin(subs), std::end(subs), offset);
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr auto adjacent_indices(std::initializer_list<size_type> subs, size_type offset = 1) const
+        {
+            return adjacent_indices<Level>(subs.begin(), subs.end(), offset);
+        }
+        template <std::int64_t Level, std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto adjacent_indices(const U (&subs)[M], size_type offset = 1) const
+        {
+            return adjacent_indices<Level>(std::begin(subs), std::end(subs), offset);
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr auto adjacent_indices(const Cont& subs, size_type offset = 1) const
+        {
+            return adjacent_indices<this_type::depth>(std::begin(subs), std::end(subs), offset);
+        }
+        [[nodiscard]] constexpr auto adjacent_indices(std::initializer_list<size_type> subs, size_type offset = 1) const
+        {
+            return adjacent_indices<this_type::depth>(subs.begin(), subs.end(), offset);
+        }
+        template <std::integral U, std::int64_t M>
+        [[nodiscard]] constexpr auto adjacent_indices(const U (&subs)[M], size_type offset = 1) const
+        {
+            return adjacent_indices<this_type::depth>(std::begin(subs), std::end(subs), offset);
         }
 
         template <std::int64_t Level, typename Pred, typename... Args>
@@ -13207,6 +13364,55 @@ namespace details {
         return reorder<ArCo::depth>(arr, axis, std::begin(order), std::end(order));
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, InputIt first_sub, InputIt last_sub, typename ArCo::size_type offset = 1)
+    {
+        return arr.template adjacent_indices<Level>(first_sub, last_sub, offset);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, const Cont& subs, typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<Level>(arr, std::begin(subs), std::end(subs), offset);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> subs, typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<Level>(arr, subs.begin(), subs.end(), offset);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, const U (&subs)[M], typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<Level>(arr, std::begin(subs), std::end(subs), offset);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, InputIt first_sub, InputIt last_sub, typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<ArCo::depth>(arr, first_sub, last_sub, offset);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, const Cont& subs, typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, std::initializer_list<typename ArCo::size_type> subs, typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<ArCo::depth>(arr, subs.begin(), subs.end(), offset);
+    }
+    template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto adjacent_indices(
+        const ArCo& arr, const U (&subs)[M], typename ArCo::size_type offset = 1)
+    {
+        return adjacent_indices<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
+    }
+
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred, typename... Args>
     [[nodiscard]] inline constexpr bool all_match(const ArCo& arr, Pred&& pred, Args&&... args)
     {
@@ -13493,7 +13699,8 @@ namespace details {
         //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
         //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
         //    carco = arco;
-        arrnd<typename ArCo::value_type, typename ArCo::data_storage_info/*storage_info*/ /*storage_type*/, typename ArCo::dims_storage_info/*header_type*/,
+        arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
+            typename ArCo::dims_storage_info /*header_type*/,
             ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
             carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
@@ -13519,7 +13726,8 @@ namespace details {
             //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
             //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
             //    carco = arco;
-            arrnd<typename ArCo::value_type, typename ArCo::data_storage_info/*storage_info*/ /*storage_type*/, typename ArCo::dims_storage_info/*header_type*/,
+            arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
+                typename ArCo::dims_storage_info /*header_type*/,
                 ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
                 carco = arco;
             typename ArCo::size_type nvertical_spaces = 4;
@@ -13675,6 +13883,7 @@ using details::squeeze;
 using details::sort;
 using details::is_sorted;
 using details::reorder;
+using details::adjacent_indices;
 using details::all_match;
 using details::any_match;
 using details::transform;
