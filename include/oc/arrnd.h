@@ -5660,9 +5660,10 @@ namespace details {
                 return transformed_type();
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
-                return transformed_type();
-            }
+            //if (hdr_.dims() != arr.header().dims()) {
+            //    return transformed_type();
+            //}
+            assert(hdr_.numel() == arr.header().numel());
 
             transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
@@ -5690,9 +5691,10 @@ namespace details {
                 return transformed_type();
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
-                return transformed_type();
-            }
+            //if (hdr_.dims() != arr.header().dims()) {
+            //    return transformed_type();
+            //}
+            assert(hdr_.numel() == arr.header().numel());
 
             transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
@@ -5760,13 +5762,14 @@ namespace details {
                     Args...>)
         constexpr this_type& apply(const ArCo& arr, Func&& func, Args&&... args)
         {
-            if (empty()) {
+            if (empty() || arr.empty()) {
                 return *this;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
-                return *this;
-            }
+            //if (hdr_.dims() != arr.header().dims()) {
+            //    return *this;
+            //}
+            assert(hdr_.numel() == arr.header().numel());
 
             indexer_type gen(hdr_);
             typename std::remove_cvref_t<ArCo>::indexer_type arr_gen(arr.header());
@@ -5784,13 +5787,14 @@ namespace details {
                     Args...>)
         constexpr this_type& apply(const ArCo& arr, Func&& func, Args&&... args)
         {
-            if (empty()) {
+            if (empty() || arr.empty()) {
                 return *this;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
-                return *this;
-            }
+            //if (hdr_.dims() != arr.header().dims()) {
+            //    return *this;
+            //}
+            assert(hdr_.numel() == arr.header().numel());
 
             for (indexer_type gen(hdr_); gen; ++gen) {
                 (*this)[*gen].template apply<Level - 1, typename ArCo::value_type, Func, Args...>(
