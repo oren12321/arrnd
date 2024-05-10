@@ -77,6 +77,8 @@ namespace details {
     using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
     template <typename Iter, typename T>
     concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
+    template <typename Iter, template <typename...> typename T>
+    concept iterator_of_template_type = std::input_iterator<Iter>&& template_type<iterator_value_type<Iter>, T>;
 
     template <typename Cont>
     concept iterable = requires(Cont&& c) {
@@ -94,6 +96,14 @@ namespace details {
                                                          std::remove_cvref_t<decltype(*std::begin(c))>{}
                                                          } -> std::same_as<T>;
                                                  };
+    template <typename Cont, template <typename...> typename T>
+    concept iterable_of_template_type = iterable<Cont>&& requires(Cont&& c)
+    {
+        {
+            std::remove_cvref_t<decltype(*std::begin(c))> { }
+        }
+        ->template_type<T>;
+    };
 
     template <typename T>
     concept random_access_type = std::random_access_iterator<typename T::iterator>;
@@ -5410,13 +5420,16 @@ namespace details {
             return repeat<this_type::depth>(count);
         }
 
-        template <std::int64_t Level, template_type<std::tuple> Tuple>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
+
+        template <std::int64_t Level, iterator_of_template_type<std::tuple> InputIt>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_tuple, InputIt last_tuple) const
         {
+            assert(std::distance(first_tuple, last_tuple) >= 0);
+
             auto res = *this;
             auto mid = res;
 
-            std::for_each(count_axis_tuples.begin(), count_axis_tuples.end(), [&res, &mid](const auto& tuple) {
+            std::for_each(first_tuple, last_tuple, [&res, &mid](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
                     res = res.template append<Level>(mid, std::get<1>(tuple));
                 }
@@ -5425,10 +5438,40 @@ namespace details {
 
             return res;
         }
+        template <iterator_of_template_type<std::tuple> InputIt>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_tuple, InputIt last_tuple) const
+        {
+            return repeat<this_type::depth>(first_tuple, last_tuple);
+        }
+        template <std::int64_t Level, template_type<std::tuple> Tuple>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
+        {
+            return repeat<Level>(count_axis_tuples.begin(), count_axis_tuples.end());
+        }
         template <template_type<std::tuple> Tuple>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
         {
-            return repeat<this_type::depth>(count_axis_tuples);
+            return repeat<this_type::depth>(count_axis_tuples.begin(), count_axis_tuples.end());
+        }
+        template <std::int64_t Level, iterable_of_template_type<std::tuple> Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& count_axis_tuples) const
+        {
+            return repeat<Level>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
+        }
+        template <iterable_of_template_type<std::tuple> Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& count_axis_tuples) const
+        {
+            return repeat<this_type::depth>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
+        }
+        template <std::int64_t Level, template_type<std::tuple> U, std::int64_t M>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const U (&count_axis_tuples)[M]) const
+        {
+            return repeat<Level>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
+        }
+        template <template_type<std::tuple> U, std::int64_t M>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const U (&count_axis_tuples)[M]) const
+        {
+            return repeat<this_type::depth>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
         }
 
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
@@ -11209,16 +11252,47 @@ namespace details {
         return repeat<ArCo::depth>(arr, count);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, iterator_of_template_type<std::tuple> InputIt>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_tuple, InputIt last_tuple)
+    {
+        return arr.template repeat<Level>(first_tuple, last_tuple);
+    }
+    template <arrnd_compliant ArCo, iterator_of_template_type<std::tuple> InputIt>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_tuple, InputIt last_tuple)
+    {
+        return repeat<ArCo::depth>(arr, first_tuple, last_tuple);
+    }
     template <std::int64_t Level, arrnd_compliant ArCo, template_type<std::tuple> Tuple>
     [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<Tuple> count_axis_tuples)
     {
-        return arr.template repeat<Level>(count_axis_tuples);
+        return repeat<Level>(arr, count_axis_tuples.begin(), count_axis_tuples.end());
     }
     template <arrnd_compliant ArCo, template_type<std::tuple> Tuple>
     [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<Tuple> count_axis_tuples)
     {
-        return repeat<ArCo::depth>(arr, count_axis_tuples);
+        return repeat<ArCo::depth>(arr, count_axis_tuples.begin(), count_axis_tuples.end());
     }
+    template <std::int64_t Level, arrnd_compliant ArCo, iterable_of_template_type<std::tuple> Cont>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& count_axis_tuples)
+    {
+        return repeat<Level>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    }
+    template <arrnd_compliant ArCo, iterable_of_template_type<std::tuple> Cont>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& count_axis_tuples)
+    {
+        return repeat<ArCo::depth>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, template_type<std::tuple> U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const U (&count_axis_tuples)[M])
+    {
+        return repeat<Level>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    }
+    template <arrnd_compliant ArCo, template_type<std::tuple> U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const U (&count_axis_tuples)[M])
+    {
+        return repeat<ArCo::depth>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    }
+
 
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto remove(

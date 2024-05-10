@@ -2885,13 +2885,22 @@ TEST(arrnd_test, repeat)
 
     // by axis
     {
-        auto arr = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
+        auto arr1 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
 
         arrnd<int> res({2, 6, 4},
             {1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2,
                 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4});
 
-        EXPECT_TRUE(all_equal(arr, res));
+        EXPECT_TRUE(all_equal(arr1, res));
+
+        arrnd<int> reps({3}, {2, 3, 2});
+        arrnd<int> axes({3}, {2, 1, 0});
+
+        auto z = zip(iter_pack(reps), iter_pack(axes));
+
+        auto arr2 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), z.begin(), z.end());
+
+        EXPECT_TRUE(all_equal(arr2, res));
     }
 }
 
