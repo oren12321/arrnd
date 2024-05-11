@@ -26,6 +26,12 @@ TEST(arrnd_test, matmul)
         auto res = matmul(arr1, arr2);
 
         EXPECT_TRUE(all_equal(res, arrnd<double>({3, 2, 1}, {14, 32, 50, 68, 86, 104})));
+        EXPECT_TRUE(all_equal(res, arr1.as_pages() * arr2.as_pages()));
+
+        auto arr1p = arr1.as_pages();
+        arr1p *= arr2.as_pages();
+
+        EXPECT_TRUE(all_equal(res, arr1p));
     }
 
     {

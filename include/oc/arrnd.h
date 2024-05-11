@@ -4573,6 +4573,18 @@ namespace details {
             return (*this)[hdr_.offset()];
         }
 
+        [[nodiscard]] constexpr shared_ref<this_type> as_pages() const
+        {
+            auto res = *this;
+            res.treat_as_pages_ = true;
+            return res;
+        }
+
+        [[nodiscard]] constexpr bool is_as_pages() const noexcept
+        {
+            return treat_as_pages_;
+        }
+
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
             assert(index >= hdr_.offset() && index <= hdr_.last_index());
@@ -11033,6 +11045,7 @@ namespace details {
         std::shared_ptr<bool> original_valid_creator_ = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
         std::weak_ptr<bool> is_creator_valid_{};
         const this_type* creator_ = nullptr;
+        bool treat_as_pages_ = false; // useful for specific operations e.g. for operator* to decide between element wise and matrix multiplication
     };
 
     // free arrnd iterator functions
@@ -12341,6 +12354,12 @@ namespace details {
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto operator*(const ArCo1& lhs, const ArCo2& rhs)
     {
+        assert(lhs.is_as_pages() == rhs.is_as_pages());
+
+        if (lhs.is_as_pages() && rhs.is_as_pages()) {
+            return lhs.matmul(rhs);
+        }
+
         return lhs.transform(rhs, [](const auto& a, const auto& b) {
             return a * b;
         });
@@ -12369,6 +12388,13 @@ namespace details {
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& operator*=(ArCo1& lhs, const ArCo2& rhs)
     {
+        assert(lhs.is_as_pages() == rhs.is_as_pages());
+
+        if (lhs.is_as_pages() && rhs.is_as_pages()) {
+            lhs = lhs.matmul(rhs);
+            return lhs;
+        }
+
         return lhs.apply(rhs, [](const auto& a, const auto& b) {
             return a * b;
         });
