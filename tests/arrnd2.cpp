@@ -15,7 +15,7 @@
 
 #include <oc/arrnd.h>
 
-TEST(arrnd_test, mtimes)
+TEST(arrnd_test, matmul)
 {
     using namespace oc;
 
@@ -23,7 +23,7 @@ TEST(arrnd_test, mtimes)
         arrnd<int> arr1({3, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18});
         arrnd<double> arr2({3, 1}, {1, 2, 3});
 
-        auto res = mtimes(arr1, arr2);
+        auto res = matmul(arr1, arr2);
 
         EXPECT_TRUE(all_equal(res, arrnd<double>({3, 2, 1}, {14, 32, 50, 68, 86, 104})));
     }
@@ -35,7 +35,7 @@ TEST(arrnd_test, mtimes)
         arrnd<arrnd<arrnd<double>>> arr2(
             {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 1, 3, 1}, {1, 2, 3, 4, 5, 6, 7, 8, 9})})});
 
-        auto res = mtimes(arr1, arr2);
+        auto res = matmul(arr1, arr2);
 
         EXPECT_TRUE(all_equal(res,
             arrnd<arrnd<arrnd<double>>>(
@@ -50,7 +50,7 @@ TEST(arrnd_test, mtimes)
         arrnd<double> arr2({1, 3, 1}, {1.5, 2.5, 3.5});
         arrnd<long> arr3({1, 1, 2}, {1, 2});
 
-        auto res = mtimes(arr1, arr2, arr3);
+        auto res = matmul(arr1, arr2, arr3);
 
         EXPECT_TRUE(all_equal(res, arrnd<double>({1, 2, 2}, {17, 34, 39.5, 79})));
     }
@@ -140,7 +140,7 @@ TEST(arrnd_test, DISABLED_qr)
 
         //std::cout << std::get<0>(res) << "\n";
         //std::cout << std::get<1>(res) << "\n\n";
-        //std::cout << std::get<0>(res).mtimes(std::get<1>(res)) << "\n\n";
+        //std::cout << std::get<0>(res).matmul(std::get<1>(res)) << "\n\n";
 
         EXPECT_TRUE(all_close(q,
             arrnd<double>(
@@ -149,7 +149,7 @@ TEST(arrnd_test, DISABLED_qr)
             arrnd<double>({4, 3},
                 {2, 4, 2, -3.05311e-16, 2, 8, 2.77556e-16, -3.88578e-16, 4, -3.33067e-16, -1.11022e-16, 8.88178e-16})));
 
-        EXPECT_TRUE(all_close(mtimes(q, r), arr));
+        EXPECT_TRUE(all_close(matmul(q, r), arr));
     }
 
     {
@@ -168,7 +168,7 @@ TEST(arrnd_test, DISABLED_qr)
             arrnd<double>({3, 3},
                 {5.38516, 2.59973, 5.19947, -7.87957e-16, 1.11417, 0.433289, -1.39389e-15, 5.55112e-17, 1.33333})));
 
-        EXPECT_TRUE(all_close(mtimes(q, r), arr));
+        EXPECT_TRUE(all_close(matmul(q, r), arr));
     }
 }
 
@@ -192,7 +192,7 @@ TEST(arrnd_test, DISABLED_hess)
             {2, -7.06556, -0.271611, 0.0644157, -8.77496, 16.1039, -3.95445, 1.79851, -1.18654e-15, -0.604838, -4.16936,
                 1.92719, -4.12133e-16, 1.94289e-16, 0.331741, -5.93453})));
 
-    EXPECT_TRUE(all_close(mtimes(q, h, transpose(q, {1, 0})), arr));
+    EXPECT_TRUE(all_close(matmul(q, h, transpose(q, {1, 0})), arr));
 }
 
 TEST(arrnd_test, DISABLED_schur)
@@ -206,7 +206,7 @@ TEST(arrnd_test, DISABLED_schur)
 
         //std::cout << u << "\n\n";
         //std::cout << s << "\n\n";
-        //std::cout << u.mtimes(s, u.transpose({1, 0})) << "\n\n";
+        //std::cout << u.matmul(s, u.transpose({1, 0})) << "\n\n";
 
         EXPECT_TRUE(all_close(u,
             arrnd<double>({4, 4},
@@ -217,7 +217,7 @@ TEST(arrnd_test, DISABLED_schur)
                 {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0, 0, -4.07002,
                     -1.70698, 0, 0, 1.47042e-15, -6.27774})));
 
-        EXPECT_TRUE(all_close(mtimes(u, s, transpose(u, {1, 0})), arr));
+        EXPECT_TRUE(all_close(matmul(u, s, transpose(u, {1, 0})), arr));
     }
 
     {
@@ -229,7 +229,7 @@ TEST(arrnd_test, DISABLED_schur)
 
         auto [uc, sc] = schur(carr)(0);
 
-        EXPECT_TRUE(all_close(rarr, real(mtimes(uc, sc, conj(transpose(uc, {1, 0}))))));
+        EXPECT_TRUE(all_close(rarr, real(matmul(uc, sc, conj(transpose(uc, {1, 0}))))));
     }
 }
 
@@ -254,7 +254,7 @@ TEST(arrnd_test, DISABLED_eig)
 
     for (int i = 0; i < l.header().numel(); ++i) {
         EXPECT_TRUE(
-            all_close(mtimes(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
+            all_close(matmul(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
     }
 }
 
@@ -266,7 +266,7 @@ TEST(arrnd_test, DISABLED_svd)
 
     auto [u, s, v] = svd(arr)(0);
 
-    EXPECT_TRUE(all_close(arr, mtimes(u, s, v.transpose({1, 0}))));
+    EXPECT_TRUE(all_close(arr, matmul(u, s, v.transpose({1, 0}))));
     //std::cout << u << "\n\n";
     //std::cout << s << "\n\n";
     //std::cout << v << "\n\n";

@@ -5300,14 +5300,14 @@ namespace details {
         }
 
         template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        [[nodiscard]] constexpr auto mtimes(const ArCo& arr, ArCos&&... others) const
+        [[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
         {
-            return mtimes(arr).mtimes(std::forward<ArCos>(others)...);
+            return matmul(arr).matmul(std::forward<ArCos>(others)...);
         }
         //template <arrnd_compliant... ArCos>
-        //[[nodiscard]] constexpr auto mtimes(ArCos&&... others) const
+        //[[nodiscard]] constexpr auto matmul(ArCos&&... others) const
         //{
-        //    return mtimes<this_type::depth>(std::forward<ArCos>(others)...);
+        //    return matmul<this_type::depth>(std::forward<ArCos>(others)...);
         //}
 
         template <std::int64_t Level, arrnd_compliant ArCo>
@@ -6597,10 +6597,10 @@ namespace details {
 
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
-        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        [[nodiscard]] constexpr auto matmul(const ArCo& arr) const
         {
             return transform<0>(arr, [](const auto& a, const auto& b) {
-                return a.mtimes(b);
+                return a.matmul(b);
             });
             /*using ret_type = inner_replaced_type<decltype(inner_value_type<Level>{} * (typename ArCo::template inner_value_type<Level>{})), Level>;
 
@@ -6614,20 +6614,20 @@ namespace details {
             typename ret_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template mtimes<Level - 1>(arr);
+                res[*res_gen] = (*this)[*gen].template matmul<Level - 1>(arr);
             }
 
             return res;*/
         }
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level == 0*/ this_type::is_flat && ArCo::is_flat)
-        [[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        [[nodiscard]] constexpr auto matmul(const ArCo& arr) const
         {
             using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
 
             assert(hdr_.dims().size() >= 2 && arr.header().dims().size() >= 2);
 
-            auto matmul = [](const auto& lhs, const auto& rhs) {
+            auto impl = [](const auto& lhs, const auto& rhs) {
                 assert(lhs.header().is_matrix() && rhs.header().is_matrix());
                 assert(lhs.header().dims().back() == rhs.header().dims().front());
 
@@ -6647,12 +6647,12 @@ namespace details {
             };
 
             if (hdr_.is_matrix() && arr.header().is_matrix()) {
-                return matmul(*this, arr);
+                return impl(*this, arr);
             }
 
             if (arr.header().is_matrix()) {
-                return pageop<0>(2, [&arr, matmul](auto page) {
-                    return matmul(page, arr);
+                return pageop<0>(2, [&arr, impl](auto page) {
+                    return impl(page, arr);
                 });
             } else {
                 size_type lhs_num_pages
@@ -6665,20 +6665,20 @@ namespace details {
                 auto arr_pages = arr.template pages<0>(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return pageop<0>(2, [&arr_pages, &arr_pages_gen, &matmul](auto page) {
-                    return matmul(page, arr_pages[*(arr_pages_gen++)]);
+                return pageop<0>(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
+                    return impl(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
             //};
 
-            //return pageop([&arr, &matmul](const auto& page) {
-            //    return matmul(page, arr);
+            //return pageop([&arr, &impl](const auto& page) {
+            //    return impl(page, arr);
             //});
         }
         //template <arrnd_compliant ArCo>
-        //[[nodiscard]] constexpr auto mtimes(const ArCo& arr) const
+        //[[nodiscard]] constexpr auto matmul(const ArCo& arr) const
         //{
-        //    return mtimes<this_type::depth>(arr);
+        //    return matmul<this_type::depth>(arr);
         //}
 
         [[nodiscard]] constexpr auto det() const
@@ -6893,11 +6893,11 @@ namespace details {
                     auto qk1 = eye<this_type>({k - 1, k - 1}).append(zeros<this_type>({k - 1, m - k + 1}), 1);
                     auto qk2 = zeros<this_type>({m - k + 1, k - 1})
                                    .append(eye<this_type>({m - k + 1, m - k + 1})
-                                           - value_type{2} * v.mtimes(v.transpose({1, 0})),
+                                           - value_type{2} * v.matmul(v.transpose({1, 0})),
                                        1);
                     auto qk = qk1.append(qk2, 0);
-                    r = qk.mtimes(r);
-                    q = q.mtimes(qk);
+                    r = qk.matmul(r);
+                    q = q.matmul(qk);
 
                     /*std::cout << "qk:" << qk << "\n";
                     std::cout << "r:" << r << "\n";
@@ -6954,25 +6954,25 @@ namespace details {
                         using namespace std::complex_literals;
 
                         u[{0, 0}]
-                            = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).mtimes(r)), value_type{0.5})(0);
+                            = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).matmul(r)), value_type{0.5})(0);
                     } else {
                         u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
-                            * std::pow((r.transpose({1, 0}).mtimes(r)(0)), value_type{0.5});
+                            * std::pow((r.transpose({1, 0}).matmul(r)(0)), value_type{0.5});
                     }
 
                     auto v = r - u;
-                    v /= std::pow((v.transpose({1, 0}).mtimes(v)(0)), value_type{0.5});
+                    v /= std::pow((v.transpose({1, 0}).matmul(v)(0)), value_type{0.5});
 
                     auto w1 = eye<this_type>({k + 1, k + 1}).append(zeros<this_type>({k + 1, n - (k + 1)}), 1);
                     auto w2 = zeros<this_type>({n - (k + 1), k + 1})
                                   .append(eye<this_type>({n - (k + 1), n - (k + 1)})
-                                          - value_type{2} * (v.mtimes(v.transpose({1, 0}))),
+                                          - value_type{2} * (v.matmul(v.transpose({1, 0}))),
                                       1);
 
                     auto w = w1.append(w2, 0);
 
-                    h = w.mtimes(h, w.transpose({1, 0}));
-                    q = q.mtimes(w.transpose({1, 0}));
+                    h = w.matmul(h, w.transpose({1, 0}));
+                    q = q.matmul(w.transpose({1, 0}));
                 }
 
                 return std::make_tuple(q, h);
@@ -7031,13 +7031,13 @@ namespace details {
                         auto s_k = s[{k - 1, k - 1}];
                         auto s_kk_1 = s[{k - 1, k - 2}];
                         auto s_k_1k = s[{k - 2, k - 1}];
-                        //std::cout << "stok2:\n" << stok.mtimes(stok) << "\n";
+                        //std::cout << "stok2:\n" << stok.matmul(stok) << "\n";
                         //std::cout << "s_k_1:\n" << s_k_1 << "\n";
                         //std::cout << "s_k:\n" << s_k << "\n";
                         //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
                         //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
 
-                        auto m = stok.mtimes(stok) - (s_k_1 + s_k) * stok
+                        auto m = stok.matmul(stok) - (s_k_1 + s_k) * stok
                             + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
                         //std::cout << "m:\n" << m << "\n";
                         auto [q, r] = m.qr()(0);
@@ -7049,8 +7049,8 @@ namespace details {
                         q = q1.append(q2, 0);
                         //std::cout << "q:\n" << q << "\n";
 
-                        u = u.mtimes(q);
-                        s = q.transpose({1, 0}).mtimes(s, q);
+                        u = u.matmul(q);
+                        s = q.transpose({1, 0}).matmul(s, q);
 
                         auto m1 = s.abs() < tol;
 
@@ -7097,8 +7097,8 @@ namespace details {
                         auto qq = eye<this_type>({n, n});
                         qq[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}].copy_from(q);
                         //std::cout << "q:\n" << q << "\n\n";
-                        s = qq.transpose({1, 0}).mtimes(s, qq);
-                        u = u.mtimes(qq);
+                        s = qq.transpose({1, 0}).matmul(s, qq);
+                        u = u.matmul(qq);
                     }
                 }
 
@@ -7155,15 +7155,15 @@ namespace details {
                         //std::cout << g << "\n\n";
 
                         auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
-                        s1.copy_from(g.transpose({1, 0}).conj().mtimes(s1)); // conj transpose
+                        s1.copy_from(g.transpose({1, 0}).conj().matmul(s1)); // conj transpose
                         //std::cout << s << "\n\n";
 
                         auto s2 = s[{ival::between(0, k + 1), ival::between(k - 1, k + 1)}];
-                        s2.copy_from(s2.mtimes(g));
+                        s2.copy_from(s2.matmul(g));
                         //std::cout << s << "\n\n";
 
                         auto u1 = u[{ival::between(0, n), ival::between(k - 1, k + 1)}];
-                        u1.copy_from(u1.mtimes(g));
+                        u1.copy_from(u1.matmul(g));
                         //std::cout << u << "\n\n";
                     }
                     s[{k, k - 1}] = 0;
@@ -7260,15 +7260,15 @@ namespace details {
                 this_type v;
 
                 if constexpr (template_type<value_type, std::complex>) {
-                    auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}).conj())).eig()(0);
-                    auto [vt, l2t] = (arr.transpose({1, 0}).conj().mtimes(arr)).eig()(0);
+                    auto [ut, l1t] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
+                    auto [vt, l2t] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
                     l1 = l1t;
                     l2 = l2t;
                     u = ut;
                     v = vt;
                 } else {
-                    auto [ut, l1t] = (arr.mtimes(arr.transpose({1, 0}))).eig()(0);
-                    auto [vt, l2t] = (arr.transpose({1, 0}).mtimes(arr)).eig()(0);
+                    auto [ut, l1t] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
+                    auto [vt, l2t] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
                     l1 = l1t;
                     l2 = l2t;
                     u = ut;
@@ -7305,9 +7305,9 @@ namespace details {
                 s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag());
 
                 if constexpr (template_type<value_type, std::complex>) {
-                    v = ((arr.mtimes(v)).inverse().mtimes(u)).mtimes(s);
+                    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
                 } else {
-                    auto mask = (arr.mtimes(v) - u.mtimes(s)).abs().reduce(1, [](value_type m, value_type v) {
+                    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
                         return std::max({m, v});
                     }) > value_type{1e-8};
                     v(mask) = v * (value_type{-1});
@@ -7629,7 +7629,7 @@ namespace details {
                 assert(lhs.header().is_matrix() && rhs.header().is_matrix());
                 assert(lhs.header().dims().back() == rhs.header().dims().front());
 
-                return lhs.inverse().mtimes(rhs);
+                return lhs.inverse().matmul(rhs);
             };
 
             if (hdr_.is_matrix() && b.header().is_matrix()) {
@@ -7657,8 +7657,8 @@ namespace details {
             }
             //};
 
-            //return pageop([&arr, &matmul](const auto& page) {
-            //    return matmul(page, arr);
+            //return pageop([&arr, &impl](const auto& page) {
+            //    return impl(page, arr);
             //});
         }
 
@@ -11273,25 +11273,25 @@ namespace details {
     }
 
     template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    [[nodiscard]] inline constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
     {
-        return lhs.mtimes(rhs);
+        return lhs.matmul(rhs);
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    //[[nodiscard]] constexpr auto mtimes(const ArCo1& lhs, const ArCo2& rhs)
+    //[[nodiscard]] constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
     //{
-    //    return mtimes<ArCo1::depth>(lhs, rhs);
+    //    return matmul<ArCo1::depth>(lhs, rhs);
     //}
 
     template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    [[nodiscard]] inline constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    [[nodiscard]] inline constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     {
-        return arr1.mtimes(arr2, std::forward<ArCos>(others)...);
+        return arr1.matmul(arr2, std::forward<ArCos>(others)...);
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    //[[nodiscard]] constexpr auto mtimes(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    //[[nodiscard]] constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     //{
-    //    return mtimes<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
+    //    return matmul<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
     //}
 
     template <arrnd_compliant ArCo>
@@ -14192,7 +14192,7 @@ using details::sum;
 using details::prod;
 using details::min;
 using details::max;
-using details::mtimes;
+using details::matmul;
 using details::det;
 using details::inverse;
 using details::solve;
