@@ -1282,6 +1282,74 @@ namespace details {
             return subs;
         }
 
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr bool is_reduced_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
+        {
+            size_type ndims = std::distance(first_dim, last_dim);
+
+            assert(ndims >= 0);
+
+            if (dims_.size() != ndims) {
+                return false;
+            }
+
+            return !std::equal(dims_.cbegin(), dims_.cend(), first_dim)
+                && std::transform_reduce(
+                    dims_.cbegin(), dims_.cend(), first_dim, true, std::logical_and<>{}, [](auto d1, auto d2) {
+                        return d1 == d2 || d1 == size_type{1};
+                    });
+        }
+
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr bool is_reduced_dims_from(const Cont& dims) const
+        {
+            return is_reduced_dims_from(std::begin(dims), std::end(dims));
+        }
+
+        template <std::signed_integral U, std::int64_t M>
+        [[nodiscard]] constexpr bool is_reduced_dims_from(const U (&dims)[M]) const
+        {
+            return is_reduced_dims_from(std::begin(dims), std::end(dims));
+        }
+
+        [[nodiscard]] constexpr bool is_reduced_dims_from(std::initializer_list<size_type> dims) const
+        {
+            return is_reduced_dims_from(dims.begin(), dims.end());
+        }
+
+
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr storage_type complement_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
+        {
+            assert(dims_.size() == std::distance(first_dim, last_dim));
+
+            storage_type comp_dims(dims_.size());
+
+            std::transform(dims_.cbegin(), dims_.cend(), first_dim, comp_dims.begin(), [](auto rd, auto cd) {
+                return cd - rd + 1;
+            });
+
+            return comp_dims;
+        }
+
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr storage_type complement_dims_from(const Cont& dims) const
+        {
+            return complement_dims_from(std::begin(dims), std::end(dims));
+        }
+
+        template <std::signed_integral U, std::int64_t M>
+        [[nodiscard]] constexpr storage_type complement_dims_from(const U (&dims)[M]) const
+        {
+            return complement_dims_from(std::begin(dims), std::end(dims));
+        }
+
+        [[nodiscard]] constexpr storage_type complement_dims_from(std::initializer_list<size_type> dims) const
+        {
+            return complement_dims_from(dims.begin(), dims.end());
+        }
+
+
         constexpr arrnd_header(arrnd_header&& other) = default;
         constexpr arrnd_header& operator=(arrnd_header&& other) = default;
 
@@ -5474,6 +5542,72 @@ namespace details {
             return repeat<this_type::depth>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
         }
 
+
+
+
+        template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_rep, InputIt last_rep) const
+        {
+            assert(std::distance(first_rep, last_rep) <= hdr_.dims().size());
+
+            auto nreps = std::distance(first_rep, last_rep);
+
+            this_type::template replaced_type<size_type> reps({nreps}, first_rep, last_rep);
+            this_type::template replaced_type<size_type> axes({nreps});
+            std::iota(axes.begin(), axes.end(), hdr_.dims().size() - nreps);
+
+            auto z = zip(iter_pack(reps), iter_pack(axes));
+
+            auto res = *this;
+            auto mid = res;
+
+            std::for_each(z.begin(), z.end(), [&res, &mid](const auto& tuple) {
+                for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
+                    res = res.template append<Level>(mid, std::get<1>(tuple));
+                }
+                mid = res;
+            });
+
+            return res;
+        }
+        template <signed_integral_type_iterator InputIt>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_rep, InputIt last_rep) const
+        {
+            return repeat<this_type::depth>(first_rep, last_rep);
+        }
+        template <std::int64_t Level>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> reps) const
+        {
+            return repeat<Level>(reps.begin(), reps.end());
+        }
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> reps) const
+        {
+            return repeat<this_type::depth>(reps.begin(), reps.end());
+        }
+        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
+        {
+            return repeat<Level>(std::begin(reps), std::end(reps));
+        }
+        template <signed_integral_type_iterable Cont>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
+        {
+            return repeat<this_type::depth>(std::begin(reps), std::end(reps));
+        }
+        template <std::int64_t Level, std::signed_integral U, std::int64_t M>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const U (&reps)[M]) const
+        {
+            return repeat<Level>(std::begin(reps), std::end(reps));
+        }
+        template <std::signed_integral U, std::int64_t M>
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const U (&reps)[M]) const
+        {
+            return repeat<this_type::depth>(std::begin(reps), std::end(reps));
+        }
+
+
+
+
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
         //{
         //    auto res = *this;
@@ -5734,20 +5868,47 @@ namespace details {
                 return transformed_type();
             }
 
+            if (hdr_.is_scalar()) {
+                auto val = (*this)(0);
+                auto tfunc = [&](const auto& a) -> typename transformed_type::value_type {
+                    return func(val, a, std::forward<Args>(args)...);
+                };
+                return arr.template transform<Level>(tfunc);
+            }
+
+            if (arr.header().is_scalar()) {
+                auto val = arr(0);
+                auto tfunc = [&](const auto& a) -> typename transformed_type::value_type {
+                    return func(a, val, std::forward<Args>(args)...);
+                };
+                return transform<Level>(tfunc);
+            }
+
+            auto arr1 = *this;
+            auto arr2 = arr;
+
+            if (arr1.header().is_reduced_dims_from(arr2.header().dims())) {
+                auto reps = arr1.header().complement_dims_from(arr2.header().dims());
+                arr1 = arr1.template repeat<Level>(reps);
+            } else if (arr2.header().is_reduced_dims_from(arr1.header().dims())) {
+                auto reps = arr2.header().complement_dims_from(arr1.header().dims());
+                arr2 = arr2.template repeat<Level>(reps);
+            }
+
             //if (hdr_.dims() != arr.header().dims()) {
             //    return transformed_type();
             //}
-            assert(hdr_.numel() == arr.header().numel());
+            assert(arr1.header().numel() == arr2.header().numel());
 
-            transformed_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+            transformed_type res(arr1.header().dims().cbegin(), arr1.header().dims().cend());
 
-            indexer_type gen(hdr_);
+            indexer_type gen(arr1.header());
             typename transformed_type::indexer_type res_gen(res.header());
 
-            typename ArCo::indexer_type arr_gen(arr.header());
+            typename ArCo::indexer_type arr_gen(arr2.header());
 
             for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
-                res[*res_gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
+                res[*res_gen] = func(arr1[*gen], arr2[*arr_gen], std::forward<Args>(args)...);
             }
 
             return res;
@@ -5809,16 +5970,31 @@ namespace details {
                 return *this;
             }
 
+            if (arr.header().is_scalar()) {
+                auto val = arr(0);
+                auto tfunc = [&](const auto& a) {
+                    return func(a, val, std::forward<Args>(args)...);
+                };
+                return apply<Level>(tfunc);
+            }
+
+            auto carr = arr;
+
+            if (arr.header().is_reduced_dims_from(hdr_.dims())) {
+                auto reps = arr.header().complement_dims_from(hdr_.dims());
+                carr = arr.template repeat<Level>(reps);
+            }
+
             //if (hdr_.dims() != arr.header().dims()) {
             //    return *this;
             //}
-            assert(hdr_.numel() == arr.header().numel());
+            assert(hdr_.numel() == carr.header().numel());
 
             indexer_type gen(hdr_);
-            typename std::remove_cvref_t<ArCo>::indexer_type arr_gen(arr.header());
+            typename std::remove_cvref_t<ArCo>::indexer_type arr_gen(carr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                (*this)[*gen] = func((*this)[*gen], arr[*arr_gen], std::forward<Args>(args)...);
+                (*this)[*gen] = func((*this)[*gen], carr[*arr_gen], std::forward<Args>(args)...);
             }
 
             return *this;
@@ -11291,6 +11467,48 @@ namespace details {
     [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const U (&count_axis_tuples)[M])
     {
         return repeat<ArCo::depth>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    }
+
+
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
+    {
+        return arr.template repeat<Level>(first_rep, last_rep);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
+    {
+        return repeat<ArCo::depth>(arr, first_rep, last_rep);
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<typename ArCo::size_type> reps)
+    {
+        return repeat<Level>(arr, reps.begin(), reps.end());
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<typename ArCo::size_type> reps)
+    {
+        return repeat<ArCo::depth>(arr, reps.begin(), reps.end());
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& reps)
+    {
+        return repeat<Level>(arr, std::begin(reps), std::end(reps));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& reps)
+    {
+        return repeat<ArCo::depth>(arr, std::begin(reps), std::end(reps));
+    }
+    template <std::int64_t Level, arrnd_compliant ArCo, std::signed_integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const U (&reps)[M])
+    {
+        return repeat<Level>(arr, std::begin(reps), std::end(reps));
+    }
+    template <arrnd_compliant ArCo, std::signed_integral U, std::int64_t M>
+    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const U (&reps)[M])
+    {
+        return repeat<ArCo::depth>(arr, std::begin(reps), std::end(reps));
     }
 
 

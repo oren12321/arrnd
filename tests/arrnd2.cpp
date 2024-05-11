@@ -1132,6 +1132,50 @@ TEST(arrnd_test, element_wise_transformation)
         static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
         EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {7.5, 20})));
     }
+
+    // scalar
+    {
+        using namespace oc;
+
+        arrnd<int> iarr(
+            {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<int> scalar({1}, {1});
+
+        auto tarr1 = transform(iarr, scalar, std::minus<>{});
+
+        EXPECT_TRUE(all_equal(tarr1,
+            arrnd<int>(
+                {3, 2, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})));
+
+        auto tarr2 = transform(scalar, iarr, std::minus<>{});
+
+        EXPECT_TRUE(all_equal(tarr2,
+            arrnd<int>({3, 2, 4},
+                {0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -16, -17, -18, -19, -20, -21, -22,
+                    -23})));
+    }
+
+    // reduced dims
+    {
+        using namespace oc;
+
+        arrnd<int> iarr(
+            {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<int> rarr({1, 2, 1}, {1, 2});
+
+        auto tarr1 = transform(iarr, rarr, std::minus<>{});
+
+        EXPECT_TRUE(all_equal(tarr1,
+            arrnd<int>(
+                {3, 2, 4}, {0, 1, 2, 3, 3, 4, 5, 6, 8, 9, 10, 11, 11, 12, 13, 14, 16, 17, 18, 19, 19, 20, 21, 22})));
+
+        auto tarr2 = transform(rarr, iarr, std::minus<>{});
+
+        EXPECT_TRUE(all_equal(tarr2,
+            arrnd<int>({3, 2, 4},
+                {0, -1, -2, -3, -3, -4, -5, -6, -8, -9, -10, -11, -11, -12, -13, -14, -16, -17, -18, -19, -19, -20, -21,
+                    -22})));
+    }
 }
 
 TEST(arrnd_test, apply_transformation_on_array_elements)
@@ -1174,6 +1218,36 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
             {1, 4}, {arrnd<int>({1}, {2}), arrnd<int>({1}, {2}), arrnd<int>({1}, {2}), arrnd<int>({1}, {2})});
 
         EXPECT_TRUE(all_equal(nres, narr));
+    }
+
+    // scalar
+    {
+        arrnd<int> iarr(
+            {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<int> scalar({1}, {1});
+
+        apply(iarr, scalar, [](int a, int b) {
+            return a + b;
+        });
+
+        EXPECT_TRUE(all_equal(iarr,
+            arrnd<int>(
+                {3, 2, 4}, {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25})));
+    }
+
+    // reduced dims
+    {
+        arrnd<int> iarr(
+            {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
+        arrnd<int> rarr({1, 2, 1}, {1, 2});
+
+        apply(iarr, rarr, [](int a, int b) {
+            return a + b;
+        });
+
+        EXPECT_TRUE(all_equal(iarr,
+            arrnd<int>(
+                {3, 2, 4}, {2, 3, 4, 5, 7, 8, 9, 10, 10, 11, 12, 13, 15, 16, 17, 18, 18, 19, 20, 21, 23, 24, 25, 26})));
     }
 }
 

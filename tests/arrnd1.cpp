@@ -2901,6 +2901,10 @@ TEST(arrnd_test, repeat)
         auto arr2 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), z.begin(), z.end());
 
         EXPECT_TRUE(all_equal(arr2, res));
+
+        auto arr3 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {2, 3, 2});
+
+        EXPECT_TRUE(all_equal(arr3, res));
     }
 }
 
