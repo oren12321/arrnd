@@ -7743,6 +7743,47 @@ namespace details {
             return transpose<this_type::depth>(std::begin(order), std::end(order));
         }
 
+
+        template <std::int64_t Level>
+        requires(Level == 0) [[nodiscard]] constexpr this_type transpose() const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type::template replaced_type<size_type> order({hdr_.dims().size()});
+            std::iota(order.begin(), order.end(), size_type{0});
+
+            if (order.header().numel() > 1) {
+                std::swap(order[order.header().numel() - 1], order[order.header().numel() - 2]);
+            }
+
+            return transpose<Level>(order);
+        }
+        template <std::int64_t Level>
+        requires(Level > 0) [[nodiscard]] constexpr this_type transpose() const
+        {
+            if (empty()) {
+                return this_type();
+            }
+
+            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+
+            indexer_type gen(hdr_);
+            indexer_type res_gen(res.header());
+
+            for (; gen && res_gen; ++gen, ++res_gen) {
+                res[*res_gen] = (*this)[*gen].template transpose<Level - 1>();
+            }
+
+            return res;
+        }
+        [[nodiscard]] constexpr this_type transpose() const
+        {
+            return transpose<this_type::depth>();
+        }
+
+
         //template <std::int64_t Depth>
         //    requires(Depth == 0)
         //[[nodiscard]] constexpr auto nest() const // deprecated
@@ -11988,6 +12029,19 @@ namespace details {
     {
         return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
     }
+
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
+    {
+        return arr.template transpose<Level>();
+    }
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
+    {
+        return arr.template transpose<ArCo::depth>();
+    }
+
 
     //template <std::int64_t Depth, arrnd_compliant ArCo>
     //    requires(Depth >= 0)
