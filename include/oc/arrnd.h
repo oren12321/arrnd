@@ -4178,8 +4178,8 @@ namespace details {
     class arrnd {
     public:
         using value_type = T;
-        using size_type = std::int64_t;
-        using difference_type = std::int64_t;
+        using size_type = /*std::int64_t*/std::make_signed_t<typename DataStorageInfo::storage_type::size_type>;
+        using difference_type = /*std::int64_t*/size_type;
         using reference = T&;
         using const_reference = const T&;
         using pointer = T*;
