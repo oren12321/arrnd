@@ -92,17 +92,17 @@ TEST(arrnd_test, basic_math_and_trigo)
     using comparrnd = arrnd<std::complex<double>>;
 
     EXPECT_TRUE(
-        all_equal(real(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::real(3.0 + 2i), std::real(6.0)})));
-    EXPECT_TRUE(
-        all_equal(imag(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::imag(3.0 + 2i), std::imag(6.0)})));
-    EXPECT_TRUE(
-        all_equal(arg(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::arg(3.0 + 2i), std::arg(6.0)})));
-    EXPECT_TRUE(
-        all_equal(norm(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::norm(3.0 + 2i), std::norm(6.0)})));
-    EXPECT_TRUE(
-        all_equal(conj(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::conj(3.0 + 2i), std::conj(6.0)})));
-    EXPECT_TRUE(
-        all_equal(proj(comparrnd({1, 2}, {3.0 + 2i, 6.0})), comparrnd({1, 2}, {std::proj(3.0 + 2i), std::proj(6.0)})));
+        all_equal(real(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::real(3.0 + 2i), std::real(6.0)})));
+    EXPECT_TRUE(all_equal(
+        imag(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::imag(3.0 + 2i), std::imag(6.0)})));
+    EXPECT_TRUE(all_equal(
+        arg(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::arg(3.0 + 2i), std::arg(6.0)})));
+    EXPECT_TRUE(all_equal(
+        norm(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::norm(3.0 + 2i), std::norm(6.0)})));
+    EXPECT_TRUE(all_equal(
+        conj(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::conj(3.0 + 2i), std::conj(6.0)})));
+    EXPECT_TRUE(all_equal(
+        proj(comparrnd({1, 2}, {3.0 + 2i, 6.0 + 0i})), comparrnd({1, 2}, {std::proj(3.0 + 2i), std::proj(6.0)})));
 
     EXPECT_TRUE(
         all_equal(polar(arrnd<double>({1, 2}, {3.0, 6.0})), comparrnd({1, 2}, {std::polar(3.0), std::polar(6.0)})));
@@ -110,7 +110,7 @@ TEST(arrnd_test, basic_math_and_trigo)
         comparrnd({1, 2}, {std::polar(3.0, 0.3), std::polar(6.0, 0.6)})));
 
     EXPECT_TRUE(
-        all_equal(sign(arrnd<double>({1, 5}, {-1.5, -1, 0.0, 1, 1.5})), arrnd<double>({1, 5}, {-1, -1, 0, 1, 1})));
+        all_equal(sign(arrnd<double>({1, 5}, {-1.5, -1., 0.0, 1., 1.5})), arrnd<double>({1, 5}, {-1, -1, 0, 1, 1})));
 }
 
 TEST(arrnd_test, filter_elements_by_condition)

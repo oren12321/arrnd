@@ -1630,8 +1630,8 @@ TEST(arrnd_test, movop)
 
             EXPECT_TRUE(all_equal(res,
                 arrnd<arrnd<double>>({1, 2},
-                    {arrnd<double>({3}, {10.5, 10.5, 9}),
-                        arrnd<double>({10}, {3, 5, 7, 9, 11, 13, 15, 17, 13.5, 9.5})})));
+                    {arrnd<double>({3}, {10.5, 10.5, 9.}),
+                        arrnd<double>({10}, {3., 5., 7., 9., 11., 13., 15., 17., 13.5, 9.5})})));
         }
 
         {

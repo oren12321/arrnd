@@ -58,7 +58,7 @@ TEST(arrnd_test, matmul)
 
         auto res = matmul(arr1, arr2, arr3);
 
-        EXPECT_TRUE(all_equal(res, arrnd<double>({1, 2, 2}, {17, 34, 39.5, 79})));
+        EXPECT_TRUE(all_equal(res, arrnd<double>({1, 2, 2}, {17.0, 34.0, 39.5, 79.0})));
     }
 }
 
@@ -86,7 +86,7 @@ TEST(arrnd_test, inverse)
         arrnd<arrnd<double>>({3},
             {arrnd<double>({2, 2, 2}, {-1.5, 0.5, 1.25, -0.25, -3.5, 2.5, 3.25, -2.25}),
                 arrnd<double>({2, 2}, {1, 0, 0, 1}),
-                arrnd<double>({3, 3}, {0.2, 0.2, 0, -0.2, 0.3, 1, 0.2, -0.3, 0})})));
+                arrnd<double>({3, 3}, {0.2, 0.2, 0.0, -0.2, 0.3, 1.0, 0.2, -0.3, 0.0})})));
 }
 
 TEST(arrnd_test, solve)
@@ -153,7 +153,7 @@ TEST(arrnd_test, DISABLED_qr)
                 {4, 4}, {-0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5})));
         EXPECT_TRUE(all_close(r,
             arrnd<double>({4, 3},
-                {2, 4, 2, -3.05311e-16, 2, 8, 2.77556e-16, -3.88578e-16, 4, -3.33067e-16, -1.11022e-16, 8.88178e-16})));
+                {2.0, 4.0, 2.0, -3.05311e-16, 2.0, 8.0, 2.77556e-16, -3.88578e-16, 4.0, -3.33067e-16, -1.11022e-16, 8.88178e-16})));
 
         EXPECT_TRUE(all_close(matmul(q, r), arr));
     }
@@ -182,7 +182,7 @@ TEST(arrnd_test, DISABLED_hess)
 {
     using namespace oc;
 
-    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 
     auto [q, h] = hess(arr)(0);
 
@@ -191,11 +191,11 @@ TEST(arrnd_test, DISABLED_hess)
 
     EXPECT_TRUE(all_close(q,
         arrnd<double>({4, 4},
-            {1, 0, 0, 0, 0, -0.455842, 0.863773, 0.214719, 0, -0.569803, -0.0978779, -0.815932, 0, -0.683763, -0.494284,
+            {1., 0., 0., 0., 0., -0.455842, 0.863773, 0.214719, 0., -0.569803, -0.0978779, -0.815932, 0., -0.683763, -0.494284,
                 0.536797})));
     EXPECT_TRUE(all_close(h,
         arrnd<double>({4, 4},
-            {2, -7.06556, -0.271611, 0.0644157, -8.77496, 16.1039, -3.95445, 1.79851, -1.18654e-15, -0.604838, -4.16936,
+            {2., -7.06556, -0.271611, 0.0644157, -8.77496, 16.1039, -3.95445, 1.79851, -1.18654e-15, -0.604838, -4.16936,
                 1.92719, -4.12133e-16, 1.94289e-16, 0.331741, -5.93453})));
 
     EXPECT_TRUE(all_close(matmul(q, h, transpose(q, {1, 0})), arr));
@@ -206,7 +206,7 @@ TEST(arrnd_test, DISABLED_schur)
     using namespace oc;
 
     {
-        arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+        arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 
         auto [u, s] = schur(arr)(0);
 
@@ -220,8 +220,8 @@ TEST(arrnd_test, DISABLED_schur)
                     -0.193754, 0.26634, -0.783733, 0.62348, -0.207072, 0.432931, 0.617224})));
         EXPECT_TRUE(all_close(s,
             arrnd<double>({4, 4},
-                {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0, 0, -4.07002,
-                    -1.70698, 0, 0, 1.47042e-15, -6.27774})));
+                {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0., 0., -4.07002,
+                    -1.70698, 0., 0., 1.47042e-15, -6.27774})));
 
         EXPECT_TRUE(all_close(matmul(u, s, transpose(u, {1, 0})), arr));
     }
@@ -243,7 +243,7 @@ TEST(arrnd_test, DISABLED_eig)
 {
     using namespace oc;
 
-    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 
     auto [l, v] = eig(arr)(0);
 
@@ -268,7 +268,7 @@ TEST(arrnd_test, DISABLED_svd)
 {
     using namespace oc;
 
-    arrnd<double> arr({4, 4}, {2., 3, 4, 5, 4, 2., 5, 6, 5, 7, 2., 7, 6, 8, 10, 2.});
+    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 
     auto [u, s, v] = svd(arr)(0);
 
@@ -374,7 +374,7 @@ TEST(arrnd_test, is_banded)
 
     {
         arrnd<double> arr1(
-            {5, 5}, {2, 3, 0, 1e-15, 0, 1, -2, -3, 0, 0, 0, -1, 2, 3, 0, -1e-20, 0, 1, -2, -3, 0, 0, 0, -1, 2});
+            {5, 5}, {2., 3., 0., 1e-15, 0., 1., -2., -3., 0., 0., 0., -1., 2., 3., 0., -1e-20, 0., 1., -2., -3., 0., 0., 0., -1., 2.});
 
         EXPECT_TRUE(is_banded(arr1, 1, 1)(0));
         EXPECT_FALSE(is_banded(arr1, 0, 1)(0));
@@ -634,208 +634,483 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 {
     using namespace oc;
 
+    // type deduction for data iterators
+
+    // dims - iterators
+    // data - iterators
     {
         std::vector<int> dims{3, 1, 2};
         std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims.cbegin(), dims.cend(), data.cbegin(), data.cend());
+        arrnd arr(dims.cbegin(), dims.cend(), data.cbegin(), data.cend());
     }
 
+    // dims - container
+    // data - iterators
     {
         std::vector<int> dims{3, 1, 2};
         std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims, data.cbegin(), data.cend());
+        arrnd arr(dims, data.cbegin(), data.cend());
     }
 
+    // dims - initializer_list
+    // data - iterators
     {
         std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
-        arrnd<int> arr2({3, 1, 2}, data.cbegin(), data.cend());
+        arrnd arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
+        arrnd arr2({3, 1, 2}, data.cbegin(), data.cend());
     }
 
+    // dims - array
+    // data - iterators
     {
         int dims[]{3, 1, 2};
         std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims, data.cbegin(), data.cend());
+        arrnd arr(dims, data.cbegin(), data.cend());
     }
 
+    // same 4 previous constructors with different specified arrnd type
+
+    // dims - iterators
+    // data - iterators
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims.cbegin(), dims.cend(), data.cbegin(), data.cend());
+    }
+
+    // dims - container
+    // data - iterators
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data.cbegin(), data.cend());
+    }
+
+    // dims - initializer_list
+    // data - iterators
+    {
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
+        arrnd<double> arr2({3, 1, 2}, data.cbegin(), data.cend());
+    }
+
+    // dims - array
+    // data - iterators
+    {
+        int dims[]{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data.cbegin(), data.cend());
+    }
+
+    // ------------------------------
+
+    // type deduction for data initializer_list
+
+    // dims - iterators
+    // data - initailizer_list
     {
         std::vector<int> dims{3, 1, 2};
         arrnd arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - container
+    // data - initailizer_list
     {
         std::vector<int> dims{3, 1, 2};
         arrnd arr(dims, {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - initializer_list
+    // data - initailizer_list
     {
         arrnd arr1(std::initializer_list<int>{}, {1, 2, 3, 4, 5, 6});
         arrnd arr2({3, 1, 2}, {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - array
+    // data - initailizer_list
     {
         int dims[]{3, 1, 2};
         arrnd arr(dims, {1, 2, 3, 4, 5, 6});
     }
 
+    // same 4 previous constructors with different specified arrnd type
+
+    // dims - iterators
+    // data - initailizer_list
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims.cbegin(), dims.cend(), {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+        arrnd<double> arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - container
+    // data - initailizer_list
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+        arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - initializer_list
+    // data - initailizer_list
     {
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr1(std::initializer_list<int>{}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
-        arrnd<int> arr2({3, 1, 2}, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+        arrnd<double> arr1(std::initializer_list<int>{}, {1, 2, 3, 4, 5, 6});
+        arrnd<double> arr2({3, 1, 2}, {1, 2, 3, 4, 5, 6});
     }
 
+    // dims - array
+    // data - initailizer_list
     {
         int dims[]{3, 1, 2};
-        arrnd<int> arr(dims, {1.0, 2.0, 3.0, 4.0, 5.0, 6.0});
+        arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
     }
 
+    // ------------------------------
+
+    // type deduction for data std library container
+
+    // dims - iterators
+    // data - container
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims.cbegin(), dims.cend(), data);
+    }
+
+    // dims - container
+    // data - container
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims, data);
+    }
+
+    // dims - initializer_list
+    // data - container
+    {
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd arr1(std::initializer_list<int>{}, data);
+        arrnd arr2({3, 1, 2}, data);
+    }
+
+    // dims - array
+    // data - container
+    {
+        int dims[]{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd arr(dims, data);
+    }
+
+    // same 4 previous constructors with different specified arrnd type
+
+    // dims - iterators
+    // data - container
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims.cbegin(), dims.cend(), data);
+    }
+
+    // dims - container
+    // data - container
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data);
+    }
+
+    // dims - initializer_list
+    // data - container
+    {
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr1(std::initializer_list<int>{}, data);
+        arrnd<double> arr2({3, 1, 2}, data);
+    }
+
+    // dims - array
+    // data - container
+    {
+        int dims[]{3, 1, 2};
+        std::vector<int> data{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data);
+    }
+
+    // ------------------------------
+
+    // type deduction for data c-style array
+
+    // dims - iterators
+    // data - array
     {
         std::vector<int> dims{3, 1, 2};
         int data[]{1, 2, 3, 4, 5, 6};
         arrnd arr(dims.cbegin(), dims.cend(), data);
     }
 
+    // dims - container
+    // data - array
     {
         std::vector<int> dims{3, 1, 2};
         int data[]{1, 2, 3, 4, 5, 6};
         arrnd arr(dims, data);
     }
 
+    // dims - initializer_list
+    // data - array
     {
         int data[]{1, 2, 3, 4, 5, 6};
         arrnd arr1(std::initializer_list<int>{}, data);
         arrnd arr2({3, 1, 2}, data);
     }
 
+    // dims - array
+    // data - array
     {
         int dims[]{3, 1, 2};
         int data[]{1, 2, 3, 4, 5, 6};
         arrnd arr(dims, data);
     }
 
+    // same 4 previous constructors with different specified arrnd type
+
+    // dims - iterators
+    // data - array
     {
         std::vector<int> dims{3, 1, 2};
-        double data[]{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims.cbegin(), dims.cend(), data);
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims.cbegin(), dims.cend(), data);
     }
 
+    // dims - container
+    // data - array
     {
         std::vector<int> dims{3, 1, 2};
-        double data[]{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims, data);
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data);
     }
 
+    // dims - initializer_list
+    // data - array
     {
-        double data[]{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr1(std::initializer_list<int>{}, data);
-        arrnd<int> arr2({3, 1, 2}, data);
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr1(std::initializer_list<int>{}, data);
+        arrnd<double> arr2({3, 1, 2}, data);
     }
 
+    // dims - array
+    // data - array
     {
         int dims[]{3, 1, 2};
-        double data[]{1, 2, 3, 4, 5, 6};
-        arrnd<int> arr(dims, data);
+        int data[]{1, 2, 3, 4, 5, 6};
+        arrnd<double> arr(dims, data);
     }
 
+    // ------------------------------
+
+    // no type deduction for dimensions parameter only
+
+    // dims - iterators
     {
         std::vector<int> dims{3, 1, 2};
         arrnd<int> arr(dims.cbegin(), dims.cend());
     }
 
+    // dims - container
     {
         std::vector<int> dims{3, 1, 2};
         arrnd<int> arr(dims);
     }
 
+    // dims - initializer_list
     {
         arrnd<int> arr1(std::initializer_list<int>{});
         arrnd<int> arr2({3, 1, 2});
     }
 
+    // dims - array
     {
         int dims[]{3, 1, 2};
         arrnd<int> arr(dims);
     }
 
+    // ------------------------------
+
+    // type deduction for data by function parameter
+
+    auto proxy_func = [](auto a) {
+        return a;
+    };
+
+    // dims - iterators
+    // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims.cbegin(), dims.cend(), 0);
+        arrnd arr(dims.cbegin(), dims.cend(), proxy_func, 1);
     }
 
+    // dims - container
+    // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims, 0);
+        arrnd arr(dims, proxy_func, 1);
     }
 
+    // dims - initializer_list
+    // data - function
     {
-        arrnd arr1(std::initializer_list<int>{}, 0);
-        arrnd arr2({3, 1, 2}, 0);
+        arrnd arr1(std::initializer_list<int>{}, proxy_func, 1);
+        arrnd arr2({3, 1, 2}, proxy_func, 1);
     }
 
+    // dims - array
+    // data - function
     {
         int dims[]{3, 1, 2};
-        arrnd arr(dims, 0);
+        arrnd arr(dims, proxy_func, 1);
     }
 
+    // same 4 previous constructors with different specified arrnd type
+
+    // dims - iterators
+    // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims.cbegin(), dims.cend(), 0.1);
+        arrnd<double> arr(dims.cbegin(), dims.cend(), proxy_func, 1);
     }
 
+    // dims - container
+    // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims, 0.1);
+        arrnd<double> arr(dims, proxy_func, 1);
     }
 
+    // dims - initializer_list
+    // data - function
     {
-        arrnd<int> arr1(std::initializer_list<int>{}, 0.1);
-        arrnd<int> arr2({3, 1, 2}, 0.1);
+        arrnd<double> arr1(std::initializer_list<int>{}, proxy_func, 1);
+        arrnd<double> arr2({3, 1, 2}, proxy_func, 1);
     }
 
+    // dims - array
+    // data - function
     {
         int dims[]{3, 1, 2};
-        arrnd<int> arr(dims, 0.1);
+        arrnd<double> arr(dims, proxy_func, 1);
     }
 
+    // ------------------------------
+
+    // type deduction according to iterable guides or by specificed arrnd type
+
+    // dims - iterators
+    // data - value
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims.cbegin(), dims.cend(), []() {
-            return 0.1;
-        });
+        int value = 5;
+        arrnd arr(dims.cbegin(), dims.cend(), value);
     }
 
+    // dims - container
+    // data - value
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<int> arr(dims, []() {
-            return 1;
-        });
+        int value = 5;
+        arrnd arr(dims, value);
     }
 
+    // dims - initializer_list
+    // data - value
     {
-        arrnd<int> arr1(std::initializer_list<int>{}, []() {
-            return 1;
-        });
-        arrnd<int> arr2({3, 1, 2}, []() {
-            return 1;
-        });
+        int value = 5;
+        arrnd arr1(std::initializer_list<int>{}, value);
+        arrnd arr2({3, 1, 2}, value);
     }
 
+    // dims - array
+    // data - value
     {
         int dims[]{3, 1, 2};
-        arrnd<int> arr(dims, []() {
-            return 1;
-        });
+        int value = 5;
+        arrnd arr(dims, value);
     }
+
+    // dims - iterators
+    // data - value
+    {
+        std::vector<int> dims{3, 1, 2};
+        int value = 5;
+        arrnd<double> arr(dims.cbegin(), dims.cend(), value);
+    }
+
+    // dims - container
+    // data - value
+    {
+        std::vector<int> dims{3, 1, 2};
+        int value = 5;
+        arrnd<double> arr(dims, value);
+    }
+
+    // dims - initializer_list
+    // data - value
+    {
+        int value = 5;
+        arrnd<double> arr1(std::initializer_list<int>{}, value);
+        arrnd<double> arr2({3, 1, 2}, value);
+    }
+
+    // dims - array
+    // data - value
+    {
+        int dims[]{3, 1, 2};
+        int value = 5;
+        arrnd<double> arr(dims, value);
+    }
+
+    // dims - iterators
+    // data - value
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::string value{"str"};
+        arrnd<std::string> arr(dims.cbegin(), dims.cend(), value);
+    }
+
+    // dims - container
+    // data - value
+    {
+        std::vector<int> dims{3, 1, 2};
+        std::string value{"str"};
+        arrnd<std::string> arr(dims, value);
+    }
+
+    // dims - initializer_list
+    // data - value
+    {
+        std::string value{"str"};
+        arrnd<std::string> arr1(std::initializer_list<int>{}, value);
+        arrnd<std::string> arr2({3, 1, 2}, value);
+    }
+
+    // dims - array
+    // data - value
+    {
+        int dims[]{3, 1, 2};
+        std::string value{"str"};
+        arrnd<std::string> arr(dims, value);
+    }
+
+    // ------------------------------
+
+    // scalar constructors
+
+    //{
+    //    int value = 5;
+    //    arrnd arr(value);
+    //}
+
+    //{
+    //    int value = 5;
+    //    arrnd<double> arr(value);
+    //}
 }
 
 TEST(arrnd_test, subscript_operators_compilation)
@@ -1136,7 +1411,7 @@ TEST(arrnd_test, element_wise_transformation)
         });
 
         static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
-        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {7.5, 20})));
+        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {7.5, 20.})));
     }
 
     // scalar
@@ -1313,7 +1588,7 @@ TEST(arrnd_test, element_wise_transform_operation)
         });
 
         static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
-        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {22.5, 60})));
+        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {22.5, 60.})));
     }
 }
 
