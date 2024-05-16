@@ -699,7 +699,7 @@ using details::sign;
 
 namespace oc {
 namespace details {
-    enum class interval_type { full, from, to, none };
+    enum class interval_hint { full, from, to, none };
 
     /**
     * @note half open interval
@@ -708,11 +708,11 @@ namespace details {
     class interval {
     public:
         // interval type might cause ignoring values of interval's start or stop values
-        constexpr interval(T start, T stop, T step = 1, interval_type type = interval_type::none) noexcept
+        constexpr interval(T start, T stop, T step = 1, interval_hint type = interval_hint::none) noexcept
             : start_(start)
             , stop_(stop)
             , step_(step)
-            , type_(type)
+            , hint_(type)
         { }
 
         constexpr interval() = default; // interval of first element
@@ -736,23 +736,23 @@ namespace details {
             return step_;
         }
 
-        [[nodiscard]] constexpr interval_type type() const noexcept
+        [[nodiscard]] constexpr interval_hint hint() const noexcept
         {
-            return type_;
+            return hint_;
         }
 
         // returns normalize type from dimension, useful in case of interval types that are not none
         [[nodiscard]] constexpr interval align(T dim) const noexcept
         {
-            switch (type_) {
-            case interval_type::none:
+            switch (hint_) {
+            case interval_hint::none:
                 return *this;
-            case interval_type::full:
-                return interval{0, dim, step_, interval_type::none};
-            case interval_type::from:
-                return interval{start_, dim, step_, interval_type::none};
-            case interval_type::to:
-                return interval{0, stop_, step_, interval_type::none};
+            case interval_hint::full:
+                return interval{0, dim, step_, interval_hint::none};
+            case interval_hint::from:
+                return interval{start_, dim, step_, interval_hint::none};
+            case interval_hint::to:
+                return interval{0, stop_, step_, interval_hint::none};
             }
 
             return *this;
@@ -760,17 +760,17 @@ namespace details {
 
         [[nodiscard]] static constexpr interval full(T step = 1) noexcept
         {
-            return interval{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), step, interval_type::full};
+            return interval{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), step, interval_hint::full};
         }
 
         [[nodiscard]] static constexpr interval from(T start, T step = 1)
         {
-            return interval{start, std::numeric_limits<T>::max(), step, interval_type::from};
+            return interval{start, std::numeric_limits<T>::max(), step, interval_hint::from};
         }
 
         [[nodiscard]] static constexpr interval to(T stop, T step = 1) noexcept
         {
-            return interval{0, stop, step, interval_type::to};
+            return interval{0, stop, step, interval_hint::to};
         }
 
         [[nodiscard]] static constexpr interval at(T pos) noexcept
@@ -787,7 +787,7 @@ namespace details {
         T start_{0};
         T stop_{1};
         T step_{1};
-        interval_type type_{interval_type::none};
+        interval_hint hint_{interval_hint::none};
     };
 
     template <std::signed_integral T>
@@ -811,17 +811,17 @@ namespace details {
     template <std::signed_integral T>
     [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
-        return (lhs.type() == interval_type::none && rhs.type() == interval_type::none && lhs.start() == rhs.start()
+        return (lhs.hint() == interval_hint::none && rhs.hint() == interval_hint::none && lhs.start() == rhs.start()
                    && lhs.stop() == rhs.stop() && lhs.step() == rhs.step())
-            || (lhs.type() == interval_type::full && rhs.type() == interval_type::full && lhs.step() == rhs.step())
-            || (lhs.type() == interval_type::from && rhs.type() == interval_type::from && lhs.start() == rhs.start()
+            || (lhs.hint() == interval_hint::full && rhs.hint() == interval_hint::full && lhs.step() == rhs.step())
+            || (lhs.hint() == interval_hint::from && rhs.hint() == interval_hint::from && lhs.start() == rhs.start()
                 && lhs.step() == rhs.step())
-            || (lhs.type() == interval_type::to && rhs.type() == interval_type::to && lhs.start() == 0
+            || (lhs.hint() == interval_hint::to && rhs.hint() == interval_hint::to && lhs.start() == 0
                 && rhs.start() == 0 && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
     }
 }
 
-using details::interval_type;
+using details::interval_hint;
 using details::interval;
 
 using details::modulo;
