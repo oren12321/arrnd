@@ -301,21 +301,43 @@ TEST(arrnd_test, diag)
 {
     using namespace oc;
 
-    arrnd<arrnd<int>> arr({3},
-        {arrnd<int>({3, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
-            arrnd<int>({5, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
-            arrnd<int>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9})});
+    {
+        arrnd<arrnd<int>> arr({3},
+            {arrnd<int>({3, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+                arrnd<int>({5, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
+                arrnd<int>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9})});
 
-    EXPECT_TRUE(all_equal(diag(arr),
-        arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {1, 7, 13}), arrnd<int>({3}, {1, 5, 9}), arrnd<int>({3}, {1, 5, 9})})));
-    EXPECT_TRUE(all_equal(diag(arr, 1),
-        arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {2, 8, 14}), arrnd<int>({2}, {2, 6}), arrnd<int>({2}, {2, 6})})));
-    EXPECT_TRUE(all_equal(diag(arr, 2),
-        arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {3, 9, 15}), arrnd<int>({1}, {3}), arrnd<int>({1}, {3})})));
-    EXPECT_TRUE(all_equal(diag(arr, -1),
-        arrnd<arrnd<int>>({3}, {arrnd<int>({2}, {6, 12}), arrnd<int>({3}, {4, 8, 12}), arrnd<int>({2}, {4, 8})})));
-    EXPECT_TRUE(all_equal(diag(arr, -2),
-        arrnd<arrnd<int>>({3}, {arrnd<int>({1}, {11}), arrnd<int>({3}, {7, 11, 15}), arrnd<int>({1}, {7})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix),
+            arrnd<arrnd<int>>(
+                {3}, {arrnd<int>({3}, {1, 7, 13}), arrnd<int>({3}, {1, 5, 9}), arrnd<int>({3}, {1, 5, 9})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, 1),
+            arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {2, 8, 14}), arrnd<int>({2}, {2, 6}), arrnd<int>({2}, {2, 6})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, 2),
+            arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {3, 9, 15}), arrnd<int>({1}, {3}), arrnd<int>({1}, {3})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, -1),
+            arrnd<arrnd<int>>({3}, {arrnd<int>({2}, {6, 12}), arrnd<int>({3}, {4, 8, 12}), arrnd<int>({2}, {4, 8})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, -2),
+            arrnd<arrnd<int>>({3}, {arrnd<int>({1}, {11}), arrnd<int>({3}, {7, 11, 15}), arrnd<int>({1}, {7})})));
+    }
+
+    {
+        arrnd<arrnd<int>> arr({3}, {arrnd<int>({2}, {6, 12}), arrnd<int>({3}, {4, 8, 12}), arrnd<int>({2}, {4, 8})});
+
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix),
+            arrnd<arrnd<int>>({3},
+                {arrnd<int>({2, 2}, {6, 0, 0, 12}), arrnd<int>({3, 3}, {4, 0, 0, 0, 8, 0, 0, 0, 12}),
+                    arrnd<int>({2, 2}, {4, 0, 0, 8})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix, 1),
+            arrnd<arrnd<int>>({3},
+                {arrnd<int>({3, 3}, {0, 6, 0, 0, 0, 12, 0, 0, 0}),
+                    arrnd<int>({4, 4}, {0, 4, 0, 0, 0, 0, 8, 0, 0, 0, 0, 12, 0, 0, 0, 0}),
+                    arrnd<int>({3, 3}, {0, 4, 0, 0, 0, 8, 0, 0, 0})})));
+        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix, -1),
+            arrnd<arrnd<int>>({3},
+                {arrnd<int>({3, 3}, {0, 0, 0, 6, 0, 0, 0, 12, 0}),
+                    arrnd<int>({4, 4}, {0, 0, 0, 0, 4, 0, 0, 0, 0, 8, 0, 0, 0, 0, 12, 0}),
+                    arrnd<int>({3, 3}, {0, 0, 0, 4, 0, 0, 0, 8, 0})})));
+    }
 }
 
 TEST(arrnd_test, tril_and_triu)

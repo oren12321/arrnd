@@ -3363,6 +3363,7 @@ namespace details {
     using inner_replaced_type_t = inner_replaced_type<T, R, Level>::type;
 
     enum class arrnd_shape_preset { vector, row, column };
+    enum class arrnd_diag_type { from_matrix, to_matrix };
 
     // zip class
 
@@ -7466,21 +7467,22 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+        [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix, size_type offset = 0) const
             requires(!this_type::is_flat)
         {
-            return transform<0>([offset](const auto& a) {
-                return a.diag(offset);
+            return transform<0>([type, offset](const auto& a) {
+                return a.diag(type, offset);
             });
         }
-        [[nodiscard]] constexpr auto diag(size_type offset = 0) const
+        [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix,
+            size_type offset = 0) const
             requires(this_type::is_flat)
         {
-            assert(hdr_.dims().size() >= 2);
+            assert(hdr_.dims().size() >= 1);
 
-            std::function<this_type(this_type)> diag_impl;
+            std::function<this_type(this_type)> diag_from_matrix_impl;
 
-            diag_impl = [&](this_type arr) {
+            diag_from_matrix_impl = [&](this_type arr) {
                 if (arr.empty()) {
                     return this_type();
                 }
@@ -7527,20 +7529,60 @@ namespace details {
                 size_type current_ind = offset >= 0 ? offset : -offset * c;
 
                 for (size_type i = 0; i < numel; ++i) {
-                    res[i] = (*this)(current_ind);
+                    res[i] = arr(current_ind);
                     current_ind += c + 1;
                 }
 
                 return res;
             };
 
-            if (hdr_.is_matrix()) {
-                return diag_impl(*this);
-            }
 
-            return pageop<0>(2, [diag_impl](auto page) {
-                return diag_impl(page);
-            });
+            std::function<this_type(this_type)> diag_to_matrix_impl;
+
+            diag_to_matrix_impl = [&](this_type arr) {
+                if (arr.empty()) {
+                    return this_type();
+                }
+
+                assert(arr.header().is_vector());
+
+                size_type abs_offset = static_cast<size_type>(std::abs(offset));
+
+                size_type n = arr.header().numel() + abs_offset;
+
+                this_type res({n, n}, 0);
+
+                size_type current_ind = offset >= 0 ? offset : -offset * n;
+
+                indexer_type gen(arr.header());
+
+                for (; current_ind < res.header().numel() && gen; ++gen) {
+                    res[current_ind] = arr[*gen];
+                    current_ind += n + 1;
+                }
+
+                return res;
+            };
+
+
+            if (type == arrnd_diag_type::from_matrix) {
+                if (hdr_.is_matrix()) {
+                    return diag_from_matrix_impl(*this);
+                }
+
+                return pageop<0>(2, [diag_from_matrix_impl](auto page) {
+                    return diag_from_matrix_impl(page);
+                });
+            }
+            else {
+                if (hdr_.is_vector()) {
+                    return diag_to_matrix_impl(*this);
+                }
+
+                return pageop<0>(1, [diag_to_matrix_impl](auto page) {
+                    return diag_to_matrix_impl(page(arrnd_shape_preset::vector));
+                });
+            }
         }
 
         [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
@@ -12104,9 +12146,10 @@ namespace details {
     //}
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto diag(const ArCo& arr, typename ArCo::size_type offset = 0)
+    [[nodiscard]] inline constexpr auto diag(
+        const ArCo& arr, arrnd_diag_type type = arrnd_diag_type::from_matrix, typename ArCo::size_type offset = 0)
     {
-        return arr.diag(offset);
+        return arr.diag(type, offset);
     }
 
     template <arrnd_compliant ArCo>
@@ -14336,6 +14379,7 @@ using details::arrnd_slice_front_inserter;
 using details::arrnd_slice_inserter;
 
 using details::arrnd_shape_preset;
+using details::arrnd_diag_type;
 using details::arrnd_filter_proxy;
 using details::arrnd;
 
