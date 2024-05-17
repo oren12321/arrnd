@@ -7235,6 +7235,42 @@ namespace details {
         {
             assert(hdr_.dims().size() >= 2);
 
+            std::function<this_type(this_type)> qr_algorithm_impl;
+            
+            qr_algorithm_impl = [&](this_type arr) {
+                assert(arr.header().is_matrix());
+                assert(arr.header().dims().front() == arr.header().dims().back());
+
+                value_type tol = value_type{1e-12};
+                size_type max_iters = 1000;
+
+                auto [_, h] = arr.hess()(0);
+                // for tolerance
+                //h(h <= tol) = value_type{0};
+
+                size_type n = arr.header().dims().front();
+
+                auto qq = eye<this_type>({n, n});
+
+                size_type k = 0;
+                value_type diff = std::numeric_limits<value_type>::max();
+
+                while (k++ < max_iters && diff > tol) {
+                    auto h_prev = h.clone();
+                    auto s = h[{n - 1, n - 1}];
+                    auto smult = s * eye<this_type>({n, n});
+
+                    auto [q, r] = (h - smult).qr()(0);
+
+                    h = r.matmul(q) + smult;
+                    qq = qq.matmul(q);
+
+                    diff = (h - h_prev).abs().max();
+                }
+
+                return h.diag()(arrnd_shape_preset::column);
+            };
+
             std::function<std::tuple<this_type, this_type>(this_type)> eig_impl;
 
             eig_impl = [&](this_type arr) {
@@ -7243,13 +7279,14 @@ namespace details {
 
                 size_type n = arr.header().dims().front();
 
-                auto [u, s] = arr.schur()(0);
-                //std::cout << "u:\n" << u << "\n\n";
-                //std::cout << "s:\n" << s << "\n\n";
+                //auto [u, s] = arr.schur()(0);
+                ////std::cout << "u:\n" << u << "\n\n";
+                ////std::cout << "s:\n" << s << "\n\n";
 
                 using ival = interval_type;
 
-                auto lambda = s.diag()(arrnd_shape_preset::column);
+                //auto lambda = s.diag()(arrnd_shape_preset::column);
+                auto lambda = qr_algorithm_impl(arr);
                 auto v = zeros<this_type>({n, n});
 
                 for (size_type k = 1; k <= n; ++k) {
@@ -7301,15 +7338,15 @@ namespace details {
                 this_type v;
 
                 if constexpr (template_type<value_type, std::complex>) {
-                    auto [ut, l1t] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
-                    auto [vt, l2t] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
+                    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
+                    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
                     l1 = l1t;
                     l2 = l2t;
                     u = ut;
                     v = vt;
                 } else {
-                    auto [ut, l1t] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
-                    auto [vt, l2t] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
+                    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
+                    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
                     l1 = l1t;
                     l2 = l2t;
                     u = ut;
@@ -7343,7 +7380,7 @@ namespace details {
                 auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
                 auto sv = (slc1 + slc2) / 2;
                 sv(sv < value_type{0}) = value_type{0};
-                s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag());
+                s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
 
                 if constexpr (template_type<value_type, std::complex>) {
                     v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
