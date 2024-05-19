@@ -637,32 +637,120 @@ using details::simple_static_vector;
 
 namespace oc {
 namespace details {
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const std::complex<T>& rhs)
+    {
+        return std::abs(lhs) < std::abs(rhs);
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const T& rhs)
+    {
+        return std::abs(lhs) < rhs;
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<(const T& lhs, const std::complex<T>& rhs)
+    {
+        return lhs < std::abs(rhs);
+    }
+
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const std::complex<T>& rhs)
+    {
+        return std::abs(lhs) <= std::abs(rhs);
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const T& rhs)
+    {
+        return std::abs(lhs) <= rhs;
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator<=(const T& lhs, const std::complex<T>& rhs)
+    {
+        return lhs <= std::abs(rhs);
+    }
+
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const std::complex<T>& rhs)
+    {
+        return std::abs(lhs) > std::abs(rhs);
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const T& rhs)
+    {
+        return std::abs(lhs) > rhs;
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>(const T& lhs, const std::complex<T>& rhs)
+    {
+        return lhs > std::abs(rhs);
+    }
+
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const std::complex<T>& rhs)
+    {
+        return std::abs(lhs) >= std::abs(rhs);
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const T& rhs)
+    {
+        return std::abs(lhs) >= rhs;
+    }
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator>=(const T& lhs, const std::complex<T>& rhs)
+    {
+        return lhs >= std::abs(rhs);
+    }
+}
+
+using details::operator<;
+using details::operator<=;
+using details::operator>;
+using details::operator>=;
+}
+
+namespace oc {
+namespace details {
     template <std::integral T>
     [[nodiscard]] inline constexpr T default_atol() noexcept
     {
         return T{0};
     }
 
-    template <std::floating_point T>
+    template </*std::floating_point*/ typename T>
+    requires(std::floating_point<T> || template_type<T, std::complex>)
     [[nodiscard]] inline constexpr T default_atol() noexcept
     {
         return T{1e-8};
     }
 
+    //template <template_type<std::complex> T>
+    //[[nodiscard]] inline constexpr T default_atol() noexcept
+    //{
+    //    return T{1e-8};
+    //}
+
     template <std::integral T>
     [[nodiscard]] inline constexpr T default_rtol() noexcept
     {
         return T{0};
     }
 
-    template <std::floating_point T>
+    template </*std::floating_point*/ typename T>
+    requires(std::floating_point<T> || template_type<T, std::complex>)
     [[nodiscard]] inline constexpr T default_rtol() noexcept
     {
         return T{1e-5};
     }
 
+    //template <template_type<std::complex> T>
+    //[[nodiscard]] inline constexpr T default_atol() noexcept
+    //{
+    //    return T{1e-5};
+    //}
+
     template <typename T1, typename T2>
-        requires(std::is_arithmetic_v<T1> && std::is_arithmetic_v<T2>)
+    requires((std::is_arithmetic_v<T1> || template_type<T1, std::complex>)&&(
+        std::is_arithmetic_v<T2> || template_type<T2, std::complex>))
     [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b,
         const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(),
         const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>()) noexcept

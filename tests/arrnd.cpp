@@ -211,6 +211,28 @@ TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
     EXPECT_FALSE(close(1e-100, 0.0, 0.0));
     EXPECT_FALSE(close(1e-7, 0.0, 0.0));
     EXPECT_FALSE(close(1e-10, 1e-20, 0.0));
+
+    // complex numbers
+    {
+        using namespace std::complex_literals;
+
+        EXPECT_TRUE(1.0 + 1.0i < 1.0 + 2.0i);
+        EXPECT_TRUE(1.0 + 1.0i <= 1.0 + 2.0i);
+        EXPECT_TRUE(2.0 + 1.0i > 1.0 + 1.0i);
+        EXPECT_TRUE(2.0 + 1.0i >= 1.0 + 1.0i);
+
+        EXPECT_TRUE(1.0 < 1.0 + 2.0i);
+        EXPECT_TRUE(1.0 <= 1.0 + 2.0i);
+        EXPECT_TRUE(2.0 > 1.0i);
+        EXPECT_TRUE(2.0 >= 1.0i);
+
+        EXPECT_TRUE(1.0i < 2.0);
+        EXPECT_TRUE(1.0i <= 2.0);
+        EXPECT_TRUE(2.0 + 1.0i > 1.0);
+        EXPECT_TRUE(2.0 + 1.0i >= 1.0);
+
+        EXPECT_TRUE(close(1.0 + 1.0i, 1.0 + 1.0i));
+    }
 }
 
 TEST(modulo_test, modulo_opration_can_be_perform_on_positive_zero_or_negative_number)
@@ -1074,6 +1096,19 @@ TEST(arrnd_test, iterators_and_inserters)
         rend(arr, arrnd_returned_element_iterator_tag{});
         crend(arr, arrnd_returned_element_iterator_tag{});
     }
+}
+
+TEST(arrnd_test, complex_type_array_ordering_compilation)
+{
+    using namespace oc;
+
+    arrnd<std::complex<double>> arrc1{};
+    arrnd<std::complex<double>> arrc2{};
+    arrnd<double> arrd{};
+
+    auto cond = (arrc1 < arrc2) && (arrc1 <= arrc2) && (arrc1 > arrc2) && (arrc1 >= arrc2) && (arrc1 < arrd)
+        && (arrc1 <= arrd) && (arrc1 > arrd) && (arrc1 >= arrd) && (arrd < arrc1) && (arrd <= arrc1) && (arrd > arrc1)
+        && (arrd >= arrc1) && close(arrc1, arrc2) && close(arrc1, arrd) && close(arrd, arrc1);
 }
 
 TEST(arrnd_test, zip)
