@@ -277,6 +277,7 @@ TEST(arrnd_test, DISABLED_svd)
     //std::cout << u << "\n\n";
     //std::cout << s << "\n\n";
     //std::cout << v << "\n\n";
+    //std::cout << matmul(u, s, v.transpose()) << "\n";
 }
 
 TEST(arrnd_test, zeros)

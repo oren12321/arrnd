@@ -7341,7 +7341,12 @@ namespace details {
                 auto qq = eye<this_type>({n, n});
 
                 size_type k = 0;
-                value_type diff = std::numeric_limits<value_type>::max();
+                value_type diff;
+                if constexpr (template_type<value_type, std::complex>) {
+                    diff = std::numeric_limits<double>::max();
+                } else {
+                    diff = std::numeric_limits<value_type>::max();
+                }
 
                 while (k++ < max_iters && diff > tol) {
                     auto h_prev = h.clone();
@@ -7415,69 +7420,122 @@ namespace details {
                 assert(arr.header().is_matrix());
                 //assert(arr.header().dims().front() == arr.header().dims().back());
 
-                using ival = interval_type;
-
-                auto r = arr.header().dims().front();
-                auto c = arr.header().dims().back();
-
-                this_type l1;
-                this_type l2;
-                this_type u;
-                this_type v;
-
+                this_type arr_t{};
                 if constexpr (template_type<value_type, std::complex>) {
-                    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
-                    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
-                    l1 = l1t;
-                    l2 = l2t;
-                    u = ut;
-                    v = vt;
+                    arr_t = arr.transpose().conj();
                 } else {
-                    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
-                    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
-                    l1 = l1t;
-                    l2 = l2t;
-                    u = ut;
-                    v = vt;
+                    arr_t = arr.transpose();
                 }
+
+                auto [l1, u] = (arr.as_pages() * arr_t.as_pages()).eig()(0);
+                auto [l2, v] = (arr_t.as_pages() * arr.as_pages()).eig()(0);
+
+                using ord_type = replaced_type<size_type>;
 
                 auto comp = [](const auto& t1, const auto& t2) {
                     return std::get<0>(t1) > std::get<0>(t2);
                 };
 
-                auto sl1 = l1.clone();
-                replaced_type<size_type> sl1i({l1.header().numel()});
-                std::iota(sl1i.begin(), sl1i.end(), size_type{0});
-                auto z1 = zip(iter_pack(sl1), iter_pack(sl1i));
+                ord_type ord1({l1.header().numel()});
+                std::iota(ord1.begin(), ord1.end(), size_type{0});
+                auto z1 = zip(iter_pack(l1), iter_pack(ord1));
                 std::sort(z1.begin(), z1.end(), comp);
+                u = u.reorder(1, ord1);
 
-                auto sl2 = l2.clone();
-                replaced_type<size_type> sl2i({l2.header().numel()});
-                std::iota(sl2i.begin(), sl2i.end(), size_type{0});
-                auto z2 = zip(iter_pack(sl2), iter_pack(sl2i));
+                ord_type ord2({l2.header().numel()});
+                std::iota(ord2.begin(), ord2.end(), size_type{0});
+                auto z2 = zip(iter_pack(l2), iter_pack(ord2));
                 std::sort(z2.begin(), z2.end(), comp);
+                v = v.reorder(1, ord2);
 
-                u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
-                v = v.reorder(1, sl2i.cbegin(), sl2i.cend());
+                auto s = zeros<this_type>(arr.header().dims());
 
-                auto s = zeros<this_type>({r, c});
+                auto min_dim = std::min({s.header().dims().front(), s.header().dims().back()});
 
-                auto arr_minsize = std::min({r, c});
-
-                auto slc1 = l1(sl1i)()[{ival::to(arr_minsize)}];
-                auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
-                auto sv = (slc1 + slc2) / 2;
+                auto sv = (l1(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}]
+                              + l2(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}])
+                    / value_type{2};
                 sv(sv < value_type{0}) = value_type{0};
-                s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
+
+                s[{interval_type::to(min_dim), interval_type::to(min_dim)}]
+                    = sv.sqrt().diag(arrnd_diag_type::to_matrix);
 
                 if constexpr (template_type<value_type, std::complex>) {
                     v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
                 } else {
-                    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
-                        return std::max({m, v});
-                    }) > value_type{1e-8};
-                    v(mask) = v * (value_type{-1});
+                    auto m = (arr.matmul(v) - u.matmul(s)).abs().max(1)(arrnd_shape_preset::vector) > value_type{1e-8};
+
+                    for (size_type i = 0; i < m.header().numel(); ++i) {
+                        if (m[i]) {
+                            v[{interval_type::full(), interval_type::at(i)}]
+                                = v[{interval_type::full(), interval_type::at(i)}] * value_type{-1};
+                        }
+                    }
                 }
+
+                //using ival = interval_type;
+
+                //auto r = arr.header().dims().front();
+                //auto c = arr.header().dims().back();
+
+                //this_type l1;
+                //this_type l2;
+                //this_type u;
+                //this_type v;
+
+                //if constexpr (template_type<value_type, std::complex>) {
+                //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
+                //    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
+                //    l1 = l1t;
+                //    l2 = l2t;
+                //    u = ut;
+                //    v = vt;
+                //} else {
+                //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
+                //    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
+                //    l1 = l1t;
+                //    l2 = l2t;
+                //    u = ut;
+                //    v = vt;
+                //}
+
+                //auto comp = [](const auto& t1, const auto& t2) {
+                //    return std::get<0>(t1) > std::get<0>(t2);
+                //};
+
+                //auto sl1 = l1.clone();
+                //replaced_type<size_type> sl1i({l1.header().numel()});
+                //std::iota(sl1i.begin(), sl1i.end(), size_type{0});
+                //auto z1 = zip(iter_pack(sl1), iter_pack(sl1i));
+                //std::sort(z1.begin(), z1.end(), comp);
+
+                //auto sl2 = l2.clone();
+                //replaced_type<size_type> sl2i({l2.header().numel()});
+                //std::iota(sl2i.begin(), sl2i.end(), size_type{0});
+                //auto z2 = zip(iter_pack(sl2), iter_pack(sl2i));
+                //std::sort(z2.begin(), z2.end(), comp);
+
+                //u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
+                //v = v.reorder(1, sl2i.cbegin(), sl2i.cend());
+
+                //auto s = zeros<this_type>({r, c});
+
+                //auto arr_minsize = std::min({r, c});
+
+                //auto slc1 = l1(sl1i)()[{ival::to(arr_minsize)}];
+                //auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
+                //auto sv = (slc1 + slc2) / 2;
+                //sv(sv < value_type{0}) = value_type{0};
+                //s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
+
+                //if constexpr (template_type<value_type, std::complex>) {
+                //    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
+                //} else {
+                //    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
+                //        return std::max({m, v});
+                //    }) > value_type{1e-8};
+                //    v(mask) = v * (value_type{-1});
+                //}
 
                 return std::make_tuple(u, s, v);
             };
