@@ -1186,6 +1186,30 @@ TEST(arrnd_test, zip)
         EXPECT_TRUE(all_equal(res, arrnd<int>({4, 2}, {1, 2, 7, 8, 3, 4, 5, 6})));
     }
 
+    // zip using both container and iterator arguments
+    {
+        std::vector<int> res = {5, 8, 9, 8, 5};
+
+        std::vector<int> vals1 = {1, 2, 3, 4, 5};
+        std::vector<int> vals2 = {5, 4, 3, 2, 1};
+
+        std::vector<int> valst;
+
+        valst.clear();
+        auto z1 = zip(iter_pack(vals1), iter_arg(vals2.begin(), vals2.end()));
+        std::transform(z1.begin(), z1.end(), std::back_inserter(valst), [](auto t) {
+            return std::get<0>(t) * std::get<1>(t);
+        });
+        EXPECT_EQ(valst, res);
+
+        valst.clear();
+        auto z2 = zip(iter_pack(vals1), iter_arg(vals2.rbegin(), vals2.rend()));
+        std::transform(z2.rbegin(), z2.rend(), std::back_inserter(valst), [](auto t) {
+            return std::get<0>(t) * std::get<1>(t);
+        });
+        EXPECT_EQ(valst, res);
+    }
+
     //std::vector<int> indices{0, 2, 1, 3, 5, 4};
     //std::vector<int> values{10, 20, 30, 40, 50, 60};
     //arrnd<int> arr({3, 1, 2}, {10, 20, 30, 40, 50, 60});

@@ -3536,6 +3536,60 @@ namespace details {
         std::tuple<Args...> args_ = std::tuple<>{};
     };
 
+    template <std::input_iterator InputIt>
+    class iter_arg {
+    public:
+        struct unknown { };
+        using cont_type = unknown;
+        using iter_type = InputIt;
+        using riter_type = InputIt;
+
+        constexpr iter_arg(const InputIt& first, const InputIt& last)
+            : first_(first)
+            , last_(last)
+        { }
+
+        constexpr iter_arg(const iter_arg&) = default;
+        constexpr iter_arg(iter_arg&&) = default;
+
+        constexpr iter_arg& operator=(const iter_arg&) = default;
+        constexpr iter_arg& operator=(iter_arg&&) = default;
+
+        constexpr virtual ~iter_arg() = default;
+
+        constexpr auto& first() noexcept
+        {
+            return first_;
+        }
+        constexpr const auto& first() const noexcept
+        {
+            return first_;
+        }
+
+        constexpr auto& last() noexcept
+        {
+            return last_;
+        }
+        constexpr const auto& last() const
+        {
+            return last_;
+        }
+
+        constexpr auto& args() noexcept
+        {
+            return args_;
+        }
+        constexpr const auto& args() const
+        {
+            return args_;
+        }
+
+    private:
+        InputIt first_;
+        InputIt last_;
+        std::tuple<> args_ = std::tuple<>{};
+    };
+
     template <typename... ItPack>
     class zip {
     public:
@@ -3794,8 +3848,13 @@ namespace details {
         auto begin()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                using std::begin;
-                return begin(ip.cont(), std::get<I>(ip.args())...);
+                if constexpr (template_type<P, iter_pack>) {
+                    using std::begin;
+                    return begin(ip.cont(), std::get<I>(ip.args())...);
+                }
+                else {
+                    return ip.first();
+                }
             };
 
             return iterator(std::apply(
@@ -3810,8 +3869,13 @@ namespace details {
         auto end()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                using std::end;
-                return end(ip.cont(), std::get<I>(ip.args())...);
+                if constexpr (template_type<P, iter_pack>) {
+                    using std::end;
+                    return end(ip.cont(), std::get<I>(ip.args())...);
+                }
+                else {
+                    return ip.last();
+                }
             };
 
             return iterator{std::apply(
@@ -3826,8 +3890,13 @@ namespace details {
         auto rbegin()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                using std::rbegin;
-                return rbegin(ip.cont(), std::get<I>(ip.args())...);
+                if constexpr (template_type<P, iter_pack>) {
+                    using std::rbegin;
+                    return rbegin(ip.cont(), std::get<I>(ip.args())...);
+                }
+                else {
+                    return ip.first();
+                }
             };
 
             return reverse_iterator(std::apply(
@@ -3842,8 +3911,13 @@ namespace details {
         auto rend()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                using std::rend;
-                return rend(ip.cont(), std::get<I>(ip.args())...);
+                if constexpr (template_type<P, iter_pack>) {
+                    using std::rend;
+                    return rend(ip.cont(), std::get<I>(ip.args())...);
+                }
+                else {
+                    return ip.last();
+                }
             };
 
             return reverse_iterator{std::apply(
@@ -14567,6 +14641,7 @@ using details::arrnd_filter_proxy;
 using details::arrnd;
 
 using details::iter_pack;
+using details::iter_arg;
 using details::zip;
 
 using details::begin;
