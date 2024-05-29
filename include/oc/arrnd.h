@@ -1718,7 +1718,7 @@ namespace details {
                 if (indices_[hdr_.dims().size() - 1 - i] > -1) {
                     return *this;
                 }
-                indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[i] - 1;
+                indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[hdr_.dims().size() - 1 - i] - 1;
                 current_index_
                     += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
             }

@@ -3101,6 +3101,28 @@ TEST(arrnd_test, complex_array)
         auto earr3 = arr[{{0, 2}, {0, 1}, {1, 2}, {0, 3, 2}, {1, 3, 2}}][{{1, 2}}][{{0, 1}}];
         EXPECT_TRUE(oc::all_equal(rarr3, earr3));
     }
+
+    // complex forward backward iterations
+    {
+        using namespace oc;
+
+        std::vector<int> data(3 * 4 * 2 * 5 * 6);
+        std::iota(data.begin(), data.end(), 0);
+
+        arrnd<int> carr({3, 4, 2, 5, 6}, data);
+
+        int i = 0;
+        for (auto ind = carr.indexer(arrnd_iterator_start_position::begin); ind; ++ind) {
+            EXPECT_EQ(carr[*ind], data[i++]);
+        }
+        EXPECT_EQ(i, std::ssize(data));
+
+        i = std::ssize(data) - 1;
+        for (auto ind = carr.indexer(arrnd_iterator_start_position::rbegin); ind; --ind) {
+            EXPECT_EQ(carr[*ind], data[i--]);
+        }
+        EXPECT_EQ(i, -1);
+    }
 }
 
 TEST(arrnd_test, ostream_operator)
