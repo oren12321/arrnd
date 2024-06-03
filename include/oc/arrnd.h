@@ -1660,7 +1660,8 @@ namespace details {
                 if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
                     return *this;
                 }
-                current_index_ -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
+                current_index_
+                    -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
                 indices_[hdr_.dims().size() - 1 - i] = 0;
             }
 
@@ -1719,8 +1720,8 @@ namespace details {
                     return *this;
                 }
                 indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[hdr_.dims().size() - 1 - i] - 1;
-                current_index_
-                    += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
+                current_index_ += (indices_[hdr_.dims().size() - 1 - i] + 1)
+                    * hdr_.strides()[hdr_.dims().size() - 1 - i];
             }
 
             return *this;
@@ -1786,9 +1787,11 @@ namespace details {
                 firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
             }
 
-            indices_ = storage_type(hdr_.dims().size());
-            for (size_type i = 3; i < hdr_.dims().size(); ++i) {
-                indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
+            if (std::ssize(hdr_.dims()) > 3) {
+                indices_ = storage_type(hdr_.dims().size() - 3);
+                for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+                    indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
+                }
             }
 
             current_index_ = backward ? hdr_.last_index() : hdr_.offset();
