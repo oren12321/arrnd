@@ -1026,37 +1026,37 @@ namespace details {
         //    : arrnd_header(std::begin(dims), std::end(dims))
         //{ }
 
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
-        {
-            if (first_dim == last_dim) {
-                return *this;
-            }
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
+        //{
+        //    if (first_dim == last_dim) {
+        //        return *this;
+        //    }
 
-            assert(first_dim < last_dim);
+        //    assert(first_dim < last_dim);
 
-            if (empty()) {
-                return arrnd_header(first_dim, last_dim);
-            }
+        //    if (empty()) {
+        //        return arrnd_header(first_dim, last_dim);
+        //    }
 
-            storage_type new_dims(std::ssize(dims_) + std::distance(first_dim, last_dim));
+        //    storage_type new_dims(std::ssize(dims_) + std::distance(first_dim, last_dim));
 
-            std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
-            std::copy(first_dim, last_dim, std::next(new_dims.begin(), std::ssize(dims_)));
+        //    std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
+        //    std::copy(first_dim, last_dim, std::next(new_dims.begin(), std::ssize(dims_)));
 
-            return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        }
+        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        //}
 
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
-        {
-            return expand(std::begin(dims), std::end(dims));
-        }
+        //template <signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
+        //{
+        //    return expand(std::begin(dims), std::end(dims));
+        //}
 
-        [[nodiscard]] constexpr arrnd_header expand(std::initializer_list<size_type> dims) const
-        {
-            return expand(dims.begin(), dims.end());
-        }
+        //[[nodiscard]] constexpr arrnd_header expand(std::initializer_list<size_type> dims) const
+        //{
+        //    return expand(dims.begin(), dims.end());
+        //}
 
         //template <std::signed_integral D, std::int64_t M>
         //[[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
@@ -8735,9 +8735,17 @@ namespace details {
 
                 auto processed = invoke_func(trimed_page /*.template reshape<0>({page_dim1, page_dim2})*/);
 
-                processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
-                    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size))
-                                         .expand(processed.header().dims());
+                //processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
+                //    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size))
+                //                         .expand(processed.header().dims());
+
+                typename decltype(page)::header_type::storage_type expanded_dims(
+                    std::ssize(page.header().dims()) - page_size + std::ssize(processed.header().dims()));
+                std::copy(page.header().dims().cbegin(),
+                    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size), expanded_dims.begin());
+                std::copy(processed.header().dims().begin(), processed.header().dims().end(),
+                    std::next(expanded_dims.begin(), page.header().dims().size() - page_size));
+                processed.header() = typename decltype(page)::header_type(expanded_dims);
 
                 trans_expanded[*trs_gen] = processed;
             }
