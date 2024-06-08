@@ -1150,7 +1150,7 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header subheader(interval_type range) const
         {
-            std::initializer_list<interval_type> ranges = {range.align(dims_.front())};
+            std::initializer_list<interval_type> ranges = {range/*.align(dims_.front())*/};
 
             auto res = subheader(ranges.begin(), ranges.end());
             if (res.empty() || res.dims_.front() != 1) {
@@ -1159,12 +1159,12 @@ namespace details {
 
             res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
             res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
-            res.last_index_ = res.offset_
-                + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
-                    std::plus<>{}, [](auto d, auto s) {
-                        return (d - 1) * s;
-                    });
-            res.is_slice_ = true;
+            //res.last_index_ = res.offset_
+            //    + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
+            //        std::plus<>{}, [](auto d, auto s) {
+            //            return (d - 1) * s;
+            //        });
+            //res.is_slice_ = true;
 
             return res;
         }
@@ -1176,46 +1176,75 @@ namespace details {
             typename storage_type::template replaced_type<interval_type> ranges(axis + 1);
 
             std::fill(ranges.begin(), ranges.end(), interval_type::full());
-            ranges[std::ssize(ranges) - 1] = range.align(*std::next(dims_.cbegin(), axis));
+            ranges[std::ssize(ranges) - 1] = range/*.align(*std::next(dims_.cbegin(), axis))*/;
 
             return subheader(ranges.begin(), ranges.end());
         }
 
-        [[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
-        {
-            assert(omitted_axis >= 0 && omitted_axis < std::ssize(dims_));
+        //[[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
+        //{
+        //    assert(omitted_axis >= 0 && omitted_axis < std::ssize(dims_));
 
-            if (empty()) {
-                return *this;
-            }
+        //    if (empty()) {
+        //        return *this;
+        //    }
+
+        //    storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
+
+        //    if (std::ssize(dims_) == 1) {
+        //        new_dims.front() = 1;
+        //        return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        //    }
+
+        //    std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
+        //    std::copy(
+        //        std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
+
+        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        //}
+
+        [[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type removed_axis) const
+        {
+            assert(removed_axis >= 0 && removed_axis < std::ssize(dims_));
 
             storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
 
             if (std::ssize(dims_) == 1) {
                 new_dims.front() = 1;
-                return arrnd_header(new_dims.cbegin(), new_dims.cend());
+                return new_dims;
             }
 
-            std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
+            std::copy(dims_.cbegin(), std::next(dims_.cbegin(), removed_axis), new_dims.begin());
             std::copy(
-                std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
+                std::next(dims_.cbegin(), removed_axis + 1), dims_.cend(), std::next(new_dims.begin(), removed_axis));
 
-            return arrnd_header(new_dims.cbegin(), new_dims.cend());
+            return new_dims;
         }
 
-        [[nodiscard]] constexpr arrnd_header subheader(size_type count, size_type axis) const
+        //[[nodiscard]] constexpr arrnd_header subheader(size_type count, size_type axis) const
+        //{
+        //    assert(axis >= 0 && axis < std::ssize(dims_));
+        //    assert(count >= -*std::next(dims_.cbegin(), axis));
+
+        //    if (empty()) {
+        //        return *this;
+        //    }
+
+        //    storage_type new_dims(dims_);
+        //    *std::next(new_dims.begin(), axis) += count;
+
+        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+        //}
+
+        [[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type axis, size_type added_count) const
         {
             assert(axis >= 0 && axis < std::ssize(dims_));
-            assert(count >= -*std::next(dims_.cbegin(), axis));
-
-            if (empty()) {
-                return *this;
-            }
+            assert(added_count >= -*std::next(dims_.cbegin(), axis));
 
             storage_type new_dims(dims_);
-            *std::next(new_dims.begin(), axis) += count;
+            *std::next(new_dims.begin(), axis) += added_count;
 
-            return arrnd_header(new_dims.cbegin(), new_dims.cend());
+            return new_dims;
         }
 
         template <signed_integral_type_iterator InputIt>
@@ -1230,12 +1259,21 @@ namespace details {
                 return *this;
             }
 
+            storage_type same_order(std::ssize(dims_));
+            std::iota(same_order.begin(), same_order.end(), size_type{0});
+
+            if (std::equal(same_order.cbegin(), same_order.cend(), first_order, last_order)) {
+                return *this;
+            }
+
             arrnd_header res(*this);
 
             for (size_type i = 0; i < std::ssize(dims_); ++i) {
                 *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
             }
+
+            res.is_reordered_ = true;
 
             return res;
         }
@@ -1287,6 +1325,8 @@ namespace details {
             res.dims_.front() = main_dim;
             res.strides_.front() = main_stride;
 
+            res.is_reordered_ = true;
+
             return res;
         }
 
@@ -1317,7 +1357,7 @@ namespace details {
                 }
             }
 
-            res.is_slice_ = true;
+            //res.is_slice_ = true;
 
             return res;
         }
@@ -1485,6 +1525,16 @@ namespace details {
             return is_slice_;
         }
 
+        [[nodiscard]] constexpr bool is_reordered() const noexcept
+        {
+            return is_reordered_;
+        }
+
+        [[nodiscard]] constexpr bool is_continuous() const noexcept
+        {
+            return is_continuous_;
+        }
+
         [[nodiscard]] constexpr bool empty() const noexcept
         {
             return dims_.empty();
@@ -1527,6 +1577,8 @@ namespace details {
         size_type offset_{0};
         size_type last_index_{0};
         bool is_slice_{false};
+        bool is_reordered_{false};
+        bool is_continuous_{true};
     };
 
     template <arrnd_header_compliant ArHdrCo>
@@ -5699,15 +5751,16 @@ namespace details {
                 return clone(); //*this;
             }
 
-            header_type new_header(hdr_.subheader(arr.header().dims()[axis], axis));
-            if (new_header.empty()) {
-                return this_type();
-            }
+            //header_type new_header(hdr_.subheader(arr.header().dims()[axis], axis));
+            //if (new_header.empty()) {
+            //    return this_type();
+            //}
 
             assert(ind >= 0 && ind <= hdr_.dims()[axis]);
 
             this_type res({hdr_.numel() + arr.header().numel()});
-            res.hdr_ = std::move(new_header);
+            //res.hdr_ = std::move(new_header);
+            res.hdr_ = header_type(hdr_.dims_with_modified_axis(axis, *std::next(arr.header().dims().cbegin(), axis)));
 
             indexer_type gen(hdr_, axis);
             typename ArCo::indexer_type arr_gen(arr.header(), axis);
@@ -5997,17 +6050,18 @@ namespace details {
                 return *this;
             }
 
-            header_type new_header(hdr_.subheader(-count, axis));
+            //header_type new_header(hdr_.subheader(-count, axis));
 
             assert(ind >= 0 && ind < hdr_.dims()[axis]);
             assert(ind + count <= hdr_.dims()[axis]);
 
-            if (new_header.empty()) {
-                return this_type();
-            }
+            //if (new_header.empty()) {
+            //    return this_type();
+            //}
 
             this_type res({hdr_.numel() - (hdr_.numel() / hdr_.dims()[axis]) * count});
-            res.hdr_ = std::move(new_header);
+            //res.hdr_ = std::move(new_header);
+            res.hdr_ = header_type(hdr_.dims_with_modified_axis(axis, -count));
 
             indexer_type gen(hdr_, axis);
             indexer_type res_gen(res.hdr_, axis);
@@ -6466,11 +6520,12 @@ namespace details {
                 return reduced_type();
             }
 
-            typename reduced_type::header_type new_header(hdr_.subheader(axis));
-            if (new_header.empty()) {
-                return reduced_type();
-            }
+            //typename reduced_type::header_type new_header(hdr_.subheader(axis));
+            //if (new_header.empty()) {
+            //    return reduced_type();
+            //}
 
+            auto new_header = header_type(hdr_.dims_with_modified_axis(axis));
             reduced_type res({new_header.numel()});
             res.header() = std::move(new_header);
 
@@ -6537,14 +6592,15 @@ namespace details {
                 return folded_type();
             }
 
-            typename folded_type::header_type new_header(hdr_.subheader(axis));
+            //typename folded_type::header_type new_header(hdr_.subheader(axis));
 
             assert(inits.header().dims().size() == 1 && inits.header().dims()[0] == hdr_.numel() / hdr_.dims()[axis]);
 
-            if (new_header.empty()) {
-                return folded_type();
-            }
+            //if (new_header.empty()) {
+            //    return folded_type();
+            //}
 
+            auto new_header = header_type(hdr_.dims_with_modified_axis(axis));
             folded_type res({new_header.numel()});
             res.header() = std::move(new_header);
 
