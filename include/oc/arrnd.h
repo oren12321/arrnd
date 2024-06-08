@@ -2059,6 +2059,9 @@ namespace details {
     struct arrnd_returned_slice_iterator_tag { };
 
     template <typename Arrnd>
+    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_const_iterator;
+
+    template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_iterator final {
     public:
@@ -2070,6 +2073,8 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
         using returned_type_category = arrnd_returned_element_iterator_tag;
+
+        friend class arrnd_const_iterator<Arrnd>;
 
         explicit constexpr arrnd_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
@@ -2201,6 +2206,28 @@ namespace details {
 
         constexpr ~arrnd_const_iterator() = default;
 
+        constexpr arrnd_const_iterator(const arrnd_iterator<Arrnd>& other)
+            : gen_(other.gen_)
+            , data_(other.data_)
+        { }
+        constexpr arrnd_const_iterator& operator=(const arrnd_iterator<Arrnd>& other)
+        {
+            gen_ = other.gen_;
+            data_ = other.data_;
+            return *this;
+        }
+
+        constexpr arrnd_const_iterator(arrnd_iterator<Arrnd>&& other)
+            : gen_(std::move(other.gen_))
+            , data_(std::move(other.data_))
+        { }
+        constexpr arrnd_const_iterator& operator=(arrnd_iterator<Arrnd>&& other)
+        {
+            gen_ = std::move(other.gen_);
+            data_ = std::move(other.data_);
+            return *this;
+        }
+
         constexpr arrnd_const_iterator& operator++() noexcept
         {
             ++gen_;
@@ -2289,6 +2316,9 @@ namespace details {
     };
 
     template <typename Arrnd>
+    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_const_reverse_iterator;
+
+    template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_reverse_iterator final {
     public:
@@ -2300,6 +2330,8 @@ namespace details {
 
         using indexer_type = typename Arrnd::indexer_type;
         using returned_type_category = arrnd_returned_element_iterator_tag;
+
+        friend arrnd_const_reverse_iterator<Arrnd>;
 
         explicit constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
             : gen_(gen)
@@ -2431,6 +2463,28 @@ namespace details {
 
         constexpr ~arrnd_const_reverse_iterator() = default;
 
+        constexpr arrnd_const_reverse_iterator(const arrnd_reverse_iterator<Arrnd>& other)
+            : gen_(other.gen_)
+            , data_(other.data_)
+        { }
+        constexpr arrnd_const_reverse_iterator& operator=(const arrnd_reverse_iterator<Arrnd>& other)
+        {
+            gen_ = other.gen_;
+            data_ = other.data_;
+            return *this;
+        }
+
+        constexpr arrnd_const_reverse_iterator(arrnd_reverse_iterator<Arrnd>&& other)
+            : gen_(std::move(other.gen_))
+            , data_(std::move(other.data_))
+        { }
+        constexpr arrnd_const_reverse_iterator& operator=(arrnd_reverse_iterator<Arrnd>&& other)
+        {
+            gen_ = std::move(other.gen_);
+            data_ = std::move(other.data_);
+            return *this;
+        }
+
         constexpr arrnd_const_reverse_iterator& operator++() noexcept
         {
             --gen_;
@@ -2519,6 +2573,9 @@ namespace details {
     };
 
     template <typename Arrnd>
+    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_slice_const_iterator;
+
+    template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_iterator final {
     public:
@@ -2529,6 +2586,8 @@ namespace details {
 
         using ranger_type = typename Arrnd::ranger_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
+
+        friend arrnd_slice_const_iterator<Arrnd>;
 
         explicit constexpr arrnd_slice_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -2671,6 +2730,32 @@ namespace details {
 
         constexpr ~arrnd_slice_const_iterator() = default;
 
+        constexpr arrnd_slice_const_iterator(const arrnd_slice_iterator<Arrnd>& other)
+            : arrnd_ref_(other.arrnd_ref_)
+            , far_(other.far_)
+            , slice_(other.slice_)
+        { }
+        constexpr arrnd_slice_const_iterator& operator=(const arrnd_slice_iterator<Arrnd>& other)
+        {
+            arrnd_ref_ = other.arrnd_ref_;
+            far_ = other.far_;
+            slice_ = other.slice_;
+            return *this;
+        }
+
+        constexpr arrnd_slice_const_iterator(arrnd_slice_iterator<Arrnd>&& other)
+            : arrnd_ref_(std::move(other.arrnd_ref_))
+            , far_(std::move(other.far_))
+            , slice_(std::move(other.slice_))
+        { }
+        constexpr arrnd_slice_const_iterator& operator=(arrnd_slice_iterator<Arrnd>&& other)
+        {
+            arrnd_ref_ = std::move(other.arrnd_ref_);
+            far_ = std::move(other.far_);
+            slice_ = std::move(other.slice_);
+            return *this;
+        }
+
         constexpr arrnd_slice_const_iterator& operator++() noexcept
         {
             ++far_;
@@ -2763,6 +2848,9 @@ namespace details {
     };
 
     template <typename Arrnd>
+    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_slice_reverse_const_iterator;
+
+    template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_iterator final {
     public:
@@ -2773,6 +2861,8 @@ namespace details {
 
         using ranger_type = typename Arrnd::ranger_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
+
+        friend arrnd_slice_reverse_const_iterator<Arrnd>;
 
         explicit constexpr arrnd_slice_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -2916,6 +3006,32 @@ namespace details {
             = default;
 
         constexpr ~arrnd_slice_reverse_const_iterator() = default;
+
+        constexpr arrnd_slice_reverse_const_iterator(const arrnd_slice_reverse_iterator<Arrnd>& other)
+            : arrnd_ref_(other.arrnd_ref_)
+            , far_(other.far_)
+            , slice_(other.slice_)
+        { }
+        constexpr arrnd_slice_reverse_const_iterator& operator=(const arrnd_slice_reverse_iterator<Arrnd>& other)
+        {
+            arrnd_ref_ = other.arrnd_ref_;
+            far_ = other.far_;
+            slice_ = other.slice_;
+            return *this;
+        }
+
+        constexpr arrnd_slice_reverse_const_iterator(arrnd_slice_reverse_iterator<Arrnd>&& other)
+            : arrnd_ref_(std::move(other.arrnd_ref_))
+            , far_(std::move(other.far_))
+            , slice_(std::move(other.slice_))
+        { }
+        constexpr arrnd_slice_reverse_const_iterator& operator=(arrnd_slice_reverse_iterator<Arrnd>&& other)
+        {
+            arrnd_ref_ = std::move(other.arrnd_ref_);
+            far_ = std::move(other.far_);
+            slice_ = std::move(other.slice_);
+            return *this;
+        }
 
         constexpr arrnd_slice_reverse_const_iterator& operator--() noexcept
         {
