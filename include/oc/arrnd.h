@@ -1106,6 +1106,8 @@ namespace details {
             if (res.numel_ == 0) { // allow empty header for zero interval
                 arrnd_header empty_subheader{};
                 empty_subheader.is_slice_ = true;
+                res.is_reordered_ = is_reordered_;
+                res.is_continuous_ = true;
                 return empty_subheader;
             }
 
@@ -1120,13 +1122,19 @@ namespace details {
             }
             std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
 
-            res.last_index_ = res.offset_
-                + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
-                    std::plus<>{}, [](auto d, auto s) {
-                        return (d - 1) * s;
-                    });
+            auto dot_prod = std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(),
+                size_type{0}, std::plus<>{}, [](auto d, auto s) {
+                    return (d - 1) * s;
+                });
+
+            res.last_index_ = res.offset_ + dot_prod;
 
             res.is_slice_ = true;
+
+            res.is_reordered_ = is_reordered_;
+            res.order_ = order_;
+
+            res.is_continuous_ = (dot_prod + 1 == res.numel_);
 
             return res;
         }
@@ -1268,6 +1276,9 @@ namespace details {
 
             arrnd_header res(*this);
 
+            res.order_ = storage_type(std::ssize(dims_));
+            std::copy(first_order, last_order, res.order_.begin());
+
             for (size_type i = 0; i < std::ssize(dims_); ++i) {
                 *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
                 *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
@@ -1310,20 +1321,25 @@ namespace details {
 
             size_type j = 1;
 
+            res.order_ = storage_type(std::ssize(dims_));
+
             for (size_type i = 0; i < main_axis; ++i) {
                 *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
                 *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                *std::next(res.order_.begin(), j) = i;
                 ++j;
             }
 
             for (size_type i = main_axis + 1; i < std::ssize(dims_); ++i) {
                 *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
                 *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+                *std::next(res.order_.begin(), j) = i;
                 ++j;
             }
 
             res.dims_.front() = main_dim;
             res.strides_.front() = main_stride;
+            res.order_.front() = main_axis;
 
             res.is_reordered_ = true;
 
@@ -1530,6 +1546,11 @@ namespace details {
             return is_reordered_;
         }
 
+        [[nodiscard]] constexpr storage_type& order() noexcept
+        {
+            return order_;
+        }
+
         [[nodiscard]] constexpr bool is_continuous() const noexcept
         {
             return is_continuous_;
@@ -1576,9 +1597,10 @@ namespace details {
         size_type numel_{0};
         size_type offset_{0};
         size_type last_index_{0};
-        bool is_slice_{false};
-        bool is_reordered_{false};
-        bool is_continuous_{true};
+        bool is_slice_{false}; // not all array buffer included
+        bool is_reordered_{false}; // header axis are reordered
+        storage_type order_{};
+        bool is_continuous_{true}; // array buffer is not continuous in memory
     };
 
     template <arrnd_header_compliant ArHdrCo>
@@ -1608,7 +1630,7 @@ namespace details {
         os << "last_index: " << hdr.last_index() << '\n';
         os << "flags: vector(" << hdr.is_vector() << "), matrix(" << hdr.is_matrix() << "), row(" << hdr.is_row()
            << "), column(" << hdr.is_column() << "), scalar(" << hdr.is_scalar() << "), slice(" << hdr.is_slice()
-           << ')';
+           << "), reordered(" << hdr.is_reordered() << "), continuous(" << hdr.is_continuous() << ')';
 
         return os;
     }
