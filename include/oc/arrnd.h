@@ -1718,17 +1718,17 @@ namespace details {
 
             ++rel_pos_;
 
-            for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-                ++firsts_[i].index;
-                current_index_ += firsts_[i].stride;
-                if (firsts_[i].index < firsts_[i].dim) {
-                    return *this;
-                }
-                current_index_ -= firsts_[i].index * firsts_[i].stride;
-                firsts_[i].index = 0;
-            }
+            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+            //    ++firsts_[i].index;
+            //    current_index_ += firsts_[i].stride;
+            //    if (firsts_[i].index < firsts_[i].dim) {
+            //        return *this;
+            //    }
+            //    current_index_ -= firsts_[i].index * firsts_[i].stride;
+            //    firsts_[i].index = 0;
+            //}
 
-            for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+            for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
                 ++indices_[hdr_.dims().size() - 1 - i];
                 current_index_ += hdr_.strides()[hdr_.dims().size() - 1 - i];
                 if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
@@ -1777,17 +1777,17 @@ namespace details {
 
             --rel_pos_;
 
-            for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-                --firsts_[i].index;
-                current_index_ -= firsts_[i].stride;
-                if (firsts_[i].index > -1) {
-                    return *this;
-                }
-                firsts_[i].index = firsts_[i].dim - 1;
-                current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
-            }
+            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+            //    --firsts_[i].index;
+            //    current_index_ -= firsts_[i].stride;
+            //    if (firsts_[i].index > -1) {
+            //        return *this;
+            //    }
+            //    firsts_[i].index = firsts_[i].dim - 1;
+            //    current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
+            //}
 
-            for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+            for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
                 --indices_[hdr_.dims().size() - 1 - i];
                 current_index_ -= hdr_.strides()[hdr_.dims().size() - 1 - i];
                 if (indices_[hdr_.dims().size() - 1 - i] > -1) {
@@ -1834,6 +1834,11 @@ namespace details {
             return current_index_;
         }
 
+        [[nodiscard]] constexpr const storage_type& indices() const noexcept
+        {
+            return indices_;
+        }
+
         [[nodiscard]] constexpr size_type operator[](size_type index) const noexcept
         {
             assert(index >= 0 && index < hdr_.numel());
@@ -1855,18 +1860,18 @@ namespace details {
 
             bool backward = (pos == arrnd_iterator_start_position::rbegin || pos == arrnd_iterator_start_position::end);
 
-            for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-                firsts_[i].dim = hdr_.dims()[hdr_.dims().size() - i - 1];
-                firsts_[i].stride = hdr_.strides()[hdr_.dims().size() - i - 1];
-                firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
-            }
+            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+            //    firsts_[i].dim = hdr_.dims()[hdr_.dims().size() - i - 1];
+            //    firsts_[i].stride = hdr_.strides()[hdr_.dims().size() - i - 1];
+            //    firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
+            //}
 
-            if (std::ssize(hdr_.dims()) > 3) {
-                indices_ = storage_type(hdr_.dims().size() - 3);
-                for (size_type i = 3; i < hdr_.dims().size(); ++i) {
+            //if (std::ssize(hdr_.dims()) > 3) {
+                indices_ = storage_type(hdr_.dims().size()/* - 3*/);
+                for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
                     indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
                 }
-            }
+            //}
 
             current_index_ = backward ? hdr_.last_index() : hdr_.offset();
 
@@ -1883,13 +1888,13 @@ namespace details {
 
         std::make_unsigned_t<size_type> last_first_diff_;
 
-        struct data_package {
-            size_type dim;
-            size_type stride;
-            size_type index;
-        };
+        //struct data_package {
+        //    size_type dim;
+        //    size_type stride;
+        //    size_type index;
+        //};
 
-        data_package firsts_[3];
+        //data_package firsts_[3];
 
         storage_type indices_;
         size_type current_index_;
