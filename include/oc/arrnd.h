@@ -5160,7 +5160,10 @@ namespace details {
             requires invocable_no_arrnd<Pred, value_type, Args...>
         [[nodiscard]] constexpr auto operator()(Pred&& pred, Args&&... args) const
         {
-            auto selector = std::bind(std::forward<Pred>(pred), std::placeholders::_1, std::forward<Args>(args)...);
+            //auto selector = std::bind(std::forward<Pred>(pred), std::placeholders::_1, std::forward<Args>(args)...);
+            auto selector = [&pred, &args...](const value_type& value) {
+                return pred(value, std::forward<Args>(args)...);
+            };
 
             /*    auto selector = [&args](const value_type& vt) {
                     return
