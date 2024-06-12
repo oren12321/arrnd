@@ -2471,25 +2471,31 @@ TEST(arrnd_test, reshape)
     {
         oc::arrnd<Integer_array> inarr({1, 2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({1, 4}, {5, 6, 7, 8})});
 
-        oc::arrnd<Integer_array> rnarr1 = oc::reshape(inarr, {2, 2});
+        //oc::arrnd<Integer_array> rnarr1 = oc::reshape(inarr, {2, 2});
+        oc::arrnd<Integer_array> rnarr1 = oc::transform<0>(inarr, [](const auto& val) {
+            return oc::reshape(val, {2, 2});
+        });
         EXPECT_FALSE(oc::all_equal(rnarr1, inarr));
         EXPECT_TRUE(oc::all_equal(Integer_array({2, 2}, {1, 2, 3, 4}), rnarr1[{0, 0}]));
         EXPECT_TRUE(oc::all_equal(Integer_array({2, 2}, {5, 6, 7, 8}), rnarr1[{0, 1}]));
         EXPECT_EQ((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_EQ((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        oc::arrnd<Integer_array> rnarr2 = oc::reshape<0>(inarr, {2});
+        oc::arrnd<Integer_array> rnarr2 = oc::reshape/*<0>*/(inarr, {2});
         EXPECT_FALSE(oc::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::all_equal(rnarr2[{0}], inarr[{0, 0}]));
         EXPECT_TRUE(oc::all_equal(rnarr2[{1}], inarr[{0, 1}]));
         EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_EQ((rnarr2[{1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        auto rnarr3 = oc::reshape(inarr, oc::arrnd_shape_preset::vector);
+        //auto rnarr3 = oc::reshape(inarr, oc::arrnd_shape_preset::vector);
+        auto rnarr3 = oc::transform<0>(inarr, [](const auto& val) {
+            return oc::reshape(val, oc::arrnd_shape_preset::vector);
+        });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({4}, {5, 6, 7, 8})})));
 
-        auto rnarr4 = oc::reshape<0>(inarr, oc::arrnd_shape_preset::vector);
+        auto rnarr4 = oc::reshape/*<0>*/(inarr, oc::arrnd_shape_preset::vector);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({1, 4}, {5, 6, 7, 8})})));
     }

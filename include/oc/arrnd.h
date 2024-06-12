@@ -5191,7 +5191,7 @@ namespace details {
 
         [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
         {
-            return reshape<0>(shape);
+            return reshape/*<0>*/(shape);
         }
 
         template <typename Pred, typename... Args>
@@ -5463,8 +5463,8 @@ namespace details {
             return clone;
         }
 
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level == 0)
+        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
+            //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -5485,50 +5485,50 @@ namespace details {
 
             return res;
         }
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
-        {
-            if (empty()) {
-                return *this;
-            }
+        //template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
+        //    const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        //{
+        //    if (empty()) {
+        //        return *this;
+        //    }
 
-            this_type res(hdr_.dims());
+        //    this_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.hdr_);
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template reshape<Level - 1, InputIt>(first_new_dim, last_new_dim);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template reshape<Level - 1, InputIt>(first_new_dim, last_new_dim);
+        //    }
 
-            return res;
-        }
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
-        {
-            return reshape<this_type::depth>(first_new_dim, last_new_dim);
-        }
-        template <std::int64_t Level, signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
-        {
-            return reshape<Level>(std::begin(new_dims), std::end(new_dims));
-        }
+        //    return res;
+        //}
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
+        //    const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        //{
+        //    return reshape<this_type::depth>(first_new_dim, last_new_dim);
+        //}
+        //template <std::int64_t Level, signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
+        //{
+        //    return reshape<Level>(std::begin(new_dims), std::end(new_dims));
+        //}
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
         {
-            return reshape<this_type::depth, Cont>(std::begin(new_dims), std::end(new_dims));
+            return reshape/*<this_type::depth, Cont>*/(std::begin(new_dims), std::end(new_dims));
         }
-        template <std::int64_t Level>
+        //template <std::int64_t Level>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
+        //{
+        //    return reshape<Level>(new_dims.begin(), new_dims.end());
+        //}
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
         {
-            return reshape<Level>(new_dims.begin(), new_dims.end());
-        }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
-        {
-            return reshape<this_type::depth>(new_dims.begin(), new_dims.end());
+            return reshape/*<this_type::depth>*/(new_dims.begin(), new_dims.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const U (&new_dims)[M]) const
@@ -5540,27 +5540,27 @@ namespace details {
         //{
         //    return reshape<this_type::depth>(std::begin(new_dims), std::end(new_dims));
         //}
-        template <std::int64_t Level>
-            requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
-        {
-            if (empty()) {
-                return *this;
-            }
+        //template <std::int64_t Level>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
+        //{
+        //    if (empty()) {
+        //        return *this;
+        //    }
 
-            this_type res(hdr_.dims());
+        //    this_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.hdr_);
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template reshape<Level - 1>(shape);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template reshape<Level - 1>(shape);
+        //    }
 
-            return res;
-        }
-        template <std::int64_t Level>
-            requires(Level == 0)
+        //    return res;
+        //}
+        //template <std::int64_t Level>
+            //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
         {
             if (empty()) {
@@ -5569,20 +5569,20 @@ namespace details {
 
             switch (shape) {
             case arrnd_shape_preset::vector:
-                return reshape<Level>({hdr_.numel()});
+                return reshape/*<Level>*/({hdr_.numel()});
             case arrnd_shape_preset::row:
-                return reshape<Level>({size_type{1}, hdr_.numel()});
+                return reshape/*<Level>*/({size_type{1}, hdr_.numel()});
             case arrnd_shape_preset::column:
-                return reshape<Level>({hdr_.numel(), size_type{1}});
+                return reshape/*<Level>*/({hdr_.numel(), size_type{1}});
             default:
                 assert(false && "unknown arrnd_shape_preset value");
                 return this_type();
             }
         }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
-        {
-            return reshape<this_type::depth>(shape);
-        }
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
+        //{
+        //    return reshape<this_type::depth>(shape);
+        //}
 
         template <std::int64_t Level, signed_integral_type_iterator InputIt>
             requires(Level == 0)
@@ -5757,7 +5757,7 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
         {
             if (empty()) {
-                return arr.template reshape<Level>({arr.header().numel()}).clone();
+                return arr./*template */reshape/*<Level>*/({arr.header().numel()}).clone();
             }
 
             if (arr.empty()) {
@@ -8959,7 +8959,7 @@ namespace details {
                 //}
             }
 
-            return pages.template reshape<Level>(
+            return pages./*template */reshape/*<Level>*/(
                 pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
         [[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
@@ -9878,7 +9878,7 @@ namespace details {
                 return acc.template append<Level>(cur, axis);
             });
 
-            return reduced.template reshape<Level>(hdr_.dims());
+            return reduced./*template */reshape/*<Level>*/(hdr_.dims());
         }
         template <std::int64_t Level, typename Comp, typename... Args>
             requires(Level > 0 && invocable_no_arrnd<Comp, inner_this_type<Level>, inner_this_type<Level>, Args...>)
@@ -11851,60 +11851,60 @@ namespace details {
         return arr.clone();
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto reshape(
         const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
-        return arr.template reshape<Level>(first_new_dim, last_new_dim);
+        return arr./*template */reshape/*<Level>*/(first_new_dim, last_new_dim);
     }
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
     {
-        return reshape<Level>(arr, std::begin(new_dims), std::end(new_dims));
+        return reshape/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
     }
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto reshape(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
     {
-        return reshape<Level>(arr, new_dims.begin(), new_dims.end());
+        return reshape/*<Level>*/(arr, new_dims.begin(), new_dims.end());
     }
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const U (&new_dims)[M])
     //{
     //    return reshape<Level>(arr, std::begin(new_dims), std::end(new_dims));
     //}
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape_preset shape)
     {
-        return arr.template reshape<Level>(shape);
+        return arr./*template */reshape/*<Level>*/(shape);
     }
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(
-        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
-    {
-        return arr.template reshape<ArCo::depth>(first_new_dim, last_new_dim);
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
-    {
-        return reshape<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reshape(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
-    {
-        return reshape<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
-    }
+    //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto reshape(
+    //    const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    //{
+    //    return arr.template reshape<ArCo::depth>(first_new_dim, last_new_dim);
+    //}
+    //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
+    //{
+    //    return reshape<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
+    //}
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reshape(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    //{
+    //    return reshape<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
+    //}
     //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const U (&new_dims)[M])
     //{
     //    return reshape<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
     //}
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape_preset shape)
-    {
-        return reshape<ArCo::depth>(arr, shape);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape_preset shape)
+    //{
+    //    return reshape<ArCo::depth>(arr, shape);
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto resize(
