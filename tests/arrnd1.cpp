@@ -2618,7 +2618,7 @@ TEST(arrnd_test, inserters)
     {
         arrnd<int> res({5}, 0);
         std::copy(arr.cbegin(), arr.cend(), arrnd_inserter(res, 1));
-        EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0}), res));
+        EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 1, 2, 3, 4, 5, 6, 0, 0, 0, 0}), res));
     }
 
     {

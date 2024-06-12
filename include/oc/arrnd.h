@@ -3217,25 +3217,25 @@ namespace details {
 
         arrnd_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->append(cont);
+            *cont_ = cont_->append<0>(cont);
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->append(std::move(cont));
+            *cont_ = cont_->append<0>(std::move(cont));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->append(Arrnd({1}, {value}));
+            *cont_ = cont_->append<0>(Arrnd({1}, {value}));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->append(std::move(Arrnd({1}, {value})));
+            *cont_ = cont_->append<0>(std::move(Arrnd({1}, {value})));
             return *this;
         }
 
@@ -3277,25 +3277,25 @@ namespace details {
 
         arrnd_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, 0);
+            *cont_ = cont_->insert<0>(cont, 0);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), 0);
+            *cont_ = cont_->insert<0>(std::move(cont), 0);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert(Arrnd({1}, {value}), 0);
+            *cont_ = cont_->insert<0>(Arrnd({1}, {value}), 0);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert(std::move(Arrnd({1}, {value})), 0);
+            *cont_ = cont_->insert<0>(std::move(Arrnd({1}, {value})), 0);
             return *this;
         }
 
@@ -3339,27 +3339,29 @@ namespace details {
 
         arrnd_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, ind_);
+            *cont_ = cont_->insert<0>(cont, ind_);
             ind_ += cont.header().numel();
             return *this;
         }
 
         arrnd_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), ind_);
+            *cont_ = cont_->insert<0>(std::move(cont), ind_);
             ind_ += cont.header().numel();
             return *this;
         }
 
         arrnd_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert(Arrnd({1}, {value}), ind_);
+            *cont_ = cont_->insert<0>(Arrnd({1}, {value}), ind_);
+            ind_ += 1;
             return *this;
         }
 
         arrnd_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert(std::move(Arrnd({1}, {value})), ind_);
+            *cont_ = cont_->insert<0>(std::move(Arrnd({1}, {value})), ind_);
+            ind_ += 1;
             return *this;
         }
 
@@ -3405,13 +3407,13 @@ namespace details {
 
         arrnd_slice_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->append(cont, axis_);
+            *cont_ = cont_->append<0>(cont, axis_);
             return *this;
         }
 
         arrnd_slice_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->append(std::move(cont), axis_);
+            *cont_ = cont_->append<0>(std::move(cont), axis_);
             return *this;
         }
 
@@ -3457,13 +3459,13 @@ namespace details {
 
         arrnd_slice_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, 0, axis_);
+            *cont_ = cont_->insert<0>(cont, 0, axis_);
             return *this;
         }
 
         arrnd_slice_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), 0, axis_);
+            *cont_ = cont_->insert<0>(std::move(cont), 0, axis_);
             return *this;
         }
 
@@ -3510,14 +3512,14 @@ namespace details {
 
         arrnd_slice_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, ind_, axis_);
+            *cont_ = cont_->insert<0>(cont, ind_, axis_);
             ind_ += cont.header().dims()[axis_];
             return *this;
         }
 
         arrnd_slice_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), ind_, axis_);
+            *cont_ = cont_->insert<0>(std::move(cont), ind_, axis_);
             ind_ += cont.header().dims()[axis_];
             return *this;
         }
