@@ -2829,20 +2829,30 @@ TEST(arrnd_test, insert)
     {
         oc::arrnd<Integer_array> inarr1({1, 2}, {Integer_array({1}, {1}), Integer_array({1, 1}, {6})});
 
-        auto rnarr1 = oc::insert(inarr1,
+        //auto rnarr1 = oc::insert(inarr1,
+        //    oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
+        //    1);
+        auto rnarr1 = oc::transform<0>(inarr1,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
-            1);
+            [](const auto& lhs, const auto& rhs) {
+                return oc::insert(lhs, rhs, 1);
+            });
         EXPECT_TRUE(oc::all_equal(rnarr1,
             oc::arrnd<Integer_array>(
                 {1, 2}, {Integer_array({5}, {1, 2, 3, 4, 5}), Integer_array({5}, {6, 7, 8, 9, 10})})));
 
         EXPECT_TRUE(oc::all_equal(
-            oc::insert(oc::arrnd<Integer_array>({1, 2}),
+            /*oc::insert(oc::arrnd<Integer_array>({1, 2}),
                 oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
-                0),
+                0)*/
+            oc::transform<0>(oc::arrnd<Integer_array>({1, 2}),
+                oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
+                [](const auto& lhs, const auto& rhs) {
+                    return oc::insert(lhs, rhs, 0);
+                }),
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({4}, {7, 8, 9, 10})})));
 
-        auto rnarr2 = oc::insert<0>(inarr1,
+        auto rnarr2 = oc::insert/*<0>*/(inarr1,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
             0);
         EXPECT_TRUE(oc::all_equal(rnarr2,
@@ -2853,16 +2863,22 @@ TEST(arrnd_test, insert)
         oc::arrnd<Integer_array> inarr2({1, 2},
             {Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}), Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})});
 
-        auto rnarr3 = oc::insert(inarr2,
+        //auto rnarr3 = oc::insert(inarr2,
+        //    oc::arrnd<Integer_array>({1, 2},
+        //        {Integer_array({1, 2, 3}, {1, 2, 3, 4, 5, 6}), Integer_array({1, 2, 3}, {13, 14, 15, 16, 17, 18})}),
+        //    0, 0);
+        auto rnarr3 = oc::transform<0>(inarr2,
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({1, 2, 3}, {1, 2, 3, 4, 5, 6}), Integer_array({1, 2, 3}, {13, 14, 15, 16, 17, 18})}),
-            0, 0);
+            [](const auto& lhs, const auto& rhs) {
+                return oc::insert(lhs, rhs, 0, 0);
+            });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                     Integer_array({2, 2, 3}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})})));
 
-        auto rnarr4 = oc::insert<0>(inarr2, oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0);
+        auto rnarr4 = oc::insert/*<0>*/(inarr2, oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({2, 2},
                 {Integer_array{}, Integer_array{}, Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}),
@@ -3030,24 +3046,30 @@ TEST(arrnd_test, remove)
         oc::arrnd<Integer_array> inarr1(
             {1, 2}, {Integer_array({5}, {1, 2, 3, 4, 5}), Integer_array({1, 5}, {6, 7, 8, 9, 10})});
 
-        auto rnarr1 = oc::remove(inarr1, 2, 2);
+        //auto rnarr1 = oc::remove(inarr1, 2, 2);
+        auto rnarr1 = oc::transform<0>(inarr1, [](const auto& val) {
+            return oc::remove(val, 2, 2);
+        });
         EXPECT_TRUE(oc::all_equal(
             rnarr1, oc::arrnd<Integer_array>({1, 2}, {Integer_array({3}, {1, 2, 5}), Integer_array({3}, {6, 7, 10})})));
 
-        auto rnarr2 = oc::remove<0>(inarr1, 0, 1);
+        auto rnarr2 = oc::remove/*<0>*/(inarr1, 0, 1);
         EXPECT_TRUE(oc::all_equal(rnarr2, oc::arrnd<Integer_array>({1}, {Integer_array({1, 5}, {6, 7, 8, 9, 10})})));
 
         oc::arrnd<Integer_array> inarr2({1, 2},
             {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                 Integer_array({2, 2, 3}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
-        auto rnarr3 = oc::remove(inarr2, 0, 1, 0);
+        //auto rnarr3 = oc::remove(inarr2, 0, 1, 0);
+        auto rnarr3 = oc::transform<0>(inarr2, [](const auto& val) {
+            return oc::remove(val, 0, 1, 0);
+        });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}),
                     Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})})));
 
-        auto rnarr4 = oc::remove<0>(inarr2, 1, 1, 1);
+        auto rnarr4 = oc::remove/*<0>*/(inarr2, 1, 1, 1);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({1, 1}, {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
     }
