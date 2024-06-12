@@ -2916,7 +2916,7 @@ TEST(arrnd_test, repeat)
         arrnd<int> reps({3}, {2, 3, 2});
         arrnd<int> axes({3}, {2, 1, 0});
 
-        auto z = zip(iter_pack(reps), iter_pack(axes));
+        auto z = zip(zipped_cont(reps), zipped_cont(axes));
 
         auto arr2 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), z.begin(), z.end());
 

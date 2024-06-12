@@ -3730,24 +3730,24 @@ namespace details {
     }
 
     template <typename Cont, typename... Args>
-    class iter_pack {
+    class zipped_cont {
     public:
         using cont_type = Cont;
         using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
         using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
 
-        constexpr iter_pack(Cont& cont, Args&&... args)
+        constexpr zipped_cont(Cont& cont, Args&&... args)
             : cont_(cont)
             , args_(std::forward_as_tuple(std::forward<Args>(args)...))
         { }
 
-        constexpr iter_pack(const iter_pack&) = default;
-        constexpr iter_pack(iter_pack&&) = default;
+        constexpr zipped_cont(const zipped_cont&) = default;
+        constexpr zipped_cont(zipped_cont&&) = default;
 
-        constexpr iter_pack& operator=(const iter_pack&) = default;
-        constexpr iter_pack& operator=(iter_pack&&) = default;
+        constexpr zipped_cont& operator=(const zipped_cont&) = default;
+        constexpr zipped_cont& operator=(zipped_cont&&) = default;
 
-        constexpr virtual ~iter_pack() = default;
+        constexpr virtual ~zipped_cont() = default;
 
         constexpr auto& cont() noexcept
         {
@@ -3773,25 +3773,25 @@ namespace details {
     };
 
     template <std::input_iterator InputIt>
-    class iter_arg {
+    class zipped_iter {
     public:
         struct unknown { };
         using cont_type = unknown;
         using iter_type = InputIt;
         using riter_type = InputIt;
 
-        constexpr iter_arg(const InputIt& first, const InputIt& last)
+        constexpr zipped_iter(const InputIt& first, const InputIt& last)
             : first_(first)
             , last_(last)
         { }
 
-        constexpr iter_arg(const iter_arg&) = default;
-        constexpr iter_arg(iter_arg&&) = default;
+        constexpr zipped_iter(const zipped_iter&) = default;
+        constexpr zipped_iter(zipped_iter&&) = default;
 
-        constexpr iter_arg& operator=(const iter_arg&) = default;
-        constexpr iter_arg& operator=(iter_arg&&) = default;
+        constexpr zipped_iter& operator=(const zipped_iter&) = default;
+        constexpr zipped_iter& operator=(zipped_iter&&) = default;
 
-        constexpr virtual ~iter_arg() = default;
+        constexpr virtual ~zipped_iter() = default;
 
         constexpr auto& first() noexcept
         {
@@ -4084,7 +4084,7 @@ namespace details {
         auto begin()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, iter_pack>) {
+                if constexpr (template_type<P, zipped_cont>) {
                     using std::begin;
                     return begin(ip.cont(), std::get<I>(ip.args())...);
                 }
@@ -4105,7 +4105,7 @@ namespace details {
         auto end()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, iter_pack>) {
+                if constexpr (template_type<P, zipped_cont>) {
                     using std::end;
                     return end(ip.cont(), std::get<I>(ip.args())...);
                 }
@@ -4126,7 +4126,7 @@ namespace details {
         auto rbegin()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, iter_pack>) {
+                if constexpr (template_type<P, zipped_cont>) {
                     using std::rbegin;
                     return rbegin(ip.cont(), std::get<I>(ip.args())...);
                 }
@@ -4147,7 +4147,7 @@ namespace details {
         auto rend()
         {
             auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, iter_pack>) {
+                if constexpr (template_type<P, zipped_cont>) {
                     using std::rend;
                     return rend(ip.cont(), std::get<I>(ip.args())...);
                 }
@@ -5999,7 +5999,7 @@ namespace details {
             this_type::template replaced_type<size_type> axes({nreps});
             std::iota(axes.begin(), axes.end(), hdr_.dims().size() - nreps);
 
-            auto z = zip(iter_pack(reps), iter_pack(axes));
+            auto z = zip(zipped_cont(reps), zipped_cont(axes));
 
             auto res = *this;
             auto mid = res;
@@ -7755,13 +7755,13 @@ namespace details {
 
                 ord_type ord1({l1.header().numel()});
                 std::iota(ord1.begin(), ord1.end(), size_type{0});
-                auto z1 = zip(iter_pack(l1), iter_pack(ord1));
+                auto z1 = zip(zipped_cont(l1), zipped_cont(ord1));
                 std::sort(z1.begin(), z1.end(), comp);
                 u = u.reorder(1, ord1);
 
                 ord_type ord2({l2.header().numel()});
                 std::iota(ord2.begin(), ord2.end(), size_type{0});
-                auto z2 = zip(iter_pack(l2), iter_pack(ord2));
+                auto z2 = zip(zipped_cont(l2), zipped_cont(ord2));
                 std::sort(z2.begin(), z2.end(), comp);
                 v = v.reorder(1, ord2);
 
@@ -7823,13 +7823,13 @@ namespace details {
                 //auto sl1 = l1.clone();
                 //replaced_type<size_type> sl1i({l1.header().numel()});
                 //std::iota(sl1i.begin(), sl1i.end(), size_type{0});
-                //auto z1 = zip(iter_pack(sl1), iter_pack(sl1i));
+                //auto z1 = zip(zipped_cont(sl1), zipped_cont(sl1i));
                 //std::sort(z1.begin(), z1.end(), comp);
 
                 //auto sl2 = l2.clone();
                 //replaced_type<size_type> sl2i({l2.header().numel()});
                 //std::iota(sl2i.begin(), sl2i.end(), size_type{0});
-                //auto z2 = zip(iter_pack(sl2), iter_pack(sl2i));
+                //auto z2 = zip(zipped_cont(sl2), zipped_cont(sl2i));
                 //std::sort(z2.begin(), z2.end(), comp);
 
                 //u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
@@ -10017,7 +10017,7 @@ namespace details {
 
             auto reordered = clone();
 
-            auto z = zip(iter_pack(order), iter_pack(reordered));
+            auto z = zip(zipped_cont(order), zipped_cont(reordered));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
@@ -10097,7 +10097,7 @@ namespace details {
 
             auto expanded = expand<Level>(axis);
 
-            auto z = zip(iter_pack(order), iter_pack(expanded));
+            auto z = zip(zipped_cont(order), zipped_cont(expanded));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
@@ -14891,8 +14891,8 @@ using details::arrnd_diag_type;
 using details::arrnd_filter_proxy;
 using details::arrnd;
 
-using details::iter_pack;
-using details::iter_arg;
+using details::zipped_cont;
+using details::zipped_iter;
 using details::zip;
 
 using details::begin;

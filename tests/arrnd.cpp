@@ -1135,7 +1135,7 @@ TEST(arrnd_test, zip)
         arrnd<int> arr1({3, 2}, {1, 2, 3, 4, 5, 6});
         arrnd<int> arr2({6, 1}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(iter_pack(arr1, 1, arrnd_returned_element_iterator_tag{}), iter_pack(arr2));
+        auto z = zip(zipped_cont(arr1, 1, arrnd_returned_element_iterator_tag{}), zipped_cont(arr2));
 
         std::for_each(z.rbegin(), z.rend(), [&pairs](const auto& t) {
             auto [a, b] = t;
@@ -1152,7 +1152,7 @@ TEST(arrnd_test, zip)
         std::vector<int> inds{0, 1, 2, 3, 4, 5};
         arrnd<int> vals({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(iter_pack(inds), iter_pack(vals));
+        auto z = zip(zipped_cont(inds), zipped_cont(vals));
 
         auto [_, sum] = std::reduce(z.begin(), z.end(), std::make_tuple(0, 0), [](std::tuple<int, int> acc, auto t) {
             auto [ind, val] = t;
@@ -1168,7 +1168,7 @@ TEST(arrnd_test, zip)
         std::vector<std::string> vec{"a", "b", "c", "d", "e", "f"};
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(iter_pack(indices), iter_pack(vec), iter_pack(arr));
+        auto z = zip(zipped_cont(indices), zipped_cont(vec), zipped_cont(arr));
 
         std::sort(z.begin(), z.end(), [](const auto& a, const auto& b) {
             return std::get<0>(a) < std::get<0>(b);
@@ -1209,14 +1209,14 @@ TEST(arrnd_test, zip)
         std::vector<int> valst;
 
         valst.clear();
-        auto z1 = zip(iter_pack(vals1), iter_arg(vals2.begin(), vals2.end()));
+        auto z1 = zip(zipped_cont(vals1), zipped_iter(vals2.begin(), vals2.end()));
         std::transform(z1.begin(), z1.end(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
         EXPECT_EQ(valst, res);
 
         valst.clear();
-        auto z2 = zip(iter_pack(vals1), iter_arg(vals2.rbegin(), vals2.rend()));
+        auto z2 = zip(zipped_cont(vals1), zipped_iter(vals2.rbegin(), vals2.rend()));
         std::transform(z2.rbegin(), z2.rend(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
@@ -1229,23 +1229,23 @@ TEST(arrnd_test, zip)
     //
     //auto expanded = arr.expand(0);
 
-    //for (auto [i, v] : zip(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //}
-    //zip pack(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}});
+    //zip pack(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}});
     //auto t1 = begin(pack);
     ////swap(*t1, *t1);
     //std::sort(pack.begin(), pack.end(), [](auto a, auto b) {
     //    return std::get<0>(a) < std::get<0>(b);
     //});
 
-    //for (auto [i, v] : zip(iter_pack{indices}, iter_pack{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //    /*i = 10;
     //    v[{0,0}] = 100;*/
     //}
 
-    //zip z(iter_pack{indices}, iter_pack{arr, 0, arrnd_returned_slice_iterator_tag{}});
+    //zip z(zipped_cont{indices}, zipped_cont{arr, 0, arrnd_returned_slice_iterator_tag{}});
 
     //std::for_each(z.rbegin(), z.rend(), [](const auto& t) {
     //    auto [i, v] = t;
