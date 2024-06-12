@@ -3227,6 +3227,18 @@ namespace details {
             return *this;
         }
 
+        arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
+        {
+            *cont_ = cont_->append(Arrnd({1}, {value}));
+            return *this;
+        }
+
+        arrnd_back_insert_iterator& operator=(typename Arrnd::value_type&& value)
+        {
+            *cont_ = cont_->append(std::move(Arrnd({1}, {value})));
+            return *this;
+        }
+
         [[nodiscard]] arrnd_back_insert_iterator& operator*() noexcept
         {
             return *this;
@@ -3272,6 +3284,18 @@ namespace details {
         arrnd_front_insert_iterator& operator=(Arrnd&& cont)
         {
             *cont_ = cont_->insert(std::move(cont), 0);
+            return *this;
+        }
+
+        arrnd_front_insert_iterator& operator=(const typename Arrnd::value_type& value)
+        {
+            *cont_ = cont_->insert(Arrnd({1}, {value}), 0);
+            return *this;
+        }
+
+        arrnd_front_insert_iterator& operator=(typename Arrnd::value_type&& value)
+        {
+            *cont_ = cont_->insert(std::move(Arrnd({1}, {value})), 0);
             return *this;
         }
 
@@ -3324,6 +3348,18 @@ namespace details {
         {
             *cont_ = cont_->insert(std::move(cont), ind_);
             ind_ += cont.header().numel();
+            return *this;
+        }
+
+        arrnd_insert_iterator& operator=(const typename Arrnd::value_type& value)
+        {
+            *cont_ = cont_->insert(Arrnd({1}, {value}), ind_);
+            return *this;
+        }
+
+        arrnd_insert_iterator& operator=(typename Arrnd::value_type&& value)
+        {
+            *cont_ = cont_->insert(std::move(Arrnd({1}, {value})), ind_);
             return *this;
         }
 
