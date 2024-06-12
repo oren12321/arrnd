@@ -7080,7 +7080,7 @@ namespace details {
                 ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
 
                 size_type ind = 0;
-                auto trhs = rhs.template transpose<0>({1, 0});
+                auto trhs = rhs./*template */transpose/*<0>*/({1, 0});
                 std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}),
                     lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
                         std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}),
@@ -8244,8 +8244,8 @@ namespace details {
             //});
         }
 
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level == 0)
+        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
+            //requires(Level == 0)
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
@@ -8271,49 +8271,49 @@ namespace details {
 
             return res;
         }
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level > 0)
-        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
-        {
-            if (empty()) {
-                return this_type();
-            }
+        //template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
+        //{
+        //    if (empty()) {
+        //        return this_type();
+        //    }
 
-            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+        //    this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template transpose<Level - 1, InputIt>(first_order, last_order);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template transpose<Level - 1, InputIt>(first_order, last_order);
+        //    }
 
-            return res;
-        }
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
-        {
-            return transpose<this_type::depth, InputIt>(first_order, last_order);
-        }
-        template <std::int64_t Level, signed_integral_type_iterable Cont>
+        //    return res;
+        //}
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
+        //{
+        //    return transpose<this_type::depth, InputIt>(first_order, last_order);
+        //}
+        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr this_type transpose(const Cont& order) const
         {
-            return transpose<Level>(std::begin(order), std::end(order));
+            return transpose/*<Level>*/(std::begin(order), std::end(order));
         }
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr this_type transpose(const Cont& order) const
-        {
-            return transpose<this_type::depth>(std::begin(order), std::end(order));
-        }
-        template <std::int64_t Level>
+        //template <signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr this_type transpose(const Cont& order) const
+        //{
+        //    return transpose<this_type::depth>(std::begin(order), std::end(order));
+        //}
+        //template <std::int64_t Level>
         [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
         {
-            return transpose<Level>(order.begin(), order.end());
+            return transpose/*<Level>*/(order.begin(), order.end());
         }
-        [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
-        {
-            return transpose<this_type::depth>(order.begin(), order.end());
-        }
+        //[[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
+        //{
+        //    return transpose<this_type::depth>(order.begin(), order.end());
+        //}
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr this_type transpose(const U (&order)[M]) const
         //{
@@ -8326,8 +8326,8 @@ namespace details {
         //}
 
 
-        template <std::int64_t Level>
-        requires(Level == 0) [[nodiscard]] constexpr this_type transpose() const
+        //template <std::int64_t Level>
+        /*requires(Level == 0) */[[nodiscard]] constexpr this_type transpose() const
         {
             if (empty()) {
                 return this_type();
@@ -8340,30 +8340,30 @@ namespace details {
                 std::swap(order[order.header().numel() - 1], order[order.header().numel() - 2]);
             }
 
-            return transpose<Level>(order);
+            return transpose/*<Level>*/(order);
         }
-        template <std::int64_t Level>
-        requires(Level > 0) [[nodiscard]] constexpr this_type transpose() const
-        {
-            if (empty()) {
-                return this_type();
-            }
+        //template <std::int64_t Level>
+        //requires(Level > 0) [[nodiscard]] constexpr this_type transpose() const
+        //{
+        //    if (empty()) {
+        //        return this_type();
+        //    }
 
-            this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
+        //    this_type res(hdr_.dims().cbegin(), hdr_.dims().cend());
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template transpose<Level - 1>();
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template transpose<Level - 1>();
+        //    }
 
-            return res;
-        }
-        [[nodiscard]] constexpr this_type transpose() const
-        {
-            return transpose<this_type::depth>();
-        }
+        //    return res;
+        //}
+        //[[nodiscard]] constexpr this_type transpose() const
+        //{
+        //    return transpose<this_type::depth>();
+        //}
 
 
         //template <std::int64_t Depth>
@@ -12667,45 +12667,45 @@ namespace details {
         return arr.is_banded(lower, upper);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto transpose(
         const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
     {
-        return arr.template transpose<Level>(first_order, last_order);
+        return arr./*template */transpose/*<Level>*/(first_order, last_order);
     }
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
     {
-        return transpose<Level>(arr, std::begin(order), std::end(order));
+        return transpose/*<Level>*/(arr, std::begin(order), std::end(order));
     }
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto transpose(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
     {
-        return transpose<Level>(arr, order.begin(), order.end());
+        return transpose/*<Level>*/(arr, order.begin(), order.end());
     }
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const U (&order)[M])
     //{
     //    return transpose<Level>(arr, std::begin(order), std::end(order));
     //}
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(
-        const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
-    {
-        return arr.template transpose<ArCo::depth>(first_order, last_order);
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
-    {
-        return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto transpose(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
-    {
-        return transpose<ArCo::depth>(arr, order.begin(), order.end());
-    }
+    //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto transpose(
+    //    const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
+    //{
+    //    return arr.template transpose<ArCo::depth>(first_order, last_order);
+    //}
+    //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
+    //{
+    //    return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
+    //}
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto transpose(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    //{
+    //    return transpose<ArCo::depth>(arr, order.begin(), order.end());
+    //}
     //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const U (&order)[M])
     //{
@@ -12713,16 +12713,16 @@ namespace details {
     //}
 
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
     {
-        return arr.template transpose<Level>();
+        return arr./*template */transpose/*<Level>*/();
     }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
-    {
-        return arr.template transpose<ArCo::depth>();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
+    //{
+    //    return arr.template transpose<ArCo::depth>();
+    //}
 
 
     //template <std::int64_t Depth, arrnd_compliant ArCo>
