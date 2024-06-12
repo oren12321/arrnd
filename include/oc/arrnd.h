@@ -4547,7 +4547,7 @@ namespace details {
         }
 
         ArCo res(first_dim, last_dim, typename ArCo::value_type{0});
-        return res.template pageop<0>(2, [eye_impl](auto page) {
+        return res./*template */pageop/*<0>*/(2, [eye_impl](auto page) {
             return eye_impl(page.header().dims().front(), page.header().dims().back());
         });
     }
@@ -7097,7 +7097,7 @@ namespace details {
             }
 
             if (arr.header().is_matrix()) {
-                return pageop<0>(2, [&arr, impl](auto page) {
+                return pageop/*<0>*/(2, [&arr, impl](auto page) {
                     return impl(page, arr);
                 });
             } else {
@@ -7108,10 +7108,10 @@ namespace details {
                         * arr.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto arr_pages = arr.template pages<0>(arr.header().dims().size() - 3, 0, true);
+                auto arr_pages = arr./*template */pages/*<0>*/(arr.header().dims().size() - 3, 0, true);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return pageop<0>(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
+                return pageop/*<0>*/(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
                     return impl(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
@@ -7172,7 +7172,7 @@ namespace details {
                 return this_type({1}, det_impl(*this));
             }
 
-            return pageop<0>(2, [det_impl](auto page) {
+            return pageop/*<0>*/(2, [det_impl](auto page) {
                 return det_impl(page);
             });
         }
@@ -7221,7 +7221,7 @@ namespace details {
                 return inverse_impl(*this);
             }
 
-            return pageop<0>(2, [inverse_impl](auto page) {
+            return pageop/*<0>*/(2, [inverse_impl](auto page) {
                 return inverse_impl(page);
             });
         }
@@ -7282,7 +7282,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, lu_impl(*this));
             }
 
-            return pageop<0>(2, [lu_impl](auto page) {
+            return pageop/*<0>*/(2, [lu_impl](auto page) {
                 return lu_impl(page);
             });
         }
@@ -7359,7 +7359,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, qr_impl(*this));
             }
 
-            return pageop<0>(2, [qr_impl](auto page) {
+            return pageop/*<0>*/(2, [qr_impl](auto page) {
                 return qr_impl(page);
             });
         }
@@ -7428,7 +7428,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
             }
 
-            return pageop<0>(2, [hess_impl](auto page) {
+            return pageop/*<0>*/(2, [hess_impl](auto page) {
                 return hess_impl(page);
             });
         }
@@ -7555,7 +7555,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
             }
 
-            return pageop<0>(2, [schur_impl](auto page) {
+            return pageop/*<0>*/(2, [schur_impl](auto page) {
                 return schur_impl(page);
             });
         }
@@ -7622,7 +7622,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
             }
 
-            return pageop<0>(2, [schur_impl](auto page) {
+            return pageop/*<0>*/(2, [schur_impl](auto page) {
                 return schur_impl(page);
             });
         }
@@ -7713,7 +7713,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type>>({1}, eig_impl(*this));
             }
 
-            return pageop<0>(2, [eig_impl](auto page) {
+            return pageop/*<0>*/(2, [eig_impl](auto page) {
                 return eig_impl(page);
             });
         }
@@ -7861,7 +7861,7 @@ namespace details {
                 return replaced_type<std::tuple<this_type, this_type, this_type>>({1}, svd_impl(*this));
             }
 
-            return pageop<0>(2, [svd_impl](auto page) {
+            return pageop/*<0>*/(2, [svd_impl](auto page) {
                 return svd_impl(page);
             });
         }
@@ -7911,7 +7911,7 @@ namespace details {
                 return tril_impl(*this);
             }
 
-            return pageop<0>(2, [tril_impl](auto page) {
+            return pageop/*<0>*/(2, [tril_impl](auto page) {
                 return tril_impl(page);
             });
         }
@@ -7962,7 +7962,7 @@ namespace details {
                 return triu_impl(*this);
             }
 
-            return pageop<0>(2, [triu_impl](auto page) {
+            return pageop/*<0>*/(2, [triu_impl](auto page) {
                 return triu_impl(page);
             });
         }
@@ -8070,7 +8070,7 @@ namespace details {
                     return diag_from_matrix_impl(*this);
                 }
 
-                return pageop<0>(2, [diag_from_matrix_impl](auto page) {
+                return pageop/*<0>*/(2, [diag_from_matrix_impl](auto page) {
                     return diag_from_matrix_impl(page);
                 });
             }
@@ -8079,7 +8079,7 @@ namespace details {
                     return diag_to_matrix_impl(*this);
                 }
 
-                return pageop<0>(1, [diag_to_matrix_impl](auto page) {
+                return pageop/*<0>*/(1, [diag_to_matrix_impl](auto page) {
                     return diag_to_matrix_impl(page(arrnd_shape_preset::vector));
                 });
             }
@@ -8121,7 +8121,7 @@ namespace details {
                 return replaced_type<bool>({1}, {is_banded_impl(*this)});
             }
 
-            return pageop<0>(2, [is_banded_impl](auto page) {
+            return pageop/*<0>*/(2, [is_banded_impl](auto page) {
                 return is_banded_impl(page);
             });
         }
@@ -8186,7 +8186,7 @@ namespace details {
                 return cholesky_impl(*this);
             }
 
-            return pageop<0>(2, [cholesky_impl](auto page) {
+            return pageop/*<0>*/(2, [cholesky_impl](auto page) {
                 return cholesky_impl(page);
             });
         }
@@ -8219,7 +8219,7 @@ namespace details {
             }
 
             if (b.header().is_matrix()) {
-                return pageop<0>(2, [&b, solve_impl](auto page) {
+                return pageop/*<0>*/(2, [&b, solve_impl](auto page) {
                     return solve_impl(page, b);
                 });
             } else {
@@ -8230,10 +8230,10 @@ namespace details {
                         * b.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto b_pages = b.template pages<0>(b.header().dims().size() - 3, 0, true);
+                auto b_pages = b./*template */pages/*<0>*/(b.header().dims().size() - 3, 0, true);
                 typename decltype(b_pages)::indexer_type b_pages_gen(b_pages.header());
 
-                return pageop<0>(2, [&b_pages, &b_pages_gen, &solve_impl](auto page) {
+                return pageop/*<0>*/(2, [&b_pages, &b_pages_gen, &solve_impl](auto page) {
                     return solve_impl(page, b_pages[*(b_pages_gen++)]);
                 });
             }
@@ -8613,62 +8613,62 @@ namespace details {
         //    return collapse<this_type::depth>();
         //}
 
-        template <std::int64_t Level, typename Func, typename... Args>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
-        constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
-        {
-            constexpr bool is_void_func
-                = std::is_same_v<std::invoke_result_t<Func, inner_this_type<Level>, Args...>, void>;
-            using func_res_type = std::conditional_t<is_void_func, inner_this_type<Level>,
-                std::invoke_result_t<Func, inner_this_type<Level>, Args...>>;
-            using returned_type = std::conditional_t<arrnd_compliant<func_res_type>
-                    && same_depth<func_res_type, inner_this_type<Level>>,
-                inner_replaced_type<func_res_type, Level - 1>, inner_replaced_type<func_res_type, Level>>;
+        //template <std::int64_t Level, typename Func, typename... Args>
+        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
+        //constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
+        //{
+        //    constexpr bool is_void_func
+        //        = std::is_same_v<std::invoke_result_t<Func, inner_this_type<Level>, Args...>, void>;
+        //    using func_res_type = std::conditional_t<is_void_func, inner_this_type<Level>,
+        //        std::invoke_result_t<Func, inner_this_type<Level>, Args...>>;
+        //    using returned_type = std::conditional_t<arrnd_compliant<func_res_type>
+        //            && same_depth<func_res_type, inner_this_type<Level>>,
+        //        inner_replaced_type<func_res_type, Level - 1>, inner_replaced_type<func_res_type, Level>>;
 
-            if (empty()) {
-                return returned_type();
-            }
+        //    if (empty()) {
+        //        return returned_type();
+        //    }
 
-            returned_type res(hdr_.dims());
+        //    returned_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename returned_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename returned_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template pageop<Level - 1, Func, Args...>(
-                    page_size, std::forward<Func>(func), std::forward<Args>(args)...);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template pageop<Level - 1, Func, Args...>(
+        //            page_size, std::forward<Func>(func), std::forward<Args>(args)...);
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
-        template <std::int64_t Level, typename Func, typename... Args>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
-        [[nodiscard]] constexpr auto movop(
-            size_type axis, interval_type window, bool bounded, Func&& func, Args&&... args) const
-        {
-            using func_res_type = std::invoke_result_t<Func, inner_this_type<Level>, Args...>;
-            using movop_type = inner_replaced_type<func_res_type, Level>;
+        //template <std::int64_t Level, typename Func, typename... Args>
+        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
+        //[[nodiscard]] constexpr auto movop(
+        //    size_type axis, interval_type window, bool bounded, Func&& func, Args&&... args) const
+        //{
+        //    using func_res_type = std::invoke_result_t<Func, inner_this_type<Level>, Args...>;
+        //    using movop_type = inner_replaced_type<func_res_type, Level>;
 
-            if (empty()) {
-                return movop_type();
-            }
+        //    if (empty()) {
+        //        return movop_type();
+        //    }
 
-            movop_type res(hdr_.dims());
+        //    movop_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename movop_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename movop_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template movop<Level - 1, Func, Args...>(
-                    axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template movop<Level - 1, Func, Args...>(
+        //            axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
-        template <std::int64_t Level, typename Func, typename... Args>
-            requires(Level == 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
+        template </*std::int64_t Level, */typename Func, typename... Args>
+            requires(/*Level == 0 && */invocable_no_arrnd<Func, inner_this_type</*Level*/0>, Args...>)
         [[nodiscard]] constexpr auto movop(
             size_type axis, interval_type window, bool bounded, Func&& func, Args&&... args) const
         {
@@ -8698,48 +8698,48 @@ namespace details {
             return res;
         }
 
-        template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, inner_this_type<this_type::depth>, Args...>)
-        [[nodiscard]] constexpr auto movop(
-            size_type axis, interval_type window, bool bounded, Func&& func, Args&&... args) const
-        {
-            return movop<this_type::depth>(
-                axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
-        }
+        //template <typename Func, typename... Args>
+        //    requires(invocable_no_arrnd<Func, inner_this_type<this_type::depth>, Args...>)
+        //[[nodiscard]] constexpr auto movop(
+        //    size_type axis, interval_type window, bool bounded, Func&& func, Args&&... args) const
+        //{
+        //    return movop<this_type::depth>(
+        //        axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+        //}
 
-        template <std::int64_t Level, typename ReduceFunc, typename TransformFunc, typename... Args>
-            requires(Level > 0 && invocable_no_arrnd<TransformFunc, inner_this_type<Level>, Args...>
-                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>,
-                    std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>>)
-        [[nodiscard]] constexpr auto cumop(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
-            TransformFunc&& tfunc, Args&&... args) const
-        {
-            using trans_res_type = std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>;
-            using acc_res_type = std::invoke_result_t<ReduceFunc, trans_res_type, trans_res_type>;
-            using cumop_type = inner_replaced_type<acc_res_type, Level>;
+        //template <std::int64_t Level, typename ReduceFunc, typename TransformFunc, typename... Args>
+        //    requires(Level > 0 && invocable_no_arrnd<TransformFunc, inner_this_type<Level>, Args...>
+        //        && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>,
+        //            std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>>)
+        //[[nodiscard]] constexpr auto cumop(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
+        //    TransformFunc&& tfunc, Args&&... args) const
+        //{
+        //    using trans_res_type = std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>;
+        //    using acc_res_type = std::invoke_result_t<ReduceFunc, trans_res_type, trans_res_type>;
+        //    using cumop_type = inner_replaced_type<acc_res_type, Level>;
 
-            if (empty()) {
-                return cumop_type();
-            }
+        //    if (empty()) {
+        //        return cumop_type();
+        //    }
 
-            cumop_type res(hdr_.dims());
+        //    cumop_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename cumop_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename cumop_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template cumop<Level - 1, ReduceFunc, TransformFunc, Args...>(axis,
-                    window, bounded, std::forward<ReduceFunc>(rfunc), std::forward<TransformFunc>(tfunc),
-                    std::forward<Args>(args)...);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template cumop<Level - 1, ReduceFunc, TransformFunc, Args...>(axis,
+        //            window, bounded, std::forward<ReduceFunc>(rfunc), std::forward<TransformFunc>(tfunc),
+        //            std::forward<Args>(args)...);
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
-        template <std::int64_t Level, typename ReduceFunc, typename TransformFunc, typename... Args>
-            requires(Level == 0 && invocable_no_arrnd<TransformFunc, inner_this_type<Level>, Args...>
-                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>,
-                    std::invoke_result_t<TransformFunc, inner_this_type<Level>, Args...>>)
+        template </*std::int64_t Level, */typename ReduceFunc, typename TransformFunc, typename... Args>
+            requires(/*Level == 0 && */invocable_no_arrnd<TransformFunc, inner_this_type</*Level*/0>, Args...>
+                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type</*Level*/0>, Args...>,
+                    std::invoke_result_t<TransformFunc, inner_this_type</*Level*/0>, Args...>>)
         [[nodiscard]] constexpr auto cumop(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
             TransformFunc&& tfunc, Args&&... args) const
         {
@@ -8780,20 +8780,20 @@ namespace details {
             return res;
         }
 
-        template <typename ReduceFunc, typename TransformFunc, typename... Args>
-            requires(invocable_no_arrnd<TransformFunc, inner_this_type<this_type::depth>, Args...>
-                && invocable_no_arrnd<ReduceFunc,
-                    std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>,
-                    std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>>)
-        [[nodiscard]] constexpr auto cumop(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
-            TransformFunc&& tfunc, Args&&... args) const
-        {
-            return cumop<this_type::depth>(axis, window, bounded, std::forward<ReduceFunc>(rfunc),
-                std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
-        }
+        //template <typename ReduceFunc, typename TransformFunc, typename... Args>
+        //    requires(invocable_no_arrnd<TransformFunc, inner_this_type<this_type::depth>, Args...>
+        //        && invocable_no_arrnd<ReduceFunc,
+        //            std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>,
+        //            std::invoke_result_t<TransformFunc, inner_this_type<this_type::depth>, Args...>>)
+        //[[nodiscard]] constexpr auto cumop(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
+        //    TransformFunc&& tfunc, Args&&... args) const
+        //{
+        //    return cumop<this_type::depth>(axis, window, bounded, std::forward<ReduceFunc>(rfunc),
+        //        std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
+        //}
 
-        template <std::int64_t Level, typename Func, typename... Args>
-            requires(Level == 0 && invocable_no_arrnd<Func, this_type, Args...>)
+        template </*std::int64_t Level, */typename Func, typename... Args>
+            requires(/*Level == 0 && */invocable_no_arrnd<Func, this_type, Args...>)
         constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
         {
             constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type, Args...>, void>;
@@ -8882,43 +8882,43 @@ namespace details {
             }
         }
 
-        template <typename Func, typename... Args>
-            requires(invocable_no_arrnd<Func, this_type, Args...>)
-        constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
-        {
-            return pageop<this_type::depth>(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
-        }
+        //template <typename Func, typename... Args>
+        //    requires(invocable_no_arrnd<Func, this_type, Args...>)
+        //constexpr auto pageop(size_type page_size, Func&& func, Args&&... args) const
+        //{
+        //    return pageop<this_type::depth>(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
+        //}
 
-        template <std::int64_t Level>
-            requires(Level > 0)
-        [[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
-        {
-            using pages_type = inner_replaced_type<inner_this_type<Level>, Level>;
+        //template <std::int64_t Level>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
+        //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        //{
+        //    using pages_type = inner_replaced_type<inner_this_type<Level>, Level>;
 
-            if (empty()) {
-                return pages_type();
-            }
+        //    if (empty()) {
+        //        return pages_type();
+        //    }
 
-            pages_type res(hdr_.dims());
+        //    pages_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename pages_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename pages_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template pages<Level - 1>(
-                    axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template pages<Level - 1>(
+        //            axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        //    }
 
-            return res;
-        }
-        template <std::int64_t Level>
-            requires(Level == 0)
+        //    return res;
+        //}
+        //template <std::int64_t Level>
+            //requires(Level == 0)
         constexpr auto pages(size_type axis, size_type division = 0,
             bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
             using page_type = this_type;
-            using pages_type = inner_replaced_type<page_type, Level>;
+            using pages_type = inner_replaced_type<page_type, /*Level*/0>;
 
             if (empty()) {
                 return pages_type();
@@ -8962,11 +8962,11 @@ namespace details {
             return pages./*template */reshape/*<Level>*/(
                 pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
-        [[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
-        {
-            return pages<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-        }
+        //[[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
+        //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        //{
+        //    return pages<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        //}
 
         template <std::int64_t Level, signed_integral_type_iterator AxesIt>
             requires(Level > 0)
@@ -13767,18 +13767,18 @@ namespace details {
     //    return collapse<ArCo::depth>(arr);
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
         typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return arr.template pages<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        return arr./*template */pages/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
-    {
-        return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
+    //{
+    //    return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
     [[nodiscard]] inline constexpr auto split(
@@ -14220,49 +14220,49 @@ namespace details {
         return merge<ArCo::depth - 1>(arr);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
         typename ArCo::interval_type window, bool bounded, Func&& func, Args&&... args)
     {
-        return arr.template movop<Level>(axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr./*template */movop/*<Level>*/(axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <arrnd_compliant ArCo, typename Func, typename... Args>
-    [[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::interval_type window, bool bounded, Func&& func, Args&&... args)
-    {
-        return movop<ArCo::depth>(arr, axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
-    }
+    //template <arrnd_compliant ArCo, typename Func, typename... Args>
+    //[[nodiscard]] inline constexpr auto movop(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::interval_type window, bool bounded, Func&& func, Args&&... args)
+    //{
+    //    return movop<ArCo::depth>(arr, axis, window, bounded, std::forward<Func>(func), std::forward<Args>(args)...);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
     [[nodiscard]] inline constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
         typename ArCo::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc,
         Args&&... args)
     {
-        return arr.template cumop<Level>(axis, window, bounded, std::forward<ReduceFunc>(rfunc),
+        return arr./*template */cumop/*<Level>*/(axis, window, bounded, std::forward<ReduceFunc>(rfunc),
             std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
     }
 
-    template <arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
-    [[nodiscard]] inline constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc,
-        Args&&... args)
-    {
-        return cumop<ArCo::depth>(arr, axis, window, bounded, std::forward<ReduceFunc>(rfunc),
-            std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
-    }
+    //template <arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
+    //[[nodiscard]] inline constexpr auto cumop(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc,
+    //    Args&&... args)
+    //{
+    //    return cumop<ArCo::depth>(arr, axis, window, bounded, std::forward<ReduceFunc>(rfunc),
+    //        std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Func, typename... Args>
     inline constexpr auto pageop(const ArCo& arr, typename ArCo::size_type page_size, Func&& func, Args&&... args)
     {
-        return arr.template pageop<Level>(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
+        return arr./*template */pageop/*<Level>*/(page_size, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 
-    template <arrnd_compliant ArCo, typename Func, typename... Args>
-    inline constexpr auto pageop(const ArCo& arr, typename ArCo::size_type page_size, Func&& func, Args&&... args)
-    {
-        return pageop<ArCo::depth>(arr, page_size, std::forward<Func>(func), std::forward<Args>(args)...);
-    }
+    //template <arrnd_compliant ArCo, typename Func, typename... Args>
+    //inline constexpr auto pageop(const ArCo& arr, typename ArCo::size_type page_size, Func&& func, Args&&... args)
+    //{
+    //    return pageop<ArCo::depth>(arr, page_size, std::forward<Func>(func), std::forward<Args>(args)...);
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)

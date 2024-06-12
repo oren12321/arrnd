@@ -1683,7 +1683,7 @@ TEST(arrnd_test, pages)
         arrnd<arrnd<int>> narr({3, 1, 2},
             {arrnd<int>({2}, {1, 2}), arrnd<int>({2}, {3, 4}), arrnd<int>({2}, {5, 6}), arrnd<int>({2}, {7, 8}),
                 arrnd<int>({2}, {9, 10}), arrnd<int>({2}, {11, 12})});
-        auto p = pages<0>(narr, 0, 0, true);
+        auto p = pages/*<0>*/(narr, 0, 0, true);
 
         EXPECT_TRUE(all_equal(p,
             arrnd<arrnd<arrnd<int>>>({3},
@@ -1732,11 +1732,14 @@ TEST(arrnd_test, movop)
 
         {
             EXPECT_TRUE(
-                all_equal(arrnd<arrnd<double>>(), movop<0>(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum, 0.5)));
+                all_equal(arrnd<arrnd<double>>(), movop/*<0>*/(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum, 0.5)));
         }
 
         {
-            auto res = movop(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
+            //auto res = movop(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
+            auto res = transform<0>(arr, [weigted_sum](const auto& val) {
+                return movop(val, 0, {-1, 2}, false, weigted_sum, 0.5);
+            });
 
             EXPECT_TRUE(all_equal(res,
                 arrnd<arrnd<double>>({1, 2},
@@ -1745,7 +1748,10 @@ TEST(arrnd_test, movop)
         }
 
         {
-            auto res = movop(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
+            //auto res = movop(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
+            auto res = transform<0>(arr, [weigted_sum](const auto& val) {
+                return movop(val, 0, {-1, 2}, true, weigted_sum, 0.5);
+            });
 
             EXPECT_TRUE(all_equal(
                 res, arrnd<arrnd<double>>({1, 2}, {arrnd<double>(), arrnd<double>({7}, {5, 7, 9, 11, 13, 15, 17})})));
@@ -1774,7 +1780,10 @@ TEST(arrnd_test, cumop)
         }
 
         {
-            auto res = cumop(arr, 0, {-1, 2}, false, add_prev, slice_sum);
+            //auto res = cumop(arr, 0, {-1, 2}, false, add_prev, slice_sum);
+            auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
+                return cumop(val, 0, {-1, 2}, false, add_prev, slice_sum);
+            });
 
             EXPECT_TRUE(all_equal(res,
                 arrnd<arrnd<int>>({1, 2},
@@ -1782,7 +1791,10 @@ TEST(arrnd_test, cumop)
         }
 
         {
-            auto res = cumop(arr, 0, {-1, 2}, true, add_prev, slice_sum);
+            //auto res = cumop(arr, 0, {-1, 2}, true, add_prev, slice_sum);
+            auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
+                return cumop(val, 0, {-1, 2}, true, add_prev, slice_sum);
+            });
 
             EXPECT_TRUE(all_equal(
                 res, arrnd<arrnd<int>>({1, 2}, {arrnd<int>(), arrnd<int>({7}, {10, 24, 42, 64, 90, 120, 154})})));
@@ -1893,9 +1905,16 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}));
 
-        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
-            page.apply([](int value) {
-                return value * 2;
+        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //    page.apply([](int value) {
+        //        return value * 2;
+        //    });
+        //});
+        auto res = transform<0>(arr, [](const auto& val) {
+            return pageop(val, 2, [](arrnd<int> page) {
+                page.apply([](int value) {
+                    return value * 2;
+                });
             });
         });
 
@@ -1917,8 +1936,13 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
-            return page.transpose({1, 0});
+        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //    return page.transpose({1, 0});
+        //});
+        auto res = transform<0>(arr, [](const auto& val) {
+            return pageop(val, 2, [](arrnd<int> page) {
+                return page.transpose({1, 0});
+            });
         });
 
         EXPECT_TRUE(all_equal(res, arrnd<arrnd<int>>({1}, {arrnd<int>({3, 2, 1}, {1, 2, 3, 4, 5, 6})})));
@@ -1952,8 +1976,13 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
-            return 0.5 * page.sum();
+        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //    return 0.5 * page.sum();
+        //});
+        auto res = transform<0>(arr, [](const auto& val) {
+            return pageop(val, 2, [](arrnd<int> page) {
+                return 0.5 * page.sum();
+            });
         });
 
         EXPECT_TRUE(all_equal(res, arrnd<arrnd<double>>({1}, {arrnd<double>({3, 1}, {1.5, 3.5, 5.5})})));
