@@ -8391,36 +8391,36 @@ namespace details {
         //    return res;
         //}
 
-        template <std::int64_t Level>
-            requires(Level > 0)
+        //template <std::int64_t Level>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
+        //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        //{
+        //    using expanded_type = inner_replaced_type<inner_this_type<Level>, Level>;
+
+        //    if (empty()) {
+        //        return expanded_type();
+        //    }
+
+        //    expanded_type res(hdr_.dims());
+
+        //    indexer_type gen(hdr_);
+        //    typename expanded_type::indexer_type res_gen(res.header());
+
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template expand<Level - 1>(
+        //            axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        //    }
+
+        //    return res;
+        //}
+
+        //template <std::int64_t Level>
+            //requires(Level == 0)
         [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
             bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
-            using expanded_type = inner_replaced_type<inner_this_type<Level>, Level>;
-
-            if (empty()) {
-                return expanded_type();
-            }
-
-            expanded_type res(hdr_.dims());
-
-            indexer_type gen(hdr_);
-            typename expanded_type::indexer_type res_gen(res.header());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template expand<Level - 1>(
-                    axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-            }
-
-            return res;
-        }
-
-        template <std::int64_t Level>
-            requires(Level == 0)
-        [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
-        {
-            using expanded_type = inner_replaced_type<inner_this_type<Level>, Level>;
+            using expanded_type = inner_replaced_type<inner_this_type</*Level*/0>, /*Level*/0>;
 
             if (empty()) {
                 return expanded_type();
@@ -8502,40 +8502,40 @@ namespace details {
             return res;
         }
 
-        [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
-        {
-            return expand<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-        }
+        //[[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
+        //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        //{
+        //    return expand<this_type::depth>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        //}
 
-        template <std::int64_t Level>
-            requires(Level > 1 && !this_type::is_flat)
-        [[nodiscard]] constexpr auto collapse() const
-        {
-            using collapsed_type = inner_replaced_type<inner_value_type<Level>, Level - 1>;
+        //template <std::int64_t Level>
+        //    requires(Level > 1 && !this_type::is_flat)
+        //[[nodiscard]] constexpr auto collapse() const
+        //{
+        //    using collapsed_type = inner_replaced_type<inner_value_type<Level>, Level - 1>;
 
-            if (empty()) {
-                return collapsed_type();
-            }
+        //    if (empty()) {
+        //        return collapsed_type();
+        //    }
 
-            collapsed_type res(hdr_.dims());
+        //    collapsed_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename collapsed_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename collapsed_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template collapse<Level - 1>();
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template collapse<Level - 1>();
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
         /**
         * @note collapse should only used on valid expanded arrays
         */
-        template <std::int64_t Level>
-            requires(Level == 1 && !this_type::is_flat)
-        [[nodiscard]] constexpr auto collapse() const
+        //template <std::int64_t Level>
+            //requires(Level == 1 && !this_type::is_flat)
+        [[nodiscard]] constexpr auto collapse() const requires(!this_type::is_flat)
         {
             using collapsed_type = value_type;
 
@@ -8607,11 +8607,11 @@ namespace details {
             //return res;
         }
 
-        [[nodiscard]] constexpr auto collapse() const
-            requires(!this_type::is_flat)
-        {
-            return collapse<this_type::depth>();
-        }
+        //[[nodiscard]] constexpr auto collapse() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return collapse<this_type::depth>();
+        //}
 
         template <std::int64_t Level, typename Func, typename... Args>
             requires(Level > 0 && invocable_no_arrnd<Func, inner_this_type<Level>, Args...>)
@@ -8832,7 +8832,7 @@ namespace details {
                 }
             }
 
-            auto expanded = expand<Level>(hdr_.dims().size() - (page_size + 1), 0, true);
+            auto expanded = expand/*<Level>*/(hdr_.dims().size() - (page_size + 1), 0, true);
 
             using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
 
@@ -8878,7 +8878,7 @@ namespace details {
                 return *this;
             } else {
 
-                return trans_expanded.template collapse<Level + 1>();
+                return trans_expanded./*template */collapse/*<Level + 1>*/();
             }
         }
 
@@ -8933,7 +8933,7 @@ namespace details {
             // find axis
             // the first axis from the end bigger than one, and after the page
 
-            pages_type pages = expand<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+            pages_type pages = expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
 
             //auto fixed_axis = axis;
             //if (find_closest_axis_dim_bigger_than_one_to_the_left) {
@@ -9059,7 +9059,7 @@ namespace details {
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
-                auto exp = arr.template expand<0>(arr.header().dims().size() - current_depth, division);
+                auto exp = arr./*template */expand/*<0>*/(arr.header().dims().size() - current_depth, division);
                 typename decltype(exp)::indexer_type exp_gen(exp.header());
 
                 for (; exp_gen; ++exp_gen) {
@@ -9870,7 +9870,7 @@ namespace details {
 
             assert(axis >= 0 && axis < hdr_.dims().size());
 
-            auto expanded = expand<Level>(axis);
+            auto expanded = expand/*<Level>*/(axis);
 
             auto sorted = expanded.template sort<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
 
@@ -9960,7 +9960,7 @@ namespace details {
 
             assert(axis >= 0 && axis < hdr_.dims().size());
 
-            auto expanded = expand<Level>(axis);
+            auto expanded = expand/*<Level>*/(axis);
 
             return expanded.template is_sorted<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
 
@@ -10095,7 +10095,7 @@ namespace details {
 
             replaced_type<size_type> order({std::distance(first_order, last_order)}, first_order, last_order);
 
-            auto expanded = expand<Level>(axis);
+            auto expanded = expand/*<Level>*/(axis);
 
             auto z = zip(zipped_cont(order), zipped_cont(expanded));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
@@ -13742,30 +13742,30 @@ namespace details {
         return operator--(arr, int{});
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
         typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     {
-        return arr.template expand<Level>(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        return arr./*template */expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
-    {
-        return expand<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
+    //{
+    //    return expand<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
     {
-        return arr.template collapse<Level>();
+        return arr./*template */collapse/*<Level>*/();
     }
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
-    {
-        return collapse<ArCo::depth>(arr);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
+    //{
+    //    return collapse<ArCo::depth>(arr);
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,

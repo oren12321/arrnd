@@ -1362,13 +1362,16 @@ TEST(arrnd_test, expand)
 
     arrnd<arrnd<int>> narr({2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
 
-    EXPECT_TRUE(all_equal(expand(narr, 0),
+    EXPECT_TRUE(all_equal(/*expand(narr, 0)*/ transform<0>(narr,
+                              [](const auto& val) {
+                                  return expand(val, 0);
+                              }),
         arrnd<arrnd<arrnd<int>>>({2, 1},
             {arrnd<arrnd<int>>({3, 1, 1},
                  {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6})}),
                 arrnd<arrnd<int>>({2, 1}, {arrnd<int>({1, 3}, {1, 2, 3}), arrnd<int>({1, 3}, {4, 5, 6})})})));
 
-    EXPECT_TRUE(all_equal(expand<0>(narr, 0),
+    EXPECT_TRUE(all_equal(expand/*<0>*/(narr, 0),
         arrnd<arrnd<arrnd<int>>>({2, 1},
             {arrnd<arrnd<int>>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
                 arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
@@ -1825,9 +1828,9 @@ TEST(arrnd_test, collapse)
         arrnd<arrnd<int>> arr(
             {2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
 
-        auto exp = expand<1>(arr, 0);
+        auto exp = expand/*<1>*/(arr, 0);
 
-        auto col = collapse<2>(exp);
+        auto col = collapse/*<2>*/(exp);
 
         EXPECT_TRUE(all_equal(arr, col));
 
@@ -1837,11 +1840,11 @@ TEST(arrnd_test, collapse)
 
     // nested array
     {
-        auto exp = expand<1>(arrnd<arrnd<int>>({2, 1},
+        auto exp = expand/*<1>*/(arrnd<arrnd<int>>({2, 1},
                                  {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
             0);
 
-        auto col = collapse<2>(exp);
+        auto col = collapse/*<2>*/(exp);
 
         EXPECT_TRUE(all_equal(arrnd<arrnd<int>>({2, 1},
                                   {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
