@@ -2562,7 +2562,10 @@ TEST(arrnd_test, resize)
         oc::arrnd<Integer_array> inarr(
             {1, 2}, {Integer_array({5}, {1, 2, 3, 4, 5}), Integer_array({1, 5}, {6, 7, 8, 9, 10})});
 
-        oc::arrnd<Integer_array> rnarr1 = oc::resize(inarr, {2, 2});
+        //oc::arrnd<Integer_array> rnarr1 = oc::resize(inarr, {2, 2});
+        oc::arrnd<Integer_array> rnarr1 = oc::transform<0>(inarr, [](const auto& val) {
+            return oc::resize(val, {2, 2});
+        });
         EXPECT_FALSE(oc::all_equal(rnarr1, inarr));
         //std::cout << rnarr1[{0, 0}] << "\n\n";
         //std::cout << rnarr1[{0, 1}] << "\n\n";
@@ -2573,7 +2576,7 @@ TEST(arrnd_test, resize)
         EXPECT_NE((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_NE((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        oc::arrnd<Integer_array> rnarr2 = oc::resize<0>(inarr, {1});
+        oc::arrnd<Integer_array> rnarr2 = oc::resize/*<0>*/(inarr, {1});
         EXPECT_FALSE(oc::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::all_equal(rnarr2[{0}], inarr[{0, 0}]));
         EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));

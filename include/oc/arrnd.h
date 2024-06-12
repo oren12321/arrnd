@@ -5584,8 +5584,8 @@ namespace details {
         //    return reshape<this_type::depth>(shape);
         //}
 
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level == 0)
+        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
+            //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -5632,50 +5632,50 @@ namespace details {
 
             return res;
         }
-        template <std::int64_t Level, signed_integral_type_iterator InputIt>
-            requires(Level > 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
-        {
-            if (empty()) {
-                return *this;
-            }
+        //template <std::int64_t Level, signed_integral_type_iterator InputIt>
+        //    requires(Level > 0)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
+        //    const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        //{
+        //    if (empty()) {
+        //        return *this;
+        //    }
 
-            this_type res(hdr_.dims());
+        //    this_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.hdr_);
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template resize<Level - 1, InputIt>(first_new_dim, last_new_dim);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template resize<Level - 1, InputIt>(first_new_dim, last_new_dim);
+        //    }
 
-            return res;
-        }
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
-        {
-            return resize<this_type::depth>(first_new_dim, last_new_dim);
-        }
-        template <std::int64_t Level, signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
-        {
-            return resize<Level>(std::begin(new_dims), std::end(new_dims));
-        }
+        //    return res;
+        //}
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
+        //    const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        //{
+        //    return resize<this_type::depth>(first_new_dim, last_new_dim);
+        //}
+        //template <std::int64_t Level, signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
+        //{
+        //    return resize<Level>(std::begin(new_dims), std::end(new_dims));
+        //}
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
         {
-            return resize<this_type::depth, Cont>(std::begin(new_dims), std::end(new_dims));
+            return resize/*<this_type::depth, Cont>*/(std::begin(new_dims), std::end(new_dims));
         }
-        template <std::int64_t Level>
+        //template <std::int64_t Level>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
+        //{
+        //    return resize<Level>(new_dims.begin(), new_dims.end());
+        //}
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
         {
-            return resize<Level>(new_dims.begin(), new_dims.end());
-        }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
-        {
-            return resize<this_type::depth>(new_dims.begin(), new_dims.end());
+            return resize/*<this_type::depth>*/(new_dims.begin(), new_dims.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const U (&new_dims)[M]) const
@@ -6752,7 +6752,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.template resize<Level>({res_count});
+                return res./*template */resize/*<Level>*/({res_count});
             }
 
             return res;
@@ -6819,7 +6819,7 @@ namespace details {
                 }
 
                 if (res_count < hdr_.numel()) {
-                    return res.template resize<Level>({res_count});
+                    return res./*template */resize/*<Level>*/({res_count});
                 }
 
                 return res;
@@ -6939,7 +6939,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.template resize<Level>({res_count});
+                return res./*template */resize/*<Level>*/({res_count});
             }
 
             return res;
@@ -7009,7 +7009,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res.template resize<Level>({res_count});
+                return res./*template */resize/*<Level>*/({res_count});
             }
 
             return res;
@@ -8497,7 +8497,7 @@ namespace details {
             //}
 
             if (count != fixed_div) {
-                return res.template resize<Level>({count});
+                return res./*template */resize/*<Level>*/({count});
             }
             return res;
         }
@@ -10218,7 +10218,7 @@ namespace details {
             impl(returned_type({std::distance(first_sub, last_sub)}, first_sub, last_sub), 0, false);
 
             if (res.header().numel() > actual_num_adj) {
-                return res.template resize<Level>({actual_num_adj});
+                return res./*template */resize/*<Level>*/({actual_num_adj});
             }
             return res;
         }
@@ -11906,45 +11906,45 @@ namespace details {
     //    return reshape<ArCo::depth>(arr, shape);
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto resize(
         const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
     {
-        return arr.template resize<Level>(first_new_dim, last_new_dim);
+        return arr./*template */resize/*<Level>*/(first_new_dim, last_new_dim);
     }
-    template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
     [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
     {
-        return resize<Level>(arr, std::begin(new_dims), std::end(new_dims));
+        return resize/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
     }
-    template <std::int64_t Level, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto resize(
         const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
     {
-        return resize<Level>(arr, new_dims.begin(), new_dims.end());
+        return resize/*<Level>*/(arr, new_dims.begin(), new_dims.end());
     }
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto resize(const ArCo& arr, const U (&new_dims)[M])
     //{
     //    return resize<Level>(arr, std::begin(new_dims), std::end(new_dims));
     //}
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(
-        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
-    {
-        return arr.template resize<ArCo::depth>(first_new_dim, last_new_dim);
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
-    {
-        return resize<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
-    }
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto resize(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
-    {
-        return resize<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
-    }
+    //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto resize(
+    //    const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    //{
+    //    return arr.template resize<ArCo::depth>(first_new_dim, last_new_dim);
+    //}
+    //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
+    //{
+    //    return resize<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
+    //}
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto resize(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    //{
+    //    return resize<ArCo::depth>(arr, new_dims.begin(), new_dims.end());
+    //}
     //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto resize(const ArCo& arr, const U (&new_dims)[M])
     //{
