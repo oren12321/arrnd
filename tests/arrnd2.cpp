@@ -89,196 +89,196 @@ TEST(arrnd_test, inverse)
                 arrnd<double>({3, 3}, {0.2, 0.2, 0.0, -0.2, 0.3, 1.0, 0.2, -0.3, 0.0})})));
 }
 
-TEST(arrnd_test, solve)
-{
-    using namespace oc;
-
-    arrnd<arrnd<double>> arr({2},
-        {arrnd<double>({2, 2}, {1, 2, 3, 5}),
-            arrnd<double>({2, 3, 3}, {2, 1, 1, -1, 1, -1, 1, 2, 3, 1, 2, -2, 2, 1, -5, 1, -4, 1})});
-
-    arrnd<arrnd<double>> b({2}, {arrnd<double>({2, 1}, {1, 2}), arrnd<double>({2, 3, 1}, {2, 3, -10, -15, -21, 18})});
-
-    arrnd<arrnd<double>> x({2}, {arrnd<double>({2, 1}, {-1, 1}), arrnd<double>({2, 3, 1}, {3, 1, -5, -1, -4, 3})});
-
-    EXPECT_TRUE(all_close(solve(arr, b), x));
-}
-
-TEST(arrnd_test, DISABLED_cholesky)
-{
-    using namespace oc;
-
-    arrnd<double> arr({3, 3}, {4, 12, -16, 12, 37, -43, -16, -43, 98});
-    arrnd<double> l({3, 3}, {2, 0, 0, 6, 1, 0, -8, 5, 3});
-
-    EXPECT_TRUE(all_close(cholesky(arr), l));
-}
-
-TEST(arrnd_test, DISABLED_lu)
-{
-    using namespace oc;
-
-    arrnd<double> arr({3, 3}, {2, -1, -2, -4, 6, 3, -4, -2, 8});
-
-    auto res = lu(arr)(0);
-
-    arrnd<double> l({3, 3}, {1, 0, 0, -2, 1, 0, -2, -1, 1});
-    arrnd<double> u({3, 3}, {2, -1, -2, 0, 4, -1, 0, 0, 3});
-
-    EXPECT_TRUE(all_close(std::get<0>(res), l));
-    EXPECT_TRUE(all_close(std::get<1>(res), u));
-}
-
-TEST(arrnd_test, DISABLED_qr)
-{
-    using namespace oc;
-
-    {
-        arrnd<double> arr({4, 3}, {-1, -1, 1, 1, 3, 3, -1, -1, 5, 1, 3, 7});
-
-        auto [q, r] = qr(arr)(0);
-
-        //arrnd<double> q({4, 3}, {-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5});
-        //arrnd<double> r({3, 3}, {2, 4, 2, 0, 2, 8, 0, 0, 4});
-
-        //std::cout <<q<< "\n";
-        //std::cout << r << "\n\n";
-
-        //std::cout << std::get<0>(res) << "\n";
-        //std::cout << std::get<1>(res) << "\n\n";
-        //std::cout << std::get<0>(res).matmul(std::get<1>(res)) << "\n\n";
-
-        EXPECT_TRUE(all_close(q,
-            arrnd<double>(
-                {4, 4}, {-0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5})));
-        EXPECT_TRUE(all_close(r,
-            arrnd<double>({4, 3},
-                {2.0, 4.0, 2.0, -3.05311e-16, 2.0, 8.0, 2.77556e-16, -3.88578e-16, 4.0, -3.33067e-16, -1.11022e-16, 8.88178e-16})));
-
-        EXPECT_TRUE(all_close(matmul(q, r), arr));
-    }
-
-    {
-        arrnd<double> arr({3, 3}, {3, 2, 4, 2, 0, 2, 4, 2, 3});
-
-        auto [q, r] = qr(arr)(0);
-
-        //arrnd<double> q(
-        //    {3, 3}, {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667});
-        //arrnd<double> r({3, 3}, {5.38516, 2.59973, 5.19947, 0, 1.11417, 0.433289, 0, 0, 1.33333});
-
-        EXPECT_TRUE(all_close(q,
-            arrnd<double>({3, 3},
-                {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667})));
-        EXPECT_TRUE(all_close(r,
-            arrnd<double>({3, 3},
-                {5.38516, 2.59973, 5.19947, -7.87957e-16, 1.11417, 0.433289, -1.39389e-15, 5.55112e-17, 1.33333})));
-
-        EXPECT_TRUE(all_close(matmul(q, r), arr));
-    }
-}
-
-TEST(arrnd_test, DISABLED_hess)
-{
-    using namespace oc;
-
-    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
-
-    auto [q, h] = hess(arr)(0);
-
-    //std::cout << q << "\n";
-    //std::cout << h << "\n";
-
-    EXPECT_TRUE(all_close(q,
-        arrnd<double>({4, 4},
-            {1., 0., 0., 0., 0., -0.455842, 0.863773, 0.214719, 0., -0.569803, -0.0978779, -0.815932, 0., -0.683763, -0.494284,
-                0.536797})));
-    EXPECT_TRUE(all_close(h,
-        arrnd<double>({4, 4},
-            {2., -7.06556, -0.271611, 0.0644157, -8.77496, 16.1039, -3.95445, 1.79851, -1.18654e-15, -0.604838, -4.16936,
-                1.92719, -4.12133e-16, 1.94289e-16, 0.331741, -5.93453})));
-
-    EXPECT_TRUE(all_close(matmul(q, h, transpose(q, {1, 0})), arr));
-}
-
-TEST(arrnd_test, DISABLED_schur)
-{
-    using namespace oc;
-
-    {
-        arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
-
-        auto [u, s] = schur(arr)(0);
-
-        //std::cout << u << "\n\n";
-        //std::cout << s << "\n\n";
-        //std::cout << u.matmul(s, u.transpose({1, 0})) << "\n\n";
-
-        EXPECT_TRUE(all_close(u,
-            arrnd<double>({4, 4},
-                {0.370278, 0.925419, -0.0802532, -0.00727113, 0.443715, -0.251355, -0.857434, 0.0688785, 0.526578,
-                    -0.193754, 0.26634, -0.783733, 0.62348, -0.207072, 0.432931, 0.617224})));
-        EXPECT_TRUE(all_close(s,
-            arrnd<double>({4, 4},
-                {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0., 0., -4.07002,
-                    -1.70698, 0., 0., 1.47042e-15, -6.27774})));
-
-        EXPECT_TRUE(all_close(matmul(u, s, transpose(u, {1, 0})), arr));
-    }
-
-    {
-        arrnd<double> rarr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
-
-        auto [ur, sr] = schur(rarr)(0);
-
-        arrnd<std::complex<double>> carr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
-
-        auto [uc, sc] = schur(carr)(0);
-
-        EXPECT_TRUE(all_close(rarr, real(matmul(uc, sc, conj(transpose(uc, {1, 0}))))));
-    }
-}
-
-TEST(arrnd_test, DISABLED_eig)
-{
-    using namespace oc;
-
-    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
-
-    auto [l, v] = eig(arr)(0);
-
-    auto o = arrnd<double>({4, 1}, 1.) * 1e-12;
-
-    //std::cout << l << "\n\n";
-    //std::cout << v << "\n\n";
-
-    EXPECT_TRUE(all_close(l, arrnd<double>({4, 1}, {19.7025, -1.35476, -4.07002, -6.27774})));
-    EXPECT_TRUE(all_close(v,
-        arrnd<double>({4, 4},
-            {-0.370278, 0.897619, 0.424033, 0.258014, -0.443715, -0.281416, 0.595486, 0.314169, -0.526578, -0.229678,
-                -0.391643, 0.306355, -0.62348, -0.249667, -0.558755, -0.86074})));
-
-    //for (int i = 0; i < l.header().numel(); ++i) {
-    //    std::cout << matmul(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]) << "\n\n";
-    //    EXPECT_TRUE(
-    //        all_close(matmul(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
-    //}
-}
-
-TEST(arrnd_test, DISABLED_svd)
-{
-    using namespace oc;
-
-    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
-
-    auto [u, s, v] = svd(arr)(0);
-
-    EXPECT_TRUE(all_close(arr, matmul(u, s, v.transpose({1, 0}))));
-    //std::cout << u << "\n\n";
-    //std::cout << s << "\n\n";
-    //std::cout << v << "\n\n";
-    //std::cout << matmul(u, s, v.transpose()) << "\n";
-}
+//TEST(arrnd_test, solve)
+//{
+//    using namespace oc;
+//
+//    arrnd<arrnd<double>> arr({2},
+//        {arrnd<double>({2, 2}, {1, 2, 3, 5}),
+//            arrnd<double>({2, 3, 3}, {2, 1, 1, -1, 1, -1, 1, 2, 3, 1, 2, -2, 2, 1, -5, 1, -4, 1})});
+//
+//    arrnd<arrnd<double>> b({2}, {arrnd<double>({2, 1}, {1, 2}), arrnd<double>({2, 3, 1}, {2, 3, -10, -15, -21, 18})});
+//
+//    arrnd<arrnd<double>> x({2}, {arrnd<double>({2, 1}, {-1, 1}), arrnd<double>({2, 3, 1}, {3, 1, -5, -1, -4, 3})});
+//
+//    EXPECT_TRUE(all_close(solve(arr, b), x));
+//}
+//
+//TEST(arrnd_test, DISABLED_cholesky)
+//{
+//    using namespace oc;
+//
+//    arrnd<double> arr({3, 3}, {4, 12, -16, 12, 37, -43, -16, -43, 98});
+//    arrnd<double> l({3, 3}, {2, 0, 0, 6, 1, 0, -8, 5, 3});
+//
+//    EXPECT_TRUE(all_close(cholesky(arr), l));
+//}
+//
+//TEST(arrnd_test, DISABLED_lu)
+//{
+//    using namespace oc;
+//
+//    arrnd<double> arr({3, 3}, {2, -1, -2, -4, 6, 3, -4, -2, 8});
+//
+//    auto res = lu(arr)(0);
+//
+//    arrnd<double> l({3, 3}, {1, 0, 0, -2, 1, 0, -2, -1, 1});
+//    arrnd<double> u({3, 3}, {2, -1, -2, 0, 4, -1, 0, 0, 3});
+//
+//    EXPECT_TRUE(all_close(std::get<0>(res), l));
+//    EXPECT_TRUE(all_close(std::get<1>(res), u));
+//}
+//
+//TEST(arrnd_test, DISABLED_qr)
+//{
+//    using namespace oc;
+//
+//    {
+//        arrnd<double> arr({4, 3}, {-1, -1, 1, 1, 3, 3, -1, -1, 5, 1, 3, 7});
+//
+//        auto [q, r] = qr(arr)(0);
+//
+//        //arrnd<double> q({4, 3}, {-0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5});
+//        //arrnd<double> r({3, 3}, {2, 4, 2, 0, 2, 8, 0, 0, 4});
+//
+//        //std::cout <<q<< "\n";
+//        //std::cout << r << "\n\n";
+//
+//        //std::cout << std::get<0>(res) << "\n";
+//        //std::cout << std::get<1>(res) << "\n\n";
+//        //std::cout << std::get<0>(res).matmul(std::get<1>(res)) << "\n\n";
+//
+//        EXPECT_TRUE(all_close(q,
+//            arrnd<double>(
+//                {4, 4}, {-0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5})));
+//        EXPECT_TRUE(all_close(r,
+//            arrnd<double>({4, 3},
+//                {2.0, 4.0, 2.0, -3.05311e-16, 2.0, 8.0, 2.77556e-16, -3.88578e-16, 4.0, -3.33067e-16, -1.11022e-16, 8.88178e-16})));
+//
+//        EXPECT_TRUE(all_close(matmul(q, r), arr));
+//    }
+//
+//    {
+//        arrnd<double> arr({3, 3}, {3, 2, 4, 2, 0, 2, 4, 2, 3});
+//
+//        auto [q, r] = qr(arr)(0);
+//
+//        //arrnd<double> q(
+//        //    {3, 3}, {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667});
+//        //arrnd<double> r({3, 3}, {5.38516, 2.59973, 5.19947, 0, 1.11417, 0.433289, 0, 0, 1.33333});
+//
+//        EXPECT_TRUE(all_close(q,
+//            arrnd<double>({3, 3},
+//                {0.557086, 0.495188, 0.666667, 0.371391, -0.866578, 0.333333, 0.742781, 0.0618984, -0.666667})));
+//        EXPECT_TRUE(all_close(r,
+//            arrnd<double>({3, 3},
+//                {5.38516, 2.59973, 5.19947, -7.87957e-16, 1.11417, 0.433289, -1.39389e-15, 5.55112e-17, 1.33333})));
+//
+//        EXPECT_TRUE(all_close(matmul(q, r), arr));
+//    }
+//}
+//
+//TEST(arrnd_test, DISABLED_hess)
+//{
+//    using namespace oc;
+//
+//    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
+//
+//    auto [q, h] = hess(arr)(0);
+//
+//    //std::cout << q << "\n";
+//    //std::cout << h << "\n";
+//
+//    EXPECT_TRUE(all_close(q,
+//        arrnd<double>({4, 4},
+//            {1., 0., 0., 0., 0., -0.455842, 0.863773, 0.214719, 0., -0.569803, -0.0978779, -0.815932, 0., -0.683763, -0.494284,
+//                0.536797})));
+//    EXPECT_TRUE(all_close(h,
+//        arrnd<double>({4, 4},
+//            {2., -7.06556, -0.271611, 0.0644157, -8.77496, 16.1039, -3.95445, 1.79851, -1.18654e-15, -0.604838, -4.16936,
+//                1.92719, -4.12133e-16, 1.94289e-16, 0.331741, -5.93453})));
+//
+//    EXPECT_TRUE(all_close(matmul(q, h, transpose(q, {1, 0})), arr));
+//}
+//
+//TEST(arrnd_test, DISABLED_schur)
+//{
+//    using namespace oc;
+//
+//    {
+//        arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
+//
+//        auto [u, s] = schur(arr)(0);
+//
+//        //std::cout << u << "\n\n";
+//        //std::cout << s << "\n\n";
+//        //std::cout << u.matmul(s, u.transpose({1, 0})) << "\n\n";
+//
+//        EXPECT_TRUE(all_close(u,
+//            arrnd<double>({4, 4},
+//                {0.370278, 0.925419, -0.0802532, -0.00727113, 0.443715, -0.251355, -0.857434, 0.0688785, 0.526578,
+//                    -0.193754, 0.26634, -0.783733, 0.62348, -0.207072, 0.432931, 0.617224})));
+//        EXPECT_TRUE(all_close(s,
+//            arrnd<double>({4, 4},
+//                {19.7025, 1.45867, -2.84783, -2.11022, 8.00528e-15, -1.35476, 1.32379, 0.801807, 0., 0., -4.07002,
+//                    -1.70698, 0., 0., 1.47042e-15, -6.27774})));
+//
+//        EXPECT_TRUE(all_close(matmul(u, s, transpose(u, {1, 0})), arr));
+//    }
+//
+//    {
+//        arrnd<double> rarr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
+//
+//        auto [ur, sr] = schur(rarr)(0);
+//
+//        arrnd<std::complex<double>> carr({3, 3}, {3, 1, 1, 0, 2, 0, -2, 1, 1});
+//
+//        auto [uc, sc] = schur(carr)(0);
+//
+//        EXPECT_TRUE(all_close(rarr, real(matmul(uc, sc, conj(transpose(uc, {1, 0}))))));
+//    }
+//}
+//
+//TEST(arrnd_test, DISABLED_eig)
+//{
+//    using namespace oc;
+//
+//    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
+//
+//    auto [l, v] = eig(arr)(0);
+//
+//    auto o = arrnd<double>({4, 1}, 1.) * 1e-12;
+//
+//    //std::cout << l << "\n\n";
+//    //std::cout << v << "\n\n";
+//
+//    EXPECT_TRUE(all_close(l, arrnd<double>({4, 1}, {19.7025, -1.35476, -4.07002, -6.27774})));
+//    EXPECT_TRUE(all_close(v,
+//        arrnd<double>({4, 4},
+//            {-0.370278, 0.897619, 0.424033, 0.258014, -0.443715, -0.281416, 0.595486, 0.314169, -0.526578, -0.229678,
+//                -0.391643, 0.306355, -0.62348, -0.249667, -0.558755, -0.86074})));
+//
+//    //for (int i = 0; i < l.header().numel(); ++i) {
+//    //    std::cout << matmul(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]) << "\n\n";
+//    //    EXPECT_TRUE(
+//    //        all_close(matmul(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
+//    //}
+//}
+//
+//TEST(arrnd_test, DISABLED_svd)
+//{
+//    using namespace oc;
+//
+//    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
+//
+//    auto [u, s, v] = svd(arr)(0);
+//
+//    EXPECT_TRUE(all_close(arr, matmul(u, s, v.transpose({1, 0}))));
+//    //std::cout << u << "\n\n";
+//    //std::cout << s << "\n\n";
+//    //std::cout << v << "\n\n";
+//    //std::cout << matmul(u, s, v.transpose()) << "\n";
+//}
 
 TEST(arrnd_test, zeros)
 {

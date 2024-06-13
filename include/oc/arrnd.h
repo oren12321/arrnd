@@ -7238,645 +7238,645 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.lu();
-            });
-        }
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type>(this_type)> lu_impl;
-
-            lu_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
-
-                this_type l(arr.header().dims(), value_type{0});
-                this_type u(arr.header().dims(), value_type{0});
-
-                size_type n = arr.header().dims().front();
-
-                for (size_type i = 0; i < n; ++i) {
-                    // l
-                    for (size_type k = i; k < n; ++k) {
-                        value_type sum{0};
-                        for (size_type j = 0; j < i; ++j) {
-                            sum += l[{i, j}] * u[{j, k}];
-                        }
-
-                        u[{i, k}] = arr[{i, k}] - sum;
-                    }
-
-                    // u
-                    for (size_type k = i; k < n; ++k) {
-                        if (i == k) {
-                            l[{i, i}] = value_type{1};
-                        } else {
-                            value_type sum{0};
-                            for (size_type j = 0; j < i; ++j) {
-                                sum += l[{k, j}] * u[{j, i}];
-                            }
-
-                            l[{k, i}] = (arr[{k, i}] - sum) / u[{i, i}];
-                        }
-                    }
-                }
-
-                return std::make_tuple(l, u);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, lu_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [lu_impl](auto page) {
-                return lu_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([/*permute*/](const auto& a) {
-                return a.qr(/*permute*/);
-            });
-        }
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type>(this_type)> qr_impl;
-
-            qr_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                //assert(arr.header().dims().front() == arr.header().dims().back());
-
-                size_type m = arr.header().dims().front();
-                size_type n = arr.header().dims().back();
-
-                this_type q = eye<this_type>({m, m});
-                this_type r = arr.clone();
-
-                using ival = interval_type;
-
-                size_type loop_size = (m * (m < n) + n * (m >= n));
-
-                for (size_type k = 1; k <= loop_size; ++k) {
-                    auto a = r[{ival::between(k - 1, m), ival::at(k - 1)}];
-                    auto alpha = std::sqrt(a.fold(value_type{0}, [](value_type acc, value_type val) {
-                        return acc + val * val;
-                    }));
-                    if constexpr (template_type<value_type, std::complex>) {
-                        using namespace std::complex_literals;
-                        alpha *= std::exp(1i * std::arg(a[{0, 0}]));
-                    }
-                    auto e = eye<this_type>({m - k + 1, 1}) * alpha;
-                    auto u = a - e;
-                    auto sumsqu = u.fold(value_type{0}, [](value_type acc, value_type val) {
-                        return acc + val * val;
-                    });
-                    this_type v{};
-                    if (sumsqu != value_type{0}) {
-                        v = u / std::sqrt(sumsqu);
-                    } else {
-                        v = u;
-                    }
-
-                    auto qk1 = eye<this_type>({k - 1, k - 1}).append(zeros<this_type>({k - 1, m - k + 1}), 1);
-                    auto qk2 = zeros<this_type>({m - k + 1, k - 1})
-                                   .append(eye<this_type>({m - k + 1, m - k + 1})
-                                           - value_type{2} * v.matmul(v.transpose({1, 0})),
-                                       1);
-                    auto qk = qk1.append(qk2, 0);
-                    r = qk.matmul(r);
-                    q = q.matmul(qk);
-
-                    /*std::cout << "qk:" << qk << "\n";
-                    std::cout << "r:" << r << "\n";
-                    std::cout << "q:" << q << "\n\n";*/
-                }
-
-                //if (permute) {
-                return std::make_tuple(q, r);
-                //}
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, qr_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [qr_impl](auto page) {
-                return qr_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.hess();
-            });
-        }
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type>(this_type)> hess_impl;
-
-            hess_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
-
-                size_type n = arr.header().dims().front();
-
-                auto q = eye<this_type>({n, n});
-                auto h = arr;
-
-                using ival = interval_type;
-
-                for (size_type k = 0; k < n - 2; ++k) {
-                    auto r = h[{ival::between(k + 1, n), ival::at(k)}];
-                    auto u = zeros<this_type>({n - (k + 1), 1});
-
-                    if constexpr (template_type<value_type, std::complex>) {
-                        using std::exp;
-                        using std::arg;
-                        using std::pow;
-                        using namespace std::complex_literals;
-
-                        u[{0, 0}]
-                            = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).matmul(r)), value_type{0.5})(0);
-                    } else {
-                        u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
-                            * std::pow((r.transpose({1, 0}).matmul(r)(0)), value_type{0.5});
-                    }
-
-                    auto v = r - u;
-                    v /= std::pow((v.transpose({1, 0}).matmul(v)(0)), value_type{0.5});
-
-                    auto w1 = eye<this_type>({k + 1, k + 1}).append(zeros<this_type>({k + 1, n - (k + 1)}), 1);
-                    auto w2 = zeros<this_type>({n - (k + 1), k + 1})
-                                  .append(eye<this_type>({n - (k + 1), n - (k + 1)})
-                                          - value_type{2} * (v.matmul(v.transpose({1, 0}))),
-                                      1);
-
-                    auto w = w1.append(w2, 0);
-
-                    h = w.matmul(h, w.transpose({1, 0}));
-                    q = q.matmul(w.transpose({1, 0}));
-                }
-
-                return std::make_tuple(q, h);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [hess_impl](auto page) {
-                return hess_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.schur();
-            });
-        }
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
-            requires(this_type::is_flat && !template_type<value_type, std::complex>)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
-
-            schur_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
-
-                size_type n = arr.header().dims().front();
-
-                auto [u, s] = arr.hess()(0);
-
-                using ival = interval_type;
-
-                auto k = n;
-                value_type tol = value_type{1e-20};
-
-                while (k > 2) {
-                    //std::cout << "k=" << k << "\n";
-                    if (s[{k - 1, k - 2}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}) {
-                        --k;
-                    } else if (s[{k - 2, k - 3}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}
-                        && (k <= 3 || s[{k - 2, k - 4}] == value_type{0})) {
-                        k -= 2;
-                    }
-                    //std::cout << "k=" << k << "\n";
-
-                    if (k > 1) {
-                        auto stok = s[{ival::to(k), ival::to(k)}];
-                        //std::cout << "stok:\n" << stok << "\n";
-                        auto s_k_1 = s[{k - 2, k - 2}];
-                        auto s_k = s[{k - 1, k - 1}];
-                        auto s_kk_1 = s[{k - 1, k - 2}];
-                        auto s_k_1k = s[{k - 2, k - 1}];
-                        //std::cout << "stok2:\n" << stok.matmul(stok) << "\n";
-                        //std::cout << "s_k_1:\n" << s_k_1 << "\n";
-                        //std::cout << "s_k:\n" << s_k << "\n";
-                        //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
-                        //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
-
-                        auto m = stok.matmul(stok) - (s_k_1 + s_k) * stok
-                            + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
-                        //std::cout << "m:\n" << m << "\n";
-                        auto [q, r] = m.qr()(0);
-                        //std::cout << "q:\n" << q << "\n";
-                        //std::cout << "r:\n" << r << "\n";
-
-                        auto q1 = q.append(zeros<this_type>({k, n - k}), 1);
-                        auto q2 = zeros<this_type>({n - k, k}).append(eye<this_type>({n - k, n - k}), 1);
-                        q = q1.append(q2, 0);
-                        //std::cout << "q:\n" << q << "\n";
-
-                        u = u.matmul(q);
-                        s = q.transpose({1, 0}).matmul(s, q);
-
-                        auto m1 = s.abs() < tol;
-
-                        replaced_type<size_type> arng({n, n});
-                        std::iota(arng.begin(), arng.end(), size_type{1});
-                        auto m2 = arng.tril(-1) > size_type{0};
-
-                        auto mask = m1 && m2;
-                        //std::cout << "m1:\n" << m1 << "\n";
-                        //std::cout << "m2:\n" << m2 << "\n";
-                        //std::cout << "mask:\n" << mask << "\n";
-                        {
-                            auto sgen = s.indexer();
-                            auto mgen = mask.indexer();
-
-                            for (; sgen && mgen; ++sgen, ++mgen) {
-                                if (mask[*mgen]) {
-                                    s[*sgen] = value_type{0};
-                                }
-                            }
-                        }
-
-                        //std::cout << "u:\n" << u << "\n";
-                        //std::cout << "s:\n" << s << "\n";
-                    }
-                }
-
-                for (size_type k = 1; k <= n - 1; ++k) {
-                    if (s[{k, k - 1}] != value_type{0}) {
-                        auto f = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
-                        //std::cout << "f:\n" << f << "\n";
-                        auto trc = f.diag().sum();
-                        value_type t{};
-                        if (trc * trc - 4 * f.det() > value_type{0}) {
-                            t = std::atan((-f[{0, 0}] + f[{1, 1}]
-                                              + std::sqrt(std::pow(f[{0, 0}], 2) - 2 * f[{0, 0}] * f[{1, 1}]
-                                                  + 4 * f[{0, 1}] * f[{1, 0}] + std::pow(f[{1, 1}], 2)))
-                                / (2 * f[{0, 1}]));
-                        } else {
-                            t = .5 * std::atan((f[{1, 1}] - f[{0, 0}]) / (f[{0, 1}] + f[{1, 0}]));
-                        }
-                        auto q = this_type({2, 2}, {std::cos(t), -std::sin(t), std::sin(t), std::cos(t)});
-                        //std::cout << "q:\n" << q << "\n\n";
-                        auto qq = eye<this_type>({n, n});
-                        qq[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}].copy_from(q);
-                        //std::cout << "q:\n" << q << "\n\n";
-                        s = qq.transpose({1, 0}).matmul(s, qq);
-                        u = u.matmul(qq);
-                    }
-                }
-
-                return std::make_tuple(u, s);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [schur_impl](auto page) {
-                return schur_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
-            requires(this_type::is_flat && template_type<value_type, std::complex>)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
-
-            schur_impl = [&](this_type arr) {
-                size_type n = arr.header().dims().front();
-
-                using rtype = typename value_type::value_type;
-
-                replaced_type<rtype> rarr = arr.real();
-                auto [ru, rs] = rarr.schur()(0);
-                this_type u = ru;
-                this_type s = rs;
-
-                //std::cout << u << "\n\n";
-                //std::cout << s << "\n\n";
-
-                using ival = interval_type;
-
-                rtype tol = std::numeric_limits<rtype>::epsilon();
-
-                for (size_type k = 1; k <= n - 1; ++k) {
-                    if (std::abs(s[{k, k - 1}]) > tol * (std::abs(s[{k - 1, k - 1}] + std::abs(s[{k, k}])))) {
-                        auto b = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
-                        //std::cout << b << "\n\n";
-                        auto mu = std::sqrt(b[{1, 0}] * b[{0, 1}]);
-                        //std::cout << mu << "\n\n";
-                        auto r = std::sqrt(std::conj(mu) * mu + std::conj(b[{1, 0}]) * b[{1, 0}]); // conj transpose
-                        //std::cout << r << "\n\n";
-                        auto c = mu / r;
-                        //std::cout << c << "\n\n";
-                        auto ss = b[{1, 0}] / r;
-                        //std::cout << ss << "\n\n";
-
-                        this_type g({2, 2}, {std::conj(c), -ss, ss, c});
-                        //std::cout << g << "\n\n";
-
-                        auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
-                        s1.copy_from(g.transpose({1, 0}).conj().matmul(s1)); // conj transpose
-                        //std::cout << s << "\n\n";
-
-                        auto s2 = s[{ival::between(0, k + 1), ival::between(k - 1, k + 1)}];
-                        s2.copy_from(s2.matmul(g));
-                        //std::cout << s << "\n\n";
-
-                        auto u1 = u[{ival::between(0, n), ival::between(k - 1, k + 1)}];
-                        u1.copy_from(u1.matmul(g));
-                        //std::cout << u << "\n\n";
-                    }
-                    s[{k, k - 1}] = 0;
-                }
-
-                return std::make_tuple(u, s);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [schur_impl](auto page) {
-                return schur_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.eig();
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<this_type(this_type)> qr_algorithm_impl;
-            
-            qr_algorithm_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
-
-                value_type tol = value_type{1e-12};
-                size_type max_iters = 1000;
-
-                auto [_, h] = arr.hess()(0);
-                // for tolerance
-                //h(h <= tol) = value_type{0};
-
-                size_type n = arr.header().dims().front();
-
-                auto qq = eye<this_type>({n, n});
-
-                size_type k = 0;
-                value_type diff;
-                if constexpr (template_type<value_type, std::complex>) {
-                    diff = std::numeric_limits<double>::max();
-                } else {
-                    diff = std::numeric_limits<value_type>::max();
-                }
-
-                while (k++ < max_iters && diff > tol) {
-                    auto h_prev = h.clone();
-                    auto s = h[{n - 1, n - 1}];
-                    auto smult = s * eye<this_type>({n, n});
-
-                    auto [q, r] = (h - smult).qr()(0);
-
-                    h = r.matmul(q) + smult;
-                    qq = qq.matmul(q);
-
-                    diff = (h - h_prev).abs().max();
-                }
-
-                return h.diag()(arrnd_shape_preset::column);
-            };
-
-            std::function<std::tuple<this_type, this_type>(this_type)> eig_impl;
-
-            eig_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
-
-                size_type n = arr.header().dims().front();
-
-                //auto [u, s] = arr.schur()(0);
-                ////std::cout << "u:\n" << u << "\n\n";
-                ////std::cout << "s:\n" << s << "\n\n";
-
-                using ival = interval_type;
-
-                //auto lambda = s.diag()(arrnd_shape_preset::column);
-                auto lambda = qr_algorithm_impl(arr);
-                auto v = zeros<this_type>({n, n});
-
-                for (size_type k = 1; k <= n; ++k) {
-                    auto [q, _] = (arr - eye<this_type>({n, n}) * lambda[k - 1]).transpose({1, 0}).qr()(0);
-                    //std::cout << "q(m):\n" << q << "\n\n";
-                    v[{ival::full(), ival::at(k - 1)}].copy_from(q[{ival::full(), ival::at(n - 1)}]);
-                    //std::cout << "v(m):\n" << v << "\n\n";
-                }
-
-                return std::make_tuple(lambda, v);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type>>({1}, eig_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [eig_impl](auto page) {
-                return eig_impl(page);
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.svd();
-            });
-        }
-
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
-
-            std::function<std::tuple<this_type, this_type, this_type>(this_type)> svd_impl;
-
-            svd_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
-                //assert(arr.header().dims().front() == arr.header().dims().back());
-
-                this_type arr_t{};
-                if constexpr (template_type<value_type, std::complex>) {
-                    arr_t = arr.transpose().conj();
-                } else {
-                    arr_t = arr.transpose();
-                }
-
-                auto [l1, u] = (arr.as_pages() * arr_t.as_pages()).eig()(0);
-                auto [l2, v] = (arr_t.as_pages() * arr.as_pages()).eig()(0);
-
-                using ord_type = replaced_type<size_type>;
-
-                auto comp = [](const auto& t1, const auto& t2) {
-                    return std::get<0>(t1) > std::get<0>(t2);
-                };
-
-                ord_type ord1({l1.header().numel()});
-                std::iota(ord1.begin(), ord1.end(), size_type{0});
-                auto z1 = zip(zipped_cont(l1), zipped_cont(ord1));
-                std::sort(z1.begin(), z1.end(), comp);
-                u = u.reorder(1, ord1);
-
-                ord_type ord2({l2.header().numel()});
-                std::iota(ord2.begin(), ord2.end(), size_type{0});
-                auto z2 = zip(zipped_cont(l2), zipped_cont(ord2));
-                std::sort(z2.begin(), z2.end(), comp);
-                v = v.reorder(1, ord2);
-
-                auto s = zeros<this_type>(arr.header().dims());
-
-                auto min_dim = std::min({s.header().dims().front(), s.header().dims().back()});
-
-                auto sv = (l1(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}]
-                              + l2(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}])
-                    / value_type{2};
-                sv(sv < value_type{0}) = value_type{0};
-
-                s[{interval_type::to(min_dim), interval_type::to(min_dim)}]
-                    = sv.sqrt().diag(arrnd_diag_type::to_matrix);
-
-                if constexpr (template_type<value_type, std::complex>) {
-                    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
-                } else {
-                    auto m = (arr.matmul(v) - u.matmul(s)).abs().max(1)(arrnd_shape_preset::vector) > value_type{1e-8};
-
-                    for (size_type i = 0; i < m.header().numel(); ++i) {
-                        if (m[i]) {
-                            v[{interval_type::full(), interval_type::at(i)}]
-                                = v[{interval_type::full(), interval_type::at(i)}] * value_type{-1};
-                        }
-                    }
-                }
-
-                //using ival = interval_type;
-
-                //auto r = arr.header().dims().front();
-                //auto c = arr.header().dims().back();
-
-                //this_type l1;
-                //this_type l2;
-                //this_type u;
-                //this_type v;
-
-                //if constexpr (template_type<value_type, std::complex>) {
-                //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
-                //    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
-                //    l1 = l1t;
-                //    l2 = l2t;
-                //    u = ut;
-                //    v = vt;
-                //} else {
-                //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
-                //    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
-                //    l1 = l1t;
-                //    l2 = l2t;
-                //    u = ut;
-                //    v = vt;
-                //}
-
-                //auto comp = [](const auto& t1, const auto& t2) {
-                //    return std::get<0>(t1) > std::get<0>(t2);
-                //};
-
-                //auto sl1 = l1.clone();
-                //replaced_type<size_type> sl1i({l1.header().numel()});
-                //std::iota(sl1i.begin(), sl1i.end(), size_type{0});
-                //auto z1 = zip(zipped_cont(sl1), zipped_cont(sl1i));
-                //std::sort(z1.begin(), z1.end(), comp);
-
-                //auto sl2 = l2.clone();
-                //replaced_type<size_type> sl2i({l2.header().numel()});
-                //std::iota(sl2i.begin(), sl2i.end(), size_type{0});
-                //auto z2 = zip(zipped_cont(sl2), zipped_cont(sl2i));
-                //std::sort(z2.begin(), z2.end(), comp);
-
-                //u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
-                //v = v.reorder(1, sl2i.cbegin(), sl2i.cend());
-
-                //auto s = zeros<this_type>({r, c});
-
-                //auto arr_minsize = std::min({r, c});
-
-                //auto slc1 = l1(sl1i)()[{ival::to(arr_minsize)}];
-                //auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
-                //auto sv = (slc1 + slc2) / 2;
-                //sv(sv < value_type{0}) = value_type{0};
-                //s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
-
-                //if constexpr (template_type<value_type, std::complex>) {
-                //    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
-                //} else {
-                //    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
-                //        return std::max({m, v});
-                //    }) > value_type{1e-8};
-                //    v(mask) = v * (value_type{-1});
-                //}
-
-                return std::make_tuple(u, s, v);
-            };
-
-            if (hdr_.is_matrix()) {
-                return replaced_type<std::tuple<this_type, this_type, this_type>>({1}, svd_impl(*this));
-            }
-
-            return pageop/*<0>*/(2, [svd_impl](auto page) {
-                return svd_impl(page);
-            });
-        }
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.lu();
+        //    });
+        //}
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto lu() const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> lu_impl;
+
+        //    lu_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        this_type l(arr.header().dims(), value_type{0});
+        //        this_type u(arr.header().dims(), value_type{0});
+
+        //        size_type n = arr.header().dims().front();
+
+        //        for (size_type i = 0; i < n; ++i) {
+        //            // l
+        //            for (size_type k = i; k < n; ++k) {
+        //                value_type sum{0};
+        //                for (size_type j = 0; j < i; ++j) {
+        //                    sum += l[{i, j}] * u[{j, k}];
+        //                }
+
+        //                u[{i, k}] = arr[{i, k}] - sum;
+        //            }
+
+        //            // u
+        //            for (size_type k = i; k < n; ++k) {
+        //                if (i == k) {
+        //                    l[{i, i}] = value_type{1};
+        //                } else {
+        //                    value_type sum{0};
+        //                    for (size_type j = 0; j < i; ++j) {
+        //                        sum += l[{k, j}] * u[{j, i}];
+        //                    }
+
+        //                    l[{k, i}] = (arr[{k, i}] - sum) / u[{i, i}];
+        //                }
+        //            }
+        //        }
+
+        //        return std::make_tuple(l, u);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, lu_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [lu_impl](auto page) {
+        //        return lu_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([/*permute*/](const auto& a) {
+        //        return a.qr(/*permute*/);
+        //    });
+        //}
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto qr(/*bool permute = false*/) const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> qr_impl;
+
+        //    qr_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        //assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        size_type m = arr.header().dims().front();
+        //        size_type n = arr.header().dims().back();
+
+        //        this_type q = eye<this_type>({m, m});
+        //        this_type r = arr.clone();
+
+        //        using ival = interval_type;
+
+        //        size_type loop_size = (m * (m < n) + n * (m >= n));
+
+        //        for (size_type k = 1; k <= loop_size; ++k) {
+        //            auto a = r[{ival::between(k - 1, m), ival::at(k - 1)}];
+        //            auto alpha = std::sqrt(a.fold(value_type{0}, [](value_type acc, value_type val) {
+        //                return acc + val * val;
+        //            }));
+        //            if constexpr (template_type<value_type, std::complex>) {
+        //                using namespace std::complex_literals;
+        //                alpha *= std::exp(1i * std::arg(a[{0, 0}]));
+        //            }
+        //            auto e = eye<this_type>({m - k + 1, 1}) * alpha;
+        //            auto u = a - e;
+        //            auto sumsqu = u.fold(value_type{0}, [](value_type acc, value_type val) {
+        //                return acc + val * val;
+        //            });
+        //            this_type v{};
+        //            if (sumsqu != value_type{0}) {
+        //                v = u / std::sqrt(sumsqu);
+        //            } else {
+        //                v = u;
+        //            }
+
+        //            auto qk1 = eye<this_type>({k - 1, k - 1}).append(zeros<this_type>({k - 1, m - k + 1}), 1);
+        //            auto qk2 = zeros<this_type>({m - k + 1, k - 1})
+        //                           .append(eye<this_type>({m - k + 1, m - k + 1})
+        //                                   - value_type{2} * v.matmul(v.transpose({1, 0})),
+        //                               1);
+        //            auto qk = qk1.append(qk2, 0);
+        //            r = qk.matmul(r);
+        //            q = q.matmul(qk);
+
+        //            /*std::cout << "qk:" << qk << "\n";
+        //            std::cout << "r:" << r << "\n";
+        //            std::cout << "q:" << q << "\n\n";*/
+        //        }
+
+        //        //if (permute) {
+        //        return std::make_tuple(q, r);
+        //        //}
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, qr_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [qr_impl](auto page) {
+        //        return qr_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.hess();
+        //    });
+        //}
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto hess() const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> hess_impl;
+
+        //    hess_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        size_type n = arr.header().dims().front();
+
+        //        auto q = eye<this_type>({n, n});
+        //        auto h = arr;
+
+        //        using ival = interval_type;
+
+        //        for (size_type k = 0; k < n - 2; ++k) {
+        //            auto r = h[{ival::between(k + 1, n), ival::at(k)}];
+        //            auto u = zeros<this_type>({n - (k + 1), 1});
+
+        //            if constexpr (template_type<value_type, std::complex>) {
+        //                using std::exp;
+        //                using std::arg;
+        //                using std::pow;
+        //                using namespace std::complex_literals;
+
+        //                u[{0, 0}]
+        //                    = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).matmul(r)), value_type{0.5})(0);
+        //            } else {
+        //                u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
+        //                    * std::pow((r.transpose({1, 0}).matmul(r)(0)), value_type{0.5});
+        //            }
+
+        //            auto v = r - u;
+        //            v /= std::pow((v.transpose({1, 0}).matmul(v)(0)), value_type{0.5});
+
+        //            auto w1 = eye<this_type>({k + 1, k + 1}).append(zeros<this_type>({k + 1, n - (k + 1)}), 1);
+        //            auto w2 = zeros<this_type>({n - (k + 1), k + 1})
+        //                          .append(eye<this_type>({n - (k + 1), n - (k + 1)})
+        //                                  - value_type{2} * (v.matmul(v.transpose({1, 0}))),
+        //                              1);
+
+        //            auto w = w1.append(w2, 0);
+
+        //            h = w.matmul(h, w.transpose({1, 0}));
+        //            q = q.matmul(w.transpose({1, 0}));
+        //        }
+
+        //        return std::make_tuple(q, h);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, hess_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [hess_impl](auto page) {
+        //        return hess_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.schur();
+        //    });
+        //}
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+        //    requires(this_type::is_flat && !template_type<value_type, std::complex>)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
+
+        //    schur_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        size_type n = arr.header().dims().front();
+
+        //        auto [u, s] = arr.hess()(0);
+
+        //        using ival = interval_type;
+
+        //        auto k = n;
+        //        value_type tol = value_type{1e-20};
+
+        //        while (k > 2) {
+        //            //std::cout << "k=" << k << "\n";
+        //            if (s[{k - 1, k - 2}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}) {
+        //                --k;
+        //            } else if (s[{k - 2, k - 3}] == value_type{0} && s[{k - 1, k - 3}] == value_type{0}
+        //                && (k <= 3 || s[{k - 2, k - 4}] == value_type{0})) {
+        //                k -= 2;
+        //            }
+        //            //std::cout << "k=" << k << "\n";
+
+        //            if (k > 1) {
+        //                auto stok = s[{ival::to(k), ival::to(k)}];
+        //                //std::cout << "stok:\n" << stok << "\n";
+        //                auto s_k_1 = s[{k - 2, k - 2}];
+        //                auto s_k = s[{k - 1, k - 1}];
+        //                auto s_kk_1 = s[{k - 1, k - 2}];
+        //                auto s_k_1k = s[{k - 2, k - 1}];
+        //                //std::cout << "stok2:\n" << stok.matmul(stok) << "\n";
+        //                //std::cout << "s_k_1:\n" << s_k_1 << "\n";
+        //                //std::cout << "s_k:\n" << s_k << "\n";
+        //                //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
+        //                //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
+
+        //                auto m = stok.matmul(stok) - (s_k_1 + s_k) * stok
+        //                    + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
+        //                //std::cout << "m:\n" << m << "\n";
+        //                auto [q, r] = m.qr()(0);
+        //                //std::cout << "q:\n" << q << "\n";
+        //                //std::cout << "r:\n" << r << "\n";
+
+        //                auto q1 = q.append(zeros<this_type>({k, n - k}), 1);
+        //                auto q2 = zeros<this_type>({n - k, k}).append(eye<this_type>({n - k, n - k}), 1);
+        //                q = q1.append(q2, 0);
+        //                //std::cout << "q:\n" << q << "\n";
+
+        //                u = u.matmul(q);
+        //                s = q.transpose({1, 0}).matmul(s, q);
+
+        //                auto m1 = s.abs() < tol;
+
+        //                replaced_type<size_type> arng({n, n});
+        //                std::iota(arng.begin(), arng.end(), size_type{1});
+        //                auto m2 = arng.tril(-1) > size_type{0};
+
+        //                auto mask = m1 && m2;
+        //                //std::cout << "m1:\n" << m1 << "\n";
+        //                //std::cout << "m2:\n" << m2 << "\n";
+        //                //std::cout << "mask:\n" << mask << "\n";
+        //                {
+        //                    auto sgen = s.indexer();
+        //                    auto mgen = mask.indexer();
+
+        //                    for (; sgen && mgen; ++sgen, ++mgen) {
+        //                        if (mask[*mgen]) {
+        //                            s[*sgen] = value_type{0};
+        //                        }
+        //                    }
+        //                }
+
+        //                //std::cout << "u:\n" << u << "\n";
+        //                //std::cout << "s:\n" << s << "\n";
+        //            }
+        //        }
+
+        //        for (size_type k = 1; k <= n - 1; ++k) {
+        //            if (s[{k, k - 1}] != value_type{0}) {
+        //                auto f = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
+        //                //std::cout << "f:\n" << f << "\n";
+        //                auto trc = f.diag().sum();
+        //                value_type t{};
+        //                if (trc * trc - 4 * f.det() > value_type{0}) {
+        //                    t = std::atan((-f[{0, 0}] + f[{1, 1}]
+        //                                      + std::sqrt(std::pow(f[{0, 0}], 2) - 2 * f[{0, 0}] * f[{1, 1}]
+        //                                          + 4 * f[{0, 1}] * f[{1, 0}] + std::pow(f[{1, 1}], 2)))
+        //                        / (2 * f[{0, 1}]));
+        //                } else {
+        //                    t = .5 * std::atan((f[{1, 1}] - f[{0, 0}]) / (f[{0, 1}] + f[{1, 0}]));
+        //                }
+        //                auto q = this_type({2, 2}, {std::cos(t), -std::sin(t), std::sin(t), std::cos(t)});
+        //                //std::cout << "q:\n" << q << "\n\n";
+        //                auto qq = eye<this_type>({n, n});
+        //                qq[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}].copy_from(q);
+        //                //std::cout << "q:\n" << q << "\n\n";
+        //                s = qq.transpose({1, 0}).matmul(s, qq);
+        //                u = u.matmul(qq);
+        //            }
+        //        }
+
+        //        return std::make_tuple(u, s);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [schur_impl](auto page) {
+        //        return schur_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto schur() const
+        //    requires(this_type::is_flat && template_type<value_type, std::complex>)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> schur_impl;
+
+        //    schur_impl = [&](this_type arr) {
+        //        size_type n = arr.header().dims().front();
+
+        //        using rtype = typename value_type::value_type;
+
+        //        replaced_type<rtype> rarr = arr.real();
+        //        auto [ru, rs] = rarr.schur()(0);
+        //        this_type u = ru;
+        //        this_type s = rs;
+
+        //        //std::cout << u << "\n\n";
+        //        //std::cout << s << "\n\n";
+
+        //        using ival = interval_type;
+
+        //        rtype tol = std::numeric_limits<rtype>::epsilon();
+
+        //        for (size_type k = 1; k <= n - 1; ++k) {
+        //            if (std::abs(s[{k, k - 1}]) > tol * (std::abs(s[{k - 1, k - 1}] + std::abs(s[{k, k}])))) {
+        //                auto b = s[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}];
+        //                //std::cout << b << "\n\n";
+        //                auto mu = std::sqrt(b[{1, 0}] * b[{0, 1}]);
+        //                //std::cout << mu << "\n\n";
+        //                auto r = std::sqrt(std::conj(mu) * mu + std::conj(b[{1, 0}]) * b[{1, 0}]); // conj transpose
+        //                //std::cout << r << "\n\n";
+        //                auto c = mu / r;
+        //                //std::cout << c << "\n\n";
+        //                auto ss = b[{1, 0}] / r;
+        //                //std::cout << ss << "\n\n";
+
+        //                this_type g({2, 2}, {std::conj(c), -ss, ss, c});
+        //                //std::cout << g << "\n\n";
+
+        //                auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
+        //                s1.copy_from(g.transpose({1, 0}).conj().matmul(s1)); // conj transpose
+        //                //std::cout << s << "\n\n";
+
+        //                auto s2 = s[{ival::between(0, k + 1), ival::between(k - 1, k + 1)}];
+        //                s2.copy_from(s2.matmul(g));
+        //                //std::cout << s << "\n\n";
+
+        //                auto u1 = u[{ival::between(0, n), ival::between(k - 1, k + 1)}];
+        //                u1.copy_from(u1.matmul(g));
+        //                //std::cout << u << "\n\n";
+        //            }
+        //            s[{k, k - 1}] = 0;
+        //        }
+
+        //        return std::make_tuple(u, s);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, schur_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [schur_impl](auto page) {
+        //        return schur_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.eig();
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto eig() const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<this_type(this_type)> qr_algorithm_impl;
+        //    
+        //    qr_algorithm_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        value_type tol = value_type{1e-12};
+        //        size_type max_iters = 1000;
+
+        //        auto [_, h] = arr.hess()(0);
+        //        // for tolerance
+        //        //h(h <= tol) = value_type{0};
+
+        //        size_type n = arr.header().dims().front();
+
+        //        auto qq = eye<this_type>({n, n});
+
+        //        size_type k = 0;
+        //        value_type diff;
+        //        if constexpr (template_type<value_type, std::complex>) {
+        //            diff = std::numeric_limits<double>::max();
+        //        } else {
+        //            diff = std::numeric_limits<value_type>::max();
+        //        }
+
+        //        while (k++ < max_iters && diff > tol) {
+        //            auto h_prev = h.clone();
+        //            auto s = h[{n - 1, n - 1}];
+        //            auto smult = s * eye<this_type>({n, n});
+
+        //            auto [q, r] = (h - smult).qr()(0);
+
+        //            h = r.matmul(q) + smult;
+        //            qq = qq.matmul(q);
+
+        //            diff = (h - h_prev).abs().max();
+        //        }
+
+        //        return h.diag()(arrnd_shape_preset::column);
+        //    };
+
+        //    std::function<std::tuple<this_type, this_type>(this_type)> eig_impl;
+
+        //    eig_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        size_type n = arr.header().dims().front();
+
+        //        //auto [u, s] = arr.schur()(0);
+        //        ////std::cout << "u:\n" << u << "\n\n";
+        //        ////std::cout << "s:\n" << s << "\n\n";
+
+        //        using ival = interval_type;
+
+        //        //auto lambda = s.diag()(arrnd_shape_preset::column);
+        //        auto lambda = qr_algorithm_impl(arr);
+        //        auto v = zeros<this_type>({n, n});
+
+        //        for (size_type k = 1; k <= n; ++k) {
+        //            auto [q, _] = (arr - eye<this_type>({n, n}) * lambda[k - 1]).transpose({1, 0}).qr()(0);
+        //            //std::cout << "q(m):\n" << q << "\n\n";
+        //            v[{ival::full(), ival::at(k - 1)}].copy_from(q[{ival::full(), ival::at(n - 1)}]);
+        //            //std::cout << "v(m):\n" << v << "\n\n";
+        //        }
+
+        //        return std::make_tuple(lambda, v);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type>>({1}, eig_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [eig_impl](auto page) {
+        //        return eig_impl(page);
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.svd();
+        //    });
+        //}
+
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto svd() const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
+
+        //    std::function<std::tuple<this_type, this_type, this_type>(this_type)> svd_impl;
+
+        //    svd_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
+        //        //assert(arr.header().dims().front() == arr.header().dims().back());
+
+        //        this_type arr_t{};
+        //        if constexpr (template_type<value_type, std::complex>) {
+        //            arr_t = arr.transpose().conj();
+        //        } else {
+        //            arr_t = arr.transpose();
+        //        }
+
+        //        auto [l1, u] = (arr.as_pages() * arr_t.as_pages()).eig()(0);
+        //        auto [l2, v] = (arr_t.as_pages() * arr.as_pages()).eig()(0);
+
+        //        using ord_type = replaced_type<size_type>;
+
+        //        auto comp = [](const auto& t1, const auto& t2) {
+        //            return std::get<0>(t1) > std::get<0>(t2);
+        //        };
+
+        //        ord_type ord1({l1.header().numel()});
+        //        std::iota(ord1.begin(), ord1.end(), size_type{0});
+        //        auto z1 = zip(zipped_cont(l1), zipped_cont(ord1));
+        //        std::sort(z1.begin(), z1.end(), comp);
+        //        u = u.reorder(1, ord1);
+
+        //        ord_type ord2({l2.header().numel()});
+        //        std::iota(ord2.begin(), ord2.end(), size_type{0});
+        //        auto z2 = zip(zipped_cont(l2), zipped_cont(ord2));
+        //        std::sort(z2.begin(), z2.end(), comp);
+        //        v = v.reorder(1, ord2);
+
+        //        auto s = zeros<this_type>(arr.header().dims());
+
+        //        auto min_dim = std::min({s.header().dims().front(), s.header().dims().back()});
+
+        //        auto sv = (l1(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}]
+        //                      + l2(arrnd_shape_preset::vector)[{interval_type::to(min_dim)}])
+        //            / value_type{2};
+        //        sv(sv < value_type{0}) = value_type{0};
+
+        //        s[{interval_type::to(min_dim), interval_type::to(min_dim)}]
+        //            = sv.sqrt().diag(arrnd_diag_type::to_matrix);
+
+        //        if constexpr (template_type<value_type, std::complex>) {
+        //            v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
+        //        } else {
+        //            auto m = (arr.matmul(v) - u.matmul(s)).abs().max(1)(arrnd_shape_preset::vector) > value_type{1e-8};
+
+        //            for (size_type i = 0; i < m.header().numel(); ++i) {
+        //                if (m[i]) {
+        //                    v[{interval_type::full(), interval_type::at(i)}]
+        //                        = v[{interval_type::full(), interval_type::at(i)}] * value_type{-1};
+        //                }
+        //            }
+        //        }
+
+        //        //using ival = interval_type;
+
+        //        //auto r = arr.header().dims().front();
+        //        //auto c = arr.header().dims().back();
+
+        //        //this_type l1;
+        //        //this_type l2;
+        //        //this_type u;
+        //        //this_type v;
+
+        //        //if constexpr (template_type<value_type, std::complex>) {
+        //        //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
+        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
+        //        //    l1 = l1t;
+        //        //    l2 = l2t;
+        //        //    u = ut;
+        //        //    v = vt;
+        //        //} else {
+        //        //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
+        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
+        //        //    l1 = l1t;
+        //        //    l2 = l2t;
+        //        //    u = ut;
+        //        //    v = vt;
+        //        //}
+
+        //        //auto comp = [](const auto& t1, const auto& t2) {
+        //        //    return std::get<0>(t1) > std::get<0>(t2);
+        //        //};
+
+        //        //auto sl1 = l1.clone();
+        //        //replaced_type<size_type> sl1i({l1.header().numel()});
+        //        //std::iota(sl1i.begin(), sl1i.end(), size_type{0});
+        //        //auto z1 = zip(zipped_cont(sl1), zipped_cont(sl1i));
+        //        //std::sort(z1.begin(), z1.end(), comp);
+
+        //        //auto sl2 = l2.clone();
+        //        //replaced_type<size_type> sl2i({l2.header().numel()});
+        //        //std::iota(sl2i.begin(), sl2i.end(), size_type{0});
+        //        //auto z2 = zip(zipped_cont(sl2), zipped_cont(sl2i));
+        //        //std::sort(z2.begin(), z2.end(), comp);
+
+        //        //u = u.reorder(1, sl1i.cbegin(), sl1i.cend());
+        //        //v = v.reorder(1, sl2i.cbegin(), sl2i.cend());
+
+        //        //auto s = zeros<this_type>({r, c});
+
+        //        //auto arr_minsize = std::min({r, c});
+
+        //        //auto slc1 = l1(sl1i)()[{ival::to(arr_minsize)}];
+        //        //auto slc2 = l2(sl2i)()[{ival::to(arr_minsize)}];
+        //        //auto sv = (slc1 + slc2) / 2;
+        //        //sv(sv < value_type{0}) = value_type{0};
+        //        //s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
+
+        //        //if constexpr (template_type<value_type, std::complex>) {
+        //        //    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
+        //        //} else {
+        //        //    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
+        //        //        return std::max({m, v});
+        //        //    }) > value_type{1e-8};
+        //        //    v(mask) = v * (value_type{-1});
+        //        //}
+
+        //        return std::make_tuple(u, s, v);
+        //    };
+
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<std::tuple<this_type, this_type, this_type>>({1}, svd_impl(*this));
+        //    }
+
+        //    return pageop/*<0>*/(2, [svd_impl](auto page) {
+        //        return svd_impl(page);
+        //    });
+        //}
 
         [[nodiscard]] constexpr auto tril(size_type offset = 0) const
             requires(!this_type::is_flat)
@@ -8138,123 +8138,123 @@ namespace details {
             });
         }
 
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.cholesky();
-            });
-        }
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.cholesky();
+        //    });
+        //}
 
-        [[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
+        //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
 
-            std::function<this_type(this_type)> cholesky_impl;
+        //    std::function<this_type(this_type)> cholesky_impl;
 
-            cholesky_impl = [&](this_type arr) {
-                //std::cout << "calc:\n" << arr << "\n\n";
-                assert(arr.header().is_matrix());
-                assert(arr.header().dims().front() == arr.header().dims().back());
+        //    cholesky_impl = [&](this_type arr) {
+        //        //std::cout << "calc:\n" << arr << "\n\n";
+        //        assert(arr.header().is_matrix());
+        //        assert(arr.header().dims().front() == arr.header().dims().back());
 
-                size_type n = arr.header().dims().front();
+        //        size_type n = arr.header().dims().front();
 
-                this_type l(arr.header().dims(), value_type{0});
+        //        this_type l(arr.header().dims(), value_type{0});
 
-                using ival = interval_type;
+        //        using ival = interval_type;
 
-                for (size_type i = 1; i <= n; ++i) {
-                    for (size_type j = 1; j <= i; ++j) {
-                        if (i == j) {
-                            auto sumsq = l[{ival::at(i - 1), ival::to(j - 1)}].fold(
-                                value_type{0}, [](value_type acc, value_type val) {
-                                    return acc + val * val;
-                                });
-                            l[{i - 1, j - 1}] = std::sqrt(arr[{i - 1, j - 1}] - sumsq);
-                        } else {
-                            if constexpr (template_type<value_type, std::complex>) {
-                                l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
-                                                        - (l[{ival::at(i - 1), ival::to(j - 1)}]
-                                                            * l[{ival::at(j - 1), ival::to(j - 1)}].conj())
-                                                              .sum())
-                                    / l[{j - 1, j - 1}];
-                            } else {
-                                l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
-                                                        - (l[{ival::at(i - 1), ival::to(j - 1)}]
-                                                            * l[{ival::at(j - 1), ival::to(j - 1)}])
-                                                              .sum())
-                                    / l[{j - 1, j - 1}];
-                            }
-                        }
-                        //std::cout << "L:\n" << l << "\n\n";
-                    }
-                }
+        //        for (size_type i = 1; i <= n; ++i) {
+        //            for (size_type j = 1; j <= i; ++j) {
+        //                if (i == j) {
+        //                    auto sumsq = l[{ival::at(i - 1), ival::to(j - 1)}].fold(
+        //                        value_type{0}, [](value_type acc, value_type val) {
+        //                            return acc + val * val;
+        //                        });
+        //                    l[{i - 1, j - 1}] = std::sqrt(arr[{i - 1, j - 1}] - sumsq);
+        //                } else {
+        //                    if constexpr (template_type<value_type, std::complex>) {
+        //                        l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
+        //                                                - (l[{ival::at(i - 1), ival::to(j - 1)}]
+        //                                                    * l[{ival::at(j - 1), ival::to(j - 1)}].conj())
+        //                                                      .sum())
+        //                            / l[{j - 1, j - 1}];
+        //                    } else {
+        //                        l[{i - 1, j - 1}] = (arr[{i - 1, j - 1}]
+        //                                                - (l[{ival::at(i - 1), ival::to(j - 1)}]
+        //                                                    * l[{ival::at(j - 1), ival::to(j - 1)}])
+        //                                                      .sum())
+        //                            / l[{j - 1, j - 1}];
+        //                    }
+        //                }
+        //                //std::cout << "L:\n" << l << "\n\n";
+        //            }
+        //        }
 
-                return l;
-            };
+        //        return l;
+        //    };
 
-            if (hdr_.is_matrix()) {
-                return cholesky_impl(*this);
-            }
+        //    if (hdr_.is_matrix()) {
+        //        return cholesky_impl(*this);
+        //    }
 
-            return pageop/*<0>*/(2, [cholesky_impl](auto page) {
-                return cholesky_impl(page);
-            });
-        }
+        //    return pageop/*<0>*/(2, [cholesky_impl](auto page) {
+        //        return cholesky_impl(page);
+        //    });
+        //}
 
-        template <arrnd_compliant ArCo>
-            requires(same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
-        [[nodiscard]] constexpr auto solve(const ArCo& b) const
-        {
-            return transform<0>(b, [](const auto& a, const auto& b) {
-                return a.solve(b);
-            });
-        }
-        template <arrnd_compliant ArCo>
-            requires(this_type::is_flat && ArCo::is_flat)
-        [[nodiscard]] constexpr auto solve(const ArCo& b) const
-        {
-            using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
+        //template <arrnd_compliant ArCo>
+        //    requires(same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
+        //[[nodiscard]] constexpr auto solve(const ArCo& b) const
+        //{
+        //    return transform<0>(b, [](const auto& a, const auto& b) {
+        //        return a.solve(b);
+        //    });
+        //}
+        //template <arrnd_compliant ArCo>
+        //    requires(this_type::is_flat && ArCo::is_flat)
+        //[[nodiscard]] constexpr auto solve(const ArCo& b) const
+        //{
+        //    using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
 
-            assert(hdr_.dims().size() >= 2 && b.header().dims().size() >= 2);
+        //    assert(hdr_.dims().size() >= 2 && b.header().dims().size() >= 2);
 
-            auto solve_impl = [](const auto& lhs, const auto& rhs) {
-                assert(lhs.header().is_matrix() && rhs.header().is_matrix());
-                assert(lhs.header().dims().back() == rhs.header().dims().front());
+        //    auto solve_impl = [](const auto& lhs, const auto& rhs) {
+        //        assert(lhs.header().is_matrix() && rhs.header().is_matrix());
+        //        assert(lhs.header().dims().back() == rhs.header().dims().front());
 
-                return lhs.inverse().matmul(rhs);
-            };
+        //        return lhs.inverse().matmul(rhs);
+        //    };
 
-            if (hdr_.is_matrix() && b.header().is_matrix()) {
-                return solve_impl(*this, b);
-            }
+        //    if (hdr_.is_matrix() && b.header().is_matrix()) {
+        //        return solve_impl(*this, b);
+        //    }
 
-            if (b.header().is_matrix()) {
-                return pageop/*<0>*/(2, [&b, solve_impl](auto page) {
-                    return solve_impl(page, b);
-                });
-            } else {
-                size_type lhs_num_pages
-                    = hdr_.numel() / ((*std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2)) * hdr_.dims().back());
-                size_type rhs_num_pages = b.header().numel()
-                    / ((*std::next(b.header().dims().cbegin(), b.header().dims().size() - 2))
-                        * b.header().dims().back());
-                assert(lhs_num_pages == rhs_num_pages);
+        //    if (b.header().is_matrix()) {
+        //        return pageop/*<0>*/(2, [&b, solve_impl](auto page) {
+        //            return solve_impl(page, b);
+        //        });
+        //    } else {
+        //        size_type lhs_num_pages
+        //            = hdr_.numel() / ((*std::next(hdr_.dims().cbegin(), hdr_.dims().size() - 2)) * hdr_.dims().back());
+        //        size_type rhs_num_pages = b.header().numel()
+        //            / ((*std::next(b.header().dims().cbegin(), b.header().dims().size() - 2))
+        //                * b.header().dims().back());
+        //        assert(lhs_num_pages == rhs_num_pages);
 
-                auto b_pages = b./*template */pages/*<0>*/(b.header().dims().size() - 3, 0, true);
-                typename decltype(b_pages)::indexer_type b_pages_gen(b_pages.header());
+        //        auto b_pages = b./*template */pages/*<0>*/(b.header().dims().size() - 3, 0, true);
+        //        typename decltype(b_pages)::indexer_type b_pages_gen(b_pages.header());
 
-                return pageop/*<0>*/(2, [&b_pages, &b_pages_gen, &solve_impl](auto page) {
-                    return solve_impl(page, b_pages[*(b_pages_gen++)]);
-                });
-            }
-            //};
+        //        return pageop/*<0>*/(2, [&b_pages, &b_pages_gen, &solve_impl](auto page) {
+        //            return solve_impl(page, b_pages[*(b_pages_gen++)]);
+        //        });
+        //    }
+        //    //};
 
-            //return pageop([&arr, &impl](const auto& page) {
-            //    return impl(page, arr);
-            //});
-        }
+        //    //return pageop([&arr, &impl](const auto& page) {
+        //    //    return impl(page, arr);
+        //    //});
+        //}
 
         template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
             //requires(Level == 0)
@@ -12052,54 +12052,54 @@ namespace details {
         return arr.triu(offset);
     }
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
-    {
-        return arr.cholesky();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
+    //{
+    //    return arr.cholesky();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
-    {
-        return arr.lu();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto lu(const ArCo& arr)
+    //{
+    //    return arr.lu();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto qr(
-        const ArCo& arr /*, bool permute = false*/)
-    {
-        return arr.qr(/*permute*/);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto qr(
+    //    const ArCo& arr /*, bool permute = false*/)
+    //{
+    //    return arr.qr(/*permute*/);
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
-    {
-        return arr.hess();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto hess(const ArCo& arr)
+    //{
+    //    return arr.hess();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
-    {
-        return arr.schur();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto schur(const ArCo& arr)
+    //{
+    //    return arr.schur();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto svd(const ArCo& arr)
-    {
-        return arr.svd();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto svd(const ArCo& arr)
+    //{
+    //    return arr.svd();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
-    {
-        return arr.eig();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto eig(const ArCo& arr)
+    //{
+    //    return arr.eig();
+    //}
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
-    {
-        return arr.solve(b);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr auto solve(const ArCo1& arr, const ArCo2& b)
+    //{
+    //    return arr.solve(b);
+    //}
 
     template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
@@ -14958,7 +14958,7 @@ using details::max;
 using details::matmul;
 using details::det;
 using details::inverse;
-using details::solve;
+//using details::solve;
 using details::tril;
 using details::triu;
 
@@ -15006,15 +15006,15 @@ using details::sign;
 
 // the functions in the experimental namespace may still be reachable
 // from the oc namespace due to ADL
-namespace experimental {
-    using details::cholesky;
-    using details::lu;
-    using details::qr;
-    using details::hess;
-    using details::schur;
-    using details::svd;
-    using details::eig;
-}
+//namespace experimental {
+//    using details::cholesky;
+//    using details::lu;
+//    using details::qr;
+//    using details::hess;
+//    using details::schur;
+//    using details::svd;
+//    using details::eig;
+//}
 
 }
 
