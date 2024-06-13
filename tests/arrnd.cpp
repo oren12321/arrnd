@@ -1532,7 +1532,10 @@ TEST(arrnd_test, exclude_and_merge)
             {arrnd<int>(
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
-        auto exc = exclude(arr, {}, {2});
+        //auto exc = exclude(arr, {}, {2});
+        auto exc = transform<0>(arr, [](const auto& val) {
+            return exclude(val, {}, {2});
+        });
 
         EXPECT_TRUE(all_equal(exc,
             arrnd<arrnd<arrnd<int>>>({1},
@@ -1540,7 +1543,11 @@ TEST(arrnd_test, exclude_and_merge)
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 1}, {4, 8}),
                         arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})}))));
 
-        EXPECT_TRUE(all_equal(merge(exc),
+        EXPECT_TRUE(all_equal(/*merge(exc)*/
+            transform<0>(exc,
+                [](const auto& val) {
+                    return merge(val);
+                }),
             arrnd<arrnd<int>>({1}, {arrnd<int>({5, 3}, {1, 2, 4, 5, 6, 8, 13, 14, 16, 17, 18, 20, 21, 22, 24})})));
     }
 
@@ -1602,7 +1609,11 @@ TEST(arrnd_test, split)
             {arrnd<int>(
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
-        EXPECT_TRUE(all_equal(split(arr, {}, {2}),
+        EXPECT_TRUE(all_equal(/*split(arr, {}, {2})*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return split(val, {}, {2});
+                }),
             arrnd<arrnd<arrnd<int>>>({1},
                 arrnd<arrnd<int>>({2, 2},
                     {arrnd<int>({2, 2}, {1, 2, 5, 6}), arrnd<int>({2, 2}, {3, 4, 7, 8}),

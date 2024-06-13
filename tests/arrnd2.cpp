@@ -557,13 +557,16 @@ TEST(arrnd_test, squeeze)
         arrnd<arrnd<int>> arr(
             {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})});
 
-        auto sarr1 = squeeze<0>(arr);
+        auto sarr1 = squeeze/*<0>*/(arr);
         EXPECT_TRUE(all_equal(sarr1,
             arrnd<arrnd<int>>(
                 {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})})));
         //EXPECT_TRUE(sarr1.header().is_slice());
 
-        auto sarr2 = squeeze(arr);
+        //auto sarr2 = squeeze(arr);
+        auto sarr2 = transform<0>(arr, [](const auto& val) {
+            return squeeze(val);
+        });
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>(
                 {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
