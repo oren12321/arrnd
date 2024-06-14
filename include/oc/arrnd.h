@@ -6270,7 +6270,8 @@ namespace details {
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::value_type, Args...>)
+        requires(Level > 0
+            && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::template inner_value_type<Level>, Args...>)
         [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args) const
         {
             using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
@@ -6293,7 +6294,10 @@ namespace details {
             typename transformed_type::indexer_type arr_gen(arr.header());
 
             for (; gen && res_gen && arr_gen; ++gen, ++res_gen, ++arr_gen) {
-                res[*res_gen] = (*this)[*gen].template transform<Level - 1, typename ArCo::value_type, Func, Args...>(
+                res[*res_gen]
+                    = (*this)[*gen]
+                          .template transform<Level - 1, typename ArCo::template inner_value_type<Level - 1>, Func,
+                              Args...>(
                     arr[*arr_gen], std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
@@ -6301,12 +6305,14 @@ namespace details {
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
-            requires(
-                Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::value_type, Args...>)
+            requires(Level == 0
+            && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::template inner_value_type<Level>,
+                Args...>)
         [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func, Args&&... args) const
         {
-            using transformed_type = inner_replaced_type<
-                std::invoke_result_t<Func, inner_value_type<Level>, typename ArCo::value_type, Args...>, Level>;
+            using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
+                                                             typename ArCo::template inner_value_type<Level>, Args...>,
+                Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -6460,7 +6466,8 @@ namespace details {
             assert(hdr_.numel() == arr.header().numel());
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen].template apply<Level - 1, typename ArCo::value_type, Func, Args...>(
+                (*this)[*gen]
+                    .template apply<Level - 1, typename ArCo::template inner_value_type<Level - 1>, Func, Args...>(
                     arr, std::forward<Func>(func), std::forward<Args>(args)...);
             }
 
