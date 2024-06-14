@@ -41,7 +41,10 @@ TEST(arrnd_test, matmul)
         arrnd<arrnd<arrnd<double>>> arr2(
             {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 1, 3, 1}, {1, 2, 3, 4, 5, 6, 7, 8, 9})})});
 
-        auto res = matmul(arr1, arr2);
+        //auto res = matmul(arr1, arr2);
+        auto res = transform<1>(arr1, arr2, [](const auto& val1, const auto& val2) {
+            return matmul(val1, val2);
+        });
 
         EXPECT_TRUE(all_equal(res,
             arrnd<arrnd<arrnd<double>>>(
@@ -71,7 +74,12 @@ TEST(arrnd_test, det)
              {4, 3, 2, 2, 0, 1, -3, 3, 0, -1, 3, 3, 0, 3, 1, 1, 1, 1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1, 1, 1, 1}),
             arrnd<int>({3, 3}, {2, -3, 1, 2, 0, -1, 1, 4, 5})});
 
-    EXPECT_TRUE(all_equal(det(arr), arrnd<arrnd<int>>({2}, {arrnd<int>({2, 1}, {-240, -16}), arrnd<int>({1}, {49})})));
+    EXPECT_TRUE(all_equal(/*det(arr)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return det(val);
+            }),
+        arrnd<arrnd<int>>({2}, {arrnd<int>({2, 1}, {-240, -16}), arrnd<int>({1}, {49})})));
 }
 
 TEST(arrnd_test, inverse)
@@ -82,7 +90,11 @@ TEST(arrnd_test, inverse)
         {arrnd<double>({2, 2, 2}, {1, 2, 5, 6, 9, 10, 13, 14}), arrnd<double>({2, 2}, {1, 0, 0, 1}),
             arrnd<double>({3, 3}, {3, 0, 2, 2, 0, -2, 0, 1, 1})});
 
-    EXPECT_TRUE(all_close(inverse(arr),
+    EXPECT_TRUE(all_close(/*inverse(arr)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return inverse(val);
+            }),
         arrnd<arrnd<double>>({3},
             {arrnd<double>({2, 2, 2}, {-1.5, 0.5, 1.25, -0.25, -3.5, 2.5, 3.25, -2.25}),
                 arrnd<double>({2, 2}, {1, 0, 0, 1}),

@@ -7048,30 +7048,30 @@ namespace details {
             return find<this_type::depth, ArCo>(mask);
         }
 
-        template </*std::int64_t Level, */ arrnd_compliant ArCo>
-            requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
-        [[nodiscard]] constexpr auto matmul(const ArCo& arr) const
-        {
-            return transform<0>(arr, [](const auto& a, const auto& b) {
-                return a.matmul(b);
-            });
-            /*using ret_type = inner_replaced_type<decltype(inner_value_type<Level>{} * (typename ArCo::template inner_value_type<Level>{})), Level>;
+        //template </*std::int64_t Level, */ arrnd_compliant ArCo>
+        //    requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
+        //[[nodiscard]] constexpr auto matmul(const ArCo& arr) const
+        //{
+        //    return transform<0>(arr, [](const auto& a, const auto& b) {
+        //        return a.matmul(b);
+        //    });
+        //    /*using ret_type = inner_replaced_type<decltype(inner_value_type<Level>{} * (typename ArCo::template inner_value_type<Level>{})), Level>;
 
-            if (empty()) {
-                return ret_type();
-            }
+        //    if (empty()) {
+        //        return ret_type();
+        //    }
 
-            ret_type res(hdr_.dims());
+        //    ret_type res(hdr_.dims());
 
-            indexer_type gen(hdr_);
-            typename ret_type::indexer_type res_gen(res.header());
+        //    indexer_type gen(hdr_);
+        //    typename ret_type::indexer_type res_gen(res.header());
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template matmul<Level - 1>(arr);
-            }
+        //    for (; gen && res_gen; ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen].template matmul<Level - 1>(arr);
+        //    }
 
-            return res;*/
-        }
+        //    return res;*/
+        //}
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level == 0*/ this_type::is_flat && ArCo::is_flat)
         [[nodiscard]] constexpr auto matmul(const ArCo& arr) const
@@ -7134,13 +7134,13 @@ namespace details {
         //    return matmul<this_type::depth>(arr);
         //}
 
-        [[nodiscard]] constexpr auto det() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.det();
-            });
-        }
+        //[[nodiscard]] constexpr auto det() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.det();
+        //    });
+        //}
 
         [[nodiscard]] constexpr auto det() const
             requires(this_type::is_flat)
@@ -7190,13 +7190,13 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto inverse() const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([](const auto& a) {
-                return a.inverse();
-            });
-        }
+        //[[nodiscard]] constexpr auto inverse() const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([](const auto& a) {
+        //        return a.inverse();
+        //    });
+        //}
 
         [[nodiscard]] constexpr auto inverse() const
             requires(this_type::is_flat)
