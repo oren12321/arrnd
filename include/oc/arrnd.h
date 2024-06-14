@@ -8851,7 +8851,8 @@ namespace details {
                 }
             }
 
-            auto expanded = expand/*<Level>*/(hdr_.dims().size() - (page_size + 1), 0, true);
+            //auto expanded = expand/*<Level>*/(hdr_.dims().size() - (page_size + 1), 0, true);
+            auto expanded = get_pages(page_size);
 
             using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
 
@@ -8868,27 +8869,27 @@ namespace details {
             for (; exp_gen && trs_gen; ++exp_gen, ++trs_gen) {
                 auto page = expanded[*exp_gen];
 
-                auto trimed_page = page;
-                size_type cycles_until_page = page.header().dims().size() - page_size;
-                for (size_type i = 0; i < cycles_until_page; ++i) {
-                    assert(trimed_page.header().dims().front() == 1);
-                    trimed_page = trimed_page[interval_type::full()];
-                }
+                //auto trimed_page = page;
+                //size_type cycles_until_page = page.header().dims().size() - page_size;
+                //for (size_type i = 0; i < cycles_until_page; ++i) {
+                //    assert(trimed_page.header().dims().front() == 1);
+                //    trimed_page = trimed_page[interval_type::full()];
+                //}
                 //auto page = expanded[*exp_gen];
 
-                auto processed = invoke_func(trimed_page /*.template reshape<0>({page_dim1, page_dim2})*/);
+                auto processed = invoke_func(page/*trimed_page*/ /*.template reshape<0>({page_dim1, page_dim2})*/);
 
                 //processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
                 //    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size))
                 //                         .expand(processed.header().dims());
 
-                typename decltype(page)::header_type::storage_type expanded_dims(
-                    std::ssize(page.header().dims()) - page_size + std::ssize(processed.header().dims()));
-                std::copy(page.header().dims().cbegin(),
-                    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size), expanded_dims.begin());
-                std::copy(processed.header().dims().begin(), processed.header().dims().end(),
-                    std::next(expanded_dims.begin(), page.header().dims().size() - page_size));
-                processed.header() = typename decltype(page)::header_type(expanded_dims);
+                //typename decltype(page)::header_type::storage_type expanded_dims(
+                //    std::ssize(page.header().dims()) - page_size + std::ssize(processed.header().dims()));
+                //std::copy(page.header().dims().cbegin(),
+                //    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size), expanded_dims.begin());
+                //std::copy(processed.header().dims().begin(), processed.header().dims().end(),
+                //    std::next(expanded_dims.begin(), page.header().dims().size() - page_size));
+                //processed.header() = typename decltype(page)::header_type(expanded_dims);
 
                 trans_expanded[*trs_gen] = processed;
             }
@@ -8897,7 +8898,7 @@ namespace details {
                 return *this;
             } else {
 
-                return trans_expanded./*template */collapse/*<Level + 1>*/();
+                return trans_expanded.merge_pages/*template *//*collapse*//*<Level + 1>*/();
             }
         }
 
@@ -8981,6 +8982,113 @@ namespace details {
             return pages./*template */reshape/*<Level>*/(
                 pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         }
+
+
+
+
+        [[nodiscard]] constexpr typename this_type::template replaced_type<this_type> get_pages(
+            size_type page_ndims = 2/*, bool trimmed_dims = true*/) const
+        {
+            assert(page_ndims > 0 && page_ndims <= std::ssize(hdr_.dims()));
+
+            if (page_ndims == std::ssize(hdr_.dims())) {
+                //if (trimmed_dims) {
+                    return typename this_type::template replaced_type<this_type>({1}, {*this});
+                //}
+                //auto dims = hdr_.dims();
+                //std::fill(dims.begin(), dims.end(), 1);
+                //return typename this_type::template replaced_type<this_type>(dims, {*this});
+            }
+
+            typename this_type::template replaced_type<this_type> pages;
+            //if (trimmed_dims) {
+                pages = typename this_type::template replaced_type<this_type>(
+                    hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), std::ssize(hdr_.dims()) - page_ndims));
+            //} else {
+            //    auto dims = hdr_.dims();
+            //    std::fill(std::next(dims.begin(), std::ssize(hdr_.dims()) - page_ndims), dims.end(), 1);
+            //    pages = typename this_type::template replaced_type<this_type>(dims);
+            //}
+
+            for (auto gen = pages.indexer(); gen; ++gen) {
+                auto page = *this;
+
+                const auto& subs = gen.indices();
+                for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
+                    page = page(interval_type::at(*std::next(subs.cbegin(), axis)), axis);
+                }
+
+                //if (trimmed_dims) {
+                    for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
+                        page = page[interval_type::at(0)];
+                    }
+                //}
+
+                pages[*gen] = page;
+            }
+
+            return pages;
+        }
+
+        [[nodiscard]] constexpr value_type merge_pages() const
+        {
+            assert(!this_type::is_flat);
+
+            if (empty()) {
+                return value_type{};
+            }
+
+            bool all_pages_source_known = std::all_of(cbegin(), cend(), [](const auto& page) {
+                return page.creator() != nullptr;
+            });
+
+            bool all_pages_from_same_source = std::adjacent_find(cbegin(), cend(),
+                                                  [](const auto& page1, const auto& page2) {
+                                                      return page1.creator() != page2.creator();
+                                                  })
+                == cend();
+
+            if (all_pages_source_known && all_pages_from_same_source) {
+                return *(*this)[0].creator();
+            }
+
+            bool all_pages_with_same_dimensions
+                = std::adjacent_find(cbegin(), cend(),
+                      [](const auto& page1, const auto& page2) {
+                          return !std::equal(page1.header().dims().cbegin(), page1.header().dims().cend(),
+                              page2.header().dims().cbegin(), page2.header().dims().cend());
+                      })
+                == cend();
+
+            assert(all_pages_with_same_dimensions);
+
+            size_type this_ndims = std::ssize(hdr_.dims());
+            size_type page_ndims = std::ssize((*this)[0].header().dims());
+
+            typename header_type::storage_type new_dims;
+            //if (this_ndims != page_ndims) {
+                new_dims = typename header_type::storage_type(this_ndims + page_ndims);
+                const auto& this_dims = hdr_.dims();
+                const auto& page_dims = (*this)[0].header().dims();
+                std::copy(this_dims.cbegin(), this_dims.cend(), new_dims.begin());
+                std::copy(page_dims.cbegin(), page_dims.cend(), std::next(new_dims.begin(), this_ndims));
+            //}
+
+            value_type res(new_dims);
+            indexer_type res_gen(res.header());
+
+            for (const auto& page : *this) {
+                for (indexer_type page_gen(page.header()); page_gen && res_gen; ++page_gen, ++res_gen) {
+                    res[*res_gen] = page[*page_gen];
+                }
+            }
+
+            return res;
+        }
+
+
+
+
         //[[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
         //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         //{
