@@ -7115,7 +7115,8 @@ namespace details {
                         * arr.header().dims().back());
                 assert(lhs_num_pages == rhs_num_pages);
 
-                auto arr_pages = arr./*template */pages/*<0>*/(arr.header().dims().size() - 3, 0, true);
+                //auto arr_pages = arr./*template */pages/*<0>*/(arr.header().dims().size() - 3, 0, true);
+                auto arr_pages = arr.pages(2);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
                 return pageop/*<0>*/(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
@@ -8852,7 +8853,7 @@ namespace details {
             }
 
             //auto expanded = expand/*<Level>*/(hdr_.dims().size() - (page_size + 1), 0, true);
-            auto expanded = get_pages(page_size);
+            auto expanded = pages(page_size);
 
             using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
 
@@ -8934,59 +8935,59 @@ namespace details {
         //}
         //template <std::int64_t Level>
             //requires(Level == 0)
-        constexpr auto pages(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
-        {
-            using page_type = this_type;
-            using pages_type = inner_replaced_type<page_type, /*Level*/0>;
+        //constexpr auto pages(size_type axis, size_type division = 0,
+        //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        //{
+        //    using page_type = this_type;
+        //    using pages_type = inner_replaced_type<page_type, /*Level*/0>;
 
-            if (empty()) {
-                return pages_type();
-            }
+        //    if (empty()) {
+        //        return pages_type();
+        //    }
 
-            //assert(hdr_.dims().size() >= 2);
+        //    //assert(hdr_.dims().size() >= 2);
 
-            //if (hdr_.is_matrix()) {
-            //    return pages_type({1}, {*this});
-            //}
+        //    //if (hdr_.is_matrix()) {
+        //    //    return pages_type({1}, {*this});
+        //    //}
 
-            // find axis
-            // the first axis from the end bigger than one, and after the page
+        //    // find axis
+        //    // the first axis from the end bigger than one, and after the page
 
-            pages_type pages = expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+        //    pages_type pages = expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
 
-            //auto fixed_axis = axis;
-            //if (find_closest_axis_dim_bigger_than_one_to_the_left) {
-            //    if (*std::next(hdr_.dims().cbegin(), fixed_axis) == 1) {
-            //        for (size_type i = axis - 1; i >= 0; --i) {
-            //            if (*std::next(hdr_.dims().cbegin(), i) > 1) {
-            //                fixed_axis = i;
-            //                break;
-            //            }
-            //        }
-            //    }
-            //}
+        //    //auto fixed_axis = axis;
+        //    //if (find_closest_axis_dim_bigger_than_one_to_the_left) {
+        //    //    if (*std::next(hdr_.dims().cbegin(), fixed_axis) == 1) {
+        //    //        for (size_type i = axis - 1; i >= 0; --i) {
+        //    //            if (*std::next(hdr_.dims().cbegin(), i) > 1) {
+        //    //                fixed_axis = i;
+        //    //                break;
+        //    //            }
+        //    //        }
+        //    //    }
+        //    //}
 
-            for (typename pages_type::indexer_type pgen(pages.header()); pgen; ++pgen) {
-                //size_type cycles_until_page = pages[*pgen].header().dims().size() - 2;
-                int count = axis + 1;
-                while (count-- > 0 && pages[*pgen].header().dims().front() == 1) {
-                    pages[*pgen] = pages[*pgen][interval_type::full()];
-                }
-                //for (size_type i = 0; i < cycles_until_page; ++i) {
-                //    assert(pages[*pgen].header().dims().front() == 1);
-                //    pages[*pgen] = pages[*pgen][interval<size_type>::full()];
-                //}
-            }
+        //    for (typename pages_type::indexer_type pgen(pages.header()); pgen; ++pgen) {
+        //        //size_type cycles_until_page = pages[*pgen].header().dims().size() - 2;
+        //        int count = axis + 1;
+        //        while (count-- > 0 && pages[*pgen].header().dims().front() == 1) {
+        //            pages[*pgen] = pages[*pgen][interval_type::full()];
+        //        }
+        //        //for (size_type i = 0; i < cycles_until_page; ++i) {
+        //        //    assert(pages[*pgen].header().dims().front() == 1);
+        //        //    pages[*pgen] = pages[*pgen][interval<size_type>::full()];
+        //        //}
+        //    }
 
-            return pages./*template */reshape/*<Level>*/(
-                pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
-        }
-
-
+        //    return pages./*template */reshape/*<Level>*/(
+        //        pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
+        //}
 
 
-        [[nodiscard]] constexpr typename this_type::template replaced_type<this_type> get_pages(
+
+
+        [[nodiscard]] constexpr typename this_type::template replaced_type<this_type> pages(
             size_type page_ndims = 2/*, bool trimmed_dims = true*/) const
         {
             assert(page_ndims > 0 && page_ndims <= std::ssize(hdr_.dims()));
@@ -13894,18 +13895,30 @@ namespace details {
     //    return collapse<ArCo::depth>(arr);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
-    {
-        return arr./*template */pages/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
+    //{
+    //    return arr./*template */pages/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type axis,
     //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
     //{
     //    return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     //}
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type page_size = 2)
+    {
+        return arr.pages();
+    }
+
+    template <arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto merge_pages(const ArCo& arr)
+    {
+        return arr.merge_pages();
+    }
 
     template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
     [[nodiscard]] inline constexpr auto split(
@@ -15047,6 +15060,7 @@ using details::collapse;
 using details::zeros;
 using details::eye;
 using details::pages;
+using details::merge_pages;
 using details::split;
 using details::exclude;
 using details::merge;
