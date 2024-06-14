@@ -7885,13 +7885,13 @@ namespace details {
         //    });
         //}
 
-        [[nodiscard]] constexpr auto tril(size_type offset = 0) const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([offset](const auto& a) {
-                return a.tril(offset);
-            });
-        }
+        //[[nodiscard]] constexpr auto tril(size_type offset = 0) const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([offset](const auto& a) {
+        //        return a.tril(offset);
+        //    });
+        //}
 
         [[nodiscard]] constexpr auto tril(size_type offset = 0) const
             requires(this_type::is_flat)
@@ -7935,13 +7935,13 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto triu(size_type offset = 0) const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([offset](const auto& a) {
-                return a.triu(offset);
-            });
-        }
+        //[[nodiscard]] constexpr auto triu(size_type offset = 0) const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([offset](const auto& a) {
+        //        return a.triu(offset);
+        //    });
+        //}
 
         [[nodiscard]] constexpr auto triu(size_type offset = 0) const
             requires(this_type::is_flat)
@@ -7986,13 +7986,13 @@ namespace details {
             });
         }
 
-        [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix, size_type offset = 0) const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([type, offset](const auto& a) {
-                return a.diag(type, offset);
-            });
-        }
+        //[[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix, size_type offset = 0) const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([type, offset](const auto& a) {
+        //        return a.diag(type, offset);
+        //    });
+        //}
         [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix,
             size_type offset = 0) const
             requires(this_type::is_flat)
@@ -8104,13 +8104,13 @@ namespace details {
             }
         }
 
-        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
-            requires(!this_type::is_flat)
-        {
-            return transform<0>([lower, upper](const auto& a) {
-                return a.is_banded(lower, upper);
-            });
-        }
+        //[[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
+        //    requires(!this_type::is_flat)
+        //{
+        //    return transform<0>([lower, upper](const auto& a) {
+        //        return a.is_banded(lower, upper);
+        //    });
+        //}
         [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
             requires(this_type::is_flat)
         {

@@ -321,32 +321,64 @@ TEST(arrnd_test, diag)
                 arrnd<int>({5, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
                 arrnd<int>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9})});
 
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::from_matrix)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::from_matrix);
+                }),
             arrnd<arrnd<int>>(
                 {3}, {arrnd<int>({3}, {1, 7, 13}), arrnd<int>({3}, {1, 5, 9}), arrnd<int>({3}, {1, 5, 9})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, 1),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::from_matrix, 1)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::from_matrix, 1);
+                }),
             arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {2, 8, 14}), arrnd<int>({2}, {2, 6}), arrnd<int>({2}, {2, 6})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, 2),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::from_matrix, 2)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::from_matrix, 2);
+                }),
             arrnd<arrnd<int>>({3}, {arrnd<int>({3}, {3, 9, 15}), arrnd<int>({1}, {3}), arrnd<int>({1}, {3})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, -1),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::from_matrix, -1)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::from_matrix, -1);
+                }),
             arrnd<arrnd<int>>({3}, {arrnd<int>({2}, {6, 12}), arrnd<int>({3}, {4, 8, 12}), arrnd<int>({2}, {4, 8})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::from_matrix, -2),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::from_matrix, -2)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::from_matrix, -2);
+                }),
             arrnd<arrnd<int>>({3}, {arrnd<int>({1}, {11}), arrnd<int>({3}, {7, 11, 15}), arrnd<int>({1}, {7})})));
     }
 
     {
         arrnd<arrnd<int>> arr({3}, {arrnd<int>({2}, {6, 12}), arrnd<int>({3}, {4, 8, 12}), arrnd<int>({2}, {4, 8})});
 
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::to_matrix)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::to_matrix);
+                }),
             arrnd<arrnd<int>>({3},
                 {arrnd<int>({2, 2}, {6, 0, 0, 12}), arrnd<int>({3, 3}, {4, 0, 0, 0, 8, 0, 0, 0, 12}),
                     arrnd<int>({2, 2}, {4, 0, 0, 8})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix, 1),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::to_matrix, 1)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::to_matrix, 1);
+                }),
             arrnd<arrnd<int>>({3},
                 {arrnd<int>({3, 3}, {0, 6, 0, 0, 0, 12, 0, 0, 0}),
                     arrnd<int>({4, 4}, {0, 4, 0, 0, 0, 0, 8, 0, 0, 0, 0, 12, 0, 0, 0, 0}),
                     arrnd<int>({3, 3}, {0, 4, 0, 0, 0, 8, 0, 0, 0})})));
-        EXPECT_TRUE(all_equal(diag(arr, arrnd_diag_type::to_matrix, -1),
+        EXPECT_TRUE(all_equal(/*diag(arr, arrnd_diag_type::to_matrix, -1)*/
+            transform<0>(arr,
+                [](const auto& val) {
+                    return diag(val, arrnd_diag_type::to_matrix, -1);
+                }),
             arrnd<arrnd<int>>({3},
                 {arrnd<int>({3, 3}, {0, 0, 0, 6, 0, 0, 0, 12, 0}),
                     arrnd<int>({4, 4}, {0, 0, 0, 0, 4, 0, 0, 0, 0, 8, 0, 0, 0, 0, 12, 0}),
@@ -363,37 +395,97 @@ TEST(arrnd_test, tril_and_triu)
             arrnd<int>({5, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
             arrnd<int>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9})});
 
-    EXPECT_TRUE(all_equal(tril(arr),
+    EXPECT_TRUE(all_equal(/*tril(arr)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return tril(val);
+            }),
         arrnd<arrnd<int>>({3},
             {arrnd<int>({3, 5}, {1, 0, 0, 0, 0, 6, 7, 0, 0, 0, 11, 12, 13, 0, 0}),
                 arrnd<int>({5, 3}, {1, 0, 0, 4, 5, 0, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
                 arrnd<int>({3, 3}, {1, 0, 0, 4, 5, 0, 7, 8, 9})})));
-    EXPECT_TRUE(all_equal(tril(arr, 1),
+    EXPECT_TRUE(all_equal(/*tril(arr, 1)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return tril(val, 1);
+            }),
         arrnd<arrnd<int>>({3},
             {arrnd<int>({3, 5}, {1, 2, 0, 0, 0, 6, 7, 8, 0, 0, 11, 12, 13, 14, 0}),
                 arrnd<int>({5, 3}, {1, 2, 0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
                 arrnd<int>({3, 3}, {1, 2, 0, 4, 5, 6, 7, 8, 9})})));
-    EXPECT_TRUE(all_equal(tril(arr, 2),
+    EXPECT_TRUE(all_equal(/*tril(arr, 2)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return tril(val, 2);
+            }),
         arrnd<arrnd<int>>({3},
             {arrnd<int>({3, 5}, {1, 2, 3, 0, 0, 6, 7, 8, 9, 0, 11, 12, 13, 14, 15}),
                 arrnd<int>({5, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
                 arrnd<int>({3, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9})})));
-    EXPECT_TRUE(all_equal(tril(arr, -1),
+    EXPECT_TRUE(all_equal(/*tril(arr, -1)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return tril(val, -1);
+            }),
         arrnd<arrnd<int>>({3},
             {arrnd<int>({3, 5}, {0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 11, 12, 0, 0, 0}),
                 arrnd<int>({5, 3}, {0, 0, 0, 4, 0, 0, 7, 8, 0, 10, 11, 12, 13, 14, 15}),
                 arrnd<int>({3, 3}, {0, 0, 0, 4, 0, 0, 7, 8, 0})})));
-    EXPECT_TRUE(all_equal(tril(arr, -2),
+    EXPECT_TRUE(all_equal(/*tril(arr, -2)*/
+        transform<0>(arr,
+            [](const auto& val) {
+                return tril(val, -2);
+            }),
         arrnd<arrnd<int>>({3},
             {arrnd<int>({3, 5}, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0}),
                 arrnd<int>({5, 3}, {0, 0, 0, 0, 0, 0, 7, 0, 0, 10, 11, 0, 13, 14, 15}),
                 arrnd<int>({3, 3}, {0, 0, 0, 0, 0, 0, 7, 0, 0})})));
 
-    EXPECT_TRUE(all_equal(triu(arr) + tril(arr, -1), arr));
-    EXPECT_TRUE(all_equal(triu(arr, 1) + tril(arr), arr));
-    EXPECT_TRUE(all_equal(triu(arr, 2) + tril(arr, 1), arr));
-    EXPECT_TRUE(all_equal(triu(arr, -1) + tril(arr, -2), arr));
-    EXPECT_TRUE(all_equal(triu(arr, -2) + tril(arr, -3), arr));
+    EXPECT_TRUE(all_equal(/*triu(arr)*/ transform<0>(arr,
+                              [](const auto& val) {
+                                  return triu(val);
+                              })
+            + /*tril(arr, -1)*/ transform<0>(arr,
+                [](const auto& val) {
+                    return tril(val, -1);
+                }),
+        arr));
+    EXPECT_TRUE(all_equal(/*triu(arr, 1)*/ transform<0>(arr,
+                              [](const auto& val) {
+                                  return triu(val, 1);
+                              })
+            + /*tril(arr)*/ transform<0>(arr,
+                [](const auto& val) {
+                    return tril(val);
+                }),
+        arr));
+    EXPECT_TRUE(all_equal(/*triu(arr, 2)*/ transform<0>(arr,
+                              [](const auto& val) {
+                                  return triu(val, 2);
+                              })
+            + /*tril(arr, 1)*/ transform<0>(arr,
+                [](const auto& val) {
+                    return tril(val, 1);
+                }),
+        arr));
+    EXPECT_TRUE(all_equal(/*triu(arr, -1)*/ transform<0>(arr,
+                              [](const auto& val) {
+                                  return triu(val, -1);
+                              })
+            + /*tril(arr, -2)*/ transform<0>(arr,
+                [](const auto& val) {
+                    return tril(val, -2);
+                }),
+        arr));
+    EXPECT_TRUE(all_equal(/*triu(arr, -2)*/ transform<0>(arr,
+                              [](const auto& val) {
+                                  return triu(val, -2);
+                              })
+            + /*tril(arr, -3)*/ transform<0>(arr,
+                [](const auto& val) {
+                    return tril(val, -3);
+                }),
+        arr));
 }
 
 TEST(arrnd_test, is_banded)
