@@ -1158,9 +1158,10 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_header subheader(interval_type range) const
         {
-            std::initializer_list<interval_type> ranges = {range/*.align(dims_.front())*/};
+            //std::initializer_list<interval_type> ranges = {range/*.align(dims_.front())*/};
 
-            auto res = subheader(ranges.begin(), ranges.end());
+            //auto res = subheader(ranges.begin(), ranges.end());
+            auto res = subheader(&range, &range + 1);
             if (res.empty() || res.dims_.front() != 1) {
                 return res;
             }
@@ -9001,7 +9002,7 @@ namespace details {
                 //return typename this_type::template replaced_type<this_type>(dims, {*this});
             }
 
-            typename this_type::template replaced_type<this_type> pages;
+            typename this_type::template replaced_type<this_type> /*pages;*/
             //if (trimmed_dims) {
                 pages = typename this_type::template replaced_type<this_type>(
                     hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), std::ssize(hdr_.dims()) - page_ndims));
@@ -9016,13 +9017,13 @@ namespace details {
 
                 const auto& subs = gen.indices();
                 for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
-                    page = page(interval_type::at(*std::next(subs.cbegin(), axis)), axis);
+                    page = page/*(*/[interval_type::at(*std::next(subs.cbegin(), axis))]/*, axis)*/;
                 }
 
                 //if (trimmed_dims) {
-                    for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
-                        page = page[interval_type::at(0)];
-                    }
+                    //for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
+                    //    page = page[interval_type::at(0)];
+                    //}
                 //}
 
                 pages[*gen] = page;
