@@ -216,19 +216,23 @@ namespace details {
         using replaced_type = simple_dynamic_vector<U, Allocator>;
 
         template <typename U = value_type>
-        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr)
-            : size_(size)
+        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
+            : size_(size), is_view_(is_view)
         {
             assert(size >= 0);
             if (size > 0) {
-                data_ptr_ = alloc_.allocate(size * sizeof(value_type));
-                if (data) {
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
-                    }
-                } else if constexpr (!std::is_fundamental_v<T>) {
-                    if constexpr (std::is_default_constructible_v<T>) {
-                        std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
+                if (is_view) {
+                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+                } else {
+                    data_ptr_ = alloc_.allocate(size * sizeof(value_type));
+                    if (data) {
+                        if constexpr (std::is_copy_constructible_v<T>) {
+                            std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
+                        }
+                    } else if constexpr (!std::is_fundamental_v<T>) {
+                        if constexpr (std::is_default_constructible_v<T>) {
+                            std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
+                        }
                     }
                 }
             }
@@ -242,12 +246,17 @@ namespace details {
         constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
             : alloc_(other.alloc_)
             , size_(other.size_)
+            , is_view_(other.is_view_)
         {
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
-                        reinterpret_cast<pointer>(data_ptr_));
+                if (is_view_) {
+                    data_ptr_ = other.data_ptr_;
+                } else {
+                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                            reinterpret_cast<pointer>(data_ptr_));
+                    }
                 }
             }
         }
@@ -267,13 +276,18 @@ namespace details {
 
             alloc_ = other.alloc_;
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                if (data_ptr_) {
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
-                            reinterpret_cast<pointer>(data_ptr_));
+                if (other.is_view_) {
+                    data_ptr_ = other.data_ptr_;
+                } else {
+                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+                    if (data_ptr_) {
+                        if constexpr (std::is_copy_constructible_v<T>) {
+                            std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                                reinterpret_cast<pointer>(data_ptr_));
+                        }
                     }
                 }
             }
@@ -284,6 +298,7 @@ namespace details {
         constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
             : alloc_(std::move(other.alloc_))
             , size_(other.size_)
+            , is_view_(other.is_view_)
         {
             data_ptr_ = other.data_ptr_;
 
@@ -306,6 +321,7 @@ namespace details {
 
             alloc_ = std::move(other.alloc_);
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
             data_ptr_ = other.data_ptr_;
 
@@ -318,10 +334,12 @@ namespace details {
         constexpr ~simple_dynamic_vector() noexcept
         {
             if (!empty()) {
-                if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+                if (!is_view_) {
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+                    }
+                    alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
                 }
-                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
             }
         }
 
@@ -427,6 +445,8 @@ namespace details {
 
         size_type size_ = 0;
         std::uint8_t* data_ptr_ = nullptr;
+
+        bool is_view_ = false;
     };
 
     template <typename T, template <typename> typename Allocator = lightweight_allocator>
@@ -457,13 +477,18 @@ namespace details {
         using replaced_type = simple_static_vector<U, Size>;
 
         template <typename U = value_type>
-        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr)
+        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
             : size_(size)
+            , is_view_(is_view)
         {
             assert(size_ >= 0 && size_ <= Size);
             if (data) {
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::copy(data, std::next(data, size_), buffer_);
+                if (is_view_) {
+                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+                } else {
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::copy(data, std::next(data, size_), buffer_);
+                    }
                 }
             }
         }
@@ -475,9 +500,14 @@ namespace details {
 
         constexpr simple_static_vector(const simple_static_vector& other)
             : size_(other.size_)
+            , is_view_(other.is_view_)
         {
-            if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
         }
 
@@ -488,9 +518,14 @@ namespace details {
             }
 
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
-            if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (other.is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             return *this;
@@ -498,9 +533,14 @@ namespace details {
 
         constexpr simple_static_vector(simple_static_vector&& other) noexcept
             : size_(other.size_)
+            , is_view_(other.is_view_)
         {
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_move_constructible_v<T>) {
+                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             other.size_ = 0;
@@ -513,9 +553,14 @@ namespace details {
             }
 
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (other.is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_move_constructible_v<T>) {
+                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             other.size_ = 0;
@@ -624,6 +669,8 @@ namespace details {
         size_type size_ = 0;
         value_type buffer_[Size];
         std::uint8_t* data_ptr_ = reinterpret_cast<std::uint8_t*>(buffer_);
+
+        bool is_view_ = false;
     };
 
     template <typename T, std::int64_t Size>
