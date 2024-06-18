@@ -239,8 +239,8 @@ namespace details {
         }
 
         template <typename InputIt>
-        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last)
-            : simple_dynamic_vector(std::distance(first, last), &(*first))
+        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+            : simple_dynamic_vector(std::distance(first, last), &(*first), is_view)
         { }
 
         constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
@@ -494,8 +494,8 @@ namespace details {
         }
 
         template <typename InputIt>
-        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last)
-            : simple_static_vector(std::distance(first, last), &(*first))
+        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+            : simple_static_vector(std::distance(first, last), &(*first), is_view)
         { }
 
         constexpr simple_static_vector(const simple_static_vector& other)
@@ -4801,12 +4801,15 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
+                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), first_data, last_data))
         {
-            assert(last_data - first_data >= hdr_.numel());
+            // in case that data buffer allocated, check the number of data elements is valid
             if (buffsp_) {
-                std::copy_n(first_data, hdr_.numel(), buffsp_->data());
+                assert(last_data - first_data == hdr_.numel());
             }
+            /*if (buffsp_) {
+                std::copy_n(first_data, hdr_.numel(), buffsp_->data());
+            }*/
         }
         template <signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
         explicit constexpr arrnd(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
