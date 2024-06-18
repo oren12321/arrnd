@@ -200,7 +200,7 @@ namespace details {
     class simple_dynamic_vector final {
     public:
         using value_type = T;
-        using allocator_type = Allocator<T>;
+        using allocator_type = Allocator<std::uint8_t>;
         using size_type = std::int64_t;
         using difference_type = std::int64_t;
         using reference = T&;
@@ -221,14 +221,14 @@ namespace details {
         {
             assert(size >= 0);
             if (size > 0) {
-                data_ptr_ = alloc_.allocate(size);
+                data_ptr_ = alloc_.allocate(size * sizeof(value_type));
                 if (data) {
                     if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(data, size, data_ptr_);
+                        std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
                     }
                 } else if constexpr (!std::is_fundamental_v<T>) {
                     if constexpr (std::is_default_constructible_v<T>) {
-                        std::uninitialized_default_construct_n(data_ptr_, size);
+                        std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
                     }
                 }
             }
@@ -244,9 +244,10 @@ namespace details {
             , size_(other.size_)
         {
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_);
+                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
                 if constexpr (std::is_copy_constructible_v<T>) {
-                    std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                    std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                        reinterpret_cast<pointer>(data_ptr_));
                 }
             }
         }
@@ -259,19 +260,20 @@ namespace details {
 
             if (!empty()) {
                 if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(data_ptr_, size_);
+                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
                 }
-                alloc_.deallocate(data_ptr_, size_);
+                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
             }
 
             alloc_ = other.alloc_;
             size_ = other.size_;
 
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_);
+                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
                 if (data_ptr_) {
                     if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(other.data_ptr_, other.size_, data_ptr_);
+                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                            reinterpret_cast<pointer>(data_ptr_));
                     }
                 }
             }
@@ -297,9 +299,9 @@ namespace details {
 
             if (!empty()) {
                 if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(data_ptr_, size_);
+                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
                 }
-                alloc_.deallocate(data_ptr_, size_);
+                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
             }
 
             alloc_ = std::move(other.alloc_);
@@ -317,9 +319,9 @@ namespace details {
         {
             if (!empty()) {
                 if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(data_ptr_, size_);
+                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
                 }
-                alloc_.deallocate(data_ptr_, size_);
+                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
             }
         }
 
@@ -335,49 +337,49 @@ namespace details {
 
         [[nodiscard]] constexpr pointer data() const noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
         {
             assert(index >= 0 && index < size_);
-            return data_ptr_[index];
+            return reinterpret_cast<pointer>(data_ptr_)[index];
         }
 
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
             assert(index >= 0 && index < size_);
-            return data_ptr_[index];
+            return reinterpret_cast<pointer>(data_ptr_)[index];
         }
 
         [[nodiscard]] constexpr pointer begin() noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr pointer end() noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr const_pointer begin() const noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<const_pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr const_pointer end() const noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr const_pointer cbegin() const noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<const_pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr const_pointer cend() const noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
@@ -402,29 +404,29 @@ namespace details {
 
         [[nodiscard]] constexpr const_reference back() const noexcept
         {
-            return data_ptr_[size_ - 1];
+            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
         }
 
         [[nodiscard]] constexpr reference back() noexcept
         {
-            return data_ptr_[size_ - 1];
+            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
         }
 
         [[nodiscard]] constexpr const_reference front() const noexcept
         {
-            return data_ptr_[0];
+            return reinterpret_cast<pointer>(data_ptr_)[0];
         }
 
         [[nodiscard]] constexpr reference front() noexcept
         {
-            return data_ptr_[0];
+            return reinterpret_cast<pointer>(data_ptr_)[0];
         }
 
     private:
         allocator_type alloc_;
 
         size_type size_ = 0;
-        pointer data_ptr_ = nullptr;
+        std::uint8_t* data_ptr_ = nullptr;
     };
 
     template <typename T, template <typename> typename Allocator = lightweight_allocator>
@@ -461,7 +463,7 @@ namespace details {
             assert(size_ >= 0 && size_ <= Size);
             if (data) {
                 if constexpr (std::is_copy_constructible_v<T>) {
-                    std::copy(data, std::next(data, size_), data_ptr_);
+                    std::copy(data, std::next(data, size_), buffer_);
                 }
             }
         }
@@ -475,7 +477,7 @@ namespace details {
             : size_(other.size_)
         {
             if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
             }
         }
 
@@ -488,7 +490,7 @@ namespace details {
             size_ = other.size_;
 
             if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
             }
 
             return *this;
@@ -498,7 +500,7 @@ namespace details {
             : size_(other.size_)
         {
             if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
             }
 
             other.size_ = 0;
@@ -513,7 +515,7 @@ namespace details {
             size_ = other.size_;
 
             if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.data_ptr_, other.data_ptr_ + other.size_, data_ptr_);
+                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
             }
 
             other.size_ = 0;
@@ -533,49 +535,49 @@ namespace details {
 
         [[nodiscard]] constexpr pointer data() const noexcept
         {
-            return const_cast<pointer>(data_ptr_);
+            return reinterpret_cast<pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
         {
             assert(index >= 0 && index < size_);
-            return data_ptr_[index];
+            return reinterpret_cast<pointer>(data_ptr_)[index];
         }
 
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
             assert(index >= 0 && index < size_);
-            return data_ptr_[index];
+            return reinterpret_cast<const_pointer>(data_ptr_)[index];
         }
 
         [[nodiscard]] constexpr pointer begin() noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr pointer end() noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr const_pointer begin() const noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<const_pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr const_pointer end() const noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr const_pointer cbegin() const noexcept
         {
-            return data_ptr_;
+            return reinterpret_cast<const_pointer>(data_ptr_);
         }
 
         [[nodiscard]] constexpr const_pointer cend() const noexcept
         {
-            return data_ptr_ + size_;
+            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
         }
 
         [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
@@ -600,27 +602,28 @@ namespace details {
 
         [[nodiscard]] constexpr const_reference back() const noexcept
         {
-            return data_ptr_[size_ - 1];
+            return reinterpret_cast<const_pointer>(data_ptr_)[size_ - 1];
         }
 
         [[nodiscard]] constexpr reference back() noexcept
         {
-            return data_ptr_[size_ - 1];
+            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
         }
 
         [[nodiscard]] constexpr const_reference front() const noexcept
         {
-            return data_ptr_[0];
+            return reinterpret_cast<const_pointer>(data_ptr_)[0];
         }
 
         [[nodiscard]] constexpr reference front() noexcept
         {
-            return data_ptr_[0];
+            return reinterpret_cast<pointer>(data_ptr_)[0];
         }
 
     private:
         size_type size_ = 0;
-        value_type data_ptr_[Size];
+        value_type buffer_[Size];
+        std::uint8_t* data_ptr_ = reinterpret_cast<std::uint8_t*>(buffer_);
     };
 
     template <typename T, std::int64_t Size>
