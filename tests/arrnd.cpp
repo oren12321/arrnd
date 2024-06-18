@@ -239,6 +239,9 @@ TEST(simple_static_vector_test, basic_functionality)
 
     auto svc = sv;
     EXPECT_NE(svc.data(), sv.data());
+
+    EXPECT_FALSE(sv.is_view());
+    EXPECT_FALSE(svc.is_view());
 }
 
 TEST(simple_static_vector_test, basic_view_functionality)
@@ -279,6 +282,26 @@ TEST(simple_static_vector_test, basic_view_functionality)
 
     auto svc = sv;
     EXPECT_EQ(svc.data(), sv.data());
+
+    EXPECT_TRUE(sv.is_view());
+    EXPECT_TRUE(svc.is_view());
+}
+
+TEST(arrnd_test, arrnd_view_from_external_type)
+{
+    using namespace oc;
+
+    // create arrnd view from continuous container (e.g. vector, span, etc.)
+
+    std::vector<int> vec{1, 2, 3, 4, 5, 6};
+
+    auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
+
+    arrv.apply([](int value) {
+        return value * 2;
+    });
+
+    EXPECT_EQ(vec, (std::vector<int>{2, 4, 6, 8, 10, 12}));
 }
 
 TEST(close_test, two_numbers_can_be_compared_with_specified_percision)

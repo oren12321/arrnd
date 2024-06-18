@@ -358,6 +358,11 @@ namespace details {
             return reinterpret_cast<pointer>(data_ptr_);
         }
 
+        [[nodiscard]] constexpr bool is_view() const noexcept
+        {
+            return is_view_;
+        }
+
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
         {
             assert(index >= 0 && index < size_);
@@ -581,6 +586,11 @@ namespace details {
         [[nodiscard]] constexpr pointer data() const noexcept
         {
             return reinterpret_cast<pointer>(data_ptr_);
+        }
+
+        [[nodiscard]] constexpr bool is_view() const noexcept
+        {
+            return is_view_;
         }
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
@@ -4617,6 +4627,70 @@ namespace details {
     //{
     //    return eye<ArCo>(std::begin(dims), std::end(dims));
     //}
+
+
+
+
+
+
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
+        const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        ArCo res;
+        res.header() = typename ArCo::header_type(first_dim, last_dim);
+        res.storage() = std::allocate_shared<typename ArCo::storage_type>(
+            typename ArCo::template shared_ref_allocator_type<typename ArCo::storage_type>(), first_data, last_data,
+            true);
+        return res;
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
+        const InputDataIt& first_data,
+        const InputDataIt& last_data) {
+        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
+    {
+        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, typename U>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
+    {
+        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
+    }
+
+
+
 
     //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
     //    template <typename> typename SharedRefAllocator = lightweight_allocator,
@@ -15186,6 +15260,7 @@ using details::conj;
 using details::proj;
 using details::polar;
 using details::sign;
+using details::view;
 
 // the functions in the experimental namespace may still be reachable
 // from the oc namespace due to ADL
