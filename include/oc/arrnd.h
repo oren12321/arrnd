@@ -3309,17 +3309,20 @@ namespace details {
         return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, iterable DataCont>
+    requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(
         const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
     {
         return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, iterable DataCont>
+    requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
     {
         return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
     }
     template <arrnd_compliant ArCo, iterable DataCont>
+    requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
     {
         return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
@@ -4941,14 +4944,17 @@ namespace details {
         //{ }
 
         template <signed_integral_type_iterator InputDimsIt, iterable DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
         template <signed_integral_type_iterable Cont, iterable DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const Cont& dims, const DataCont& data)
             : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
         { }
         template <iterable DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(std::initializer_list<size_type> dims, const DataCont& data)
             : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
         { }
