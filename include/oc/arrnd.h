@@ -8140,10 +8140,6 @@ namespace details {
             assert(std::ssize(hdr_.dims()) >= 2);
 
             auto find_diagonal_in_matrix = [&](this_type arr) {
-                if (arr.empty()) {
-                    return replaced_type<size_type>();
-                }
-
                 assert(arr.header().is_matrix());
 
                 size_type rows = arr.header().dims().front();
@@ -8180,6 +8176,36 @@ namespace details {
 
             return pageop(2, [&](auto page) {
                 return find_diagonal_in_matrix(page);
+            });
+        }
+
+        [[nodiscard]] constexpr this_type spread_diagonal(size_type offset = 0)
+        {
+            assert(std::ssize(hdr_.dims()) >= 1);
+
+            auto spread_diagonal_to_matrix = [&](this_type arr) {
+                assert(arr.header().is_vector());
+
+                size_type n = arr.header().numel() + static_cast<size_type>(std::abs(offset));
+
+                this_type res({n, n}, value_type{});
+
+                size_type current_ind = offset >= 0 ? offset : -offset * n;
+
+                for (indexer_type gen(arr.header()); current_ind < res.header().numel() && gen; ++gen) {
+                    res[current_ind] = arr[*gen];
+                    current_ind += n + 1;
+                }
+
+                return res;
+            };
+
+            if (hdr_.is_vector()) {
+                return spread_diagonal_to_matrix(*this);
+            }
+
+            return pageop(1, [&](auto page) {
+                return spread_diagonal_to_matrix(page);
             });
         }
 

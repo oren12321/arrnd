@@ -104,6 +104,18 @@ TEST(arrnd_test, find_diagonal)
         all_equal(arr, arrnd<int>({4, 5}, {0, 2, 3, 4, 5, 6, 0, 8, 9, 10, 11, 12, 0, 14, 15, 16, 17, 18, 0, 20})));
 }
 
+TEST(arrnd_test, spread_diagonal)
+{
+    using namespace oc;
+
+    arrnd<int> arr({5}, {1, 2, 3, 4, 5});
+
+    EXPECT_TRUE(all_equal(arr.spread_diagonal(1),
+        arrnd<int>({6, 6},
+            {0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
+                0})));
+}
+
 
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
