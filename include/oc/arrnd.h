@@ -3265,6 +3265,74 @@ namespace details {
         mutable value_type slice_;
     };
 
+
+
+
+        template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
+        const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        ArCo res;
+        res.header() = typename ArCo::header_type(first_dim, last_dim);
+        res.storage() = std::allocate_shared<typename ArCo::storage_type>(
+            typename ArCo::template shared_ref_allocator_type<typename ArCo::storage_type>(), first_data, last_data,
+            true);
+        return res;
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(
+        const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, std::input_iterator InputDataIt>
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
+        const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
+    {
+        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, typename U>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
+    {
+        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, iterable DataCont>
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, typename T>
+    [[nodiscard]] inline constexpr auto view(const T& value)
+    {
+        return view<ArCo>({1}, &value, & value + 1);
+    }
+
+
+
+
     template <arrnd_compliant Arrnd>
     class arrnd_back_insert_iterator {
     public:
@@ -3290,13 +3358,13 @@ namespace details {
 
         arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->append/*<0>*/(Arrnd({1}, {value}));
+            *cont_ = cont_->append/*<0>*/(/*Arrnd({1}, {value})*/view<Arrnd>(value));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->append/*<0>*/(std::move(Arrnd({1}, {value})));
+            *cont_ = cont_->append /*<0>*/ (std::move(/*Arrnd({1}, {value})*/ view<Arrnd>(value)));
             return *this;
         }
 
@@ -3350,13 +3418,13 @@ namespace details {
 
         arrnd_front_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert/*<0>*/(Arrnd({1}, {value}), 0);
+            *cont_ = cont_->insert /*<0>*/ (/*Arrnd({1}, {value})*/ view<Arrnd>(value), 0);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert/*<0>*/(std::move(Arrnd({1}, {value})), 0);
+            *cont_ = cont_->insert /*<0>*/ (std::move(/*Arrnd({1}, {value})*/ view<Arrnd>(value)), 0);
             return *this;
         }
 
@@ -3414,14 +3482,14 @@ namespace details {
 
         arrnd_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert/*<0>*/(Arrnd({1}, {value}), ind_);
+            *cont_ = cont_->insert /*<0>*/ (/*Arrnd({1}, {value})*/ view<Arrnd>(value), ind_);
             ind_ += 1;
             return *this;
         }
 
         arrnd_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert/*<0>*/(std::move(Arrnd({1}, {value})), ind_);
+            *cont_ = cont_->insert /*<0>*/ (std::move(/*Arrnd({1}, {value})*/ view<Arrnd>(value)), ind_);
             ind_ += 1;
             return *this;
         }
@@ -4627,68 +4695,6 @@ namespace details {
     //{
     //    return eye<ArCo>(std::begin(dims), std::end(dims));
     //}
-
-
-
-
-
-
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
-    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
-        const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        ArCo res;
-        res.header() = typename ArCo::header_type(first_dim, last_dim);
-        res.storage() = std::allocate_shared<typename ArCo::storage_type>(
-            typename ArCo::template shared_ref_allocator_type<typename ArCo::storage_type>(), first_data, last_data,
-            true);
-        return res;
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, std::input_iterator InputDataIt>
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
-        const InputDataIt& first_data,
-        const InputDataIt& last_data) {
-        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
-    {
-        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, typename U>
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, iterable DataCont>
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
-    {
-        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
-    }
-    template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, iterable DataCont>
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
-    }
-    template <arrnd_compliant ArCo, iterable DataCont>
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
-    }
-
 
 
 
