@@ -8134,6 +8134,55 @@ namespace details {
         //        return a.diag(type, offset);
         //    });
         //}
+
+        [[nodiscard]] constexpr replaced_type<size_type> find_diagonal(size_type offset = 0)
+        {
+            assert(std::ssize(hdr_.dims()) >= 2);
+
+            auto find_diagonal_in_matrix = [&](this_type arr) {
+                if (arr.empty()) {
+                    return replaced_type<size_type>();
+                }
+
+                assert(arr.header().is_matrix());
+
+                size_type rows = arr.header().dims().front();
+                size_type cols = arr.header().dims().back();
+
+                assert(offset > -rows && offset < cols);
+
+                size_type n = std::min(rows, cols);
+
+                size_type res_numel = n - static_cast<size_type>(std::abs(offset));
+
+                if ((cols > rows && offset > 0 && offset < n) || (cols < rows && offset < 0 && offset > -n)) {
+                    res_numel = n;
+                }
+
+                replaced_type<size_type> res({res_numel});
+
+                size_type current_ind = offset >= 0 ? offset : -offset * cols;
+
+                indexer_type gen(arr.header());
+                gen += current_ind;
+
+                for (size_type i = 0; i < res_numel; ++i) {
+                    res[i] = *gen;
+                    gen += cols + 1;
+                }
+
+                return res;
+            };
+
+            if (hdr_.is_matrix()) {
+                return find_diagonal_in_matrix(*this);
+            }
+
+            return pageop(2, [&](auto page) {
+                return find_diagonal_in_matrix(page);
+            });
+        }
+
         [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix,
             size_type offset = 0) const
             requires(this_type::is_flat)

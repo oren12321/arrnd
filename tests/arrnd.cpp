@@ -91,6 +91,20 @@
 //    }
 //}
 
+
+TEST(arrnd_test, find_diagonal)
+{
+    using namespace oc;
+
+    arrnd<int> arr({4, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+
+    arr(arr.find_diagonal()) = 0;
+    
+    EXPECT_TRUE(
+        all_equal(arr, arrnd<int>({4, 5}, {0, 2, 3, 4, 5, 6, 0, 8, 9, 10, 11, 12, 0, 14, 15, 16, 17, 18, 0, 20})));
+}
+
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::simple_dynamic_vector<std::string>;
