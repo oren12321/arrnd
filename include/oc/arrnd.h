@@ -8156,33 +8156,39 @@ namespace details {
 
                 size_type n = std::min(r, c);
 
-                size_type abs_offset = static_cast<size_type>(std::abs(offset));
+                //size_type abs_offset = static_cast<size_type>(std::abs(offset));
 
-                size_type numel = 0;
-                //abs_offset + 1 <= n ? n : n - abs_offset;
-                if (r == c) {
-                    numel = n - abs_offset;
-                } else if (c > r) {
-                    if (offset > 0) {
-                        if (offset < n) {
-                            numel = n;
-                        } else {
-                            numel = n - abs_offset;
-                        }
-                    } else {
-                        numel = n - abs_offset;
-                    }
-                } else {
-                    if (offset < 0) {
-                        if (abs_offset < n) {
-                            numel = n;
-                        } else {
-                            numel = n - abs_offset;
-                        }
-                    } else {
-                        numel = n - abs_offset;
-                    }
+                //size_type numel = 0;
+                size_type numel = n - static_cast<size_type>(std::abs(offset));
+
+                if ((c > r && offset > 0 && offset < n) || (c < r && offset < 0 && offset > -n)) {
+                    numel = n;
                 }
+
+                //abs_offset + 1 <= n ? n : n - abs_offset;
+                //if (r == c) {
+                //    numel = n - abs_offset;
+                //} else if (c > r) {
+                //    if (offset > 0) {
+                //        if (offset < n) {
+                //            numel = n;
+                //        } else {
+                //            numel = n - abs_offset;
+                //        }
+                //    } else {
+                //        numel = n - abs_offset;
+                //    }
+                //} else {
+                //    if (offset < 0) {
+                //        if (abs_offset < n) {
+                //            numel = n;
+                //        } else {
+                //            numel = n - abs_offset;
+                //        }
+                //    } else {
+                //        numel = n - abs_offset;
+                //    }
+                //}
 
                 this_type res({numel});
 
