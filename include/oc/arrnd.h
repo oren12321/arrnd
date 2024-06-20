@@ -4412,77 +4412,88 @@ namespace details {
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(other, constraint_);
+            //arr_ref_.copy_from(other, constraint_);
+            other.copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator+=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) + other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) + other, constraint_);
+            (arr_ref_.filter(constraint_) + other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator-=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) - other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) - other, constraint_);
+            (arr_ref_.filter(constraint_) - other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator*=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) * other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) * other, constraint_);
+            (arr_ref_.filter(constraint_) * other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator/=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) / other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) / other, constraint_);
+            (arr_ref_.filter(constraint_) / other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator%=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) % other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) % other, constraint_);
+            (arr_ref_.filter(constraint_) % other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator^=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) ^ other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) ^ other, constraint_);
+            (arr_ref_.filter(constraint_) ^ other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator&=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) & other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) & other, constraint_);
+            (arr_ref_.filter(constraint_) & other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator|=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) | other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) | other, constraint_);
+            (arr_ref_.filter(constraint_) | other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator<<=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) << other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) << other, constraint_);
+            (arr_ref_.filter(constraint_) << other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
         template <arrnd_compliant ArCo>
         constexpr arrnd_filter_proxy& operator>>=(const ArCo& other) &&
         {
-            arr_ref_.copy_from(arr_ref_.filter(constraint_) >> other, constraint_);
+            //arr_ref_.copy_from(arr_ref_.filter(constraint_) >> other, constraint_);
+            (arr_ref_.filter(constraint_) >> other).copy_to(arr_ref_, constraint_);
             return *this;
         }
 
@@ -4799,7 +4810,8 @@ namespace details {
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd(ArCo&& other)
         {
-            set_from(other);
+            //set_from(other);
+            other.set_to(*this);
             (void)ArCo(std::move(other));
         }
         constexpr arrnd& operator=(arrnd&& other) & = default;
@@ -4809,7 +4821,8 @@ namespace details {
                 return *this;
             }
 
-            copy_from(other);
+            //copy_from(other);
+            other.copy_to(*this);
             (void)arrnd(std::move(other));
             return *this;
         }
@@ -4817,7 +4830,8 @@ namespace details {
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(ArCo&& other) &
         {
-            set_from(other);
+            //set_from(other);
+            other.set_to(*this);
             (void)ArCo(std::move(other));
             return *this;
         }
@@ -4825,7 +4839,8 @@ namespace details {
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(ArCo&& other) &&
         {
-            copy_from(other);
+            //copy_from(other);
+            other.copy_to(*this);
             (void)ArCo(std::move(other));
             return *this;
         }
@@ -4835,7 +4850,8 @@ namespace details {
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd(const ArCo& other)
         {
-            set_from(other);
+            //set_from(other);
+            other.set_to(*this);
         }
         constexpr arrnd& operator=(const arrnd& other) & = default;
         constexpr arrnd& operator=(const arrnd& other) &&
@@ -4844,21 +4860,24 @@ namespace details {
                 return *this;
             }
 
-            copy_from(other);
+            //copy_from(other);
+            other.copy_to(*this);
             return *this;
         }
         template <arrnd_compliant ArCo>
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(const ArCo& other) &
         {
-            set_from(other);
+            //set_from(other);
+            other.set_to(*this);
             return *this;
         }
         template <arrnd_compliant ArCo>
             requires arrnd_depths_match<arrnd, ArCo>
         constexpr arrnd& operator=(const ArCo& other) &&
         {
-            copy_from(other);
+            //copy_from(other);
+            other.copy_to(*this);
             return *this;
         }
 
@@ -5523,79 +5542,79 @@ namespace details {
             return copy_to(dst);
         }
 
-        template <arrnd_compliant ArCo>
-        constexpr this_type& copy_from(const ArCo& src)
-        {
-            src.copy_to(*this);
-            return *this;
-        }
+        //template <arrnd_compliant ArCo>
+        //constexpr this_type& copy_from(const ArCo& src)
+        //{
+        //    src.copy_to(*this);
+        //    return *this;
+        //}
 
-        template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-        constexpr this_type& copy_from(const ArCo& src, std::pair<InputIt, InputIt> indices)
-        {
-            src.copy_to(*this, indices);
-            return *this;
-        }
-        template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-            requires(!arrnd_compliant<Cont>)
-        constexpr this_type& copy_from(const ArCo& src, const Cont& indices)
-        {
-            return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
-        }
-        template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-            requires(std::integral<typename ArCo2::value_type>)
-        constexpr this_type& copy_from(const ArCo1& src, const ArCo2& selector)
-        {
-            src.copy_to(*this, selector);
-            return *this;
-        }
-        template <arrnd_compliant ArCo, std::integral U = size_type>
-        constexpr this_type& copy_from(const ArCo& src, std::initializer_list<U> indices)
-        {
-            return copy_from(src, std::make_pair(indices.begin(), indices.end()));
-        }
+        //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+        //constexpr this_type& copy_from(const ArCo& src, std::pair<InputIt, InputIt> indices)
+        //{
+        //    src.copy_to(*this, indices);
+        //    return *this;
+        //}
+        //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+        //    requires(!arrnd_compliant<Cont>)
+        //constexpr this_type& copy_from(const ArCo& src, const Cont& indices)
+        //{
+        //    return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
+        //}
+        //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+        //    requires(std::integral<typename ArCo2::value_type>)
+        //constexpr this_type& copy_from(const ArCo1& src, const ArCo2& selector)
+        //{
+        //    src.copy_to(*this, selector);
+        //    return *this;
+        //}
+        //template <arrnd_compliant ArCo, std::integral U = size_type>
+        //constexpr this_type& copy_from(const ArCo& src, std::initializer_list<U> indices)
+        //{
+        //    return copy_from(src, std::make_pair(indices.begin(), indices.end()));
+        //}
         //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
         //constexpr this_type& copy_from(const ArCo& src, const U (&indices)[M])
         //{
         //    return copy_from(src, std::make_pair(std::begin(indices), std::end(indices)));
         //}
 
-        template <arrnd_compliant ArCo, typename Pred, typename... Args>
-            requires invocable_no_arrnd<Pred, value_type, Args...>
-        constexpr const this_type& copy_from(const ArCo& src, Pred&& pred, Args&&... args)
-        {
-            src.copy_to(*this, std::forward<Pred>(pred), std::forward<Args>(args)...);
-            return *this;
-        }
+        //template <arrnd_compliant ArCo, typename Pred, typename... Args>
+        //    requires invocable_no_arrnd<Pred, value_type, Args...>
+        //constexpr const this_type& copy_from(const ArCo& src, Pred&& pred, Args&&... args)
+        //{
+        //    src.copy_to(*this, std::forward<Pred>(pred), std::forward<Args>(args)...);
+        //    return *this;
+        //}
 
-        template <arrnd_compliant ArCo, interval_type_iterator InputIt>
-        constexpr this_type& copy_from(const ArCo& src, const InputIt& first_range, const InputIt& last_range)
-        {
-            src.copy_to(*this, first_range, last_range);
-            return *this;
-        }
-        template <arrnd_compliant ArCo, interval_type_iterable Cont>
-        constexpr this_type& copy_from(const ArCo& src, const Cont& ranges)
-        {
-            return copy_from(src, std::begin(ranges), std::end(ranges));
-        }
-        template <arrnd_compliant ArCo>
-        constexpr this_type& copy_from(const ArCo& src, std::initializer_list<interval_type> ranges)
-        {
-            return copy_from(src, ranges.begin(), ranges.end());
-        }
+        //template <arrnd_compliant ArCo, interval_type_iterator InputIt>
+        //constexpr this_type& copy_from(const ArCo& src, const InputIt& first_range, const InputIt& last_range)
+        //{
+        //    src.copy_to(*this, first_range, last_range);
+        //    return *this;
+        //}
+        //template <arrnd_compliant ArCo, interval_type_iterable Cont>
+        //constexpr this_type& copy_from(const ArCo& src, const Cont& ranges)
+        //{
+        //    return copy_from(src, std::begin(ranges), std::end(ranges));
+        //}
+        //template <arrnd_compliant ArCo>
+        //constexpr this_type& copy_from(const ArCo& src, std::initializer_list<interval_type> ranges)
+        //{
+        //    return copy_from(src, ranges.begin(), ranges.end());
+        //}
         //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
         //constexpr this_type& copy_from(const ArCo& src, const interval<U> (&ranges)[M])
         //{
         //    return copy_from(src, std::begin(ranges), std::end(ranges));
         //}
 
-        template <arrnd_compliant ArCo>
-        constexpr this_type& set_from(const ArCo& src)
-        {
-            src.set_to(*this);
-            return *this;
-        }
+        //template <arrnd_compliant ArCo>
+        //constexpr this_type& set_from(const ArCo& src)
+        //{
+        //    src.set_to(*this);
+        //    return *this;
+        //}
 
         [[nodiscard]] constexpr this_type clone() const
         {
@@ -12159,24 +12178,28 @@ namespace details {
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
     {
-        return dst.copy_from(src);
+        //return dst.copy_from(src);
+        return src.copy_to(dst);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, signed_integral_type_iterator InputIt>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::pair<InputIt, InputIt> indices)
     {
-        return dst.copy_from(src, indices);
+        //return dst.copy_from(src, indices);
+        return src.copy_to(dst, indices);
     }
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Cont>
         requires(signed_integral_type_iterable<Cont> || iterable_of_type<Cont, bool>)
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& indices)
     {
-        return dst.copy_from(src, indices);
+        //return dst.copy_from(src, indices);
+        return src.copy_to(dst, indices);
     }
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<typename ArCo1::size_type> indices)
     {
-        return dst.copy_from(src, indices);
+        //return dst.copy_from(src, indices);
+        return src.copy_to(dst, indices);
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, std::integral U, std::int64_t M>
     //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const U (&indices)[M])
@@ -12187,7 +12210,8 @@ namespace details {
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterator InputIt>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const InputIt& first_range, const InputIt& last_range)
     {
-        return dst.copy_from(src, first_range, last_range);
+        //return dst.copy_from(src, first_range, last_range);
+        return src.copy_to(dst, first_range, last_range);
     }
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterable Cont>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& ranges)
@@ -12210,13 +12234,15 @@ namespace details {
         requires invocable_no_arrnd<Pred, typename ArCo2::value_type, Args...>
     inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, Pred&& pred, Args&&... args)
     {
-        return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
+        //return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
+        return src.copy_to(dst, std::forward<Pred>(pred), std::forward<Args>(args)...);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     inline constexpr auto& set(const ArCo1& src, ArCo2&& dst)
     {
-        return dst.set_from(src);
+        //return dst.set_from(src);
+        return src.set_to(dst);
     }
 
     template <arrnd_compliant ArCo>
