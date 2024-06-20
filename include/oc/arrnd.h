@@ -6340,6 +6340,19 @@ namespace details {
 
             return res;
         }
+
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_front(size_type count = 1, size_type axis = 0) const
+        {
+            return remove(empty() ? 0 : count, 0, axis);
+        }
+
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_back(size_type count = 1, size_type axis = 0) const
+        {
+            size_type fixed_count = empty() ? 0 : count;
+            size_type ind = empty() ? size_type{0} : *std::next(hdr_.dims().cbegin(), axis) - fixed_count;
+            return remove(fixed_count, ind, axis);
+        }
+
         //template <std::int64_t Level>
         //    requires(Level > 0)
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const

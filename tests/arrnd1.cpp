@@ -3103,6 +3103,22 @@ TEST(arrnd_test, remove)
     //}
 }
 
+TEST(arrnd_test, pop)
+{
+    using namespace oc;
+
+    arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
+
+    auto r1 = arr.pop_front(3);
+    EXPECT_TRUE(all_equal(r1, arrnd<int>({3}, {4, 5, 6})));
+
+    auto r2 = r1.pop_back();
+    EXPECT_TRUE(all_equal(r2, arrnd<int>({2}, {4, 5})));
+
+    auto r3 = r2.pop_back(2).pop_front().pop_back();
+    EXPECT_TRUE(all_equal(r3, arrnd<int>()));
+}
+
 TEST(arrnd_test, complex_array)
 {
     using Integer_array = oc::arrnd<int>;
