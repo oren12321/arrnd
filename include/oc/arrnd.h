@@ -4337,41 +4337,42 @@ namespace details {
 
             auto other_filtered = static_cast<OtherArrnd>(other);
 
-            if constexpr (arrnd_compliant<Constraint>) {
-                if constexpr (std::is_same_v<typename Constraint::value_type, bool>) {
-                    assert(constraint_.header().dims() == arr_ref_.header().dims()
-                        && "boolean constraint considered as mask");
+            other_filtered.copy_to(arr_ref_, constraint_);
+            //if constexpr (arrnd_compliant<Constraint>) {
+            //    if constexpr (std::is_same_v<typename Constraint::value_type, bool>) {
+            //        assert(constraint_.header().dims() == arr_ref_.header().dims()
+            //            && "boolean constraint considered as mask");
 
-                    typename Arrnd::indexer_type gen(arr_ref_.header());
-                    typename OtherArrnd::indexer_type ogen(other_filtered.header());
-                    typename Constraint::indexer_type cgen(constraint_.header());
+            //        typename Arrnd::indexer_type gen(arr_ref_.header());
+            //        typename OtherArrnd::indexer_type ogen(other_filtered.header());
+            //        typename Constraint::indexer_type cgen(constraint_.header());
 
-                    for (; gen && cgen && ogen; ++gen, ++cgen) {
-                        if (constraint_[*cgen]) {
-                            arr_ref_[*gen] = other_filtered[*ogen];
-                            ++ogen;
-                        }
-                    }
+            //        for (; gen && cgen && ogen; ++gen, ++cgen) {
+            //            if (constraint_[*cgen]) {
+            //                arr_ref_[*gen] = other_filtered[*ogen];
+            //                ++ogen;
+            //            }
+            //        }
 
-                } else {
-                    typename Constraint::indexer_type gen(constraint_.header());
-                    typename OtherArrnd::indexer_type ogen(other_filtered.header());
+            //    } else {
+            //        typename Constraint::indexer_type gen(constraint_.header());
+            //        typename OtherArrnd::indexer_type ogen(other_filtered.header());
 
-                    for (; gen && ogen; ++gen, ++ogen) {
-                        arr_ref_[constraint_[*gen]] = other_filtered[*ogen];
-                    }
-                }
-            } else { // might be predicator type
-                typename Arrnd::indexer_type gen(arr_ref_.header());
-                typename OtherArrnd::indexer_type ogen(other_filtered.header());
+            //        for (; gen && ogen; ++gen, ++ogen) {
+            //            arr_ref_[constraint_[*gen]] = other_filtered[*ogen];
+            //        }
+            //    }
+            //} else { // might be predicator type
+            //    typename Arrnd::indexer_type gen(arr_ref_.header());
+            //    typename OtherArrnd::indexer_type ogen(other_filtered.header());
 
-                for (; gen && ogen; ++gen) {
-                    if (constraint_(arr_ref_[*gen])) {
-                        arr_ref_[*gen] = other_filtered[*ogen];
-                        ++ogen;
-                    }
-                }
-            }
+            //    for (; gen && ogen; ++gen) {
+            //        if (constraint_(arr_ref_[*gen])) {
+            //            arr_ref_[*gen] = other_filtered[*ogen];
+            //            ++ogen;
+            //        }
+            //    }
+            //}
 
             (void)arrnd_filter_proxy<OtherArrnd, OtherConstraint>(std::move(other));
 
@@ -5415,7 +5416,7 @@ namespace details {
                     return *this;
                 }
 
-                assert(dst.header().dims() == selector.header().dims());
+                assert(dst.header().dims() == selector.header().dims() && "boolean constraint considered as mask");
 
                 indexer_type gen(hdr_);
                 typename std::remove_cvref_t<ArCo1>::indexer_type dst_gen(dst.header());
