@@ -6222,30 +6222,30 @@ namespace details {
 
         //template <std::int64_t Level>
             //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
-        {
-            if (empty()) {
-                return *this;
-            }
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
+        //{
+        //    if (empty()) {
+        //        return *this;
+        //    }
 
-            assert(ind >= 0 && ind < hdr_.numel());
-            assert(ind + count <= hdr_.numel());
+        //    assert(ind >= 0 && ind < hdr_.numel());
+        //    assert(ind + count <= hdr_.numel());
 
-            this_type res({hdr_.numel() - count});
+        //    this_type res({hdr_.numel() - count});
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.hdr_);
 
-            for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen];
-            }
-            gen += count;
-            for (size_type i = ind + count; i < hdr_.numel() && gen && res_gen; ++i, ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen];
-            }
+        //    for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen];
+        //    }
+        //    gen += count;
+        //    for (size_type i = ind + count; i < hdr_.numel() && gen && res_gen; ++i, ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen];
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
         //template <std::int64_t Level>
         //    requires(Level > 0)
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
@@ -6272,7 +6272,7 @@ namespace details {
 
         //template <std::int64_t Level>
             //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis = 0) const
         {
             if (empty()) {
                 assert(ind == 0 && count == 0);
@@ -6291,6 +6291,10 @@ namespace details {
             this_type res({hdr_.numel() - (hdr_.numel() / hdr_.dims()[axis]) * count});
             //res.hdr_ = std::move(new_header);
             res.hdr_ = header_type(hdr_.dims_with_modified_axis(axis, -count));
+
+            if (res.empty()) {
+                return res;
+            }
 
             indexer_type gen(hdr_, axis);
             indexer_type res_gen(res.hdr_, axis);
@@ -6340,36 +6344,36 @@ namespace details {
         //    return remove<this_type::depth>(ind, count, axis);
         //}
 
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple>
-            requires(std::tuple_size_v<Tuple> == 2)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuple&& ind_count_tuple) const
-        {
-            return remove/*<Level>*/(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple));
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... IndexCountTuples>
-            requires(std::tuple_size_v<Tuple> == 2)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
-            Tuple&& ind_count_tuple, IndexCountTuples&&... others) const
-        {
-            return remove/*<Level>*/(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple))
-                .template remove<IndexCountTuples...>(std::forward<IndexCountTuples>(others)...);
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple>
-            requires(std::tuple_size_v<Tuple> == 3)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuple&& ind_count_axis_tuple) const
-        {
-            return remove/*<Level>*/(std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple),
-                std::get<2>(ind_count_axis_tuple));
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... IndexCountAxisTuples>
-            requires(std::tuple_size_v<Tuple> == 3)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
-            Tuple&& ind_count_axis_tuple, IndexCountAxisTuples&&... others) const
-        {
-            return remove/*<Level>*/(
-                std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple), std::get<2>(ind_count_axis_tuple))
-                .template remove<IndexCountAxisTuples...>(std::forward<IndexCountAxisTuples>(others)...);
-        }
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple>
+        //    requires(std::tuple_size_v<Tuple> == 2)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuple&& ind_count_tuple) const
+        //{
+        //    return remove/*<Level>*/(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple));
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... IndexCountTuples>
+        //    requires(std::tuple_size_v<Tuple> == 2)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+        //    Tuple&& ind_count_tuple, IndexCountTuples&&... others) const
+        //{
+        //    return remove/*<Level>*/(std::get<0>(ind_count_tuple), std::get<1>(ind_count_tuple))
+        //        .template remove<IndexCountTuples...>(std::forward<IndexCountTuples>(others)...);
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple>
+        //    requires(std::tuple_size_v<Tuple> == 3)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuple&& ind_count_axis_tuple) const
+        //{
+        //    return remove/*<Level>*/(std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple),
+        //        std::get<2>(ind_count_axis_tuple));
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... IndexCountAxisTuples>
+        //    requires(std::tuple_size_v<Tuple> == 3)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+        //    Tuple&& ind_count_axis_tuple, IndexCountAxisTuples&&... others) const
+        //{
+        //    return remove/*<Level>*/(
+        //        std::get<0>(ind_count_axis_tuple), std::get<1>(ind_count_axis_tuple), std::get<2>(ind_count_axis_tuple))
+        //        .template remove<IndexCountAxisTuples...>(std::forward<IndexCountAxisTuples>(others)...);
+        //}
         //template <typename... Tuples>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(Tuples&&... tuples) const
         //{
@@ -12604,12 +12608,12 @@ namespace details {
     //}
 
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto remove(
-        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
-    {
-        return arr./*template */remove/*<Level>*/(ind, count);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto remove(
+    //    const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
+    //{
+    //    return arr./*template */remove/*<Level>*/(ind, count);
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto remove(
     //    const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count)
@@ -12619,7 +12623,7 @@ namespace details {
 
     template </*std::int64_t Level, */arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto remove(
-        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
+        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis = 0)
     {
         return arr./*template */remove/*<Level>*/(ind, count, axis);
     }
@@ -12630,11 +12634,11 @@ namespace details {
     //    return remove<ArCo::depth>(arr, ind, count, axis);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
-    [[nodiscard]] inline constexpr auto remove(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
-    {
-        return arr./*template */remove/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
+    //[[nodiscard]] inline constexpr auto remove(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    //{
+    //    return arr./*template */remove/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    //}
     //template <arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
     //[[nodiscard]] inline constexpr auto remove(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
     //{
