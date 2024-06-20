@@ -6291,7 +6291,8 @@ namespace details {
 
         //template <std::int64_t Level>
             //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis = 0) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+            size_type count, size_type ind, size_type axis = 0) const
         {
             if (empty()) {
                 assert(ind == 0 && count == 0);
@@ -6320,7 +6321,7 @@ namespace details {
 
             size_type cycle = ind
                 * (std::reduce(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
-                    / *std::next(res.hdr_.dims().cbegin() ,axis));
+                    / *std::next(res.hdr_.dims().cbegin(), axis));
 
             size_type removals = hdr_.numel() - res.hdr_.numel();
 
