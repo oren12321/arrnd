@@ -5947,17 +5947,29 @@ namespace details {
         //    return insert<this_type::depth, ArCo>(arr, ind);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
+        requires(arrnd_depths_match<this_type, ArCo>)
             //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis) const
         {
+            if (empty() && arr.empty()) {
+                assert(ind == 0);
+                return *this;
+            }
+
             if (empty()) {
-                this_type res(arr);
-                return res.clone();
+                assert(ind == 0);
+                if constexpr (!std::is_same_v<ArCo, this_type>) {
+                    return this_type /* res*/ (arr);
+                } else {
+                    return arr /*res*/.clone();
+                }
             }
 
             if (arr.empty()) {
-                return clone(); //*this;
+                assert(ind >= 0 && ind <= *std::next(hdr_.dims().cbegin(), axis) /*hdr_.dims()[axis]*/);
+                //return clone(); //*this;
+                return *this;
             }
 
             //header_type new_header(hdr_.subheader(arr.header().dims()[axis], axis));
@@ -5965,7 +5977,14 @@ namespace details {
             //    return this_type();
             //}
 
-            assert(ind >= 0 && ind <= hdr_.dims()[axis]);
+            assert(ind >= 0 && ind <= *std::next(hdr_.dims().cbegin(), axis)/*hdr_.dims()[axis]*/);
+            assert(std::ssize(hdr_.dims()) == std::ssize(arr.header().dims()));
+
+            bool same_dims_except_at_axis = std::equal(hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), axis),
+                arr.header().dims().cbegin(), std::next(arr.header().dims().cbegin(), axis));
+            same_dims_except_at_axis &= std::equal(std::next(hdr_.dims().cbegin(), axis + 1), hdr_.dims().cend(),
+                std::next(arr.header().dims().cbegin(), axis + 1), arr.header().dims().cend());
+            assert(same_dims_except_at_axis);
 
             this_type res({hdr_.numel() + arr.header().numel()});
             //res.hdr_ = std::move(new_header);
@@ -5977,7 +5996,7 @@ namespace details {
 
             size_type cycle = ind
                 * (std::reduce(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
-                    / res.hdr_.dims()[axis]);
+                    / *std::next(res.hdr_.dims().cbegin(), axis));
 
             auto ptr = storage()->data();
             auto res_ptr = res.storage()->data();
@@ -6256,13 +6275,14 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count, size_type axis) const
         {
             if (empty()) {
+                assert(ind == 0 && count == 0);
                 return *this;
             }
 
             //header_type new_header(hdr_.subheader(-count, axis));
 
-            assert(ind >= 0 && ind < hdr_.dims()[axis]);
-            assert(ind + count <= hdr_.dims()[axis]);
+            assert(ind >= 0 && ind < *std::next(hdr_.dims().cbegin(), axis));
+            assert(ind + count <= *std::next(hdr_.dims().cbegin(), axis));
 
             //if (new_header.empty()) {
             //    return this_type();
@@ -6277,7 +6297,7 @@ namespace details {
 
             size_type cycle = ind
                 * (std::reduce(res.hdr_.dims().begin(), res.hdr_.dims().end(), size_type{1}, std::multiplies<>{})
-                    / res.hdr_.dims()[axis]);
+                    / *std::next(res.hdr_.dims().cbegin() ,axis));
 
             size_type removals = hdr_.numel() - res.hdr_.numel();
 

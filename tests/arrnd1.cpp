@@ -2819,7 +2819,7 @@ TEST(arrnd_test, insert)
         //EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 4, 2))); // assertion failure
 
         EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 1, 0)));
-        EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 1, 0)));
+        EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 0/*1*/, 0)));
 
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 3))); // assertion failure
         //const int invalid_data1[] = { 1 };
