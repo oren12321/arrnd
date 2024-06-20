@@ -5829,11 +5829,11 @@ namespace details {
         //    return resize<this_type::depth>(std::begin(new_dims), std::end(new_dims));
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr) const
-        {
-            return insert</*Level, */ArCo>(arr, hdr_.numel());
-        }
+        //template </*std::int64_t Level, */arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr) const
+        //{
+        //    return insert</*Level, */ArCo>(arr, hdr_.numel());
+        //}
         //template <arrnd_compliant ArCo>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr) const
         //{
@@ -5841,10 +5841,10 @@ namespace details {
         //}
 
         template </*std::int64_t Level, */arrnd_compliant ArCo>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, size_type axis) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, size_type axis = 0) const
         {
-            size_type ind = empty() ? size_type{0} : hdr_.dims()[axis];
-            return insert</*Level, */ArCo>(arr, ind, axis);
+            size_type ind = empty() ? size_type{0} : *std::next(hdr_.dims().cbegin(), axis); /*hdr_.dims()[axis];*/
+            return insert</*Level, */ ArCo>(arr, ind, axis);
         }
         //template <arrnd_compliant ArCo>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, size_type axis) const
@@ -5852,11 +5852,11 @@ namespace details {
         //    return append<this_type::depth, ArCo>(arr, axis);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, ArCos&&... others) const
-        {
-            return append</*Level, */ArCo>(arr).template append<ArCos...>(std::forward<ArCos>(others)...);
-        }
+        //template </*std::int64_t Level, */arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> append(const ArCo& arr, ArCos&&... others) const
+        //{
+        //    return append</*Level, */ArCo>(arr).template append<ArCos...>(std::forward<ArCos>(others)...);
+        //}
         template </*std::int64_t Level, */template_type<std::tuple> Tuple>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> append(Tuple&& arr_axis_tuple) const
         {
@@ -5893,38 +5893,38 @@ namespace details {
         //    return matmul<this_type::depth>(std::forward<ArCos>(others)...);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
-            //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
-        {
-            if (empty()) {
-                return arr./*template */reshape/*<Level>*/({arr.header().numel()}).clone();
-            }
+        //template </*std::int64_t Level, */arrnd_compliant ArCo>
+        //    //requires(Level == 0)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
+        //{
+        //    if (empty()) {
+        //        return arr./*template */reshape/*<Level>*/({arr.header().numel()}).clone();
+        //    }
 
-            if (arr.empty()) {
-                return *this;
-            }
+        //    if (arr.empty()) {
+        //        return *this;
+        //    }
 
-            assert(ind >= 0 && ind <= hdr_.numel());
+        //    assert(ind >= 0 && ind <= hdr_.numel());
 
-            this_type res({hdr_.numel() + arr.header().numel()});
+        //    this_type res({hdr_.numel() + arr.header().numel()});
 
-            indexer_type gen(hdr_);
-            indexer_type res_gen(res.hdr_);
-            typename ArCo::indexer_type arr_gen(arr.header());
+        //    indexer_type gen(hdr_);
+        //    indexer_type res_gen(res.hdr_);
+        //    typename ArCo::indexer_type arr_gen(arr.header());
 
-            for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen];
-            }
-            for (size_type i = 0; i < arr.header().numel() && arr_gen && res_gen; ++i, ++arr_gen, ++res_gen) {
-                res[*res_gen] = arr[*arr_gen];
-            }
-            for (size_type i = 0; i < hdr_.numel() - ind && gen && res_gen; ++i, ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen];
-            }
+        //    for (size_type i = 0; i < ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen];
+        //    }
+        //    for (size_type i = 0; i < arr.header().numel() && arr_gen && res_gen; ++i, ++arr_gen, ++res_gen) {
+        //        res[*res_gen] = arr[*arr_gen];
+        //    }
+        //    for (size_type i = 0; i < hdr_.numel() - ind && gen && res_gen; ++i, ++gen, ++res_gen) {
+        //        res[*res_gen] = (*this)[*gen];
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
         //template <std::int64_t Level, arrnd_compliant ArCo>
         //    requires(Level > 0)
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind) const
@@ -5950,7 +5950,7 @@ namespace details {
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
         requires(arrnd_depths_match<this_type, ArCo>)
             //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis) const
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis = 0) const
         {
             if (empty() && arr.empty()) {
                 assert(ind == 0);
@@ -6037,36 +6037,36 @@ namespace details {
         //    return insert<this_type::depth, ArCo>(arr, ind, axis);
         //}
 
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple>
-            requires(std::tuple_size_v<Tuple> == 2)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuple&& arr_ind_tuple) const
-        {
-            return insert/*<Level>*/(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple));
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... ArCoIndexTuples>
-            requires(std::tuple_size_v<Tuple> == 2)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
-            Tuple&& arr_ind_tuple, ArCoIndexTuples&&... others) const
-        {
-            return insert/*<Level>*/(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple))
-                .template insert<ArCoIndexTuples...>(std::forward<ArCoIndexTuples>(others)...);
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple>
-            requires(std::tuple_size_v<Tuple> == 3)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuple&& arr_ind_axis_tuple) const
-        {
-            return insert/*<Level>*/(
-                std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple));
-        }
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... ArCoIndexAxisTuples>
-            requires(std::tuple_size_v<Tuple> == 3)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
-            Tuple&& arr_ind_axis_tuple, ArCoIndexAxisTuples&&... others) const
-        {
-            return insert/*<Level>*/(
-                std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple))
-                .template insert<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
-        }
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple>
+        //    requires(std::tuple_size_v<Tuple> == 2)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuple&& arr_ind_tuple) const
+        //{
+        //    return insert/*<Level>*/(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple));
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... ArCoIndexTuples>
+        //    requires(std::tuple_size_v<Tuple> == 2)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
+        //    Tuple&& arr_ind_tuple, ArCoIndexTuples&&... others) const
+        //{
+        //    return insert/*<Level>*/(std::get<0>(arr_ind_tuple), std::get<1>(arr_ind_tuple))
+        //        .template insert<ArCoIndexTuples...>(std::forward<ArCoIndexTuples>(others)...);
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple>
+        //    requires(std::tuple_size_v<Tuple> == 3)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuple&& arr_ind_axis_tuple) const
+        //{
+        //    return insert/*<Level>*/(
+        //        std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple));
+        //}
+        //template </*std::int64_t Level, */template_type<std::tuple> Tuple, typename... ArCoIndexAxisTuples>
+        //    requires(std::tuple_size_v<Tuple> == 3)
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
+        //    Tuple&& arr_ind_axis_tuple, ArCoIndexAxisTuples&&... others) const
+        //{
+        //    return insert/*<Level>*/(
+        //        std::get<0>(arr_ind_axis_tuple), std::get<1>(arr_ind_axis_tuple), std::get<2>(arr_ind_axis_tuple))
+        //        .template insert<ArCoIndexAxisTuples...>(std::forward<ArCoIndexAxisTuples>(others)...);
+        //}
         //template <typename... Tuples>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> insert(Tuples&&... tuples) const
         //{
@@ -6074,18 +6074,18 @@ namespace details {
         //}
 
         //template <std::int64_t Level>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(size_type count) const
-        {
-            assert(count >= 0);
+        //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(size_type count) const
+        //{
+        //    assert(count >= 0);
 
-            auto res = *this;
+        //    auto res = *this;
 
-            for (size_type i = 0; i < count - 1; ++i) {
-                res = res./*template */append/*<Level>*/(*this);
-            }
+        //    for (size_type i = 0; i < count - 1; ++i) {
+        //        res = res./*template */append/*<Level>*/(*this);
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(size_type count) const
         //{
         //    return repeat<this_type::depth>(count);
@@ -12325,11 +12325,11 @@ namespace details {
     //    return resize<ArCo::depth>(arr, std::begin(new_dims), std::end(new_dims));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs)
-    {
-        return lhs./*template */append/*<Level>*/(rhs);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs)
+    //{
+    //    return lhs./*template */append/*<Level>*/(rhs);
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     //[[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs)
     //{
@@ -12337,7 +12337,7 @@ namespace details {
     //}
 
     template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type axis)
+    [[nodiscard]] inline constexpr auto append(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type axis = 0)
     {
         return lhs./*template */append/*<Level>*/(rhs, axis);
     }
@@ -12347,11 +12347,11 @@ namespace details {
     //    return append<ArCo1::depth>(lhs, rhs, axis);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    [[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
-    {
-        return arr./*template */append/*<Level>*/(first, std::forward<ArCos>(others)...);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
+    //[[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
+    //{
+    //    return arr./*template */append/*<Level>*/(first, std::forward<ArCos>(others)...);
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
     //[[nodiscard]] inline constexpr auto append(const ArCo1& arr, const ArCo2& first, ArCos&&... others)
     //{
@@ -12463,11 +12463,11 @@ namespace details {
     //    return arr.solve(b);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
-    {
-        return lhs./*template */insert/*<Level>*/(rhs, ind);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
+    //{
+    //    return lhs./*template */insert/*<Level>*/(rhs, ind);
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     //[[nodiscard]] inline constexpr auto insert(const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind)
     //{
@@ -12476,7 +12476,7 @@ namespace details {
 
     template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(
-        const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis)
+        const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis = 0)
     {
         return lhs./*template */insert/*<Level>*/(rhs, ind, axis);
     }
@@ -12487,12 +12487,12 @@ namespace details {
     //    return insert<ArCo1::depth>(lhs, rhs, ind, axis);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
-        requires(std::tuple_size_v<Tuple> == 2)
-    [[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
-    {
-        return arr./*template */insert/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
+    //    requires(std::tuple_size_v<Tuple> == 2)
+    //[[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    //{
+    //    return arr./*template */insert/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    //}
     //template <arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
     //    requires(std::tuple_size_v<Tuple> == 2)
     //[[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
@@ -12500,12 +12500,12 @@ namespace details {
     //    return insert<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
-        requires(std::tuple_size_v<Tuple> == 3)
-    [[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
-    {
-        return arr./*template */insert/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
+    //    requires(std::tuple_size_v<Tuple> == 3)
+    //[[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
+    //{
+    //    return arr./*template */insert/*<Level>*/(std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
+    //}
     //template <arrnd_compliant ArCo, template_type<std::tuple> Tuple, typename... Tuples>
     //    requires(std::tuple_size_v<Tuple> == 3)
     //[[nodiscard]] inline constexpr auto insert(const ArCo& arr, Tuple&& tuple, Tuples&&... others)
@@ -12513,11 +12513,11 @@ namespace details {
     //    return insert<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, typename ArCo::size_type count)
-    {
-        return arr./*template */repeat/*<Level>*/(count);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, typename ArCo::size_type count)
+    //{
+    //    return arr./*template */repeat/*<Level>*/(count);
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, typename ArCo::size_type count)
     //{

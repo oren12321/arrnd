@@ -2594,7 +2594,8 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({5}, 0);
-        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}), arr.cend(2, arrnd_returned_slice_iterator_tag{}),
+        std::copy(arr.cbegin(2, arrnd_returned_element_iterator_tag{} /*arrnd_returned_slice_iterator_tag{}*/),
+            arr.cend(2, arrnd_returned_element_iterator_tag{} /*arrnd_returned_slice_iterator_tag{}*/),
             oc::arrnd_back_inserter(res));
         EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 0, 0, 0, 0, 1, 3, 5, 2, 4, 6}), res));
     }
@@ -2607,11 +2608,11 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({5}, 0);
-        std::transform(arr.cbegin(arrnd_returned_slice_iterator_tag{}), arr.cend(arrnd_returned_slice_iterator_tag{}),
+        std::transform(arr.cbegin(/*arrnd_returned_slice_iterator_tag{}*/), arr.cend(/*arrnd_returned_slice_iterator_tag{}*/),
             oc::arrnd_front_inserter(res), [](const auto& slice) {
                 return slice * 2;
             });
-        EXPECT_TRUE(all_equal(arrnd<int>({11}, {10, 12, 6, 8, 2, 4, 0, 0, 0, 0, 0}), res));
+        EXPECT_TRUE(all_equal(arrnd<int>({11}, {12, 10, 8, 6, 4, 2/*10, 12, 6, 8, 2, 4*/, 0, 0, 0, 0, 0}), res));
     }
 
     {
@@ -2622,7 +2623,8 @@ TEST(arrnd_test, inserters)
 
     {
         arrnd<int> res({5}, 0);
-        std::copy(arr.cbegin(2, arrnd_returned_slice_iterator_tag{}), arr.cend(2, arrnd_returned_slice_iterator_tag{}),
+        std::copy(arr.cbegin(2, arrnd_returned_element_iterator_tag{} /*arrnd_returned_slice_iterator_tag{}*/),
+            arr.cend(2, arrnd_returned_element_iterator_tag{} /*arrnd_returned_slice_iterator_tag{}*/),
             oc::arrnd_inserter(res, 1));
         EXPECT_TRUE(all_equal(arrnd<int>({11}, {0, 1, 3, 5, 2, 4, 6, 0, 0, 0, 0}), res));
     }
@@ -2665,7 +2667,7 @@ TEST(arrnd_test, append)
     // No axis specified
     {
         const int data1[] = {1, 2, 3, 4, 5, 6};
-        Integer_array arr1{{3, 1, 2}, data1};
+        Integer_array arr1{{6/*3, 1, 2*/}, data1};
 
         const double data2[] = {7.0, 8.0, 9.0, 10.0, 11.0};
         Double_array arr2{{5}, data2};
@@ -2728,28 +2730,28 @@ TEST(arrnd_test, append)
     }
 
     // multiple append cat like
-    {
-        // standard
-        {
-            oc::arrnd<int> arr = oc::append(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
-                oc::arrnd<int>({4}, {7, 8, 9, 10}), oc::arrnd<int>({4}, {11, 12, 13, 14}));
+    //{
+    //    // standard
+    //    {
+    //        oc::arrnd<int> arr = oc::append(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
+    //            oc::arrnd<int>({4}, {7, 8, 9, 10}), oc::arrnd<int>({4}, {11, 12, 13, 14}));
 
-            oc::arrnd<int> res({14}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
+    //        oc::arrnd<int> res({14}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
 
-            EXPECT_TRUE(all_equal(arr, res));
-        }
+    //        EXPECT_TRUE(all_equal(arr, res));
+    //    }
 
-        // by axis
-        {
-            oc::arrnd<int> arr = oc::append(oc::arrnd<int>({1, 1, 2}, {1, 2}),
-                std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 0),
-                std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2));
+    //    // by axis
+    //    {
+    //        oc::arrnd<int> arr = oc::append(oc::arrnd<int>({1, 1, 2}, {1, 2}),
+    //            std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 0),
+    //            std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2));
 
-            oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
+    //        oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
 
-            EXPECT_TRUE(all_equal(arr, res));
-        }
-    }
+    //        EXPECT_TRUE(all_equal(arr, res));
+    //    }
+    //}
 }
 
 TEST(arrnd_test, insert)
@@ -2760,7 +2762,7 @@ TEST(arrnd_test, insert)
     // No axis specified
     {
         const int data1[] = {1, 2, 3, 4, 5, 6};
-        Integer_array arr1{{3, 1, 2}, data1};
+        Integer_array arr1{{6/*3, 1, 2*/}, data1};
 
         const double data2[] = {7.0, 8.0, 9.0, 10.0, 11.0};
         Double_array arr2{{5}, data2};
@@ -2830,13 +2832,13 @@ TEST(arrnd_test, insert)
 
     // nested array
     {
-        oc::arrnd<Integer_array> inarr1({1, 2}, {Integer_array({1}, {1}), Integer_array({1, 1}, {6})});
+        oc::arrnd<Integer_array> inarr1({1, 2}, {Integer_array({1}, {1}), Integer_array({1/*, 1*/}, {6})});
 
         //auto rnarr1 = oc::insert(inarr1,
         //    oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
         //    1);
         auto rnarr1 = oc::transform<0>(inarr1,
-            oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
+            oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({/*1, */4}, {7, 8, 9, 10})}),
             [](const auto& lhs, const auto& rhs) {
                 return oc::insert(lhs, rhs, 1);
             });
@@ -2849,7 +2851,7 @@ TEST(arrnd_test, insert)
                 oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
                 0)*/
             oc::transform<0>(oc::arrnd<Integer_array>({1, 2}),
-                oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
+                oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({/*1, */4}, {7, 8, 9, 10})}),
                 [](const auto& lhs, const auto& rhs) {
                     return oc::insert(lhs, rhs, 0);
                 }),
@@ -2859,9 +2861,9 @@ TEST(arrnd_test, insert)
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
             0);
         EXPECT_TRUE(oc::all_equal(rnarr2,
-            oc::arrnd<Integer_array>({4},
+            oc::arrnd<Integer_array>({2, 2/*4*/},
                 {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10}), Integer_array({1}, {1}),
-                    Integer_array({1, 1}, {6})})));
+                    Integer_array({/*1, */1}, {6})})));
 
         oc::arrnd<Integer_array> inarr2({1, 2},
             {Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}), Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})});
@@ -2893,29 +2895,29 @@ TEST(arrnd_test, insert)
     }
 
     // multiple insert cat like
-    {
-        // standard
-        {
-            oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
-                std::make_tuple(oc::arrnd<int>({4}, {7, 8, 9, 10}), 6),
-                std::make_tuple(oc::arrnd<int>({4}, {11, 12, 13, 14}), 0));
+    //{
+    //    // standard
+    //    {
+    //        oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}),
+    //            std::make_tuple(oc::arrnd<int>({4}, {7, 8, 9, 10}), 6),
+    //            std::make_tuple(oc::arrnd<int>({4}, {11, 12, 13, 14}), 0));
 
-            oc::arrnd<int> res({14}, {11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+    //        oc::arrnd<int> res({14}, {11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
 
-            EXPECT_TRUE(all_equal(arr, res));
-        }
+    //        EXPECT_TRUE(all_equal(arr, res));
+    //    }
 
-        // by axis
-        {
-            oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({1, 1, 2}, {1, 2}),
-                std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 1, 0),
-                std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2, 2));
+    //    // by axis
+    //    {
+    //        oc::arrnd<int> arr = oc::insert(oc::arrnd<int>({1, 1, 2}, {1, 2}),
+    //            std::make_tuple(oc::arrnd<int>({2, 1, 2}, {3, 4, 5, 6}), 1, 0),
+    //            std::make_tuple(oc::arrnd<int>({3, 1, 1}, {14, 15, 16}), 2, 2));
 
-            oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
+    //        oc::arrnd<int> res({3, 1, 3}, {1, 2, 14, 3, 4, 15, 5, 6, 16});
 
-            EXPECT_TRUE(all_equal(arr, res));
-        }
-    }
+    //        EXPECT_TRUE(all_equal(arr, res));
+    //    }
+    //}
 }
 
 TEST(arrnd_test, repeat)
@@ -2923,13 +2925,13 @@ TEST(arrnd_test, repeat)
     using namespace oc;
 
     // standard
-    {
-        auto arr = repeat(arrnd<int>({2, 2}, {1, 2, 3, 4}), 4);
+    //{
+    //    auto arr = repeat(arrnd<int>({2, 2}, {1, 2, 3, 4}), 4);
 
-        arrnd<int> res({16}, {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4});
+    //    arrnd<int> res({16}, {1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4});
 
-        EXPECT_TRUE(all_equal(arr, res));
-    }
+    //    EXPECT_TRUE(all_equal(arr, res));
+    //}
 
     // by axis
     {
