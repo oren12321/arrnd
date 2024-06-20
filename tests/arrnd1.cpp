@@ -2659,7 +2659,7 @@ TEST(arrnd_test, inserters)
     }
 }
 
-TEST(arrnd_test, append)
+TEST(arrnd_test, push)
 {
     using Integer_array = oc::arrnd<int>;
     using Double_array = oc::arrnd<double>;
@@ -2674,10 +2674,15 @@ TEST(arrnd_test, append)
 
         const int rdata1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
         Integer_array rarr{{11}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr, oc::append(arr1, arr2)));
+        EXPECT_TRUE(oc::all_equal(rarr, arr1.push_back(arr2)));
 
-        EXPECT_TRUE(oc::all_equal(arr1, oc::append(arr1, Integer_array{})));
-        EXPECT_TRUE(oc::all_equal(arr2, oc::append(Integer_array{}, arr2)));
+        EXPECT_TRUE(oc::all_equal(arr1, arr1.push_back(Integer_array{})));
+        EXPECT_TRUE(oc::all_equal(arr2, Integer_array{}.push_back(arr2)));
+
+        EXPECT_TRUE(oc::all_equal(arr1, arr1.push_front(Integer_array{})));
+        EXPECT_TRUE(oc::all_equal(arr2, Integer_array{}.push_front(arr2)));
+
+        EXPECT_TRUE(oc::all_equal(arr1.push_front(arr2), Integer_array({11}, {7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6})));
     }
 
     // Axis specified
@@ -2700,23 +2705,23 @@ TEST(arrnd_test, append)
 
             19, 20, 21, 22, 23, 24};
         Integer_array rarr1{{4, 2, 3}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::append(arr1, arr2, 0)));
+        EXPECT_TRUE(oc::all_equal(rarr1, arr1.push_back(arr2, 0)));
 
         const int rdata2[] = {1, 2, 3, 4, 5, 6, 13, 14, 15, 16, 17, 18,
 
             7, 8, 9, 10, 11, 12, 19, 20, 21, 22, 23, 24};
         Integer_array rarr2{{2, 4, 3}, rdata2};
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::append(arr1, arr2, 1)));
+        EXPECT_TRUE(oc::all_equal(rarr2, arr1.push_back(arr2, 1)));
 
         const int rdata3[] = {1, 2, 3, 13, 14, 15, 4, 5, 6, 16, 17, 18,
 
             7, 8, 9, 19, 20, 21, 10, 11, 12, 22, 23, 24};
 
         Integer_array rarr3{{2, 2, 6}, rdata3};
-        EXPECT_TRUE(oc::all_equal(rarr3, oc::append(arr1, arr2, 2)));
+        EXPECT_TRUE(oc::all_equal(rarr3, arr1.push_back(arr2, 2)));
 
-        EXPECT_TRUE(oc::all_equal(arr1, oc::append(arr1, Integer_array{}, 0)));
-        EXPECT_TRUE(oc::all_equal(arr2, oc::append(Integer_array{}, arr2, 0)));
+        EXPECT_TRUE(oc::all_equal(arr1, arr1.push_back(Integer_array{}, 0)));
+        EXPECT_TRUE(oc::all_equal(arr2, Integer_array{}.push_back(arr2, 0)));
 
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::append(arr1, arr2, 3))); // assertion failure
         const int invalid_data1[] = {1};
@@ -2754,6 +2759,29 @@ TEST(arrnd_test, append)
     //}
 }
 
+TEST(arrnd_test, concat)
+{
+    using namespace oc;
+
+    // vector
+    {
+        std::vector<int> vec{6, 7, 8, 9, 10};
+
+        auto arr = concat(arrnd<int>({3}, {1, 2, 3}), arrnd<int>({2}, {4, 5}), view<arrnd<int>>({5}, vec),
+            arrnd<int>({5}, {11, 12, 13, 14, 15}));
+
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({15}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})));
+    }
+
+    // axis
+    {
+        auto arr = concat(arrnd<int>(), arrnd<int>({3, 1}, {1, 2, 3}), arrnd<int>({3, 1}, {4, 5, 6}), 1,
+            arrnd<int>({1, 2}, {7, 8}), 0, arrnd<int>({2, 2}, {9, 10, 11, 12}));
+
+        EXPECT_TRUE(all_equal(arr, arrnd<int>({6, 2}, {1, 4, 2, 5, 3, 6, 7, 8, 9, 10, 11, 12})));
+    }
+}
+
 TEST(arrnd_test, insert)
 {
     using Integer_array = oc::arrnd<int>;
@@ -2769,18 +2797,18 @@ TEST(arrnd_test, insert)
 
         const int rdata1[] = {1, 2, 3, 7, 8, 9, 10, 11, 4, 5, 6};
         Integer_array rarr1{{11}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 3)));
+        EXPECT_TRUE(oc::all_equal(rarr1, arr1.insert(arr2, 3)));
 
         const int rdata2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
         Integer_array rarr2{{11}, rdata2};
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 6)));
+        EXPECT_TRUE(oc::all_equal(rarr2, arr1.insert(arr2, 6)));
 
         //const int rdata3[] = { 7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6 };
         //Integer_array rarr3{ {11}, rdata3 };
         //EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 7))); // assertion failure
 
-        EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 0)));
-        EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 0)));
+        EXPECT_TRUE(oc::all_equal(arr1, arr1.insert(Integer_array{}, 0)));
+        EXPECT_TRUE(oc::all_equal(arr2, Integer_array{}.insert(arr2, 0)));
     }
 
     // Axis specified
@@ -2803,25 +2831,25 @@ TEST(arrnd_test, insert)
 
             7, 8, 9, 10, 11, 12};
         Integer_array rarr1{{4, 2, 3}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 0)));
+        EXPECT_TRUE(oc::all_equal(rarr1, arr1.insert(arr2, 1, 0)));
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 3, 0))); // assertion failure
 
         const int rdata2[] = {1, 2, 3, 13, 14, 15, 16, 17, 18, 4, 5, 6,
 
             7, 8, 9, 19, 20, 21, 22, 23, 24, 10, 11, 12};
         Integer_array rarr2{{2, 4, 3}, rdata2};
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 1, 1)));
+        EXPECT_TRUE(oc::all_equal(rarr2, arr1.insert(arr2, 1, 1)));
         //EXPECT_TRUE(oc::all_equal(rarr2, oc::insert(arr1, arr2, 3, 1))); // assertion failure
 
         const int rdata3[] = {1, 13, 14, 15, 2, 3, 4, 16, 17, 18, 5, 6,
 
             7, 19, 20, 21, 8, 9, 10, 22, 23, 24, 11, 12};
         Integer_array rarr3{{2, 2, 6}, rdata3};
-        EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 1, 2)));
+        EXPECT_TRUE(oc::all_equal(rarr3, arr1.insert(arr2, 1, 2)));
         //EXPECT_TRUE(oc::all_equal(rarr3, oc::insert(arr1, arr2, 4, 2))); // assertion failure
 
-        EXPECT_TRUE(oc::all_equal(arr1, oc::insert(arr1, Integer_array{}, 1, 0)));
-        EXPECT_TRUE(oc::all_equal(arr2, oc::insert(Integer_array{}, arr2, 0/*1*/, 0)));
+        EXPECT_TRUE(oc::all_equal(arr1, arr1.insert(Integer_array{}, 1, 0)));
+        EXPECT_TRUE(oc::all_equal(arr2, Integer_array{}.insert(arr2, 0/*1*/, 0)));
 
         //EXPECT_TRUE(oc::all_equal(rarr1, oc::insert(arr1, arr2, 1, 3))); // assertion failure
         //const int invalid_data1[] = { 1 };
@@ -2840,7 +2868,7 @@ TEST(arrnd_test, insert)
         auto rnarr1 = oc::transform<0>(inarr1,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({/*1, */4}, {7, 8, 9, 10})}),
             [](const auto& lhs, const auto& rhs) {
-                return oc::insert(lhs, rhs, 1);
+                return lhs.insert(rhs, 1);
             });
         EXPECT_TRUE(oc::all_equal(rnarr1,
             oc::arrnd<Integer_array>(
@@ -2853,11 +2881,11 @@ TEST(arrnd_test, insert)
             oc::transform<0>(oc::arrnd<Integer_array>({1, 2}),
                 oc::arrnd<Integer_array>({2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({/*1, */4}, {7, 8, 9, 10})}),
                 [](const auto& lhs, const auto& rhs) {
-                    return oc::insert(lhs, rhs, 0);
+                    return lhs.insert(rhs, 0);
                 }),
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({4}, {7, 8, 9, 10})})));
 
-        auto rnarr2 = oc::insert/*<0>*/(inarr1,
+        auto rnarr2 = inarr1.insert /*<0>*/ (
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {2, 3, 4, 5}), Integer_array({1, 4}, {7, 8, 9, 10})}),
             0);
         EXPECT_TRUE(oc::all_equal(rnarr2,
@@ -2876,20 +2904,21 @@ TEST(arrnd_test, insert)
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({1, 2, 3}, {1, 2, 3, 4, 5, 6}), Integer_array({1, 2, 3}, {13, 14, 15, 16, 17, 18})}),
             [](const auto& lhs, const auto& rhs) {
-                return oc::insert(lhs, rhs, 0, 0);
+                return lhs.insert(rhs, 0, 0);
             });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                     Integer_array({2, 2, 3}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})})));
 
-        auto rnarr4 = oc::insert/*<0>*/(inarr2, oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0);
+        auto rnarr4
+            = inarr2.insert /*<0>*/ (oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({2, 2},
                 {Integer_array{}, Integer_array{}, Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}),
                     Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})})));
 
-        EXPECT_TRUE(oc::all_equal(oc::insert(oc::arrnd<Integer_array>{},
+        EXPECT_TRUE(oc::all_equal(oc::arrnd<Integer_array>{}.insert(
                                       oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}}), 0, 0),
             oc::arrnd<Integer_array>({1, 2}, {Integer_array{}, Integer_array{}})));
     }
