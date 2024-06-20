@@ -2990,7 +2990,7 @@ TEST(arrnd_test, repeat)
 //    //}
 //}
 
-TEST(arrnd_test, remove)
+TEST(arrnd_test, erase)
 {
     using Integer_array = oc::arrnd<int>;
 
@@ -3001,13 +3001,13 @@ TEST(arrnd_test, remove)
 
         const int rdata1[] = {1, 2, 3, 6};
         Integer_array rarr1{{4}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 2, 3)));
+        EXPECT_TRUE(oc::all_equal(rarr1, arr1.erase(2, 3)));
 
         //const int rdata2[] = { 1, 2, 3 };
         //Integer_array rarr2{ {3}, rdata2 };
         //EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 3, 4))); // assertion failure
 
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::remove(Integer_array{}, 0, 0/*3, 2*/)));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, Integer_array{}.erase(0, 0/*3, 2*/)));
     }
 
     // Axis specified
@@ -3019,21 +3019,21 @@ TEST(arrnd_test, remove)
 
         const int rdata1[] = {7, 8, 9, 10, 11, 12};
         Integer_array rarr1{{1, 2, 3}, rdata1};
-        EXPECT_TRUE(oc::all_equal(rarr1, oc::remove(arr1, 1, 0, 0)));
+        EXPECT_TRUE(oc::all_equal(rarr1, arr1.erase(1, 0, 0)));
         //EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::remove(arr1, 0, 3, 0))); // assertion failure
 
         const int rdata2[] = {1, 2, 3,
 
             7, 8, 9};
         Integer_array rarr2{{2, 1, 3}, rdata2};
-        EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 1, 1, 1)));
+        EXPECT_TRUE(oc::all_equal(rarr2, arr1.erase(1, 1, 1)));
         //EXPECT_TRUE(oc::all_equal(rarr2, oc::remove(arr1, 1, 2, 1))); // assertion failure
 
         const int rdata3[] = {3, 6,
 
             9, 12};
         Integer_array rarr3{{2, 2, 1}, rdata3};
-        EXPECT_TRUE(oc::all_equal(rarr3, oc::remove(arr1, 2, 0, 2)));
+        EXPECT_TRUE(oc::all_equal(rarr3, arr1.erase(2, 0, 2)));
         //const int rdata4[] = {
         //    1, 2,
         //    4, 5,
@@ -3053,12 +3053,12 @@ TEST(arrnd_test, remove)
 
         //auto rnarr1 = oc::remove(inarr1, 2, 2);
         auto rnarr1 = oc::transform<0>(inarr1, [](const auto& val) {
-            return oc::remove(val, 2, 2);
+            return val.erase(2, 2);
         });
         EXPECT_TRUE(oc::all_equal(
             rnarr1, oc::arrnd<Integer_array>({1, 2}, {Integer_array({3}, {1, 2, 5}), Integer_array({3}, {6, 7, 10})})));
 
-        auto rnarr2 = oc::remove/*<0>*/(inarr1, 1, 0);
+        auto rnarr2 = inarr1.erase/*<0>*/(1, 0);
         EXPECT_TRUE(oc::all_equal(rnarr2, oc::arrnd<Integer_array>(/*{1}, {Integer_array({1, 5}, {6, 7, 8, 9, 10})}*/)));
 
         oc::arrnd<Integer_array> inarr2({1, 2},
@@ -3067,14 +3067,14 @@ TEST(arrnd_test, remove)
 
         //auto rnarr3 = oc::remove(inarr2, 0, 1, 0);
         auto rnarr3 = oc::transform<0>(inarr2, [](const auto& val) {
-            return oc::remove(val, 1, 0, 0);
+            return val.erase(1, 0, 0);
         });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2},
                 {Integer_array({1, 2, 3}, {7, 8, 9, 10, 11, 12}),
                     Integer_array({1, 2, 3}, {19, 20, 21, 22, 23, 24})})));
 
-        auto rnarr4 = oc::remove/*<0>*/(inarr2, 1, 1, 1);
+        auto rnarr4 = inarr2.erase/*<0>*/(1, 1, 1);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({1, 1}, {Integer_array({2, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
     }

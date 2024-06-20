@@ -6291,7 +6291,7 @@ namespace details {
 
         //template <std::int64_t Level>
             //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> remove(
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> erase(
             size_type count, size_type ind, size_type axis = 0) const
         {
             if (empty()) {
@@ -6343,14 +6343,14 @@ namespace details {
 
         [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_front(size_type count = 1, size_type axis = 0) const
         {
-            return remove(empty() ? 0 : count, 0, axis);
+            return erase(empty() ? 0 : count, 0, axis);
         }
 
         [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_back(size_type count = 1, size_type axis = 0) const
         {
             size_type fixed_count = empty() ? 0 : count;
             size_type ind = empty() ? size_type{0} : *std::next(hdr_.dims().cbegin(), axis) - fixed_count;
-            return remove(fixed_count, ind, axis);
+            return erase(fixed_count, ind, axis);
         }
 
         //template <std::int64_t Level>
@@ -12661,12 +12661,12 @@ namespace details {
     //    return remove<ArCo::depth>(arr, ind, count);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto remove(
-        const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis = 0)
-    {
-        return arr./*template */remove/*<Level>*/(ind, count, axis);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto remove(
+    //    const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis = 0)
+    //{
+    //    return arr./*template */remove/*<Level>*/(ind, count, axis);
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto remove(
     //    const ArCo& arr, typename ArCo::size_type ind, typename ArCo::size_type count, typename ArCo::size_type axis)
@@ -15338,7 +15338,7 @@ using details::resize;
 using details::append;
 using details::insert;
 using details::repeat;
-using details::remove;
+//using details::remove;
 
 using details::empty;
 using details::expand;
