@@ -6184,19 +6184,21 @@ namespace details {
 
             auto nreps = std::distance(first_rep, last_rep);
 
-            this_type::template replaced_type<size_type> reps({nreps}, first_rep, last_rep);
-            this_type::template replaced_type<size_type> axes({nreps});
-            std::iota(axes.begin(), axes.end(), hdr_.dims().size() - nreps);
+            //this_type::template replaced_type<size_type> reps({nreps}, first_rep, last_rep);
+            //auto reps = view<arrnd<size_type>>({nreps}, first_rep, last_rep);
+            //this_type::template replaced_type<size_type> axes({nreps});
+            //std::iota(axes.begin(), axes.end(), 0/*hdr_.dims().size() - nreps*/);
 
-            auto z = zip(zipped_cont(reps), zipped_cont(axes));
+            auto z = zip(zipped_iter(first_rep, last_rep)/*, zipped_cont(axes)*/);
 
             auto res = *this;
             auto mid = res;
-
-            std::for_each(z.begin(), z.end(), [&res, &mid](const auto& tuple) {
+            size_type axis = 0;
+            std::for_each(z.begin(), z.end(), [&res, &mid, &axis](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res./*template */push_back/*<Level>*/(mid, std::get<1>(tuple));
+                    res = res./*template */push_back/*<Level>*/(mid, axis);
                 }
+                ++axis;
                 mid = res;
             });
 
