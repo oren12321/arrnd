@@ -12275,33 +12275,33 @@ namespace details {
     //    return arr.clone();
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reshape(
-        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
-    {
-        return arr./*template */reshape/*<Level>*/(first_new_dim, last_new_dim);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
-    {
-        return reshape/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reshape(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
-    {
-        return reshape/*<Level>*/(arr, new_dims.begin(), new_dims.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto reshape(
+    //    const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    //{
+    //    return arr./*template */reshape/*<Level>*/(first_new_dim, last_new_dim);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const Cont& new_dims)
+    //{
+    //    return reshape/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reshape(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    //{
+    //    return reshape/*<Level>*/(arr, new_dims.begin(), new_dims.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, const U (&new_dims)[M])
     //{
     //    return reshape<Level>(arr, std::begin(new_dims), std::end(new_dims));
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape_preset shape)
-    {
-        return arr./*template */reshape/*<Level>*/(shape);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reshape(const ArCo& arr, arrnd_shape_preset shape)
+    //{
+    //    return arr./*template */reshape/*<Level>*/(shape);
+    //}
     //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     //[[nodiscard]] inline constexpr auto reshape(
     //    const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
@@ -12330,23 +12330,23 @@ namespace details {
     //    return reshape<ArCo::depth>(arr, shape);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto resize(
-        const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
-    {
-        return arr./*template */resize/*<Level>*/(first_new_dim, last_new_dim);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
-    {
-        return resize/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto resize(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
-    {
-        return resize/*<Level>*/(arr, new_dims.begin(), new_dims.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto resize(
+    //    const ArCo& arr, const InputIt& first_new_dim, const InputIt& last_new_dim)
+    //{
+    //    return arr./*template */resize/*<Level>*/(first_new_dim, last_new_dim);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto resize(const ArCo& arr, const Cont& new_dims)
+    //{
+    //    return resize/*<Level>*/(arr, std::begin(new_dims), std::end(new_dims));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto resize(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> new_dims)
+    //{
+    //    return resize/*<Level>*/(arr, new_dims.begin(), new_dims.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto resize(const ArCo& arr, const U (&new_dims)[M])
     //{
@@ -15205,13 +15205,13 @@ namespace details {
         //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
         //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
         //    carco = arco;
-        arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
-            typename ArCo::dims_storage_info /*header_type*/,
-            ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
-            carco = arco;
+        //arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
+        //    typename ArCo::dims_storage_info /*header_type*/,
+        //    ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
+        //    carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
         typename ArCo::size_type ndepth_spaces = 0;
-        return ostream_operator_recursive(os, carco, nvectical_spaces, ndepth_spaces);
+        return ostream_operator_recursive(os, arco/*carco*/, nvectical_spaces, ndepth_spaces);
     }
 
     struct arrnd_json_manip {
@@ -15232,15 +15232,15 @@ namespace details {
             //arrnd<typename ArCo::value_type, typename ArCo::storage_info/*storage_type*/, ArCo::template shared_ref_allocator_type,
             //    typename ArCo::header_type/*, arrnd_indexer, arrnd_axis_ranger*/>
             //    carco = arco;
-            arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
-                typename ArCo::dims_storage_info /*header_type*/,
-                ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
-                carco = arco;
+            //arrnd<typename ArCo::value_type, typename ArCo::data_storage_info /*storage_info*/ /*storage_type*/,
+            //    typename ArCo::dims_storage_info /*header_type*/,
+            //    ArCo::template shared_ref_allocator_type /*, arrnd_indexer, arrnd_axis_ranger*/>
+            //    carco = arco;
             typename ArCo::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";
             ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
                     << type_name<typename ArCo::template inner_value_type<ArCo::depth>>() << "\"\n";
-            to_json(ajm.os_, carco, nvertical_spaces);
+            to_json(ajm.os_, arco/*carco*/, nvertical_spaces);
             ajm.os_ << "}";
             return ajm.os_;
         }
@@ -15368,8 +15368,8 @@ using details::crend;
 using details::copy;
 using details::set;
 //using details::clone;
-using details::reshape;
-using details::resize;
+//using details::reshape;
+//using details::resize;
 //using details::append;
 using details::concat;
 //using details::insert;

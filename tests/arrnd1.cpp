@@ -2166,7 +2166,7 @@ TEST(arrnd_test, copy_from)
         EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
         EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}][{interval<>::at(0), interval<>::full(), interval<>::full()}],
             arr_no_vals[{0}][{0, 1}]));
-        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], reshape(arr_no_vals[{1}][{0, 0}], {2, 2})));
+        EXPECT_TRUE(all_equal(arr_with_vals[{1}][{0, 0}], arr_no_vals[{1}][{0, 0}].reshape({2, 2})));
 
         arr_with_vals[{0}][{0, 0}][{0, 0}] = 100;
         EXPECT_NE((arr_with_vals[{0}][{0, 0}][{0, 0}]), (arr_no_vals[{0}][{0, 0}][{0, 0}]));
@@ -2440,7 +2440,7 @@ TEST(arrnd_test, reshape)
 
     {
         Integer_array x{};
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::reshape(x, {})));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, x.reshape({})));
     }
 
     {
@@ -2448,14 +2448,14 @@ TEST(arrnd_test, reshape)
         const std::int64_t tdims[]{6};
         Integer_array tarr{tdims, tdata};
 
-        Integer_array rarr{oc::reshape(arr, {6})};
+        Integer_array rarr{arr.reshape({6})};
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
         EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
 
     {
         const std::int64_t tdims[]{3, 1, 2};
-        Integer_array rarr{oc::reshape(arr, tdims)};
+        Integer_array rarr{arr.reshape(tdims)};
         EXPECT_TRUE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
@@ -2465,7 +2465,7 @@ TEST(arrnd_test, reshape)
         const std::int64_t tdims[]{1, 2};
         Integer_array tarr{tdims, tdata};
         Integer_array x = arr[{{0, 3, 2}, {}, {}}];
-        Integer_array rarr{oc::reshape(x, {1, 2})};
+        Integer_array rarr{x.reshape({1, 2})};
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
         EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
     }
@@ -2476,7 +2476,7 @@ TEST(arrnd_test, reshape)
 
         //oc::arrnd<Integer_array> rnarr1 = oc::reshape(inarr, {2, 2});
         oc::arrnd<Integer_array> rnarr1 = oc::transform<0>(inarr, [](const auto& val) {
-            return oc::reshape(val, {2, 2});
+            return val.reshape({2, 2});
         });
         EXPECT_FALSE(oc::all_equal(rnarr1, inarr));
         EXPECT_TRUE(oc::all_equal(Integer_array({2, 2}, {1, 2, 3, 4}), rnarr1[{0, 0}]));
@@ -2484,7 +2484,7 @@ TEST(arrnd_test, reshape)
         EXPECT_EQ((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_EQ((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        oc::arrnd<Integer_array> rnarr2 = oc::reshape/*<0>*/(inarr, {2});
+        oc::arrnd<Integer_array> rnarr2 = inarr.reshape/*<0>*/({2});
         EXPECT_FALSE(oc::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::all_equal(rnarr2[{0}], inarr[{0, 0}]));
         EXPECT_TRUE(oc::all_equal(rnarr2[{1}], inarr[{0, 1}]));
@@ -2493,12 +2493,12 @@ TEST(arrnd_test, reshape)
 
         //auto rnarr3 = oc::reshape(inarr, oc::arrnd_shape_preset::vector);
         auto rnarr3 = oc::transform<0>(inarr, [](const auto& val) {
-            return oc::reshape(val, oc::arrnd_shape_preset::vector);
+            return val.reshape(oc::arrnd_shape_preset::vector);
         });
         EXPECT_TRUE(oc::all_equal(rnarr3,
             oc::arrnd<Integer_array>({1, 2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({4}, {5, 6, 7, 8})})));
 
-        auto rnarr4 = oc::reshape/*<0>*/(inarr, oc::arrnd_shape_preset::vector);
+        auto rnarr4 = inarr.reshape/*<0>*/(oc::arrnd_shape_preset::vector);
         EXPECT_TRUE(oc::all_equal(rnarr4,
             oc::arrnd<Integer_array>({2}, {Integer_array({4}, {1, 2, 3, 4}), Integer_array({1, 4}, {5, 6, 7, 8})})));
     }
@@ -2513,12 +2513,12 @@ TEST(arrnd_test, resize)
     Integer_array arr{dims, data};
 
     {
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, oc::resize(arr, {})));
+        EXPECT_TRUE(oc::all_equal(Integer_array{}, arr.resize({})));
     }
 
     {
         Integer_array x{};
-        Integer_array rarr{oc::resize(x, {6})};
+        Integer_array rarr{x.resize({6})};
         //EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
         EXPECT_EQ(6, rarr.header().dims().data()[0]);
@@ -2526,7 +2526,7 @@ TEST(arrnd_test, resize)
     }
 
     {
-        Integer_array rarr{oc::resize(arr, {6})};
+        Integer_array rarr{arr.resize({6})};
         EXPECT_TRUE(oc::all_equal(arr, rarr));
         EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
     }
@@ -2536,7 +2536,7 @@ TEST(arrnd_test, resize)
         const std::int64_t tdims[]{2};
         Integer_array tarr{tdims, tdata};
 
-        Integer_array rarr{oc::resize(arr, {2})};
+        Integer_array rarr{arr.resize({2})};
         EXPECT_TRUE(oc::all_equal(tarr, rarr));
         EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
     }
@@ -2546,7 +2546,7 @@ TEST(arrnd_test, resize)
         const std::int64_t tdims[]{3, 1, 2};
         Integer_array tarr{tdims, tdata};
 
-        Integer_array rarr{oc::resize(arr, {3, 1, 2})};
+        Integer_array rarr{arr.resize({3, 1, 2})};
         EXPECT_TRUE(oc::all_equal(tarr[{oc::interval<>::at(0)}], rarr[{oc::interval<>::at(0)}]));
         //std::cout << rarr << "\n\n";
         EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
@@ -2554,7 +2554,7 @@ TEST(arrnd_test, resize)
 
     {
         const std::int64_t tdims[]{10};
-        Integer_array rarr{oc::resize(arr, tdims)};
+        Integer_array rarr{arr.resize(tdims)};
         EXPECT_FALSE(oc::all_equal(arr, rarr));
         EXPECT_TRUE(oc::all_equal(arr, (rarr[{{0, 6}}])));
         EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
@@ -2567,7 +2567,7 @@ TEST(arrnd_test, resize)
 
         //oc::arrnd<Integer_array> rnarr1 = oc::resize(inarr, {2, 2});
         oc::arrnd<Integer_array> rnarr1 = oc::transform<0>(inarr, [](const auto& val) {
-            return oc::resize(val, {2, 2});
+            return val.resize({2, 2});
         });
         EXPECT_FALSE(oc::all_equal(rnarr1, inarr));
         //std::cout << rnarr1[{0, 0}] << "\n\n";
@@ -2579,7 +2579,7 @@ TEST(arrnd_test, resize)
         EXPECT_NE((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
         EXPECT_NE((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
 
-        oc::arrnd<Integer_array> rnarr2 = oc::resize/*<0>*/(inarr, {1});
+        oc::arrnd<Integer_array> rnarr2 = inarr.resize /*<0>*/ ({1});
         EXPECT_FALSE(oc::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::all_equal(rnarr2[{0}], inarr[{0, 0}]));
         EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
