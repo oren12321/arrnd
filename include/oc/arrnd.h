@@ -12720,11 +12720,11 @@ namespace details {
     //    return remove<ArCo::depth>(arr, std::forward<Tuple>(tuple), std::forward<Tuples>(others)...);
     //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr bool empty(const ArCo& arr) noexcept
-    {
-        return arr.empty();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr bool empty(const ArCo& arr) noexcept
+    //{
+    //    return arr.empty();
+    //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Func, typename... Args>
     [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func, Args&&... args)
@@ -14128,7 +14128,7 @@ namespace details {
     template <arrnd_compliant ArCo>
     inline constexpr auto& operator++(ArCo& arr)
     {
-        if (empty(arr)) {
+        if (arr.empty()) {
             return arr;
         }
 
@@ -14161,7 +14161,7 @@ namespace details {
     template <arrnd_compliant ArCo>
     inline constexpr auto& operator--(ArCo& arr)
     {
-        if (empty(arr)) {
+        if (arr.empty()) {
             return arr;
         }
 
@@ -15148,7 +15148,7 @@ namespace details {
         constexpr auto block_start_char = ArCo::depth > 0 ? '{' : '[';
         constexpr auto block_stop_char = ArCo::depth > 0 ? '}' : ']';
 
-        if (empty(arco)) {
+        if (arco.empty()) {
             os << block_start_char << block_stop_char;
             return os;
         }
@@ -15259,7 +15259,7 @@ namespace details {
                 return d;
             };
 
-            if (empty(arco)) {
+            if (arco.empty()) {
                 os << std::string(nvertical_spaces, ' ') << "\"header\": \"empty\",\n";
                 os << std::string(nvertical_spaces, ' ') << "\"values\": \"empty\"\n";
                 return os;
@@ -15376,7 +15376,7 @@ using details::concat;
 using details::repeat;
 //using details::remove;
 
-using details::empty;
+//using details::empty;
 using details::expand;
 using details::collapse;
 using details::zeros;

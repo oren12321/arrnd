@@ -1828,16 +1828,16 @@ TEST(arrnd_test, move_by_reference)
     Integer_array arr{dims, data};
     Integer_array carr1{std::move(arr)};
     EXPECT_TRUE(oc::all_equal(sarr, carr1));
-    EXPECT_TRUE(empty(arr));
+    EXPECT_TRUE(arr.empty());
 
     Integer_array carr2{};
     carr2 = std::move(carr1);
     EXPECT_TRUE(oc::all_equal(sarr, carr2));
-    EXPECT_TRUE(empty(carr1));
+    EXPECT_TRUE(carr1.empty());
 
     Integer_array sarr2{dims, data};
     carr2[{{0, 2}, {0, 1}, {0, 2}}] = std::move(sarr2);
-    EXPECT_TRUE(empty(sarr2));
+    EXPECT_TRUE(sarr2.empty());
     EXPECT_TRUE(oc::all_equal(sarr, carr2));
 
     // slice moving by assignment
@@ -1851,7 +1851,7 @@ TEST(arrnd_test, move_by_reference)
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         rarr3[{{0, 6, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
-        EXPECT_FALSE(empty(tarr3));
+        EXPECT_FALSE(tarr3.empty());
     }
 
     // slice moving by assignment
@@ -1866,7 +1866,7 @@ TEST(arrnd_test, move_by_reference)
         Integer_array srarr3{rarr3[{{0, 6, 2}}]};
         srarr3 = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        EXPECT_FALSE(empty(tarr3));
+        EXPECT_FALSE(tarr3.empty());
     }
 
     // different template arguments
@@ -1880,12 +1880,12 @@ TEST(arrnd_test, move_by_reference)
 
         Integer_array cdarr1{std::move(darr)};
         EXPECT_TRUE(oc::all_equal(iarr, cdarr1));
-        EXPECT_TRUE(empty(darr));
+        EXPECT_TRUE(darr.empty());
 
         oc::arrnd<double> cdarr2{};
         cdarr2 = std::move(cdarr1);
         EXPECT_TRUE(oc::all_equal((Integer_array{dims, idata}), cdarr2));
-        EXPECT_TRUE(empty(cdarr1));
+        EXPECT_TRUE(cdarr1.empty());
     }
 
     // slice moving by assignment (rvalue) - different template arguments
@@ -1899,7 +1899,7 @@ TEST(arrnd_test, move_by_reference)
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         rarr3[{{0, 6, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_TRUE(oc::all_equal(tarr3, rarr3));
-        EXPECT_FALSE(empty(tarr3));
+        EXPECT_FALSE(tarr3.empty());
     }
 
     // slice moving by assignment (rvalue) - different template arguments and different dimensions
@@ -1913,7 +1913,7 @@ TEST(arrnd_test, move_by_reference)
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
         rarr3[{{0, 4, 2}}] = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        EXPECT_FALSE(empty(tarr3));
+        EXPECT_FALSE(tarr3.empty());
     }
 
     // slice moving by assignment (lvalue) - different template arguments
@@ -1928,7 +1928,7 @@ TEST(arrnd_test, move_by_reference)
         oc::arrnd<double> srarr3{rarr3[{{0, 6, 2}}]};
         srarr3 = std::move(tarr3[{{0, 6, 2}}]);
         EXPECT_FALSE(oc::all_equal(tarr3, rarr3));
-        EXPECT_FALSE(empty(tarr3));
+        EXPECT_FALSE(tarr3.empty());
     }
 }
 
