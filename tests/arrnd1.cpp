@@ -1937,19 +1937,19 @@ TEST(arrnd_test, clone)
     using Integer_array = oc::arrnd<int>;
 
     Integer_array empty_arr{};
-    Integer_array cempty_arr{oc::clone(empty_arr)};
+    Integer_array cempty_arr{empty_arr.clone()};
     EXPECT_TRUE(oc::all_equal(empty_arr, cempty_arr));
 
     const int data[] = {1, 2, 3, 4, 5, 6};
     const std::int64_t dims[]{3, 1, 2};
     Integer_array sarr{dims, data};
 
-    Integer_array carr{oc::clone(sarr)};
+    Integer_array carr{sarr.clone()};
     EXPECT_TRUE(oc::all_equal(carr, sarr));
     carr[{0, 0, 0}] = 0;
     EXPECT_FALSE(oc::all_equal(carr, sarr));
 
-    Integer_array csubarr{oc::clone(sarr[{{1, 2}, {0, 1}, {0, 1}}])};
+    Integer_array csubarr{sarr[{{1, 2}, {0, 1}, {0, 1}}] .clone()};
     EXPECT_TRUE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
     csubarr[{0, 0, 0}] = 5;
     EXPECT_FALSE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
@@ -1966,7 +1966,7 @@ TEST(arrnd_test, clone)
             {arrnd_l1({1, 2}, {arrnd_l2({2, 2}, 1), arrnd_l2({2, 1, 3}, {1, 2, 3, 4, 5, 6})}),
                 arrnd_l1({1, 1}, {arrnd_l2({2, 2}, 1)})});
 
-        arrnd_l0 arr_no_vals = clone(arr_with_vals);
+        arrnd_l0 arr_no_vals = arr_with_vals.clone();
 
         EXPECT_TRUE(all_equal(arr_with_vals, arr_no_vals));
 

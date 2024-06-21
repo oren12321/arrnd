@@ -5616,11 +5616,12 @@ namespace details {
         //    return *this;
         //}
 
-        [[nodiscard]] constexpr this_type clone() const
+        template <arrnd_compliant ArCo = this_type>
+        [[nodiscard]] constexpr ArCo clone() const
         {
-            this_type clone;
-            set_to(clone);
-            return clone;
+            ArCo res;
+            set_to(res);
+            return res;
         }
 
         template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
@@ -5986,11 +5987,12 @@ namespace details {
 
             if (empty()) {
                 assert(ind == 0);
-                if constexpr (!std::is_same_v<ArCo, this_type>) {
-                    return this_type /* res*/ (arr);
-                } else {
-                    return arr /*res*/.clone();
-                }
+                return arr.template clone<this_type>();
+                //if constexpr (!std::is_same_v<ArCo, this_type>) {
+                //    return this_type /* res*/ (arr);
+                //} else {
+                //    return arr /*res*/.clone();
+                //}
             }
 
             if (arr.empty()) {
@@ -12267,11 +12269,11 @@ namespace details {
         return src.set_to(dst);
     }
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto clone(const ArCo& arr)
-    {
-        return arr.clone();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto clone(const ArCo& arr)
+    //{
+    //    return arr.clone();
+    //}
 
     template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     [[nodiscard]] inline constexpr auto reshape(
@@ -14145,7 +14147,7 @@ namespace details {
     template <arrnd_compliant ArCo>
     inline constexpr auto operator++(ArCo& arr, int)
     {
-        ArCo old = clone(arr);
+        ArCo old = arr.clone();
         operator++(arr);
         return old;
     }
@@ -14178,7 +14180,7 @@ namespace details {
     template <arrnd_compliant ArCo>
     inline constexpr auto operator--(ArCo& arr, int)
     {
-        ArCo old = clone(arr);
+        ArCo old = arr.clone();
         operator--(arr);
         return old;
     }
@@ -15365,7 +15367,7 @@ using details::crend;
 
 using details::copy;
 using details::set;
-using details::clone;
+//using details::clone;
 using details::reshape;
 using details::resize;
 //using details::append;
