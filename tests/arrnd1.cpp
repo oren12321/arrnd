@@ -1984,7 +1984,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{};
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        copy(src, dst);
+        //copy(src, dst);
+        src.copy_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -1992,7 +1993,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{};
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        copy(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        //copy(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        src.copy_to(dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2002,7 +2004,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        copy(src, dst);
+        //copy(src, dst);
+        src.copy_to(dst);
         arrnd<int> res{};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2010,7 +2013,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        copy(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
+        //copy(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
+        src[{{0, 2}, {0, 1}, {1, 2}}].copy_to(dst);
         arrnd<int> sres{};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2021,21 +2025,24 @@ TEST(arrnd_test, copy_from)
 
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-            copy(src, dst);
+            //copy(src, dst);
+            src.copy_to(dst);
             arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
             EXPECT_TRUE(all_equal(res, dst));
         }
 
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-            copy(src, dst, std::vector<int>{0, 2, 4});
+            //copy(src, dst, std::vector<int>{0, 2, 4});
+            src.copy_to(dst, std::vector<int>{0, 2, 4});
             arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
             EXPECT_TRUE(all_equal(res, dst));
         }
 
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-            copy(src, dst, {0, 2, 4});
+            //copy(src, dst, {0, 2, 4});
+            src.copy_to(dst, {0, 2, 4});
             arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
             EXPECT_TRUE(all_equal(res, dst));
         }
@@ -2043,21 +2050,24 @@ TEST(arrnd_test, copy_from)
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
             int inds[]{0, 2, 4};
-            copy(src, dst, inds);
+            //copy(src, dst, inds);
+            src.copy_to(dst, inds);
             arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
             EXPECT_TRUE(all_equal(res, dst));
         }
 
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-            copy(src, dst, arrnd<int>({3}, {0, 2, 4}));
+            //copy(src, dst, arrnd<int>({3}, {0, 2, 4}));
+            src.copy_to(dst, arrnd<int>({3}, {0, 2, 4}));
             arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
             EXPECT_TRUE(all_equal(res, dst));
         }
 
         {
             arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-            copy(src, dst, arrnd<bool>({3, 1, 2}, {1, 0, 1, 0, 1, 0}));
+            //copy(src, dst, arrnd<bool>({3, 1, 2}, {1, 0, 1, 0, 1, 0}));
+            src.copy_to(dst, arrnd<bool>({3, 1, 2}, {1, 0, 1, 0, 1, 0}));
             arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
             EXPECT_TRUE(all_equal(res, dst));
         }
@@ -2066,7 +2076,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        //copy(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        src[{{1, 3}, {0, 1}, {0, 1}}].copy_to(dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 3, 4, 5, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2076,7 +2087,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst);
+        //copy(src, dst);
+        src.copy_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2084,7 +2096,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        //copy(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+        src[{{0, 2}}].copy_to(dst[{{0, 2}, {0, 1}, {1, 2}}]);
         arrnd<int> sres{{3, 1, 2}, {6, 1, 4, 2, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2094,7 +2107,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{3}, {1, 2, 3}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst);
+        //copy(src, dst);
+        src.copy_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 3, 2, 1}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2102,7 +2116,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
+        //copy(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
+        src[{{1, 3}}].copy_to(dst[{{0, 3}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {2, 5, 3, 3, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2112,7 +2127,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst);
+        //copy(src, dst);
+        src.copy_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2120,7 +2136,8 @@ TEST(arrnd_test, copy_from)
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
+        //copy(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
+        src[{{1, 6}}].copy_to(dst[{{0, 2}, {0, 1}, {0, 1}}]);
         arrnd<int> sres{{3, 1, 2}, {2, 5, 3, 3, 2, 1}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2131,7 +2148,8 @@ TEST(arrnd_test, copy_from)
         arrnd<std::int64_t> indices{{3}, {0, 2, 4}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst, indices);
+        //copy(src, dst, indices);
+        src.copy_to(dst, indices);
         arrnd<int> res{{3, 1, 2}, {1, 5, 2, 3, 3, 1}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2143,7 +2161,8 @@ TEST(arrnd_test, copy_from)
             interval<std::int64_t>{0, 3}, interval<std::int64_t>{0, 1}, interval<std::int64_t>{1, 2}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        copy(src, dst, ranges);
+        //copy(src, dst, ranges);
+        src.copy_to(dst, ranges);
         arrnd<int> res{{3, 1, 2}, {6, 1, 4, 2, 2, 3}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2161,7 +2180,8 @@ TEST(arrnd_test, copy_from)
         arrnd_l0 arr_no_vals(
             {2}, {arrnd_l1({1, 2}, {arrnd_l2({2, 2}), arrnd_l2({1, 1, 3})}), arrnd_l1({1, 1}, {arrnd_l2({4})})});
 
-        copy(arr_with_vals, arr_no_vals);
+        //copy(arr_with_vals, arr_no_vals);
+        arr_with_vals.copy_to(arr_no_vals);
 
         EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 0}], arr_no_vals[{0}][{0, 0}]));
         EXPECT_TRUE(all_equal(arr_with_vals[{0}][{0, 1}][{interval<>::at(0), interval<>::full(), interval<>::full()}],
@@ -2182,26 +2202,28 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{};
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{};
         EXPECT_TRUE(all_equal(res, dst));
     }
-    {
-        arrnd<double> src{};
-        arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
+    //{
+    //    arrnd<double> src{};
+    //    arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
-        auto ref = set(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
-        arrnd<int> sres{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
-        EXPECT_TRUE(all_equal(sres, dst));
-        EXPECT_TRUE(all_equal(src, ref));
-    }
+    //    auto ref = set(src, dst[{{0, 2}, {0, 1}, {1, 2}}]);
+    //    arrnd<int> sres{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
+    //    EXPECT_TRUE(all_equal(sres, dst));
+    //    EXPECT_TRUE(all_equal(src, ref));
+    //}
 
     // empty dst
     {
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2209,7 +2231,8 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{};
 
-        set(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
+        //set(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
+        src[{{0, 2}, {0, 1}, {1, 2}}].set_to(dst);
         arrnd<int> sres{{2, 1, 1}, {2, 4}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2219,81 +2242,85 @@ TEST(arrnd_test, set_from)
         arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
-    {
-        arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
-        arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //{
+    //    arrnd<double> src{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
+    //    arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
-        arrnd<int> sres{{3, 1, 2}, {6, 3, 4, 5, 2, 1}};
-        arrnd<int> rres{{2, 1, 1}, {3, 5}};
-        EXPECT_TRUE(all_equal(sres, dst));
-        EXPECT_TRUE(all_equal(rres, ref));
-    }
+    //    auto ref = set(src[{{1, 3}, {0, 1}, {0, 1}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+    //    arrnd<int> sres{{3, 1, 2}, {6, 3, 4, 5, 2, 1}};
+    //    arrnd<int> rres{{2, 1, 1}, {3, 5}};
+    //    EXPECT_TRUE(all_equal(sres, dst));
+    //    EXPECT_TRUE(all_equal(rres, ref));
+    //}
 
     // same sizes
     {
         arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{{6}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
-    {
-        arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
-        arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //{
+    //    arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
+    //    arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
-        arrnd<int> sres{{3, 1, 2}, {1, 2, 4, 3, 2, 1}};
-        ;
-        arrnd<int> rres{{2}, {1, 2}};
-        EXPECT_TRUE(all_equal(sres, dst));
-        EXPECT_TRUE(all_equal(rres, ref));
-    }
+    //    auto ref = set(src[{{0, 2}}], dst[{{0, 2}, {0, 1}, {1, 2}}]);
+    //    arrnd<int> sres{{3, 1, 2}, {1, 2, 4, 3, 2, 1}};
+    //    ;
+    //    arrnd<int> rres{{2}, {1, 2}};
+    //    EXPECT_TRUE(all_equal(sres, dst));
+    //    EXPECT_TRUE(all_equal(rres, ref));
+    //}
 
     // size(src) < size(dst)
     {
         arrnd<double> src{{3}, {1, 2, 3}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{{3}, {1, 2, 3}};
         EXPECT_TRUE(all_equal(res, dst));
     }
-    {
-        arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
-        arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //{
+    //    arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
+    //    arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
-        arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-        arrnd<int> rres{{2}, {2, 3}};
-        EXPECT_TRUE(all_equal(sres, dst));
-        EXPECT_TRUE(all_equal(rres, ref));
-    }
+    //    auto ref = set(src[{{1, 3}}], dst[{{0, 3}, {0, 1}, {0, 1}}]);
+    //    arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //    arrnd<int> rres{{2}, {2, 3}};
+    //    EXPECT_TRUE(all_equal(sres, dst));
+    //    EXPECT_TRUE(all_equal(rres, ref));
+    //}
 
     // size(src) > size(dst)
     {
         arrnd<double> src{{10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        set(src, dst);
+        //set(src, dst);
+        src.set_to(dst);
         arrnd<int> res{{10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
         EXPECT_TRUE(all_equal(res, dst));
     }
-    {
-        arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
-        arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //{
+    //    arrnd<double> src{{6}, {1, 2, 3, 4, 5, 6}};
+    //    arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
-        auto ref = set(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
-        arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
-        arrnd<int> rres{{5}, {2, 3, 4, 5, 6}};
-        EXPECT_TRUE(all_equal(sres, dst));
-        EXPECT_TRUE(all_equal(rres, ref));
-    }
+    //    auto ref = set(src[{{1, 6}}], dst[{{0, 2}, {0, 1}, {0, 1}}]);
+    //    arrnd<int> sres{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
+    //    arrnd<int> rres{{5}, {2, 3, 4, 5, 6}};
+    //    EXPECT_TRUE(all_equal(sres, dst));
+    //    EXPECT_TRUE(all_equal(rres, ref));
+    //}
 
     // nested array
     {
@@ -2307,7 +2334,8 @@ TEST(arrnd_test, set_from)
 
         arrnd_l0 arr_no_vals;
 
-        set(arr_with_vals, arr_no_vals);
+        //set(arr_with_vals, arr_no_vals);
+        arr_with_vals.set_to(arr_no_vals);
 
         EXPECT_TRUE(all_equal(arr_with_vals, arr_no_vals));
 

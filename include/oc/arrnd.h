@@ -12217,75 +12217,75 @@ namespace details {
         return c.crend(std::forward<Args>(args)...);
     }
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
-    {
-        //return dst.copy_from(src);
-        return src.copy_to(dst);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst)
+    //{
+    //    //return dst.copy_from(src);
+    //    return src.copy_to(dst);
+    //}
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, signed_integral_type_iterator InputIt>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::pair<InputIt, InputIt> indices)
-    {
-        //return dst.copy_from(src, indices);
-        return src.copy_to(dst, indices);
-    }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Cont>
-        requires(signed_integral_type_iterable<Cont> || iterable_of_type<Cont, bool>)
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& indices)
-    {
-        //return dst.copy_from(src, indices);
-        return src.copy_to(dst, indices);
-    }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<typename ArCo1::size_type> indices)
-    {
-        //return dst.copy_from(src, indices);
-        return src.copy_to(dst, indices);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, signed_integral_type_iterator InputIt>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::pair<InputIt, InputIt> indices)
+    //{
+    //    //return dst.copy_from(src, indices);
+    //    return src.copy_to(dst, indices);
+    //}
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Cont>
+    //    requires(signed_integral_type_iterable<Cont> || iterable_of_type<Cont, bool>)
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& indices)
+    //{
+    //    //return dst.copy_from(src, indices);
+    //    return src.copy_to(dst, indices);
+    //}
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, std::initializer_list<typename ArCo1::size_type> indices)
+    //{
+    //    //return dst.copy_from(src, indices);
+    //    return src.copy_to(dst, indices);
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, std::integral U, std::int64_t M>
     //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const U (&indices)[M])
     //{
     //    return dst.copy_from(src, indices);
     //}
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterator InputIt>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const InputIt& first_range, const InputIt& last_range)
-    {
-        //return dst.copy_from(src, first_range, last_range);
-        return src.copy_to(dst, first_range, last_range);
-    }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterable Cont>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& ranges)
-    {
-        return copy(src, dst, std::begin(ranges), std::end(ranges));
-    }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    inline constexpr auto& copy(
-        const ArCo1& src, ArCo2&& dst, std::initializer_list<typename ArCo1::interval_type> ranges)
-    {
-        return copy(src, dst, ranges.begin(), ranges.end());
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterator InputIt>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const InputIt& first_range, const InputIt& last_range)
+    //{
+    //    //return dst.copy_from(src, first_range, last_range);
+    //    return src.copy_to(dst, first_range, last_range);
+    //}
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, interval_type_iterable Cont>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const Cont& ranges)
+    //{
+    //    return copy(src, dst, std::begin(ranges), std::end(ranges));
+    //}
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //inline constexpr auto& copy(
+    //    const ArCo1& src, ArCo2&& dst, std::initializer_list<typename ArCo1::interval_type> ranges)
+    //{
+    //    return copy(src, dst, ranges.begin(), ranges.end());
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, std::integral U, std::int64_t M>
     //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, const interval<U> (&ranges)[M])
     //{
     //    return copy(src, dst, std::begin(ranges), std::end(ranges));
     //}
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Pred/*, typename... Args*/>
-        requires invocable_no_arrnd<Pred, typename ArCo2::value_type/*, Args...*/>
-    inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, Pred&& pred/*, Args&&... args*/)
-    {
-        //return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
-        return src.copy_to(dst, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Pred/*, typename... Args*/>
+    //    requires invocable_no_arrnd<Pred, typename ArCo2::value_type/*, Args...*/>
+    //inline constexpr auto& copy(const ArCo1& src, ArCo2&& dst, Pred&& pred/*, Args&&... args*/)
+    //{
+    //    //return dst.copy_from(src, std::forward<Pred>(pred), std::forward<Args>(args)...);
+    //    return src.copy_to(dst, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+    //}
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    inline constexpr auto& set(const ArCo1& src, ArCo2&& dst)
-    {
-        //return dst.set_from(src);
-        return src.set_to(dst);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //inline constexpr auto& set(const ArCo1& src, ArCo2&& dst)
+    //{
+    //    //return dst.set_from(src);
+    //    return src.set_to(dst);
+    //}
 
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto clone(const ArCo& arr)
@@ -15383,8 +15383,8 @@ using details::crbegin;
 using details::rend;
 using details::crend;
 
-using details::copy;
-using details::set;
+//using details::copy;
+//using details::set;
 //using details::clone;
 //using details::reshape;
 //using details::resize;
