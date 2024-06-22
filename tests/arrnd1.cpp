@@ -2992,7 +2992,7 @@ TEST(arrnd_test, repeat)
 
     // by axis
     {
-        auto arr1 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
+        auto arr1 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).repeat({std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
 
         arrnd<int> res({2, 6, 4},
             {1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2,
@@ -3005,11 +3005,11 @@ TEST(arrnd_test, repeat)
 
         auto z = zip(zipped_cont(reps), zipped_cont(axes));
 
-        auto arr2 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), z.begin(), z.end());
+        auto arr2 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).repeat(z.begin(), z.end());
 
         EXPECT_TRUE(all_equal(arr2, res));
 
-        auto arr3 = repeat(arrnd<int>({1, 2, 2}, {1, 2, 3, 4}), {2, 3, 2});
+        auto arr3 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).repeat({2, 3, 2});
 
         EXPECT_TRUE(all_equal(arr3, res));
     }

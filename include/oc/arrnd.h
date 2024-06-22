@@ -12617,31 +12617,31 @@ namespace details {
     //    return repeat<ArCo::depth>(arr, count);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, iterator_of_template_type<std::tuple> InputIt>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_tuple, InputIt last_tuple)
-    {
-        return arr./*template */repeat/*<Level>*/(first_tuple, last_tuple);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, iterator_of_template_type<std::tuple> InputIt>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_tuple, InputIt last_tuple)
+    //{
+    //    return arr./*template */repeat/*<Level>*/(first_tuple, last_tuple);
+    //}
     //template <arrnd_compliant ArCo, iterator_of_template_type<std::tuple> InputIt>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_tuple, InputIt last_tuple)
     //{
     //    return repeat<ArCo::depth>(arr, first_tuple, last_tuple);
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<Tuple> count_axis_tuples)
-    {
-        return repeat/*<Level>*/(arr, count_axis_tuples.begin(), count_axis_tuples.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, template_type<std::tuple> Tuple>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<Tuple> count_axis_tuples)
+    //{
+    //    return repeat/*<Level>*/(arr, count_axis_tuples.begin(), count_axis_tuples.end());
+    //}
     //template <arrnd_compliant ArCo, template_type<std::tuple> Tuple>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<Tuple> count_axis_tuples)
     //{
     //    return repeat<ArCo::depth>(arr, count_axis_tuples.begin(), count_axis_tuples.end());
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo, iterable_of_template_type<std::tuple> Cont>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& count_axis_tuples)
-    {
-        return repeat/*<Level>*/(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, iterable_of_template_type<std::tuple> Cont>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& count_axis_tuples)
+    //{
+    //    return repeat/*<Level>*/(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
+    //}
     //template <arrnd_compliant ArCo, iterable_of_template_type<std::tuple> Cont>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& count_axis_tuples)
     //{
@@ -12659,31 +12659,31 @@ namespace details {
     //}
 
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
-    {
-        return arr./*template */repeat/*<Level>*/(first_rep, last_rep);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
+    //{
+    //    return arr./*template */repeat/*<Level>*/(first_rep, last_rep);
+    //}
     //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
     //{
     //    return repeat<ArCo::depth>(arr, first_rep, last_rep);
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<typename ArCo::size_type> reps)
-    {
-        return repeat/*<Level>*/(arr, reps.begin(), reps.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<typename ArCo::size_type> reps)
+    //{
+    //    return repeat/*<Level>*/(arr, reps.begin(), reps.end());
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, std::initializer_list<typename ArCo::size_type> reps)
     //{
     //    return repeat<ArCo::depth>(arr, reps.begin(), reps.end());
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& reps)
-    {
-        return repeat/*<Level>*/(arr, std::begin(reps), std::end(reps));
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& reps)
+    //{
+    //    return repeat/*<Level>*/(arr, std::begin(reps), std::end(reps));
+    //}
     //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, const Cont& reps)
     //{
@@ -15391,7 +15391,7 @@ using details::crend;
 //using details::append;
 using details::concat;
 //using details::insert;
-using details::repeat;
+//using details::repeat;
 //using details::remove;
 
 //using details::empty;
