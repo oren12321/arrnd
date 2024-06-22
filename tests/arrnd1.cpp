@@ -368,10 +368,10 @@ TEST(arrnd_test, callable_operator)
 
     {
         auto r = arr(
-            [](int a, int factor) {
-                return a <= 5 - factor;
-            },
-            1)();
+            [](int a/*, int factor*/) {
+                return a <= 4/*5 - factor*/;
+            }/*,
+            1*/)();
         EXPECT_TRUE(all_equal(r, arrnd({5}, {2, 1, 0, 3, 4})));
     }
 
@@ -1148,16 +1148,16 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         }));
         EXPECT_TRUE(oc::all_match(
             narr1,
-            [](int a, int b) {
-                return a >= b;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a >= 1/*b*/;
+            }/*,
+            1*/));
         EXPECT_FALSE(oc::all_match(
             narr1,
-            [](int a, int b) {
-                return a <= b;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a <= 1/*b*/;
+            }/*,
+            1*/));
     }
 
     // different ND array types
@@ -1195,16 +1195,16 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
     {
         EXPECT_TRUE(oc::all_match(
             arr1,
-            [](int a, int b) {
-                return a * b == a;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a * 1/*b*/ == a;
+            }/*,
+            1*/));
         EXPECT_FALSE(oc::all_match(
             arr2,
-            [](int a, int b) {
-                return a * b == a;
-            },
-            2));
+            [](int a/*, int b*/) {
+                return a * 2/*b*/ == a;
+            }/*,
+            2*/));
     }
 }
 
@@ -1278,16 +1278,16 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         }));
         EXPECT_TRUE(oc::any_match(
             narr1,
-            [](int a, int b) {
-                return a >= b;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a >= 1/*b*/;
+            }/*,
+            1*/));
         EXPECT_TRUE(oc::any_match(
             narr1,
-            [](int a, int b) {
-                return a <= b;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a <= 1/*b*/;
+            }/*,
+            1*/));
     }
 
     // different ND array types
@@ -1325,16 +1325,16 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
     {
         EXPECT_TRUE(oc::any_match(
             arr1,
-            [](int a, int b) {
-                return a * b == a;
-            },
-            1));
+            [](int a/*, int b*/) {
+                return a * 1/*b*/ == a;
+            }/*,
+            1*/));
         EXPECT_TRUE(oc::any_match(
             arr2,
-            [](int a, int b) {
-                return a * b == b;
-            },
-            2));
+            [](int a/*, int b*/) {
+                return a * 2/*b*/ == 2/*b*/;
+            }/*,
+            2*/));
     }
 }
 

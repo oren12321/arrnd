@@ -715,18 +715,18 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0.0, 0.0, 0.0}}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0.0, 0.0, 0.0}}));
 
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1}, data}));
+    EXPECT_TRUE(Integer_array({0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({0, 1}, data).empty());
 
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 1, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0, 1}, data}));
+    EXPECT_TRUE(Integer_array({1, 0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({1, 1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({1, 0, 1}, data).empty());
 
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 0}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0, 1}, data}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 1}, data}));
+    EXPECT_TRUE(Integer_array({0, 0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({0, 1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array({0, 0, 1}, data).empty());
+    EXPECT_TRUE(Integer_array({0, 1, 1}, data).empty());
 }
 
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
@@ -747,18 +747,18 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, dvalue}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, dvalue}));
 
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1}, value}));
+    EXPECT_TRUE(Integer_array({0, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({1, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({0, 1}, value).empty());
 
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 1, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{1, 0, 1}, value}));
+    EXPECT_TRUE(Integer_array({1, 0, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({1, 1, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({1, 0, 1}, value).empty());
 
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 0}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 0, 1}, value}));
-    EXPECT_TRUE(oc::empty(Integer_array{{0, 1, 1}, value}));
+    EXPECT_TRUE(Integer_array({0, 0, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({0, 1, 0}, value).empty());
+    EXPECT_TRUE(Integer_array({0, 0, 1}, value).empty());
+    EXPECT_TRUE(Integer_array({0, 1, 1}, value).empty());
 }
 
 TEST(arrnd_test, parameterized_constructors_compilation)
@@ -1067,36 +1067,36 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // type deduction for data by function parameter
 
-    auto proxy_func = [](auto a) {
-        return a;
+    auto proxy_func = [](/*auto a*/) {
+        return 1/*a*/;
     };
 
     // dims - iterators
     // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims.cbegin(), dims.cend(), proxy_func, 1);
+        arrnd arr(dims.cbegin(), dims.cend(), proxy_func/*, 1*/);
     }
 
     // dims - container
     // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims, proxy_func, 1);
+        arrnd arr(dims, proxy_func/*, 1*/);
     }
 
     // dims - initializer_list
     // data - function
     {
-        arrnd arr1(std::initializer_list<int>{}, proxy_func, 1);
-        arrnd arr2({3, 1, 2}, proxy_func, 1);
+        arrnd arr1(std::initializer_list<int>{}, proxy_func/*, 1*/);
+        arrnd arr2({3, 1, 2}, proxy_func/*, 1*/);
     }
 
     // dims - array
     // data - function
     {
         int dims[]{3, 1, 2};
-        arrnd arr(dims, proxy_func, 1);
+        arrnd arr(dims, proxy_func/*, 1*/);
     }
 
     // same 4 previous constructors with different specified arrnd type
@@ -1105,28 +1105,28 @@ TEST(arrnd_test, parameterized_constructors_compilation)
     // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<double> arr(dims.cbegin(), dims.cend(), proxy_func, 1);
+        arrnd<double> arr(dims.cbegin(), dims.cend(), proxy_func/*, 1*/);
     }
 
     // dims - container
     // data - function
     {
         std::vector<int> dims{3, 1, 2};
-        arrnd<double> arr(dims, proxy_func, 1);
+        arrnd<double> arr(dims, proxy_func/*, 1*/);
     }
 
     // dims - initializer_list
     // data - function
     {
-        arrnd<double> arr1(std::initializer_list<int>{}, proxy_func, 1);
-        arrnd<double> arr2({3, 1, 2}, proxy_func, 1);
+        arrnd<double> arr1(std::initializer_list<int>{}, proxy_func/*, 1*/);
+        arrnd<double> arr2({3, 1, 2}, proxy_func/*, 1*/);
     }
 
     // dims - array
     // data - function
     {
         int dims[]{3, 1, 2};
-        arrnd<double> arr(dims, proxy_func, 1);
+        arrnd<double> arr(dims, proxy_func/*, 1*/);
     }
 
     // ------------------------------
@@ -1308,11 +1308,11 @@ TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
     std::mt19937 gen;
     std::uniform_int_distribution dist(0, 9);
 
-    auto urand_0to9 = [&](int factor) {
-        return dist(gen) * factor;
+    auto urand_0to9 = [&](/*int factor*/) {
+        return dist(gen) * 10/*factor*/;
     };
 
-    oc::arrnd<int> arr({3, 1, 2}, urand_0to9, 10);
+    oc::arrnd<int> arr({3, 1, 2}, urand_0to9/*, 10*/);
 
     EXPECT_TRUE(std::all_of(arr.cbegin(), arr.cend(), [](int a) {
         return a >= 0 && a <= 90;
@@ -1604,10 +1604,10 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
     });
     tarr = apply(
         tarr,
-        [](int val1, int val2) {
-            return val1 == 0 ? 0 : val1 + val2;
-        },
-        2);
+        [](int val1/*, int val2*/) {
+            return val1 == 0 ? 0 : val1 + 2/*val2*/;
+        }/*,
+        2*/);
 
     arrnd<int> res({3, 1, 2}, {4, 0, 8, 0, 12, 0});
 
@@ -1689,10 +1689,10 @@ TEST(arrnd_test, element_wise_transform_operation)
     EXPECT_TRUE(oc::all_equal(oarr2,
         oc::transform(
             iarr1,
-            [](int a, int b) {
-                return a - b;
-            },
-            1)));
+            [](int a/*, int b*/) {
+                return a - 1/*b*/;
+            }/*,
+            1*/)));
 
     const int odata3[] = {0, -1, -2, -3, -4, -5};
     oc::arrnd oarr3{dims, odata3};
@@ -1700,10 +1700,10 @@ TEST(arrnd_test, element_wise_transform_operation)
     EXPECT_TRUE(oc::all_equal(oarr3,
         oc::transform(
             iarr1,
-            [](int a, int b) {
-                return -a + b;
-            },
-            1)));
+            [](int a/*, int b*/) {
+                return -a + 1/*b*/;
+            }/*,
+            1*/)));
 
     // nested array
     {
