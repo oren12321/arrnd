@@ -1859,7 +1859,7 @@ TEST(arrnd_test, all)
     const bool rdata[] = {true, false};
     oc::arrnd<bool> rarr{{2}, rdata};
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::all(arr, 0)));
+    EXPECT_TRUE(oc::all_equal(rarr, oc::all_of(arr, 0)));
 }
 
 TEST(arrnd_test, any)
@@ -1872,7 +1872,7 @@ TEST(arrnd_test, any)
     const bool rdata[] = {true, false};
     oc::arrnd<bool> rarr{{2}, rdata};
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::any(arr, 0)));
+    EXPECT_TRUE(oc::all_equal(rarr, oc::any_of(arr, 0)));
 }
 
 TEST(arrnd_test, sum)

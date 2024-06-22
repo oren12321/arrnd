@@ -10965,13 +10965,37 @@ namespace details {
         //    });
         //}
 
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
+        template <std::int64_t Level, typename Pred>
+        requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
+        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis, Pred&& pred) const
         {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                return a && b;
+            return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
+                return a && pred(b);
             });
         }
+
+        template <typename Pred>
+        requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
+        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis, Pred&& pred) const
+        {
+            return all_of<this_type::depth>(axis, std::forward<Pred>(pred));
+        }
+
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis) const
+        {
+            return all_of(axis, [](const auto& a) {
+                return a;
+            });
+        }
+
+        //template <std::int64_t Level = this_type::depth>
+        //[[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
+        //{
+        //    return reduce<Level>(axis, [](const auto& a, const auto& b) {
+        //        return a && b;
+        //    });
+        //}
 
         //template <std::int64_t Level = this_type::depth>
         //[[nodiscard]] constexpr bool any() const
@@ -10981,11 +11005,35 @@ namespace details {
         //    });
         //}
 
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
+        //template <std::int64_t Level = this_type::depth>
+        //[[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
+        //{
+        //    return reduce<Level>(axis, [](const auto& a, const auto& b) {
+        //        return a || b;
+        //    });
+        //}
+
+        template <std::int64_t Level, typename Pred>
+        requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
+        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis, Pred&& pred) const
         {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                return a || b;
+            return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
+                return a || pred(b);
+            });
+        }
+
+        template <typename Pred>
+        requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
+        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis, Pred&& pred) const
+        {
+            return any_of<this_type::depth>(axis, std::forward<Pred>(pred));
+        }
+
+        template <std::int64_t Level = this_type::depth>
+        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis) const
+        {
+            return any_of(axis, [](const auto& a) {
+                return a;
             });
         }
 
@@ -12820,16 +12868,30 @@ namespace details {
     //    return all<ArCo::depth>(arr);
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return arr.template all<Level>(axis);
+        return arr.template all_of<Level>(axis, std::forward<Pred>(pred));
+    }
+
+    template <arrnd_compliant ArCo, typename Pred>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    {
+        return all_of<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.template all_of<Level>(axis);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return all<ArCo::depth>(arr, axis);
+        return all_of<ArCo::depth>(arr, axis);
     }
 
     //template <std::int64_t Level, arrnd_compliant ArCo>
@@ -12844,16 +12906,42 @@ namespace details {
     //    return any<ArCo::depth>(arr);
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
+    //template <std::int64_t Level, arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
+    //{
+    //    return arr.template any<Level>(axis);
+    //}
+
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
+    //{
+    //    return any<ArCo::depth>(arr, axis);
+    //}
+
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return arr.template any<Level>(axis);
+        return arr.template any_of<Level>(axis, std::forward<Pred>(pred));
+    }
+
+    template <arrnd_compliant ArCo, typename Pred>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    {
+        return any_of<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo>
+    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis)
+    {
+        return arr.template any_of<Level>(axis);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return any<ArCo::depth>(arr, axis);
+        return any_of<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -14954,6 +15042,7 @@ namespace details {
     //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
     [[nodiscard]] inline constexpr bool all_of(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
@@ -14974,6 +15063,7 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr bool all_of(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
@@ -14994,6 +15084,7 @@ namespace details {
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
     [[nodiscard]] inline constexpr bool any_of(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
@@ -15014,6 +15105,7 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr bool any_of(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
@@ -15464,8 +15556,8 @@ using details::transform;
 using details::apply;
 using details::reduce;
 using details::fold;
-using details::all;
-using details::any;
+//using details::all;
+//using details::any;
 using details::sum;
 using details::prod;
 using details::min;
