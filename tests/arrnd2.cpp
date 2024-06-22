@@ -1854,7 +1854,7 @@ TEST(arrnd_test, all)
     const bool data[] = {1, 0, 1, 1};
     oc::arrnd<int> arr{{2, 2}, data};
 
-    EXPECT_EQ(false, oc::all(arr));
+    EXPECT_EQ(false, oc::all_of(arr));
 
     const bool rdata[] = {true, false};
     oc::arrnd<bool> rarr{{2}, rdata};
@@ -1867,7 +1867,7 @@ TEST(arrnd_test, any)
     const bool data[] = {1, 0, 0, 0};
     oc::arrnd<int> arr{{2, 2}, data};
 
-    EXPECT_EQ(true, oc::any(arr));
+    EXPECT_EQ(true, oc::any_of(arr));
 
     const bool rdata[] = {true, false};
     oc::arrnd<bool> rarr{{2}, rdata};

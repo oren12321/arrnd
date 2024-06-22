@@ -1146,13 +1146,13 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         EXPECT_FALSE(oc::all_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::all_match(
+        EXPECT_TRUE(oc::all_of(
             narr1,
             [](int a/*, int b*/) {
                 return a >= 1/*b*/;
             }/*,
             1*/));
-        EXPECT_FALSE(oc::all_match(
+        EXPECT_FALSE(oc::all_of(
             narr1,
             [](int a/*, int b*/) {
                 return a <= 1/*b*/;
@@ -1193,13 +1193,13 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::all_match(
+        EXPECT_TRUE(oc::all_of(
             arr1,
             [](int a/*, int b*/) {
                 return a * 1/*b*/ == a;
             }/*,
             1*/));
-        EXPECT_FALSE(oc::all_match(
+        EXPECT_FALSE(oc::all_of(
             arr2,
             [](int a/*, int b*/) {
                 return a * 2/*b*/ == a;
@@ -1276,13 +1276,13 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::any_match(
+        EXPECT_TRUE(oc::any_of(
             narr1,
             [](int a/*, int b*/) {
                 return a >= 1/*b*/;
             }/*,
             1*/));
-        EXPECT_TRUE(oc::any_match(
+        EXPECT_TRUE(oc::any_of(
             narr1,
             [](int a/*, int b*/) {
                 return a <= 1/*b*/;
@@ -1323,13 +1323,13 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::any_match(
+        EXPECT_TRUE(oc::any_of(
             arr1,
             [](int a/*, int b*/) {
                 return a * 1/*b*/ == a;
             }/*,
             1*/));
-        EXPECT_TRUE(oc::any_match(
+        EXPECT_TRUE(oc::any_of(
             arr2,
             [](int a/*, int b*/) {
                 return a * 2/*b*/ == 2/*b*/;
