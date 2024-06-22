@@ -6705,7 +6705,7 @@ namespace details {
 
             indexer_type gen(hdr_);
 
-            reduced_type res(static_cast<reduced_type>((*this)[*gen]));
+            reduced_type res = (/*static_cast<reduced_type>*/((*this)[*gen]));
             ++gen;
 
             while (gen) {
@@ -6756,7 +6756,7 @@ namespace details {
                 return init;
             }
 
-            folded_type res(static_cast<folded_type>(init));
+            folded_type res = /*(static_cast<folded_type>*/(init)/*)*/;
             for (indexer_type gen{hdr_}; gen; ++gen) {
                 res = func(res, (*this)[*gen], std::forward<Args>(args)...);
             }
@@ -6820,8 +6820,8 @@ namespace details {
             const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
 
             while (gen && res_gen) {
-                typename reduced_type::value_type res_element(
-                    static_cast<typename reduced_type::value_type>((*this)[*gen]));
+                typename reduced_type::value_type res_element = (
+                    /*static_cast<typename reduced_type::value_type>*/((*this)[*gen]));
                 ++gen;
                 for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
                     res_element = func(std::forward<typename reduced_type::value_type>(res_element), (*this)[*gen],
@@ -6896,8 +6896,8 @@ namespace details {
             const size_type reduction_iteration_cycle{hdr_.dims()[axis]};
 
             while (gen && res_gen && init_gen) {
-                typename folded_type::value_type res_element(
-                    static_cast<typename folded_type::value_type>(inits[*init_gen]));
+                typename folded_type::value_type res_element = (
+                    /*static_cast<typename folded_type::value_type>*/(inits[*init_gen]));
                 for (size_type i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
                     res_element = func(res_element, (*this)[*gen], std::forward<Args>(args)...);
                 }
