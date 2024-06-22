@@ -9206,7 +9206,7 @@ namespace details {
                 return *this;
             } else {
 
-                return trans_expanded.merge_pages/*template *//*collapse*//*<Level + 1>*/();
+                return trans_expanded.book/*template *//*collapse*//*<Level + 1>*/();
             }
         }
 
@@ -9338,7 +9338,7 @@ namespace details {
             return pages;
         }
 
-        [[nodiscard]] constexpr value_type merge_pages() const
+        [[nodiscard]] constexpr value_type book() const
         {
             assert(!this_type::is_flat);
 
@@ -14254,9 +14254,9 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto merge_pages(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto book(const ArCo& arr)
     {
-        return arr.merge_pages();
+        return arr.book();
     }
 
     template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
@@ -15400,7 +15400,7 @@ using details::collapse;
 using details::zeros;
 using details::eye;
 using details::pages;
-using details::merge_pages;
+using details::book;
 using details::split;
 using details::exclude;
 using details::merge;

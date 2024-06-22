@@ -1880,7 +1880,7 @@ TEST(arrnd_test, pages)
         p[0][0] = 100;
         EXPECT_EQ(100, arr[0]);
 
-        auto merged_pages = merge_pages(p);
+        auto merged_pages = book(p);
 
         EXPECT_TRUE(all_equal(merged_pages, arr));
         EXPECT_EQ(100, merged_pages[0]);
@@ -1893,7 +1893,7 @@ TEST(arrnd_test, pages)
             arrnd<arrnd<int>>(
                 {3, 1}, {arrnd<int>({1, 2}, {200, 4}), arrnd<int>({1, 2}, {6, 8}), arrnd<int>({1, 2}, {10, 12})})));
 
-        auto merged_pages2 = merge_pages(p2);
+        auto merged_pages2 = book(p2);
 
         EXPECT_TRUE(all_equal(merged_pages2, arrnd<int>({3, 1, 1, 2}, {200, 4, 6, 8, 10, 12})));
     }
