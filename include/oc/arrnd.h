@@ -10837,6 +10837,24 @@ namespace details {
                 arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
         }
 
+        template <std::int64_t Level, arrnd_compliant ArCo>
+        [[nodiscard]] constexpr bool all_match(const ArCo& arr) const
+        {
+            return all_match<Level, ArCo>(arr, [](const auto& a, const auto& b) {
+                if constexpr (arrnd_compliant<decltype(a)> && arrnd_compliant<decltype(b)>) {
+                    return (a == b).template all_of<this_type::depth>();
+                } else {
+                    return a == b;
+                }
+            });
+        }
+
+        template <arrnd_compliant ArCo>
+        [[nodiscard]] constexpr bool all_match(const ArCo& arr) const
+        {
+            return all_match<this_type::depth, ArCo>(arr);
+        }
+
         template <std::int64_t Level, typename Pred/*, typename... Args*/>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
             [[nodiscard]] constexpr bool any_of(Pred&& pred /*, Args&&... args*/) const
@@ -10955,6 +10973,24 @@ namespace details {
         {
             return any_match<this_type::depth, Pred, ArCo/*, Args...*/>(
                 arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        }
+
+        template <std::int64_t Level, arrnd_compliant ArCo>
+        [[nodiscard]] constexpr bool any_match(const ArCo& arr) const
+        {
+            return any_match<Level, ArCo>(arr, [](const auto& a, const auto& b) {
+                if constexpr (arrnd_compliant<decltype(a)> && arrnd_compliant<decltype(b)>) {
+                    return (a == b).template any_of<this_type::depth>();
+                } else {
+                    return a == b;
+                }
+            });
+        }
+
+        template <arrnd_compliant ArCo>
+        [[nodiscard]] constexpr bool any_match(const ArCo& arr) const
+        {
+            return any_match<this_type::depth, ArCo>(arr);
         }
 
         //template <std::int64_t Level = this_type::depth>
@@ -11148,9 +11184,7 @@ namespace details {
         template <std::int64_t Level, arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool all_equal(const ArCo& arr) const
         {
-            return all_match<Level>(arr, [](const auto& a, const auto& b) {
-                return a == b;
-            });
+            return all_match<Level>(arr);
         }
 
         template <arrnd_compliant ArCo>
@@ -11217,9 +11251,7 @@ namespace details {
         template <std::int64_t Level, arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool any_equal(const ArCo& arr) const
         {
-            return any_match<Level>(arr, [](const auto& a, const auto& b) {
-                return a == b;
-            });
+            return any_match<Level>(arr);
         }
 
         template <arrnd_compliant ArCo>
@@ -15062,6 +15094,12 @@ namespace details {
         return lhs.template all_match<Level>(rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U>
+    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs)
+    {
+        return lhs.template all_match<Level>(rhs);
+    }
+
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr bool all_of(
@@ -15081,6 +15119,12 @@ namespace details {
     [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
     {
         return all_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+    }
+
+    template <arrnd_compliant ArCo, typename U>
+    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs)
+    {
+        return all_match<ArCo::depth>(lhs, rhs);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
@@ -15104,6 +15148,12 @@ namespace details {
         return lhs.template any_match<Level>(rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U>
+    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
+    {
+        return lhs.template any_match<Level>(rhs);
+    }
+
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr bool any_of(
@@ -15123,6 +15173,12 @@ namespace details {
     [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
     {
         return any_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+    }
+
+    template <arrnd_compliant ArCo, typename U>
+    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
+    {
+        return any_match<ArCo::depth>(lhs, rhs);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename T>
