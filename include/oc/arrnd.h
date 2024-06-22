@@ -6606,8 +6606,15 @@ namespace details {
                 return *this;
             }
 
+            constexpr bool is_void_func
+                = std::is_same_v<std::invoke_result_t<Func, inner_value_type<Level> /*, Args...*/>, void>;
+
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen] = func((*this)[*gen]/*, std::forward<Args>(args)...*/);
+                if constexpr (is_void_func) {
+                    func((*this)[*gen]);
+                } else {
+                    (*this)[*gen] = func((*this)[*gen] /*, std::forward<Args>(args)...*/);
+                }
             }
 
             return *this;
@@ -6653,8 +6660,17 @@ namespace details {
             indexer_type gen(hdr_);
             typename std::remove_cvref_t<ArCo>::indexer_type arr_gen(carr.header());
 
+            constexpr bool is_void_func
+                = std::is_same_v<std::invoke_result_t<Func, inner_value_type<Level>,
+                                     typename ArCo::template inner_value_type<Level> /*, Args...*/>,
+                    void>;
+
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                (*this)[*gen] = func((*this)[*gen], carr[*arr_gen]/*, std::forward<Args>(args)...*/);
+                if constexpr (is_void_func) {
+                    func((*this)[*gen], carr[*arr_gen]);
+                } else {
+                    (*this)[*gen] = func((*this)[*gen], carr[*arr_gen] /*, std::forward<Args>(args)...*/);
+                }
             }
 
             return *this;

@@ -1661,6 +1661,27 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
             arrnd<int>(
                 {3, 2, 4}, {2, 3, 4, 5, 7, 8, 9, 10, 10, 11, 12, 13, 15, 16, 17, 18, 18, 19, 20, 21, 23, 24, 25, 26})));
     }
+
+    // apply using void function
+    {
+        arrnd<int> iarr({5}, {1, 2, 3, 4, 5});
+
+        std::vector<int> res;
+
+        iarr.apply([&res](int val) {
+            res.push_back(val);
+        });
+
+        EXPECT_EQ(res, (std::vector<int>{1, 2, 3, 4, 5}));
+
+        res.clear();
+
+        iarr.apply(iarr, [&res](int val1, int val2) {
+            res.push_back(val1 * val2);
+        });
+
+        EXPECT_EQ(res, (std::vector<int>{1, 4, 9, 16, 25}));
+    }
 }
 
 TEST(arrnd_test, element_wise_transform_operation)
