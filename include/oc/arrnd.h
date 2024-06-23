@@ -5910,11 +5910,11 @@ namespace details {
         //        std::forward<Tuple>(arr_axis_tuple), std::forward<ArCoAxisTuples>(others)...);
         //}
 
-        template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        [[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
-        {
-            return matmul(arr).matmul(std::forward<ArCos>(others)...);
-        }
+        //template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        //[[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
+        //{
+        //    return matmul(arr).matmul(std::forward<ArCos>(others)...);
+        //}
         //template <arrnd_compliant... ArCos>
         //[[nodiscard]] constexpr auto matmul(ArCos&&... others) const
         //{
@@ -12627,11 +12627,11 @@ namespace details {
         }
     }
 
-    template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
-    {
-        return lhs.matmul(rhs);
-    }
+    //template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
+    //{
+    //    return lhs.matmul(rhs);
+    //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     //[[nodiscard]] constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
     //{
@@ -12641,7 +12641,16 @@ namespace details {
     template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
     [[nodiscard]] inline constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     {
-        return arr1.matmul(arr2, std::forward<ArCos>(others)...);
+        //template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
+        //[[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
+        //{
+        //    return matmul(arr).matmul(std::forward<ArCos>(others)...);
+        //}
+        if constexpr (sizeof...(others) == 0) {
+            return arr1.matmul(arr2);
+        } else {
+            return matmul(arr1.matmul(arr2), std::forward<ArCos>(others)...);
+        }
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
     //[[nodiscard]] constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
