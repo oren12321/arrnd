@@ -14,7 +14,7 @@ oc::arrnd<int> mul(const oc::arrnd<int>& lhs, const oc::arrnd<int>& rhs)
     oc::arrnd<int> res({ lhs.header().dims()[0], rhs.header().dims()[1] });
 
     std::int64_t ind = 0;
-    auto trhs = oc::transpose(rhs, { 1, 0 });
+    auto trhs = rhs.transpose();
     std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}), lhs.cend(arrnd_returned_slice_iterator_tag{}), [&](const auto& row) {
         std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}), trhs.cend(arrnd_returned_slice_iterator_tag{}), [&](const auto& col) {
             res[ind++] = oc::reduce(row * col, std::plus<>{});
