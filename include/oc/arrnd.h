@@ -3819,7 +3819,7 @@ namespace details {
     using inner_replaced_type_t = inner_replaced_type<T, R, Level>::type;
 
     enum class arrnd_shape_preset { vector, row, column };
-    enum class arrnd_diag_type { from_matrix, to_matrix };
+    //enum class arrnd_diag_type { from_matrix, to_matrix };
 
     // zip class
 
@@ -5911,14 +5911,14 @@ namespace details {
         //}
 
         //template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        //[[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
+        //[[nodiscard]] constexpr auto dot(const ArCo& arr, ArCos&&... others) const
         //{
-        //    return matmul(arr).matmul(std::forward<ArCos>(others)...);
+        //    return dot(arr).dot(std::forward<ArCos>(others)...);
         //}
         //template <arrnd_compliant... ArCos>
-        //[[nodiscard]] constexpr auto matmul(ArCos&&... others) const
+        //[[nodiscard]] constexpr auto dot(ArCos&&... others) const
         //{
-        //    return matmul<this_type::depth>(std::forward<ArCos>(others)...);
+        //    return dot<this_type::depth>(std::forward<ArCos>(others)...);
         //}
 
         //template </*std::int64_t Level, */arrnd_compliant ArCo>
@@ -7276,10 +7276,10 @@ namespace details {
 
         //template </*std::int64_t Level, */ arrnd_compliant ArCo>
         //    requires(/*Level > 0*/ same_depth<this_type, ArCo> && !this_type::is_flat && !ArCo::is_flat)
-        //[[nodiscard]] constexpr auto matmul(const ArCo& arr) const
+        //[[nodiscard]] constexpr auto dot(const ArCo& arr) const
         //{
         //    return transform<0>(arr, [](const auto& a, const auto& b) {
-        //        return a.matmul(b);
+        //        return a.dot(b);
         //    });
         //    /*using ret_type = inner_replaced_type<decltype(inner_value_type<Level>{} * (typename ArCo::template inner_value_type<Level>{})), Level>;
 
@@ -7293,14 +7293,14 @@ namespace details {
         //    typename ret_type::indexer_type res_gen(res.header());
 
         //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = (*this)[*gen].template matmul<Level - 1>(arr);
+        //        res[*res_gen] = (*this)[*gen].template dot<Level - 1>(arr);
         //    }
 
         //    return res;*/
         //}
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
             requires(/*Level == 0*/ this_type::is_flat && ArCo::is_flat)
-        [[nodiscard]] constexpr auto matmul(const ArCo& arr) const
+        [[nodiscard]] constexpr auto dot(const ArCo& arr) const
         {
             using ret_type = replaced_type<decltype(value_type{} * (typename ArCo::value_type{}))>;
 
@@ -7356,9 +7356,9 @@ namespace details {
             //});
         }
         //template <arrnd_compliant ArCo>
-        //[[nodiscard]] constexpr auto matmul(const ArCo& arr) const
+        //[[nodiscard]] constexpr auto dot(const ArCo& arr) const
         //{
-        //    return matmul<this_type::depth>(arr);
+        //    return dot<this_type::depth>(arr);
         //}
 
         //[[nodiscard]] constexpr auto det() const
@@ -7417,22 +7417,22 @@ namespace details {
             });
         }
 
-        //[[nodiscard]] constexpr auto inverse() const
+        //[[nodiscard]] constexpr auto inv() const
         //    requires(!this_type::is_flat)
         //{
         //    return transform<0>([](const auto& a) {
-        //        return a.inverse();
+        //        return a.inv();
         //    });
         //}
 
-        [[nodiscard]] constexpr auto inverse() const
+        [[nodiscard]] constexpr auto inv() const
             requires(this_type::is_flat)
         {
             assert(hdr_.dims().size() >= 2);
 
-            std::function<this_type(this_type)> inverse_impl;
+            std::function<this_type(this_type)> inv_impl;
 
-            inverse_impl = [&](this_type arr) {
+            inv_impl = [&](this_type arr) {
                 //std::cout << "calc:\n" << arr << "\n\n";
                 assert(arr.header().is_matrix());
                 assert(arr.header().dims().front() == arr.header().dims().back());
@@ -7464,11 +7464,11 @@ namespace details {
             };
 
             if (hdr_.is_matrix()) {
-                return inverse_impl(*this);
+                return inv_impl(*this);
             }
 
-            return browse/*<0>*/(2, [inverse_impl](auto page) {
-                return inverse_impl(page);
+            return browse/*<0>*/(2, [inv_impl](auto page) {
+                return inv_impl(page);
             });
         }
 
@@ -7585,11 +7585,11 @@ namespace details {
         //            auto qk1 = eye<this_type>({k - 1, k - 1}).append(zeros<this_type>({k - 1, m - k + 1}), 1);
         //            auto qk2 = zeros<this_type>({m - k + 1, k - 1})
         //                           .append(eye<this_type>({m - k + 1, m - k + 1})
-        //                                   - value_type{2} * v.matmul(v.transpose({1, 0})),
+        //                                   - value_type{2} * v.dot(v.transpose({1, 0})),
         //                               1);
         //            auto qk = qk1.append(qk2, 0);
-        //            r = qk.matmul(r);
-        //            q = q.matmul(qk);
+        //            r = qk.dot(r);
+        //            q = q.dot(qk);
 
         //            /*std::cout << "qk:" << qk << "\n";
         //            std::cout << "r:" << r << "\n";
@@ -7646,25 +7646,25 @@ namespace details {
         //                using namespace std::complex_literals;
 
         //                u[{0, 0}]
-        //                    = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).matmul(r)), value_type{0.5})(0);
+        //                    = -exp(arg(r[{0, 0}]) * 1i) * pow((r.transpose({1, 0}).dot(r)), value_type{0.5})(0);
         //            } else {
         //                u[{0, 0}] = -(oc::sign(r[{0, 0}]) * (r[{0, 0}] != value_type{0}) + (r[{0, 0}] == value_type{0}))
-        //                    * std::pow((r.transpose({1, 0}).matmul(r)(0)), value_type{0.5});
+        //                    * std::pow((r.transpose({1, 0}).dot(r)(0)), value_type{0.5});
         //            }
 
         //            auto v = r - u;
-        //            v /= std::pow((v.transpose({1, 0}).matmul(v)(0)), value_type{0.5});
+        //            v /= std::pow((v.transpose({1, 0}).dot(v)(0)), value_type{0.5});
 
         //            auto w1 = eye<this_type>({k + 1, k + 1}).append(zeros<this_type>({k + 1, n - (k + 1)}), 1);
         //            auto w2 = zeros<this_type>({n - (k + 1), k + 1})
         //                          .append(eye<this_type>({n - (k + 1), n - (k + 1)})
-        //                                  - value_type{2} * (v.matmul(v.transpose({1, 0}))),
+        //                                  - value_type{2} * (v.dot(v.transpose({1, 0}))),
         //                              1);
 
         //            auto w = w1.append(w2, 0);
 
-        //            h = w.matmul(h, w.transpose({1, 0}));
-        //            q = q.matmul(w.transpose({1, 0}));
+        //            h = w.dot(h, w.transpose({1, 0}));
+        //            q = q.dot(w.transpose({1, 0}));
         //        }
 
         //        return std::make_tuple(q, h);
@@ -7723,13 +7723,13 @@ namespace details {
         //                auto s_k = s[{k - 1, k - 1}];
         //                auto s_kk_1 = s[{k - 1, k - 2}];
         //                auto s_k_1k = s[{k - 2, k - 1}];
-        //                //std::cout << "stok2:\n" << stok.matmul(stok) << "\n";
+        //                //std::cout << "stok2:\n" << stok.dot(stok) << "\n";
         //                //std::cout << "s_k_1:\n" << s_k_1 << "\n";
         //                //std::cout << "s_k:\n" << s_k << "\n";
         //                //std::cout << "s_k_1k:\n" << s_k_1k << "\n";
         //                //std::cout << "s_kk_1:\n" << s_kk_1 << "\n";
 
-        //                auto m = stok.matmul(stok) - (s_k_1 + s_k) * stok
+        //                auto m = stok.dot(stok) - (s_k_1 + s_k) * stok
         //                    + (s_k_1 * s_k - s_k_1k * s_kk_1) * eye<this_type>({k, k});
         //                //std::cout << "m:\n" << m << "\n";
         //                auto [q, r] = m.qr()(0);
@@ -7741,8 +7741,8 @@ namespace details {
         //                q = q1.append(q2, 0);
         //                //std::cout << "q:\n" << q << "\n";
 
-        //                u = u.matmul(q);
-        //                s = q.transpose({1, 0}).matmul(s, q);
+        //                u = u.dot(q);
+        //                s = q.transpose({1, 0}).dot(s, q);
 
         //                auto m1 = s.abs() < tol;
 
@@ -7789,8 +7789,8 @@ namespace details {
         //                auto qq = eye<this_type>({n, n});
         //                qq[{ival::between(k - 1, k + 1), ival::between(k - 1, k + 1)}].copy_from(q);
         //                //std::cout << "q:\n" << q << "\n\n";
-        //                s = qq.transpose({1, 0}).matmul(s, qq);
-        //                u = u.matmul(qq);
+        //                s = qq.transpose({1, 0}).dot(s, qq);
+        //                u = u.dot(qq);
         //            }
         //        }
 
@@ -7847,15 +7847,15 @@ namespace details {
         //                //std::cout << g << "\n\n";
 
         //                auto s1 = s[{ival::between(k - 1, k + 1), ival::between(k - 1, n)}];
-        //                s1.copy_from(g.transpose({1, 0}).conj().matmul(s1)); // conj transpose
+        //                s1.copy_from(g.transpose({1, 0}).conj().dot(s1)); // conj transpose
         //                //std::cout << s << "\n\n";
 
         //                auto s2 = s[{ival::between(0, k + 1), ival::between(k - 1, k + 1)}];
-        //                s2.copy_from(s2.matmul(g));
+        //                s2.copy_from(s2.dot(g));
         //                //std::cout << s << "\n\n";
 
         //                auto u1 = u[{ival::between(0, n), ival::between(k - 1, k + 1)}];
-        //                u1.copy_from(u1.matmul(g));
+        //                u1.copy_from(u1.dot(g));
         //                //std::cout << u << "\n\n";
         //            }
         //            s[{k, k - 1}] = 0;
@@ -7918,8 +7918,8 @@ namespace details {
 
         //            auto [q, r] = (h - smult).qr()(0);
 
-        //            h = r.matmul(q) + smult;
-        //            qq = qq.matmul(q);
+        //            h = r.dot(q) + smult;
+        //            qq = qq.dot(q);
 
         //            diff = (h - h_prev).abs().max();
         //        }
@@ -8024,9 +8024,9 @@ namespace details {
         //            = sv.sqrt().diag(arrnd_diag_type::to_matrix);
 
         //        if constexpr (template_type<value_type, std::complex>) {
-        //            v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
+        //            v = ((arr.dot(v)).inv().dot(u)).dot(s);
         //        } else {
-        //            auto m = (arr.matmul(v) - u.matmul(s)).abs().max(1)(arrnd_shape_preset::vector) > value_type{1e-8};
+        //            auto m = (arr.dot(v) - u.dot(s)).abs().max(1)(arrnd_shape_preset::vector) > value_type{1e-8};
 
         //            for (size_type i = 0; i < m.header().numel(); ++i) {
         //                if (m[i]) {
@@ -8047,15 +8047,15 @@ namespace details {
         //        //this_type v;
 
         //        //if constexpr (template_type<value_type, std::complex>) {
-        //        //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}).conj())).eig()(0);
-        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).conj().matmul(arr)).eig()(0);
+        //        //    auto [l1t, ut] = (arr.dot(arr.transpose({1, 0}).conj())).eig()(0);
+        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).conj().dot(arr)).eig()(0);
         //        //    l1 = l1t;
         //        //    l2 = l2t;
         //        //    u = ut;
         //        //    v = vt;
         //        //} else {
-        //        //    auto [l1t, ut] = (arr.matmul(arr.transpose({1, 0}))).eig()(0);
-        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).matmul(arr)).eig()(0);
+        //        //    auto [l1t, ut] = (arr.dot(arr.transpose({1, 0}))).eig()(0);
+        //        //    auto [l2t, vt] = (arr.transpose({1, 0}).dot(arr)).eig()(0);
         //        //    l1 = l1t;
         //        //    l2 = l2t;
         //        //    u = ut;
@@ -8092,9 +8092,9 @@ namespace details {
         //        //s[{ival::to(arr_minsize), ival::to(arr_minsize)}].copy_from(sv.sqrt().diag(arrnd_diag_type::to_matrix));
 
         //        //if constexpr (template_type<value_type, std::complex>) {
-        //        //    v = ((arr.matmul(v)).inverse().matmul(u)).matmul(s);
+        //        //    v = ((arr.dot(v)).inv().dot(u)).dot(s);
         //        //} else {
-        //        //    auto mask = (arr.matmul(v) - u.matmul(s)).abs().reduce(1, [](value_type m, value_type v) {
+        //        //    auto mask = (arr.dot(v) - u.dot(s)).abs().reduce(1, [](value_type m, value_type v) {
         //        //        return std::max({m, v});
         //        //    }) > value_type{1e-8};
         //        //    v(mask) = v * (value_type{-1});
@@ -8120,47 +8120,47 @@ namespace details {
         //    });
         //}
 
-        [[nodiscard]] constexpr auto tril(size_type offset = 0) const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
+        //[[nodiscard]] constexpr auto tril(size_type offset = 0) const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
 
-            std::function<this_type(this_type)> tril_impl;
+        //    std::function<this_type(this_type)> tril_impl;
 
-            tril_impl = [&](this_type arr) {
-                assert(arr.header().is_matrix());
+        //    tril_impl = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
 
-                size_type r = arr.header().dims().front();
-                size_type c = arr.header().dims().back();
-                assert(offset >= -r && offset <= c);
+        //        size_type r = arr.header().dims().front();
+        //        size_type c = arr.header().dims().back();
+        //        assert(offset >= -r && offset <= c);
 
-                this_type res(arr.header().dims(), value_type{0});
+        //        this_type res(arr.header().dims(), value_type{0});
 
-                size_type current_row_size = offset <= 0 ? 1 : offset + 1;
-                size_type tril_rows_count = offset >= 0 ? r : r + offset;
+        //        size_type current_row_size = offset <= 0 ? 1 : offset + 1;
+        //        size_type tril_rows_count = offset >= 0 ? r : r + offset;
 
-                size_type current_ind = (r - tril_rows_count) * c;
+        //        size_type current_ind = (r - tril_rows_count) * c;
 
-                while (tril_rows_count--) {
-                    for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
-                        res[i] = arr(i);
-                    }
+        //        while (tril_rows_count--) {
+        //            for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
+        //                res[i] = arr(i);
+        //            }
 
-                    current_row_size = std::min(c, current_row_size + 1);
-                    current_ind += c;
-                }
+        //            current_row_size = std::min(c, current_row_size + 1);
+        //            current_ind += c;
+        //        }
 
-                return res;
-            };
+        //        return res;
+        //    };
 
-            if (hdr_.is_matrix()) {
-                return tril_impl(*this);
-            }
+        //    if (hdr_.is_matrix()) {
+        //        return tril_impl(*this);
+        //    }
 
-            return browse/*<0>*/(2, [tril_impl](auto page) {
-                return tril_impl(page);
-            });
-        }
+        //    return browse/*<0>*/(2, [tril_impl](auto page) {
+        //        return tril_impl(page);
+        //    });
+        //}
 
         //[[nodiscard]] constexpr auto triu(size_type offset = 0) const
         //    requires(!this_type::is_flat)
@@ -8170,48 +8170,48 @@ namespace details {
         //    });
         //}
 
-        [[nodiscard]] constexpr auto triu(size_type offset = 0) const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
+        //[[nodiscard]] constexpr auto triu(size_type offset = 0) const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
 
-            std::function<this_type(this_type)> triu_impl;
+        //    std::function<this_type(this_type)> triu_impl;
 
-            triu_impl = [&](this_type arr) {
-                return arr - arr.tril(offset - 1);
-                /*assert(arr.header().is_matrix());
+        //    triu_impl = [&](this_type arr) {
+        //        return arr - arr.tril(offset - 1);
+        //        /*assert(arr.header().is_matrix());
 
-                size_type r = arr.header().dims().front();
-                size_type c = arr.header().dims().back();
-                assert(offset > -r && offset < c);
+        //        size_type r = arr.header().dims().front();
+        //        size_type c = arr.header().dims().back();
+        //        assert(offset > -r && offset < c);
 
-                this_type res = arr.clone();
+        //        this_type res = arr.clone();
 
-                size_type current_row_size = offset <= 0 ? 1 : offset + 1;
-                size_type tril_rows_count = offset >= 0 ? r : r + offset;
+        //        size_type current_row_size = offset <= 0 ? 1 : offset + 1;
+        //        size_type tril_rows_count = offset >= 0 ? r : r + offset;
 
-                size_type current_ind = (r - tril_rows_count) * c;
+        //        size_type current_ind = (r - tril_rows_count) * c;
 
-                while (tril_rows_count--) {
-                    for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
-                        res[i] = value_type{0};
-                    }
+        //        while (tril_rows_count--) {
+        //            for (size_type i = current_ind; i < current_ind + current_row_size; ++i) {
+        //                res[i] = value_type{0};
+        //            }
 
-                    current_row_size = std::min(c, current_row_size + 1);
-                    current_ind += c;
-                }
+        //            current_row_size = std::min(c, current_row_size + 1);
+        //            current_ind += c;
+        //        }
 
-                return res;*/
-            };
+        //        return res;*/
+        //    };
 
-            if (hdr_.is_matrix()) {
-                return triu_impl(*this);
-            }
+        //    if (hdr_.is_matrix()) {
+        //        return triu_impl(*this);
+        //    }
 
-            return browse/*<0>*/(2, [triu_impl](auto page) {
-                return triu_impl(page);
-            });
-        }
+        //    return browse/*<0>*/(2, [triu_impl](auto page) {
+        //        return triu_impl(page);
+        //    });
+        //}
 
         //[[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix, size_type offset = 0) const
         //    requires(!this_type::is_flat)
@@ -8221,196 +8221,196 @@ namespace details {
         //    });
         //}
 
-        [[nodiscard]] constexpr replaced_type<size_type> find_diagonal(size_type offset = 0)
-        {
-            assert(std::ssize(hdr_.dims()) >= 2);
+        //[[nodiscard]] constexpr replaced_type<size_type> find_diagonal(size_type offset = 0)
+        //{
+        //    assert(std::ssize(hdr_.dims()) >= 2);
 
-            auto find_diagonal_in_matrix = [&](this_type arr) {
-                assert(arr.header().is_matrix());
+        //    auto find_diagonal_in_matrix = [&](this_type arr) {
+        //        assert(arr.header().is_matrix());
 
-                size_type rows = arr.header().dims().front();
-                size_type cols = arr.header().dims().back();
+        //        size_type rows = arr.header().dims().front();
+        //        size_type cols = arr.header().dims().back();
 
-                assert(offset > -rows && offset < cols);
+        //        assert(offset > -rows && offset < cols);
 
-                size_type n = std::min(rows, cols);
+        //        size_type n = std::min(rows, cols);
 
-                size_type res_numel = n - static_cast<size_type>(std::abs(offset));
+        //        size_type res_numel = n - static_cast<size_type>(std::abs(offset));
 
-                if ((cols > rows && offset > 0 && offset < n) || (cols < rows && offset < 0 && offset > -n)) {
-                    res_numel = n;
-                }
+        //        if ((cols > rows && offset > 0 && offset < n) || (cols < rows && offset < 0 && offset > -n)) {
+        //            res_numel = n;
+        //        }
 
-                replaced_type<size_type> res({res_numel});
+        //        replaced_type<size_type> res({res_numel});
 
-                size_type current_ind = offset >= 0 ? offset : -offset * cols;
+        //        size_type current_ind = offset >= 0 ? offset : -offset * cols;
 
-                indexer_type gen(arr.header());
-                gen += current_ind;
+        //        indexer_type gen(arr.header());
+        //        gen += current_ind;
 
-                for (size_type i = 0; i < res_numel; ++i) {
-                    res[i] = *gen;
-                    gen += cols + 1;
-                }
+        //        for (size_type i = 0; i < res_numel; ++i) {
+        //            res[i] = *gen;
+        //            gen += cols + 1;
+        //        }
 
-                return res;
-            };
+        //        return res;
+        //    };
 
-            if (hdr_.is_matrix()) {
-                return find_diagonal_in_matrix(*this);
-            }
+        //    if (hdr_.is_matrix()) {
+        //        return find_diagonal_in_matrix(*this);
+        //    }
 
-            return browse(2, [&](auto page) {
-                return find_diagonal_in_matrix(page);
-            });
-        }
+        //    return browse(2, [&](auto page) {
+        //        return find_diagonal_in_matrix(page);
+        //    });
+        //}
 
-        [[nodiscard]] constexpr this_type spread_diagonal(size_type offset = 0)
-        {
-            assert(std::ssize(hdr_.dims()) >= 1);
+        //[[nodiscard]] constexpr this_type spread_diagonal(size_type offset = 0)
+        //{
+        //    assert(std::ssize(hdr_.dims()) >= 1);
 
-            auto spread_diagonal_to_matrix = [&](this_type arr) {
-                assert(arr.header().is_vector());
+        //    auto spread_diagonal_to_matrix = [&](this_type arr) {
+        //        assert(arr.header().is_vector());
 
-                size_type n = arr.header().numel() + static_cast<size_type>(std::abs(offset));
+        //        size_type n = arr.header().numel() + static_cast<size_type>(std::abs(offset));
 
-                this_type res({n, n}, value_type{});
+        //        this_type res({n, n}, value_type{});
 
-                size_type current_ind = offset >= 0 ? offset : -offset * n;
+        //        size_type current_ind = offset >= 0 ? offset : -offset * n;
 
-                for (indexer_type gen(arr.header()); current_ind < res.header().numel() && gen; ++gen) {
-                    res[current_ind] = arr[*gen];
-                    current_ind += n + 1;
-                }
+        //        for (indexer_type gen(arr.header()); current_ind < res.header().numel() && gen; ++gen) {
+        //            res[current_ind] = arr[*gen];
+        //            current_ind += n + 1;
+        //        }
 
-                return res;
-            };
+        //        return res;
+        //    };
 
-            if (hdr_.is_vector()) {
-                return spread_diagonal_to_matrix(*this);
-            }
+        //    if (hdr_.is_vector()) {
+        //        return spread_diagonal_to_matrix(*this);
+        //    }
 
-            return browse(1, [&](auto page) {
-                return spread_diagonal_to_matrix(page);
-            });
-        }
+        //    return browse(1, [&](auto page) {
+        //        return spread_diagonal_to_matrix(page);
+        //    });
+        //}
 
-        [[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix,
-            size_type offset = 0) const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 1);
+        //[[nodiscard]] constexpr auto diag(arrnd_diag_type type = arrnd_diag_type::from_matrix,
+        //    size_type offset = 0) const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 1);
 
-            std::function<this_type(this_type)> diag_from_matrix_impl;
+        //    std::function<this_type(this_type)> diag_from_matrix_impl;
 
-            diag_from_matrix_impl = [&](this_type arr) {
-                if (arr.empty()) {
-                    return this_type();
-                }
+        //    diag_from_matrix_impl = [&](this_type arr) {
+        //        if (arr.empty()) {
+        //            return this_type();
+        //        }
 
-                assert(arr.header().is_matrix());
+        //        assert(arr.header().is_matrix());
 
-                size_type r = arr.header().dims().front();
-                size_type c = arr.header().dims().back();
+        //        size_type r = arr.header().dims().front();
+        //        size_type c = arr.header().dims().back();
 
-                assert(offset > -r && offset < c);
+        //        assert(offset > -r && offset < c);
 
-                size_type n = std::min(r, c);
+        //        size_type n = std::min(r, c);
 
-                //size_type abs_offset = static_cast<size_type>(std::abs(offset));
+        //        //size_type abs_offset = static_cast<size_type>(std::abs(offset));
 
-                //size_type numel = 0;
-                size_type numel = n - static_cast<size_type>(std::abs(offset));
+        //        //size_type numel = 0;
+        //        size_type numel = n - static_cast<size_type>(std::abs(offset));
 
-                if ((c > r && offset > 0 && offset < n) || (c < r && offset < 0 && offset > -n)) {
-                    numel = n;
-                }
+        //        if ((c > r && offset > 0 && offset < n) || (c < r && offset < 0 && offset > -n)) {
+        //            numel = n;
+        //        }
 
-                //abs_offset + 1 <= n ? n : n - abs_offset;
-                //if (r == c) {
-                //    numel = n - abs_offset;
-                //} else if (c > r) {
-                //    if (offset > 0) {
-                //        if (offset < n) {
-                //            numel = n;
-                //        } else {
-                //            numel = n - abs_offset;
-                //        }
-                //    } else {
-                //        numel = n - abs_offset;
-                //    }
-                //} else {
-                //    if (offset < 0) {
-                //        if (abs_offset < n) {
-                //            numel = n;
-                //        } else {
-                //            numel = n - abs_offset;
-                //        }
-                //    } else {
-                //        numel = n - abs_offset;
-                //    }
-                //}
+        //        //abs_offset + 1 <= n ? n : n - abs_offset;
+        //        //if (r == c) {
+        //        //    numel = n - abs_offset;
+        //        //} else if (c > r) {
+        //        //    if (offset > 0) {
+        //        //        if (offset < n) {
+        //        //            numel = n;
+        //        //        } else {
+        //        //            numel = n - abs_offset;
+        //        //        }
+        //        //    } else {
+        //        //        numel = n - abs_offset;
+        //        //    }
+        //        //} else {
+        //        //    if (offset < 0) {
+        //        //        if (abs_offset < n) {
+        //        //            numel = n;
+        //        //        } else {
+        //        //            numel = n - abs_offset;
+        //        //        }
+        //        //    } else {
+        //        //        numel = n - abs_offset;
+        //        //    }
+        //        //}
 
-                this_type res({numel});
+        //        this_type res({numel});
 
-                size_type current_ind = offset >= 0 ? offset : -offset * c;
+        //        size_type current_ind = offset >= 0 ? offset : -offset * c;
 
-                for (size_type i = 0; i < numel; ++i) {
-                    res[i] = arr(current_ind);
-                    current_ind += c + 1;
-                }
+        //        for (size_type i = 0; i < numel; ++i) {
+        //            res[i] = arr(current_ind);
+        //            current_ind += c + 1;
+        //        }
 
-                return res;
-            };
-
-
-            std::function<this_type(this_type)> diag_to_matrix_impl;
-
-            diag_to_matrix_impl = [&](this_type arr) {
-                if (arr.empty()) {
-                    return this_type();
-                }
-
-                assert(arr.header().is_vector());
-
-                size_type abs_offset = static_cast<size_type>(std::abs(offset));
-
-                size_type n = arr.header().numel() + abs_offset;
-
-                this_type res({n, n}, 0);
-
-                size_type current_ind = offset >= 0 ? offset : -offset * n;
-
-                indexer_type gen(arr.header());
-
-                for (; current_ind < res.header().numel() && gen; ++gen) {
-                    res[current_ind] = arr[*gen];
-                    current_ind += n + 1;
-                }
-
-                return res;
-            };
+        //        return res;
+        //    };
 
 
-            if (type == arrnd_diag_type::from_matrix) {
-                if (hdr_.is_matrix()) {
-                    return diag_from_matrix_impl(*this);
-                }
+        //    std::function<this_type(this_type)> diag_to_matrix_impl;
 
-                return browse/*<0>*/(2, [diag_from_matrix_impl](auto page) {
-                    return diag_from_matrix_impl(page);
-                });
-            }
-            else {
-                if (hdr_.is_vector()) {
-                    return diag_to_matrix_impl(*this);
-                }
+        //    diag_to_matrix_impl = [&](this_type arr) {
+        //        if (arr.empty()) {
+        //            return this_type();
+        //        }
 
-                return browse/*<0>*/(1, [diag_to_matrix_impl](auto page) {
-                    return diag_to_matrix_impl(page(arrnd_shape_preset::vector));
-                });
-            }
-        }
+        //        assert(arr.header().is_vector());
+
+        //        size_type abs_offset = static_cast<size_type>(std::abs(offset));
+
+        //        size_type n = arr.header().numel() + abs_offset;
+
+        //        this_type res({n, n}, 0);
+
+        //        size_type current_ind = offset >= 0 ? offset : -offset * n;
+
+        //        indexer_type gen(arr.header());
+
+        //        for (; current_ind < res.header().numel() && gen; ++gen) {
+        //            res[current_ind] = arr[*gen];
+        //            current_ind += n + 1;
+        //        }
+
+        //        return res;
+        //    };
+
+
+        //    if (type == arrnd_diag_type::from_matrix) {
+        //        if (hdr_.is_matrix()) {
+        //            return diag_from_matrix_impl(*this);
+        //        }
+
+        //        return browse/*<0>*/(2, [diag_from_matrix_impl](auto page) {
+        //            return diag_from_matrix_impl(page);
+        //        });
+        //    }
+        //    else {
+        //        if (hdr_.is_vector()) {
+        //            return diag_to_matrix_impl(*this);
+        //        }
+
+        //        return browse/*<0>*/(1, [diag_to_matrix_impl](auto page) {
+        //            return diag_to_matrix_impl(page(arrnd_shape_preset::vector));
+        //        });
+        //    }
+        //}
 
         //[[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
         //    requires(!this_type::is_flat)
@@ -8419,39 +8419,39 @@ namespace details {
         //        return a.is_banded(lower, upper);
         //    });
         //}
-        [[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
-            requires(this_type::is_flat)
-        {
-            assert(hdr_.dims().size() >= 2);
+        //[[nodiscard]] constexpr auto is_banded(size_type lower = 0, size_type upper = 0) const
+        //    requires(this_type::is_flat)
+        //{
+        //    assert(hdr_.dims().size() >= 2);
 
-            std::function<bool(this_type)> is_banded_impl;
+        //    std::function<bool(this_type)> is_banded_impl;
 
-            is_banded_impl = [&](this_type arr) {
-                if (arr.empty()) {
-                    return true;
-                }
+        //    is_banded_impl = [&](this_type arr) {
+        //        if (arr.empty()) {
+        //            return true;
+        //        }
 
-                assert(arr.header().is_matrix());
+        //        assert(arr.header().is_matrix());
 
-                auto required = arr.tril(upper) && arr.triu(-lower);
-                //std::cout << required << "\n";
+        //        auto required = arr.tril(upper) && arr.triu(-lower);
+        //        //std::cout << required << "\n";
 
-                auto actual = arr.transform([](const value_type& val) {
-                    return !oc::close(val, value_type{0});
-                });
-                //std::cout << actual << "\n";
+        //        auto actual = arr.transform([](const value_type& val) {
+        //            return !oc::close(val, value_type{0});
+        //        });
+        //        //std::cout << actual << "\n";
 
-                return required.all_equal(actual);
-            };
+        //        return required.all_equal(actual);
+        //    };
 
-            if (hdr_.is_matrix()) {
-                return replaced_type<bool>({1}, {is_banded_impl(*this)});
-            }
+        //    if (hdr_.is_matrix()) {
+        //        return replaced_type<bool>({1}, {is_banded_impl(*this)});
+        //    }
 
-            return browse/*<0>*/(2, [is_banded_impl](auto page) {
-                return is_banded_impl(page);
-            });
-        }
+        //    return browse/*<0>*/(2, [is_banded_impl](auto page) {
+        //        return is_banded_impl(page);
+        //    });
+        //}
 
         //[[deprecated("not fully cheked")]] [[nodiscard]] constexpr auto cholesky() const
         //    requires(!this_type::is_flat)
@@ -8538,7 +8538,7 @@ namespace details {
         //        assert(lhs.header().is_matrix() && rhs.header().is_matrix());
         //        assert(lhs.header().dims().back() == rhs.header().dims().front());
 
-        //        return lhs.inverse().matmul(rhs);
+        //        return lhs.inv().dot(rhs);
         //    };
 
         //    if (hdr_.is_matrix() && b.header().is_matrix()) {
@@ -10246,6 +10246,16 @@ namespace details {
             return squeezed;
         }
 
+        [[nodiscard]] constexpr this_type zeros() const
+        {
+            return oc::details::zeros<this_type>(hdr_.dims());
+        }
+
+        [[nodiscard]] constexpr this_type eye() const
+        {
+            return oc::details::eye<this_type>(hdr_.dims());
+        }
+
         //[[nodiscard]] constexpr auto squeeze() const
         //{
         //    return squeeze<this_type::depth>();
@@ -10603,7 +10613,7 @@ namespace details {
 
         template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
             //requires(Level == 0)
-        [[nodiscard]] constexpr auto adjacent_indices(
+        [[nodiscard]] constexpr auto find_adjacents(
             const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
         {
             using returned_type = replaced_type<size_type>;
@@ -10659,7 +10669,7 @@ namespace details {
         }
         //template <std::int64_t Level, signed_integral_type_iterator InputIt>
         //    requires(Level > 0)
-        //[[nodiscard]] constexpr auto adjacent_indices(
+        //[[nodiscard]] constexpr auto find_adjacents(
         //    const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
         //{
         //    using returned_type = inner_replaced_type<size_type, Level>;
@@ -10675,51 +10685,51 @@ namespace details {
 
         //    for (; gen && res_gen; ++gen, ++res_gen) {
         //        res[*res_gen]
-        //            = (*this)[*gen].template adjacent_indices<Level - 1, InputIt>(first_sub, last_sub, offset);
+        //            = (*this)[*gen].template find_adjacents<Level - 1, InputIt>(first_sub, last_sub, offset);
         //    }
 
         //    return res;
         //}
         //template <signed_integral_type_iterator InputIt>
-        //[[nodiscard]] constexpr auto adjacent_indices(
+        //[[nodiscard]] constexpr auto find_adjacents(
         //    const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
         //{
-        //    return adjacent_indices<this_type::depth, InputIt>(first_sub, last_sub, offset);
+        //    return find_adjacents<this_type::depth, InputIt>(first_sub, last_sub, offset);
         //}
 
         template </*std::int64_t Level, */signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr auto adjacent_indices(const Cont& subs, size_type offset = 1) const
+        [[nodiscard]] constexpr auto find_adjacents(const Cont& subs, size_type offset = 1) const
         {
-            return adjacent_indices/*<Level>*/(std::begin(subs), std::end(subs), offset);
+            return find_adjacents/*<Level>*/(std::begin(subs), std::end(subs), offset);
         }
         //template <std::int64_t Level>
-        [[nodiscard]] constexpr auto adjacent_indices(std::initializer_list<size_type> subs, size_type offset = 1) const
+        [[nodiscard]] constexpr auto find_adjacents(std::initializer_list<size_type> subs, size_type offset = 1) const
         {
-            return adjacent_indices/*<Level>*/(subs.begin(), subs.end(), offset);
+            return find_adjacents/*<Level>*/(subs.begin(), subs.end(), offset);
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
-        //[[nodiscard]] constexpr auto adjacent_indices(const U (&subs)[M], size_type offset = 1) const
+        //[[nodiscard]] constexpr auto find_adjacents(const U (&subs)[M], size_type offset = 1) const
         //{
-        //    return adjacent_indices<Level>(std::begin(subs), std::end(subs), offset);
+        //    return find_adjacents<Level>(std::begin(subs), std::end(subs), offset);
         //}
         //template <signed_integral_type_iterable Cont>
-        //[[nodiscard]] constexpr auto adjacent_indices(const Cont& subs, size_type offset = 1) const
+        //[[nodiscard]] constexpr auto find_adjacents(const Cont& subs, size_type offset = 1) const
         //{
-        //    return adjacent_indices<this_type::depth>(std::begin(subs), std::end(subs), offset);
+        //    return find_adjacents<this_type::depth>(std::begin(subs), std::end(subs), offset);
         //}
-        //[[nodiscard]] constexpr auto adjacent_indices(std::initializer_list<size_type> subs, size_type offset = 1) const
+        //[[nodiscard]] constexpr auto find_adjacents(std::initializer_list<size_type> subs, size_type offset = 1) const
         //{
-        //    return adjacent_indices<this_type::depth>(subs.begin(), subs.end(), offset);
+        //    return find_adjacents<this_type::depth>(subs.begin(), subs.end(), offset);
         //}
         //template <std::integral U, std::int64_t M>
-        //[[nodiscard]] constexpr auto adjacent_indices(const U (&subs)[M], size_type offset = 1) const
+        //[[nodiscard]] constexpr auto find_adjacents(const U (&subs)[M], size_type offset = 1) const
         //{
-        //    return adjacent_indices<this_type::depth>(std::begin(subs), std::end(subs), offset);
+        //    return find_adjacents<this_type::depth>(std::begin(subs), std::end(subs), offset);
         //}
 
         template <std::int64_t Level, typename Pred/*, typename... Args*/>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool all_of(Pred&& pred /*, Args&&... args*/) const
+            [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
@@ -10736,14 +10746,14 @@ namespace details {
 
         template <std::int64_t Level, typename Pred/*, typename... Args*/>
             requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool all_of(Pred&& pred /*, Args&&... args*/) const
+            [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if (!(*this)[*gen].template all_of<Level - 1, Pred/*, Args...*/>(
+                if (!(*this)[*gen].template all<Level - 1, Pred/*, Args...*/>(
                         std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
                     return false;
                 }
@@ -10754,15 +10764,15 @@ namespace details {
 
         template <typename Pred/*, typename... Args*/>
             requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/> [[nodiscard]] constexpr bool
-        all_of(Pred&& pred /*, Args&&... args*/) const
+        all(Pred&& pred /*, Args&&... args*/) const
         {
-            return all_of<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return all<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr bool all_of() const
+        [[nodiscard]] constexpr bool all() const
         {
-            return all_of<this_type::depth>([](const auto& value) {
+            return all<this_type::depth>([](const auto& value) {
                 return static_cast<bool>(value);
             });
         }
@@ -10842,7 +10852,7 @@ namespace details {
         {
             return all_match<Level, ArCo>(arr, [](const auto& a, const auto& b) {
                 if constexpr (arrnd_compliant<decltype(a)> && arrnd_compliant<decltype(b)>) {
-                    return (a == b).template all_of<this_type::depth>();
+                    return (a == b).template all<this_type::depth>();
                 } else {
                     return a == b;
                 }
@@ -10859,7 +10869,7 @@ namespace details {
         requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
             [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
         {
-            return all_of<Level>([&u, &pred](const auto& a) {
+            return all<Level>([&u, &pred](const auto& a) {
                 return pred(a, u);
             });
         }
@@ -10874,9 +10884,9 @@ namespace details {
         template <std::int64_t Level, typename U>
         requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool all_match(const U& u) const
         {
-            return all_of<Level>([&u](const auto& a) {
+            return all<Level>([&u](const auto& a) {
                 if constexpr (arrnd_compliant<decltype(a)>) {
-                    return (a == u).template all_of<this_type::depth>();
+                    return (a == u).template all<this_type::depth>();
                 } else {
                     return a == u;
                 }
@@ -10891,7 +10901,7 @@ namespace details {
 
         template <std::int64_t Level, typename Pred/*, typename... Args*/>
             requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool any_of(Pred&& pred /*, Args&&... args*/) const
+            [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
@@ -10908,14 +10918,14 @@ namespace details {
 
         template <std::int64_t Level, typename Pred/*, typename... Args*/>
             requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool any_of(Pred&& pred /*, Args&&... args*/) const
+            [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if ((*this)[*gen].template any_of<Level - 1, Pred/*, Args...*/>(
+                if ((*this)[*gen].template any<Level - 1, Pred/*, Args...*/>(
                         std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
                     return true;
                 }
@@ -10926,15 +10936,15 @@ namespace details {
 
         template <typename Pred/*, typename... Args*/>
             requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/> [[nodiscard]] constexpr bool
-        any_of(Pred&& pred /*, Args&&... args*/) const
+        any(Pred&& pred /*, Args&&... args*/) const
         {
-            return any_of<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return any<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr bool any_of() const
+        [[nodiscard]] constexpr bool any() const
         {
-            return any_of<this_type::depth>([](const auto& value) {
+            return any<this_type::depth>([](const auto& value) {
                 return static_cast<bool>(value);
             });
         }
@@ -11014,7 +11024,7 @@ namespace details {
         {
             return any_match<Level, ArCo>(arr, [](const auto& a, const auto& b) {
                 if constexpr (arrnd_compliant<decltype(a)> && arrnd_compliant<decltype(b)>) {
-                    return (a == b).template any_of<this_type::depth>();
+                    return (a == b).template any<this_type::depth>();
                 } else {
                     return a == b;
                 }
@@ -11031,7 +11041,7 @@ namespace details {
         requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
             [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
         {
-            return any_of<Level>([&u, &pred](const auto& a) {
+            return any<Level>([&u, &pred](const auto& a) {
                 return pred(a, u);
             });
         }
@@ -11046,9 +11056,9 @@ namespace details {
         template <std::int64_t Level, typename U>
         requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool any_match(const U& u) const
         {
-            return any_of<Level>([&u](const auto& a) {
+            return any<Level>([&u](const auto& a) {
                 if constexpr (arrnd_compliant<decltype(a)>) {
-                    return (a == u).template any_of<this_type::depth>();
+                    return (a == u).template any<this_type::depth>();
                 } else {
                     return a == u;
                 }
@@ -11071,7 +11081,7 @@ namespace details {
 
         template <std::int64_t Level, typename Pred>
         requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis, Pred&& pred) const
+        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
         {
             return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
                 return a && pred(b);
@@ -11080,15 +11090,15 @@ namespace details {
 
         template <typename Pred>
         requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
-        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis, Pred&& pred) const
+        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
         {
-            return all_of<this_type::depth>(axis, std::forward<Pred>(pred));
+            return all<this_type::depth>(axis, std::forward<Pred>(pred));
         }
 
         template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr replaced_type<bool> all_of(size_type axis) const
+        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
         {
-            return all_of(axis, [](const auto& a) {
+            return all(axis, [](const auto& a) {
                 return a;
             });
         }
@@ -11119,7 +11129,7 @@ namespace details {
 
         template <std::int64_t Level, typename Pred>
         requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis, Pred&& pred) const
+        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
         {
             return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
                 return a || pred(b);
@@ -11128,15 +11138,15 @@ namespace details {
 
         template <typename Pred>
         requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
-        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis, Pred&& pred) const
+        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
         {
-            return any_of<this_type::depth>(axis, std::forward<Pred>(pred));
+            return any<this_type::depth>(axis, std::forward<Pred>(pred));
         }
 
         template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr replaced_type<bool> any_of(size_type axis) const
+        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
         {
-            return any_of(axis, [](const auto& a) {
+            return any(axis, [](const auto& a) {
                 return a;
             });
         }
@@ -11266,7 +11276,7 @@ namespace details {
         template </*std::int64_t Level, */typename U>
         [[nodiscard]] constexpr bool all_equal(const U& u) const
         {
-            return all_of<this_type::depth/*Level*/>(
+            return all<this_type::depth/*Level*/>(
                 [&u](const auto& a/*, const auto& b*/) {
                     return a == u/*b*/;
                 }/*,
@@ -11307,7 +11317,7 @@ namespace details {
             const tol_type<U, this_type::depth /*Level*/>& rtol
             = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
         {
-            return all_of<this_type::depth/*Level*/>(
+            return all<this_type::depth/*Level*/>(
                 [&u, &atol, &rtol](const auto& a/*, const auto& b*/) {
                     return oc::close(a, u/*b*/, atol, rtol);
                 }/*,
@@ -11337,7 +11347,7 @@ namespace details {
         template </*std::int64_t Level, */typename U>
         [[nodiscard]] constexpr bool any_equal(const U& u) const
         {
-            return any_of<this_type::depth/*Level*/>(
+            return any<this_type::depth/*Level*/>(
                 [&u](const auto& a/*, const auto& b*/) {
                     return a == u/*b*/;
                 }/*,
@@ -11378,7 +11388,7 @@ namespace details {
             const tol_type<U, this_type::depth /*Level*/>& rtol
             = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
         {
-            return any_of<this_type::depth/*Level*/>(
+            return any<this_type::depth/*Level*/>(
                 [&u, &atol, &rtol](const auto& a/*, const auto& b*/) {
                     return oc::close(a, u/*b*/, atol, rtol);
                 }/*,
@@ -12636,34 +12646,34 @@ namespace details {
     }
 
     //template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    //[[nodiscard]] inline constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
+    //[[nodiscard]] inline constexpr auto dot(const ArCo1& lhs, const ArCo2& rhs)
     //{
-    //    return lhs.matmul(rhs);
+    //    return lhs.dot(rhs);
     //}
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    //[[nodiscard]] constexpr auto matmul(const ArCo1& lhs, const ArCo2& rhs)
+    //[[nodiscard]] constexpr auto dot(const ArCo1& lhs, const ArCo2& rhs)
     //{
-    //    return matmul<ArCo1::depth>(lhs, rhs);
+    //    return dot<ArCo1::depth>(lhs, rhs);
     //}
 
     template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    [[nodiscard]] inline constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    [[nodiscard]] inline constexpr auto dot(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     {
         //template </*std::int64_t Level, */ arrnd_compliant ArCo, arrnd_compliant... ArCos>
-        //[[nodiscard]] constexpr auto matmul(const ArCo& arr, ArCos&&... others) const
+        //[[nodiscard]] constexpr auto dot(const ArCo& arr, ArCos&&... others) const
         //{
-        //    return matmul(arr).matmul(std::forward<ArCos>(others)...);
+        //    return dot(arr).dot(std::forward<ArCos>(others)...);
         //}
         if constexpr (sizeof...(others) == 0) {
-            return arr1.matmul(arr2);
+            return arr1.dot(arr2);
         } else {
-            return matmul(arr1.matmul(arr2), std::forward<ArCos>(others)...);
+            return dot(arr1.dot(arr2), std::forward<ArCos>(others)...);
         }
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, arrnd_compliant... ArCos>
-    //[[nodiscard]] constexpr auto matmul(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
+    //[[nodiscard]] constexpr auto dot(const ArCo1& arr1, const ArCo2& arr2, ArCos&&... others)
     //{
-    //    return matmul<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
+    //    return dot<ArCo1::depth>(arr1, arr2, std::forward<ArCos>(others)...);
     //}
 
     template <arrnd_compliant ArCo>
@@ -12673,22 +12683,22 @@ namespace details {
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto inverse(const ArCo& arr)
+    [[nodiscard]] inline constexpr auto inv(const ArCo& arr)
     {
-        return arr.inverse();
+        return arr.inv();
     }
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto tril(const ArCo& arr, typename ArCo::size_type offset = 0)
-    {
-        return arr.tril(offset);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto tril(const ArCo& arr, typename ArCo::size_type offset = 0)
+    //{
+    //    return arr.tril(offset);
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto triu(const ArCo& arr, typename ArCo::size_type offset = 0)
-    {
-        return arr.triu(offset);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto triu(const ArCo& arr, typename ArCo::size_type offset = 0)
+    //{
+    //    return arr.triu(offset);
+    //}
 
     //template <arrnd_compliant ArCo>
     //[[deprecated("not fully cheked")]] [[nodiscard]] inline constexpr auto cholesky(const ArCo& arr)
@@ -12989,28 +12999,28 @@ namespace details {
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return arr.template all_of<Level>(axis, std::forward<Pred>(pred));
+        return arr.template all<Level>(axis, std::forward<Pred>(pred));
     }
 
     template <arrnd_compliant ArCo, typename Pred>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return all_of<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
+        return all<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.template all_of<Level>(axis);
+        return arr.template all<Level>(axis);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto all_of(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return all_of<ArCo::depth>(arr, axis);
+        return all<ArCo::depth>(arr, axis);
     }
 
     //template <std::int64_t Level, arrnd_compliant ArCo>
@@ -13039,28 +13049,28 @@ namespace details {
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return arr.template any_of<Level>(axis, std::forward<Pred>(pred));
+        return arr.template any<Level>(axis, std::forward<Pred>(pred));
     }
 
     template <arrnd_compliant ArCo, typename Pred>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
+    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
-        return any_of<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
+        return any<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return arr.template any_of<Level>(axis);
+        return arr.template any<Level>(axis);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto any_of(const ArCo& arr, typename ArCo::size_type axis)
+    [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis)
     {
-        return any_of<ArCo::depth>(arr, axis);
+        return any<ArCo::depth>(arr, axis);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -13343,37 +13353,37 @@ namespace details {
     //            {M}, std::begin(indices), std::end(indices)));
     //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto diag(
-        const ArCo& arr, arrnd_diag_type type = arrnd_diag_type::from_matrix, typename ArCo::size_type offset = 0)
-    {
-        return arr.diag(type, offset);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto diag(
+    //    const ArCo& arr, arrnd_diag_type type = arrnd_diag_type::from_matrix, typename ArCo::size_type offset = 0)
+    //{
+    //    return arr.diag(type, offset);
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto is_banded(
-        const ArCo& arr, typename ArCo::size_type lower = 0, typename ArCo::size_type upper = 0)
-    {
-        return arr.is_banded(lower, upper);
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto is_banded(
+    //    const ArCo& arr, typename ArCo::size_type lower = 0, typename ArCo::size_type upper = 0)
+    //{
+    //    return arr.is_banded(lower, upper);
+    //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto transpose(
-        const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
-    {
-        return arr./*template */transpose/*<Level>*/(first_order, last_order);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
-    {
-        return transpose/*<Level>*/(arr, std::begin(order), std::end(order));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto transpose(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
-    {
-        return transpose/*<Level>*/(arr, order.begin(), order.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto transpose(
+    //    const ArCo& arr, const InputIt& first_order, const InputIt& last_order)
+    //{
+    //    return arr./*template */transpose/*<Level>*/(first_order, last_order);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const Cont& order)
+    //{
+    //    return transpose/*<Level>*/(arr, std::begin(order), std::end(order));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto transpose(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    //{
+    //    return transpose/*<Level>*/(arr, order.begin(), order.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr, const U (&order)[M])
     //{
@@ -13716,7 +13726,7 @@ namespace details {
         assert(lhs.is_as_pages() == rhs.is_as_pages());
 
         if (lhs.is_as_pages() && rhs.is_as_pages()) {
-            return lhs.matmul(rhs);
+            return lhs.dot(rhs);
         }
 
         return lhs.transform(rhs, [](const auto& a, const auto& b) {
@@ -13750,7 +13760,7 @@ namespace details {
         assert(lhs.is_as_pages() == rhs.is_as_pages());
 
         if (lhs.is_as_pages() && rhs.is_as_pages()) {
-            lhs = lhs.matmul(rhs);
+            lhs = lhs.dot(rhs);
             return lhs;
         }
 
@@ -14432,12 +14442,12 @@ namespace details {
         return operator--(arr, int{});
     }
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
-    {
-        return arr./*template */expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
+    //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
+    //{
+    //    return arr./*template */expand/*<Level>*/(axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto expand(const ArCo& arr, typename ArCo::size_type axis,
     //    typename ArCo::size_type division = 0, bool find_closest_axis_dim_bigger_than_one_to_the_left = false)
@@ -14445,11 +14455,11 @@ namespace details {
     //    return expand<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
-    {
-        return arr./*template */collapse/*<Level>*/();
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
+    //{
+    //    return arr./*template */collapse/*<Level>*/();
+    //}
 
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto collapse(const ArCo& arr)
@@ -14470,35 +14480,35 @@ namespace details {
     //    return pages<ArCo::depth>(arr, axis, division, find_closest_axis_dim_bigger_than_one_to_the_left);
     //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type page_size = 2)
-    {
-        return arr.pages();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto pages(const ArCo& arr, typename ArCo::size_type page_size = 2)
+    //{
+    //    return arr.pages();
+    //}
 
-    template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto book(const ArCo& arr)
-    {
-        return arr.book();
-    }
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto book(const ArCo& arr)
+    //{
+    //    return arr.book();
+    //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
-    {
-        return arr./*template */split/*<Level>*/(first_axis, last_axis, division);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
-    {
-        return split/*<Level>*/(arr, std::begin(axes), std::end(axes), division);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
-    {
-        return split/*<Level>*/(arr, axes.begin(), axes.end(), division);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, typename ArCo::size_type division)
+    //{
+    //    return arr./*template */split/*<Level>*/(first_axis, last_axis, division);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto split(const ArCo& arr, const Cont& axes, typename ArCo::size_type division)
+    //{
+    //    return split/*<Level>*/(arr, std::begin(axes), std::end(axes), division);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, typename ArCo::size_type division)
+    //{
+    //    return split/*<Level>*/(arr, axes.begin(), axes.end(), division);
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto split(const ArCo& arr, const U (&axes)[M], typename ArCo::size_type division)
     //{
@@ -14527,31 +14537,31 @@ namespace details {
     //    return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), division);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
-        signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
-    {
-        return arr./*template */split/*<Level>*/(first_axis, last_axis, first_ind, last_ind);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
+    //    signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return arr./*template */split/*<Level>*/(first_axis, last_axis, first_ind, last_ind);
+    //}
     //template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
     //[[nodiscard]] inline constexpr auto split(
     //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     //{
     //    return split<ArCo::depth>(arr, first_axis, last_axis, first_ind, last_ind);
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
-        signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
-    {
-        return split/*<Level>*/(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return split/*<Level>*/(arr, first_axis, last_axis, inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
+    //    signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    //{
+    //    return split/*<Level>*/(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return split/*<Level>*/(arr, first_axis, last_axis, inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U,
     //    std::int64_t M>
     //[[nodiscard]] inline constexpr auto split(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const U (&inds)[M])
@@ -14575,24 +14585,24 @@ namespace details {
     //    return split<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
-        signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
-    {
-        return split/*<Level>*/(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
-        signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
-    {
-        return split/*<Level>*/(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return split/*<Level>*/(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
+    //    signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return split/*<Level>*/(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
+    //    signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    //{
+    //    return split/*<Level>*/(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return split/*<Level>*/(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U,
     //    std::int64_t M>
     //[[nodiscard]] inline constexpr auto split(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
@@ -14621,24 +14631,24 @@ namespace details {
     //    return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
-    {
-        return split/*<Level>*/(arr, axes.begin(), axes.end(), first_ind, last_ind);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto split(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
-    {
-        return split/*<Level>*/(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
-        std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return split/*<Level>*/(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return split/*<Level>*/(arr, axes.begin(), axes.end(), first_ind, last_ind);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto split(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
+    //{
+    //    return split/*<Level>*/(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto split(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    //    std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return split/*<Level>*/(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto split(
     //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
@@ -14716,31 +14726,31 @@ namespace details {
     //    return split<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
-        signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
-    {
-        return arr./*template */exclude/*<Level>*/(first_axis, last_axis, first_ind, last_ind);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
+    //    signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return arr./*template */exclude/*<Level>*/(first_axis, last_axis, first_ind, last_ind);
+    //}
     //template <arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
     //[[nodiscard]] inline constexpr auto exclude(
     //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind)
     //{
     //    return exclude<ArCo::depth>(arr, first_axis, last_axis, first_ind, last_ind);
     //}
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
-        signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
-    {
-        return exclude/*<Level>*/(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return exclude/*<Level>*/(arr, first_axis, last_axis, inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt,
+    //    signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto exclude(const ArCo& arr, AxesIt first_axis, AxesIt last_axis, const Cont& inds)
+    //{
+    //    return exclude/*<Level>*/(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator AxesIt>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, AxesIt first_axis, AxesIt last_axis, std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return exclude/*<Level>*/(arr, first_axis, last_axis, inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterator AxesIt, std::integral U,
     //    std::int64_t M>
     //[[nodiscard]] inline constexpr auto exclude(
@@ -14766,25 +14776,25 @@ namespace details {
     //    return exclude<ArCo::depth>(arr, first_axis, last_axis, std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
-        signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
-    {
-        return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
-        signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
-    {
-        return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
+    //    signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, const AxesCont& axes, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), first_ind, last_ind);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont,
+    //    signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const Cont& inds)
+    //{
+    //    return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable AxesCont>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, const AxesCont& axes, std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return exclude/*<Level>*/(arr, std::begin(axes), std::end(axes), inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, signed_integral_type_iterable AxesCont, std::integral U,
     //    std::int64_t M>
     //[[nodiscard]] inline constexpr auto exclude(const ArCo& arr, const AxesCont& axes, const U (&inds)[M])
@@ -14814,24 +14824,24 @@ namespace details {
     //    return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
-    {
-        return exclude/*<Level>*/(arr, axes.begin(), axes.end(), first_ind, last_ind);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto exclude(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
-    {
-        return exclude/*<Level>*/(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
-        std::initializer_list<typename ArCo::size_type> inds)
-    {
-        return exclude/*<Level>*/(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator IndsIt>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, IndsIt first_ind, IndsIt last_ind)
+    //{
+    //    return exclude/*<Level>*/(arr, axes.begin(), axes.end(), first_ind, last_ind);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto exclude(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const Cont& inds)
+    //{
+    //    return exclude/*<Level>*/(arr, axes.begin(), axes.end(), std::begin(inds), std::end(inds));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto exclude(const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes,
+    //    std::initializer_list<typename ArCo::size_type> inds)
+    //{
+    //    return exclude/*<Level>*/(arr, axes.begin(), axes.end(), inds.begin(), inds.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto exclude(
     //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> axes, const U (&inds)[M])
@@ -14909,12 +14919,12 @@ namespace details {
     //    return exclude<ArCo::depth>(arr, std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-        requires(!ArCo::is_flat)
-    [[nodiscard]] inline constexpr auto merge(const ArCo& arr)
-    {
-        return arr./*template */merge/*<Level>*/();
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //    requires(!ArCo::is_flat)
+    //[[nodiscard]] inline constexpr auto merge(const ArCo& arr)
+    //{
+    //    return arr./*template */merge/*<Level>*/();
+    //}
     //template <arrnd_compliant ArCo>
     //    requires(!ArCo::is_flat)
     //[[nodiscard]] inline constexpr auto merge(const ArCo& arr)
@@ -14966,34 +14976,34 @@ namespace details {
     //    return browse<ArCo::depth>(arr, page_size, std::forward<Func>(func), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
-    {
-        return arr./*template */squeeze/*<Level>*/();
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
+    //{
+    //    return arr./*template */squeeze/*<Level>*/();
+    //}
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto squeeze(const ArCo& arr)
     //{
     //    return squeeze<ArCo::depth>(arr);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto sort(const ArCo& arr, Comp&& comp/*, Args&&... args*/)
-    {
-        return arr./*template */sort/*<Level>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
+    //[[nodiscard]] inline constexpr auto sort(const ArCo& arr, Comp&& comp/*, Args&&... args*/)
+    //{
+    //    return arr./*template */sort/*<Level>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+    //}
     //template <arrnd_compliant ArCo, typename Comp, typename... Args>
     //[[nodiscard]] inline constexpr auto sort(const ArCo& arr, Comp&& comp, Args&&... args)
     //{
     //    return sort<ArCo::depth>(arr, std::forward<Comp>(comp), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto sort(
-        const ArCo& arr, typename ArCo::size_type axis, Comp&& comp/*, Args&&... args*/)
-    {
-        return arr./*template */sort/*<Level>*/(axis, std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
+    //[[nodiscard]] inline constexpr auto sort(
+    //    const ArCo& arr, typename ArCo::size_type axis, Comp&& comp/*, Args&&... args*/)
+    //{
+    //    return arr./*template */sort/*<Level>*/(axis, std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+    //}
     //template <arrnd_compliant ArCo, typename Comp, typename... Args>
     //[[nodiscard]] inline constexpr auto sort(
     //    const ArCo& arr, typename ArCo::size_type axis, Comp&& comp, Args&&... args)
@@ -15001,23 +15011,23 @@ namespace details {
     //    return sort<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto is_sorted(const ArCo& arr, Comp&& comp/*, Args&&... args*/)
-    {
-        return arr./*template */is_sorted/*<Level>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
+    //[[nodiscard]] inline constexpr auto is_sorted(const ArCo& arr, Comp&& comp/*, Args&&... args*/)
+    //{
+    //    return arr./*template */is_sorted/*<Level>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+    //}
     //template <arrnd_compliant ArCo, typename Comp, typename... Args>
     //[[nodiscard]] inline constexpr auto is_sorted(const ArCo& arr, Comp&& comp, Args&&... args)
     //{
     //    return is_sorted<ArCo::depth>(arr, std::forward<Comp>(comp), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto is_sorted(
-        const ArCo& arr, typename ArCo::size_type axis, Comp&& comp/*, Args&&... args*/)
-    {
-        return arr./*template */is_sorted/*<Level>*/(axis, std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, typename Comp/*, typename... Args*/>
+    //[[nodiscard]] inline constexpr auto is_sorted(
+    //    const ArCo& arr, typename ArCo::size_type axis, Comp&& comp/*, Args&&... args*/)
+    //{
+    //    return arr./*template */is_sorted/*<Level>*/(axis, std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+    //}
     //template <arrnd_compliant ArCo, typename Comp, typename... Args>
     //[[nodiscard]] inline constexpr auto is_sorted(
     //    const ArCo& arr, typename ArCo::size_type axis, Comp&& comp, Args&&... args)
@@ -15025,21 +15035,21 @@ namespace details {
     //    return is_sorted<ArCo::depth>(arr, axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, InputIt first_order, InputIt last_order)
-    {
-        return arr./*template */reorder/*<Level>*/(first_order, last_order);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const Cont& order)
-    {
-        return reorder/*<Level>*/(arr, std::begin(order), std::end(order));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
-    {
-        return reorder/*<Level>*/(arr, order.begin(), order.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, InputIt first_order, InputIt last_order)
+    //{
+    //    return arr./*template */reorder/*<Level>*/(first_order, last_order);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const Cont& order)
+    //{
+    //    return reorder/*<Level>*/(arr, std::begin(order), std::end(order));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, std::initializer_list<typename ArCo::size_type> order)
+    //{
+    //    return reorder/*<Level>*/(arr, order.begin(), order.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, const U (&order)[M])
     //{
@@ -15066,23 +15076,23 @@ namespace details {
     //    return reorder<ArCo::depth>(arr, std::begin(order), std::end(order));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, typename ArCo::size_type axis, InputIt first_order, InputIt last_order)
-    {
-        return arr./*template */reorder/*<Level>*/(axis, first_order, last_order);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const Cont& order)
-    {
-        return reorder/*<Level>*/(arr, axis, std::begin(order), std::end(order));
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto reorder(
-        const ArCo& arr, typename ArCo::size_type axis, std::initializer_list<typename ArCo::size_type> order)
-    {
-        return reorder/*<Level>*/(arr, axis, order.begin(), order.end());
-    }
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto reorder(
+    //    const ArCo& arr, typename ArCo::size_type axis, InputIt first_order, InputIt last_order)
+    //{
+    //    return arr./*template */reorder/*<Level>*/(axis, first_order, last_order);
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const Cont& order)
+    //{
+    //    return reorder/*<Level>*/(arr, axis, std::begin(order), std::end(order));
+    //}
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto reorder(
+    //    const ArCo& arr, typename ArCo::size_type axis, std::initializer_list<typename ArCo::size_type> order)
+    //{
+    //    return reorder/*<Level>*/(arr, axis, order.begin(), order.end());
+    //}
     //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
     //[[nodiscard]] inline constexpr auto reorder(const ArCo& arr, typename ArCo::size_type axis, const U (&order)[M])
     //{
@@ -15111,67 +15121,67 @@ namespace details {
     //    return reorder<ArCo::depth>(arr, axis, std::begin(order), std::end(order));
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    [[nodiscard]] inline constexpr auto adjacent_indices(
-        const ArCo& arr, InputIt first_sub, InputIt last_sub, typename ArCo::size_type offset = 1)
-    {
-        return arr./*template */adjacent_indices/*<Level>*/(first_sub, last_sub, offset);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    [[nodiscard]] inline constexpr auto adjacent_indices(
-        const ArCo& arr, const Cont& subs, typename ArCo::size_type offset = 1)
-    {
-        return adjacent_indices/*<Level>*/(arr, std::begin(subs), std::end(subs), offset);
-    }
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr auto adjacent_indices(
-        const ArCo& arr, std::initializer_list<typename ArCo::size_type> subs, typename ArCo::size_type offset = 1)
-    {
-        return adjacent_indices/*<Level>*/(arr, subs.begin(), subs.end(), offset);
-    }
-    //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    //[[nodiscard]] inline constexpr auto adjacent_indices(
-    //    const ArCo& arr, const U (&subs)[M], typename ArCo::size_type offset = 1)
-    //{
-    //    return adjacent_indices<Level>(arr, std::begin(subs), std::end(subs), offset);
-    //}
-    //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
-    //[[nodiscard]] inline constexpr auto adjacent_indices(
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
     //    const ArCo& arr, InputIt first_sub, InputIt last_sub, typename ArCo::size_type offset = 1)
     //{
-    //    return adjacent_indices<ArCo::depth>(arr, first_sub, last_sub, offset);
+    //    return arr./*template */find_adjacents/*<Level>*/(first_sub, last_sub, offset);
     //}
-    //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
-    //[[nodiscard]] inline constexpr auto adjacent_indices(
+    //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
     //    const ArCo& arr, const Cont& subs, typename ArCo::size_type offset = 1)
     //{
-    //    return adjacent_indices<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
+    //    return find_adjacents/*<Level>*/(arr, std::begin(subs), std::end(subs), offset);
     //}
-    //template <arrnd_compliant ArCo>
-    //[[nodiscard]] inline constexpr auto adjacent_indices(
+    //template </*std::int64_t Level, */arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
     //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> subs, typename ArCo::size_type offset = 1)
     //{
-    //    return adjacent_indices<ArCo::depth>(arr, subs.begin(), subs.end(), offset);
+    //    return find_adjacents/*<Level>*/(arr, subs.begin(), subs.end(), offset);
     //}
-    //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
-    //[[nodiscard]] inline constexpr auto adjacent_indices(
+    //template <std::int64_t Level, arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
     //    const ArCo& arr, const U (&subs)[M], typename ArCo::size_type offset = 1)
     //{
-    //    return adjacent_indices<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
+    //    return find_adjacents<Level>(arr, std::begin(subs), std::end(subs), offset);
+    //}
+    //template <arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
+    //    const ArCo& arr, InputIt first_sub, InputIt last_sub, typename ArCo::size_type offset = 1)
+    //{
+    //    return find_adjacents<ArCo::depth>(arr, first_sub, last_sub, offset);
+    //}
+    //template <arrnd_compliant ArCo, signed_integral_type_iterable Cont>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
+    //    const ArCo& arr, const Cont& subs, typename ArCo::size_type offset = 1)
+    //{
+    //    return find_adjacents<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
+    //}
+    //template <arrnd_compliant ArCo>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
+    //    const ArCo& arr, std::initializer_list<typename ArCo::size_type> subs, typename ArCo::size_type offset = 1)
+    //{
+    //    return find_adjacents<ArCo::depth>(arr, subs.begin(), subs.end(), offset);
+    //}
+    //template <arrnd_compliant ArCo, std::integral U, std::int64_t M>
+    //[[nodiscard]] inline constexpr auto find_adjacents(
+    //    const ArCo& arr, const U (&subs)[M], typename ArCo::size_type offset = 1)
+    //{
+    //    return find_adjacents<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
     //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool all_of(
+    [[nodiscard]] inline constexpr bool all(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template all_of<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template all<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr bool all_of(const ArCo& arr)
+    [[nodiscard]] inline constexpr bool all(const ArCo& arr)
     {
-        return arr.template all_of<Level>();
+        return arr.template all<Level>();
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
@@ -15205,16 +15215,16 @@ namespace details {
 
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr bool all_of(
+    [[nodiscard]] inline constexpr bool all(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return all_of<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return all<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr bool all_of(const ArCo& arr)
+    [[nodiscard]] inline constexpr bool all(const ArCo& arr)
     {
-        return all_of<ArCo::depth>(arr);
+        return all<ArCo::depth>(arr);
     }
 
     template <arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
@@ -15246,16 +15256,16 @@ namespace details {
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool any_of(
+    [[nodiscard]] inline constexpr bool any(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template any_of<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template any<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr bool any_of(const ArCo& arr)
+    [[nodiscard]] inline constexpr bool any(const ArCo& arr)
     {
-        return arr.template any_of<Level>();
+        return arr.template any<Level>();
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
@@ -15289,16 +15299,16 @@ namespace details {
 
     template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
     requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr bool any_of(
+    [[nodiscard]] inline constexpr bool any(
         const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return any_of<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return any<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo>
-    [[nodiscard]] inline constexpr bool any_of(const ArCo& arr)
+    [[nodiscard]] inline constexpr bool any(const ArCo& arr)
     {
-        return any_of<ArCo::depth>(arr);
+        return any<ArCo::depth>(arr);
     }
 
     template <arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
@@ -15705,7 +15715,7 @@ using details::arrnd_slice_front_inserter;
 using details::arrnd_slice_inserter;
 
 using details::arrnd_shape_preset;
-using details::arrnd_diag_type;
+//using details::arrnd_diag_type;
 using details::arrnd_filter_proxy;
 using details::arrnd;
 
@@ -15734,56 +15744,62 @@ using details::concat;
 //using details::remove;
 
 //using details::empty;
-using details::expand;
-using details::collapse;
-using details::zeros;
-using details::eye;
-using details::pages;
-using details::book;
-using details::split;
-using details::exclude;
-using details::merge;
+//using details::expand;
+//using details::collapse;
+//using details::pages;
+//using details::book;
+//using details::split;
+//using details::exclude;
+//using details::merge;
+
+//using details::squeeze;
+//using details::sort;
+//using details::is_sorted;
+//using details::is_banded;
+//using details::find_adjacents;
+
+
+//using details::all;
+//using details::any;
+
+
+
+//using details::diag;
+//using details::reorder;
+//using details::transpose;
+//using details::tril;
+//using details::triu;
+//using details::nest; // deprecated
+
+
 using details::slide;
 using details::accumulate;
 using details::browse;
-using details::squeeze;
-using details::sort;
-using details::is_sorted;
-using details::reorder;
-using details::adjacent_indices;
-using details::all_of;
-using details::any_of;
+using details::all;
+using details::any;
 using details::all_match;
 using details::any_match;
 using details::transform;
 using details::apply;
 using details::reduce;
 using details::fold;
-//using details::all;
-//using details::any;
-using details::sum;
-using details::prod;
-using details::min;
-using details::max;
-using details::matmul;
-using details::det;
-using details::inverse;
-//using details::solve;
-using details::tril;
-using details::triu;
-
 using details::filter;
 using details::find;
-using details::diag;
-using details::is_banded;
-using details::transpose;
-//using details::nest; // deprecated
-using details::close;
 using details::all_equal;
 using details::all_close;
 using details::any_equal;
 using details::any_close;
 
+
+using details::sum;
+using details::prod;
+using details::min;
+using details::max;
+using details::dot;
+using details::det;
+using details::inv;
+//using details::solve;
+using details::close;
 using details::abs;
 using details::acos;
 using details::acosh;
@@ -15813,7 +15829,11 @@ using details::conj;
 using details::proj;
 using details::polar;
 using details::sign;
+
 using details::view;
+
+using details::zeros;
+using details::eye;
 
 // the functions in the experimental namespace may still be reachable
 // from the oc namespace due to ADL

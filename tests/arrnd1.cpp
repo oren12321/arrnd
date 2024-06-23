@@ -429,7 +429,7 @@ TEST(arrnd_test, transpose)
         41.0, 42.0, 47.0, 48.0};
     oc::arrnd rarr{rdims, rdata};
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, {2, 0, 1, 3})));
+    EXPECT_TRUE(oc::all_equal(rarr, iarr.transpose({2, 0, 1, 3})));
 
     //EXPECT_TRUE(oc::all_equal(rarr, oc::transpose(iarr, { 2, 0, 1, 3, 2 }))); // assertion failure
     //EXPECT_TRUE(oc::empty(oc::transpose(iarr, { 2, 0, 1, 4 }))); // assertion failure
@@ -441,18 +441,18 @@ TEST(arrnd_test, transpose)
 
         //auto r1 = oc::transpose(inarr, {1, 0});
         auto r1 = oc::transform<0>(inarr, [](const auto& val) {
-            return oc::transpose(val, {1, 0});
+            return val.transpose({1, 0});
         });
         EXPECT_TRUE(oc::all_equal(r1,
             oc::arrnd<oc::arrnd<int>>(
                 {1, 2}, {oc::arrnd<int>({6, 1}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({4, 1}, {1, 2, 3, 4})})));
-        EXPECT_TRUE(oc::all_equal(oc::transpose(inarr, {1, 0}), oc::transpose(inarr)));
+        EXPECT_TRUE(oc::all_equal(inarr.transpose({1, 0}), inarr.transpose()));
 
-        auto r2 = oc::transpose/*<0>*/(inarr, {1, 0});
+        auto r2 = inarr.transpose/*<0>*/({1, 0});
         EXPECT_TRUE(oc::all_equal(r2,
             oc::arrnd<oc::arrnd<int>>(
                 {2, 1}, {oc::arrnd<int>({1, 6}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({1, 4}, {1, 2, 3, 4})})));
-        EXPECT_TRUE(oc::all_equal(oc::transpose/*<0>*/(inarr, {1, 0}), oc::transpose/*<0>*/(inarr)));
+        EXPECT_TRUE(oc::all_equal(inarr.transpose /*<0>*/ ({1, 0}), inarr.transpose /*<0>*/ ()));
     }
 }
 
@@ -1146,13 +1146,13 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
         EXPECT_FALSE(oc::all_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::all_of(
+        EXPECT_TRUE(oc::all(
             narr1,
             [](int a/*, int b*/) {
                 return a >= 1/*b*/;
             }/*,
             1*/));
-        EXPECT_FALSE(oc::all_of(
+        EXPECT_FALSE(oc::all(
             narr1,
             [](int a/*, int b*/) {
                 return a <= 1/*b*/;
@@ -1193,13 +1193,13 @@ TEST(arrnd_test, can_be_all_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::all_of(
+        EXPECT_TRUE(oc::all(
             arr1,
             [](int a/*, int b*/) {
                 return a * 1/*b*/ == a;
             }/*,
             1*/));
-        EXPECT_FALSE(oc::all_of(
+        EXPECT_FALSE(oc::all(
             arr2,
             [](int a/*, int b*/) {
                 return a * 2/*b*/ == a;
@@ -1276,13 +1276,13 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
         EXPECT_TRUE(oc::any_match(narr1, narr4, [](int a, int b) {
             return a > b;
         }));
-        EXPECT_TRUE(oc::any_of(
+        EXPECT_TRUE(oc::any(
             narr1,
             [](int a/*, int b*/) {
                 return a >= 1/*b*/;
             }/*,
             1*/));
-        EXPECT_TRUE(oc::any_of(
+        EXPECT_TRUE(oc::any(
             narr1,
             [](int a/*, int b*/) {
                 return a <= 1/*b*/;
@@ -1323,13 +1323,13 @@ TEST(arrnd_test, can_be_any_matched_with_another_array_or_value)
 
     // scalar
     {
-        EXPECT_TRUE(oc::any_of(
+        EXPECT_TRUE(oc::any(
             arr1,
             [](int a/*, int b*/) {
                 return a * 1/*b*/ == a;
             }/*,
             1*/));
-        EXPECT_TRUE(oc::any_of(
+        EXPECT_TRUE(oc::any(
             arr2,
             [](int a/*, int b*/) {
                 return a * 2/*b*/ == 2/*b*/;

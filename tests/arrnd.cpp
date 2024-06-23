@@ -92,29 +92,29 @@
 //}
 
 
-TEST(arrnd_test, find_diagonal)
-{
-    using namespace oc;
+//TEST(arrnd_test, find_diagonal)
+//{
+//    using namespace oc;
+//
+//    arrnd<int> arr({4, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+//
+//    arr(arr.find_diagonal()) = 0;
+//    
+//    EXPECT_TRUE(
+//        all_equal(arr, arrnd<int>({4, 5}, {0, 2, 3, 4, 5, 6, 0, 8, 9, 10, 11, 12, 0, 14, 15, 16, 17, 18, 0, 20})));
+//}
 
-    arrnd<int> arr({4, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
-
-    arr(arr.find_diagonal()) = 0;
-    
-    EXPECT_TRUE(
-        all_equal(arr, arrnd<int>({4, 5}, {0, 2, 3, 4, 5, 6, 0, 8, 9, 10, 11, 12, 0, 14, 15, 16, 17, 18, 0, 20})));
-}
-
-TEST(arrnd_test, spread_diagonal)
-{
-    using namespace oc;
-
-    arrnd<int> arr({5}, {1, 2, 3, 4, 5});
-
-    EXPECT_TRUE(all_equal(arr.spread_diagonal(1),
-        arrnd<int>({6, 6},
-            {0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
-                0})));
-}
+//TEST(arrnd_test, spread_diagonal)
+//{
+//    using namespace oc;
+//
+//    arrnd<int> arr({5}, {1, 2, 3, 4, 5});
+//
+//    EXPECT_TRUE(all_equal(arr.spread_diagonal(1),
+//        arrnd<int>({6, 6},
+//            {0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0,
+//                0})));
+//}
 
 
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
@@ -1325,7 +1325,7 @@ TEST(arrnd_test, zip)
         std::vector<int> order{0, 2, 1, 3, 5, 4};
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = reorder(arr, order);
+        auto res = arr.reorder(order);
 
         EXPECT_TRUE(all_equal(res, arrnd<int>({3, 2}, {1, 3, 2, 4, 6, 5})));
     }
@@ -1335,7 +1335,7 @@ TEST(arrnd_test, zip)
         std::vector<int> order{0, 2, 3, 1};
         arrnd<int> arr({4, 2}, {1, 2, 3, 4, 5, 6, 7, 8});
 
-        auto res = reorder(arr, 0, order);
+        auto res = arr.reorder(0, order);
 
         EXPECT_TRUE(all_equal(res, arrnd<int>({4, 2}, {1, 2, 7, 8, 3, 4, 5, 6})));
     }
@@ -1425,20 +1425,20 @@ TEST(arrnd_test, sort)
         auto dummy_less = [](const auto&, const auto&) {
             return true;
         };
-        EXPECT_TRUE(all_equal(sort(arrnd<int>(), dummy_less), arrnd<int>()));
-        EXPECT_TRUE(all_equal(sort(arrnd<int>(), 0, dummy_less), arrnd<int>()));
-        EXPECT_TRUE(all_equal(sort/*<0>*/(arrnd<arrnd<int>>(), dummy_less), arrnd<arrnd<int>>()));
+        EXPECT_TRUE(all_equal(arrnd<int>().sort(dummy_less), arrnd<int>()));
+        EXPECT_TRUE(all_equal(arrnd<int>().sort(0, dummy_less), arrnd<int>()));
+        EXPECT_TRUE(all_equal(arrnd<arrnd<int>>().sort /*<0>*/ (dummy_less), arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(
             /*sort<1>(arrnd<arrnd<int>>(), dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
                 [dummy_less](const auto& val) {
-                    return sort(val, dummy_less);
+                    return val.sort(dummy_less);
                 }),
             arrnd<arrnd<int>>()));
-        EXPECT_TRUE(all_equal(sort/*<0>*/(arrnd<arrnd<int>>(), 0, dummy_less), arrnd<arrnd<int>>()));
+        EXPECT_TRUE(all_equal(arrnd<arrnd<int>>() .sort /*<0>*/ (0, dummy_less), arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(
             /*sort<1>(arrnd<arrnd<int>>(), 0, dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
                 [dummy_less](const auto& val) {
-                    return sort(val, 0, dummy_less);
+                    return val.sort(0, dummy_less);
                 }),
             arrnd<arrnd<int>>()));
     }
@@ -1457,17 +1457,17 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, std::less<>{})*/
             transform<0>(iarr,
                 [](const auto& val) {
-                    return is_sorted(val, std::less<>{});
+                    return val.is_sorted(std::less<>{});
                 }),
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, std::less<>{});
         auto sarr1 = transform<0>(iarr, [](const auto& val) {
-            return sort(val, std::less<>{});
+            return val.sort(std::less<>{});
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, std::less<>{})*/
             transform<0>(sarr1,
                 [](const auto& val) {
-                    return is_sorted(val, std::less<>{});
+                    return val.is_sorted(std::less<>{});
                 }),
             arrnd<bool>({1, 2}, {true, true})));
         //std::cout << sarr1 << "\n";
@@ -1476,9 +1476,9 @@ TEST(arrnd_test, sort)
                 {arrnd<int>({6, 4}, {1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9}),
                     arrnd<int>({3, 1, 2}, {2, 3, 4, 6, 6, 8})})));
 
-        EXPECT_FALSE(is_sorted/*<0>*/(iarr, sum_less));
-        auto sarr2 = sort/*<0>*/(iarr, sum_less);
-        EXPECT_TRUE(is_sorted/*<0>*/(sarr2, sum_less));
+        EXPECT_FALSE(iarr.is_sorted/*<0>*/(sum_less));
+        auto sarr2 = iarr.sort/*<0>*/(sum_less);
+        EXPECT_TRUE(sarr2.is_sorted/*<0>*/(sum_less));
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>({1, 2},
                 {arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6}),
@@ -1490,17 +1490,17 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, 0, sum_less)*/
             transform<0>(iarr,
                 [sum_less](const auto& val) {
-                    return is_sorted(val, 0, sum_less);
+                    return val.is_sorted(0, sum_less);
                 }),
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, 0, sum_less);
         auto sarr1 = transform<0>(iarr, [sum_less](const auto& val) {
-            return sort(val, 0, sum_less);
+            return val.sort(0, sum_less);
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, 0, sum_less)*/
             transform<0>(sarr1,
                 [sum_less](const auto& val) {
-                    return is_sorted(val, 0, sum_less);
+                    return val.is_sorted(0, sum_less);
                 }),
             arrnd<bool>({1, 2}, {true, true})));
         EXPECT_TRUE(all_equal(sarr1,
@@ -1511,17 +1511,17 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, 1, sum_less)*/
             transform<0>(iarr,
                 [sum_less](const auto& val) {
-                    return is_sorted(val, 1, sum_less);
+                    return val.is_sorted(1, sum_less);
                 }),
             arrnd<bool>({1, 2}, {false, true})));
         //auto sarr2 = sort(iarr, 1, sum_less);
         auto sarr2 = transform<0>(iarr, [sum_less](const auto& val) {
-            return sort(val, 1, sum_less);
+            return val.sort(1, sum_less);
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr2, 1, sum_less)*/
             transform<0>(sarr2,
                 [sum_less](const auto& val) {
-                    return is_sorted(val, 1, sum_less);
+                    return val.is_sorted(1, sum_less);
                 }),
             arrnd<bool>({1, 2}, {true, true})));
         EXPECT_TRUE(all_equal(sarr2,
@@ -1529,13 +1529,13 @@ TEST(arrnd_test, sort)
                 {arrnd<int>({6, 4}, {5, 4, 2, 7, 3, 9, 6, 2, 3, 5, 1, 5, 4, 3, 8, 5, 4, 2, 7, 8, 6, 2, 5, 3}),
                     arrnd<int>({3, 1, 2}, {4, 6, 8, 2, 3, 6})})));
 
-        EXPECT_FALSE(is_sorted/*<0>*/(iarr, 1, [sum_less](const auto& lhs, const auto& rhs) {
+        EXPECT_FALSE(iarr.is_sorted/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
             return sum_less(lhs[{0}], rhs[{0}]);
         }));
-        auto sarr3 = sort/*<0>*/(iarr, 1, [sum_less](const auto& lhs, const auto& rhs) {
+        auto sarr3 = iarr.sort/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
             return sum_less(lhs[{0}], rhs[{0}]);
         });
-        EXPECT_TRUE(is_sorted/*<0>*/(sarr3, 1, [sum_less](const auto& lhs, const auto& rhs) {
+        EXPECT_TRUE(sarr3.is_sorted/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
             return sum_less(lhs[{0}], rhs[{0}]);
         }));
         EXPECT_TRUE(all_equal(sarr3,
@@ -1549,20 +1549,20 @@ TEST(arrnd_test, expand)
 {
     using namespace oc;
 
-    EXPECT_TRUE(all_equal(expand(arrnd<int>(), 0), arrnd<arrnd<int>>()));
+    EXPECT_TRUE(all_equal(arrnd<int>().expand(0), arrnd<arrnd<int>>()));
 
     arrnd<arrnd<int>> narr({2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
 
     EXPECT_TRUE(all_equal(/*expand(narr, 0)*/ transform<0>(narr,
                               [](const auto& val) {
-                                  return expand(val, 0);
+                                  return val.expand(0);
                               }),
         arrnd<arrnd<arrnd<int>>>({2, 1},
             {arrnd<arrnd<int>>({3, 1, 1},
                  {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6})}),
                 arrnd<arrnd<int>>({2, 1}, {arrnd<int>({1, 3}, {1, 2, 3}), arrnd<int>({1, 3}, {4, 5, 6})})})));
 
-    EXPECT_TRUE(all_equal(expand/*<0>*/(narr, 0),
+    EXPECT_TRUE(all_equal(narr.expand/*<0>*/(0),
         arrnd<arrnd<arrnd<int>>>({2, 1},
             {arrnd<arrnd<int>>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
                 arrnd<arrnd<int>>({1, 1}, {arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})})));
@@ -1570,29 +1570,29 @@ TEST(arrnd_test, expand)
     {
         arrnd<int> iarr({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 1),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 1),
             arrnd<arrnd<int>>({1, 1, 1}, {arrnd<int>({6, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12})})));
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 2),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 2),
             arrnd<arrnd<int>>(
                 {2, 1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})})));
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 3),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 3),
             arrnd<arrnd<int>>({3, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
                     arrnd<int>({2, 1, 2}, {9, 10, 11, 12})})));
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 4),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 4),
             arrnd<arrnd<int>>({4, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({2, 1, 2}, {5, 6, 7, 8}),
                     arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 5),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 5),
             arrnd<arrnd<int>>({5, 1, 1},
                 {arrnd<int>({2, 1, 2}, {1, 2, 3, 4}), arrnd<int>({1, 1, 2}, {5, 6}), arrnd<int>({1, 1, 2}, {7, 8}),
                     arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
 
-        EXPECT_TRUE(all_equal(expand(iarr, 0, 6),
+        EXPECT_TRUE(all_equal(iarr.expand(0, 6),
             arrnd<arrnd<int>>({6, 1, 1},
                 {arrnd<int>({1, 1, 2}, {1, 2}), arrnd<int>({1, 1, 2}, {3, 4}), arrnd<int>({1, 1, 2}, {5, 6}),
                     arrnd<int>({1, 1, 2}, {7, 8}), arrnd<int>({1, 1, 2}, {9, 10}), arrnd<int>({1, 1, 2}, {11, 12})})));
@@ -1623,7 +1623,7 @@ TEST(arrnd_test, expand)
 
             arrnd<int> arr(
                 {12, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
-            auto works = expand(arr, 0, std::ssize(threads));
+            auto works = arr.expand(0, std::ssize(threads));
 
             for (auto i = 0; i < std::ssize(threads); ++i) {
                 threads[i] = std::thread([&multiply, &works, i]() {
@@ -1698,9 +1698,9 @@ TEST(arrnd_test, exclude_and_merge)
     {
         arrnd<int> arr;
 
-        EXPECT_TRUE(exclude(arr, {}, {100}).empty());
+        EXPECT_TRUE(arr.exclude({}, {100}).empty());
 
-        EXPECT_TRUE(merge(exclude(arr, {}, {100})).empty());
+        EXPECT_TRUE(arr.exclude({}, {100}).merge().empty());
     }
 
     // 1d
@@ -1708,10 +1708,10 @@ TEST(arrnd_test, exclude_and_merge)
         arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
 
         EXPECT_TRUE(all_equal(
-            exclude(arr, {}, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({3}, {4, 5, 6})})));
-        EXPECT_TRUE(all_equal(exclude(arr, {}, {5}), arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {1, 2, 3, 4, 5})})));
+            arr.exclude({}, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({3}, {4, 5, 6})})));
+        EXPECT_TRUE(all_equal(arr.exclude({}, {5}), arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {1, 2, 3, 4, 5})})));
 
-        auto exc = exclude(arr, {}, {0});
+        auto exc = arr.exclude({}, {0});
         EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({1}, {arrnd<int>({5}, {2, 3, 4, 5, 6})})));
         exc[0](0) = 100;
         EXPECT_EQ(100, arr[1]);
@@ -1725,7 +1725,7 @@ TEST(arrnd_test, exclude_and_merge)
 
         //auto exc = exclude(arr, {}, {2});
         auto exc = transform<0>(arr, [](const auto& val) {
-            return exclude(val, {}, {2});
+            return val.exclude({}, {2});
         });
 
         EXPECT_TRUE(all_equal(exc,
@@ -1737,7 +1737,7 @@ TEST(arrnd_test, exclude_and_merge)
         EXPECT_TRUE(all_equal(/*merge(exc)*/
             transform<0>(exc,
                 [](const auto& val) {
-                    return merge(val);
+                    return val.merge();
                 }),
             arrnd<arrnd<int>>({1}, {arrnd<int>({5, 3}, {1, 2, 4, 5, 6, 8, 13, 14, 16, 17, 18, 20, 21, 22, 24})})));
     }
@@ -1748,7 +1748,7 @@ TEST(arrnd_test, exclude_and_merge)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        auto exc = exclude(arr, {0, 2}, {1});
+        auto exc = arr.exclude({0, 2}, {1});
 
         EXPECT_TRUE(all_equal(exc,
             arrnd<arrnd<int>>({2, 1, 2},
@@ -1756,14 +1756,14 @@ TEST(arrnd_test, exclude_and_merge)
                     arrnd<int>({1, 4, 1}, {25, 28, 31, 34}), arrnd<int>({1, 4, 1}, {27, 30, 33, 36})})));
 
         EXPECT_TRUE(
-            all_equal(merge(exc), arrnd<int>({2, 4, 2}, {1, 3, 4, 6, 7, 9, 10, 12, 25, 27, 28, 30, 31, 33, 34, 36})));
+            all_equal(exc.merge(), arrnd<int>({2, 4, 2}, {1, 3, 4, 6, 7, 9, 10, 12, 25, 27, 28, 30, 31, 33, 34, 36})));
     }
 
     // multiple indices
     {
         arrnd<int> arr({12}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
-        EXPECT_TRUE(all_equal(exclude(arr, {}, {0, 4, 11}),
+        EXPECT_TRUE(all_equal(arr.exclude({}, {0, 4, 11}),
             arrnd<arrnd<int>>({2}, {arrnd<int>({3}, {2, 3, 4}), arrnd<int>({6}, {6, 7, 8, 9, 10, 11})})));
     }
 }
@@ -1776,7 +1776,7 @@ TEST(arrnd_test, split)
     {
         arrnd<int> arr;
 
-        EXPECT_TRUE(split(arr, {}, {100}).empty());
+        EXPECT_TRUE(arr.split({}, {100}).empty());
     }
 
     // 1d
@@ -1784,11 +1784,11 @@ TEST(arrnd_test, split)
         arrnd<int> arr({6}, {1, 2, 3, 4, 5, 6});
 
         EXPECT_TRUE(all_equal(
-            split(arr, {}, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({4}, {3, 4, 5, 6})})));
+            arr.split({}, {2}), arrnd<arrnd<int>>({2}, {arrnd<int>({2}, {1, 2}), arrnd<int>({4}, {3, 4, 5, 6})})));
         EXPECT_TRUE(all_equal(
-            split(arr, {}, {5}), arrnd<arrnd<int>>({2}, {arrnd<int>({5}, {1, 2, 3, 4, 5}), arrnd<int>({1}, {6})})));
+            arr.split({}, {5}), arrnd<arrnd<int>>({2}, {arrnd<int>({5}, {1, 2, 3, 4, 5}), arrnd<int>({1}, {6})})));
 
-        auto exc = split(arr, {}, {0});
+        auto exc = arr.split({}, {0});
         EXPECT_TRUE(all_equal(exc, arrnd<arrnd<int>>({1}, {arrnd<int>({6}, {1, 2, 3, 4, 5, 6})})));
         exc[0](0) = 100;
         EXPECT_EQ(100, arr[0]);
@@ -1803,7 +1803,7 @@ TEST(arrnd_test, split)
         EXPECT_TRUE(all_equal(/*split(arr, {}, {2})*/
             transform<0>(arr,
                 [](const auto& val) {
-                    return split(val, {}, {2});
+                    return val.split({}, {2});
                 }),
             arrnd<arrnd<arrnd<int>>>({1},
                 arrnd<arrnd<int>>({2, 2},
@@ -1818,7 +1818,7 @@ TEST(arrnd_test, split)
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
-        EXPECT_TRUE(all_equal(split(arr, {}, {2}),
+        EXPECT_TRUE(all_equal(arr.split({}, {2}),
             arrnd<arrnd<int>>({2, 2, 2},
                 {arrnd<int>({2, 2, 2}, {1, 2, 4, 5, 13, 14, 16, 17}), arrnd<int>({2, 2, 1}, {3, 6, 15, 18}),
                     arrnd<int>({2, 2, 2}, {7, 8, 10, 11, 19, 20, 22, 23}), arrnd<int>({2, 2, 1}, {9, 12, 21, 24}),
@@ -1833,7 +1833,7 @@ TEST(arrnd_test, split)
         std::vector<int> axes{1};
         int inds[]{0, 2, 3};
 
-        EXPECT_TRUE(all_equal(split(arr, axes, inds),
+        EXPECT_TRUE(all_equal(arr.split(axes, inds),
             arrnd<arrnd<int>>({1, 3},
                 {arrnd<int>({6, 2}, {1, 2, 5, 6, 9, 10, 13, 14, 17, 18, 21, 22}),
                     arrnd<int>({6, 1}, {3, 7, 11, 15, 19, 23}), arrnd<int>({6, 1}, {4, 8, 12, 16, 20, 24})})));
@@ -1843,7 +1843,7 @@ TEST(arrnd_test, split)
     {
         arrnd<int> arr({6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        EXPECT_TRUE(all_equal(split(arr, {0}, 2),
+        EXPECT_TRUE(all_equal(arr.split({0}, 2),
             arrnd<arrnd<int>>({2, 1},
                 {arrnd<int>({3, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}),
                     arrnd<int>({3, 4}, {13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})})));
@@ -1869,7 +1869,7 @@ TEST(arrnd_test, pages)
 
     {
         arrnd<int> arr({3, 1, 1, 2}, {1, 2, 3, 4, 5, 6});
-        auto p = pages(arr, 2);
+        auto p = arr.pages(2);
         EXPECT_TRUE(all_equal(p,
             arrnd<arrnd<int>>(
                 {3, 1}, {arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {3, 4}), arrnd<int>({1, 2}, {5, 6})})));
@@ -1880,20 +1880,20 @@ TEST(arrnd_test, pages)
         p[0][0] = 100;
         EXPECT_EQ(100, arr[0]);
 
-        auto merged_pages = book(p);
+        auto merged_pages = p.book();
 
         EXPECT_TRUE(all_equal(merged_pages, arr));
         EXPECT_EQ(100, merged_pages[0]);
 
-        auto p2 = pages(transform(arr, [](int a) {
+        auto p2 = transform(arr, [](int a) {
             return a * 2;
-        }));
+        }).pages();
 
         EXPECT_TRUE(all_equal(p2,
             arrnd<arrnd<int>>(
                 {3, 1}, {arrnd<int>({1, 2}, {200, 4}), arrnd<int>({1, 2}, {6, 8}), arrnd<int>({1, 2}, {10, 12})})));
 
-        auto merged_pages2 = book(p2);
+        auto merged_pages2 = p2.book();
 
         EXPECT_TRUE(all_equal(merged_pages2, arrnd<int>({3, 1, 1, 2}, {200, 4, 6, 8, 10, 12})));
     }
@@ -2030,9 +2030,9 @@ TEST(arrnd_test, collapse)
         arrnd<int> arr(
             {2, 3, 2, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        auto exp = expand(arr, 2);
+        auto exp = arr.expand(2);
 
-        auto col = collapse(exp);
+        auto col = exp.collapse();
 
         EXPECT_TRUE(all_equal(arr, col));
 
@@ -2042,11 +2042,11 @@ TEST(arrnd_test, collapse)
 
     // form unknown array creator
     {
-        auto exp = expand(arrnd<int>({2, 3, 2, 2},
-                              {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}),
-            1, 2);
+        auto exp = arrnd<int>(
+            {2, 3, 2, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})
+                       .expand(1, 2);
 
-        auto col = collapse(exp);
+        auto col = exp.collapse();
 
         EXPECT_TRUE(
             all_equal(arrnd<int>({2, 3, 2, 2},
@@ -2059,9 +2059,9 @@ TEST(arrnd_test, collapse)
         arrnd<arrnd<int>> arr(
             {2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
 
-        auto exp = expand/*<1>*/(arr, 0);
+        auto exp = arr.expand/*<1>*/(0);
 
-        auto col = collapse/*<2>*/(exp);
+        auto col = exp.collapse/*<2>*/();
 
         EXPECT_TRUE(all_equal(arr, col));
 
@@ -2071,11 +2071,11 @@ TEST(arrnd_test, collapse)
 
     // nested array
     {
-        auto exp = expand/*<1>*/(arrnd<arrnd<int>>({2, 1},
-                                 {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
-            0);
+        auto exp = /*<1>*/ arrnd<arrnd<int>>(
+            {2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})})
+                       .expand(0);
 
-        auto col = collapse/*<2>*/(exp);
+        auto col = exp.collapse/*<2>*/();
 
         EXPECT_TRUE(all_equal(arrnd<arrnd<int>>({2, 1},
                                   {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})}),
@@ -2234,7 +2234,7 @@ TEST(arrnd_type, nested_type)
     static_assert(std::is_same_v<arrnd<int>::nested_t<4>, arrnd<arrnd<arrnd<arrnd<arrnd<int>>>>>>);
 }
 
-TEST(arrnd_type, adjacent_indices)
+TEST(arrnd_type, find_adjacents)
 {
     using namespace oc;
 
@@ -2242,7 +2242,7 @@ TEST(arrnd_type, adjacent_indices)
         arrnd<int> arr(
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-        arr(adjacent_indices(arr, {1, 1, 2}, 1)) = 0;
+        arr(arr.find_adjacents({1, 1, 2}, 1)) = 0;
 
         EXPECT_TRUE(all_equal(
             arr, arrnd<int>({3, 2, 4}, {1, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0, 13, 0, 15, 0, 17, 0, 0, 0, 21, 0, 0, 0})));
