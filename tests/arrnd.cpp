@@ -1937,7 +1937,7 @@ TEST(arrnd_test, pages)
     //}
 }
 
-TEST(arrnd_test, movop)
+TEST(arrnd_test, slide)
 {
     using namespace oc;
 
@@ -1951,13 +1951,13 @@ TEST(arrnd_test, movop)
 
         {
             EXPECT_TRUE(
-                all_equal(arrnd<arrnd<double>>(), movop/*<0>*/(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum/*, 0.5*/)));
+                all_equal(arrnd<arrnd<double>>(), slide/*<0>*/(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum/*, 0.5*/)));
         }
 
         {
-            //auto res = movop(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
+            //auto res = slide(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
-                return movop(val, 0, {-1, 2}, false, weigted_sum/*, 0.5*/);
+                return slide(val, 0, {-1, 2}, false, weigted_sum/*, 0.5*/);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -1967,9 +1967,9 @@ TEST(arrnd_test, movop)
         }
 
         {
-            //auto res = movop(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
+            //auto res = slide(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
-                return movop(val, 0, {-1, 2}, true, weigted_sum/*, 0.5*/);
+                return slide(val, 0, {-1, 2}, true, weigted_sum/*, 0.5*/);
             });
 
             EXPECT_TRUE(all_equal(
@@ -1978,7 +1978,7 @@ TEST(arrnd_test, movop)
     }
 }
 
-TEST(arrnd_test, cumop)
+TEST(arrnd_test, accumulate)
 {
     using namespace oc;
 
@@ -1995,13 +1995,13 @@ TEST(arrnd_test, cumop)
         };
 
         {
-            EXPECT_TRUE(all_equal(arrnd<int>(), cumop(arrnd<int>(), 0, {-1, 2}, false, add_prev, slice_sum)));
+            EXPECT_TRUE(all_equal(arrnd<int>(), accumulate(arrnd<int>(), 0, {-1, 2}, false, add_prev, slice_sum)));
         }
 
         {
-            //auto res = cumop(arr, 0, {-1, 2}, false, add_prev, slice_sum);
+            //auto res = accumulate(arr, 0, {-1, 2}, false, add_prev, slice_sum);
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
-                return cumop(val, 0, {-1, 2}, false, add_prev, slice_sum);
+                return accumulate(val, 0, {-1, 2}, false, add_prev, slice_sum);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -2010,9 +2010,9 @@ TEST(arrnd_test, cumop)
         }
 
         {
-            //auto res = cumop(arr, 0, {-1, 2}, true, add_prev, slice_sum);
+            //auto res = accumulate(arr, 0, {-1, 2}, true, add_prev, slice_sum);
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
-                return cumop(val, 0, {-1, 2}, true, add_prev, slice_sum);
+                return accumulate(val, 0, {-1, 2}, true, add_prev, slice_sum);
             });
 
             EXPECT_TRUE(all_equal(
@@ -2083,13 +2083,13 @@ TEST(arrnd_test, collapse)
     }
 }
 
-TEST(arrnd_test, pageop)
+TEST(arrnd_test, browse)
 {
     using namespace oc;
 
     // empty array
     {
-        auto res = pageop(arrnd<int>{}, 2, [](arrnd<int> page) {
+        auto res = browse(arrnd<int>{}, 2, [](arrnd<int> page) {
             return page;
         });
 
@@ -2100,7 +2100,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({1, 2}, {1, 2});
 
-        auto res = pageop(arr, 2, [](arrnd<int> page) {
+        auto res = browse(arr, 2, [](arrnd<int> page) {
             return page.transpose({1, 0});
         });
 
@@ -2111,7 +2111,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, 2, [](arrnd<int> page) {
+        auto res = browse(arr, 2, [](arrnd<int> page) {
             page.apply([](int value) {
                 return value * 2;
             });
@@ -2124,13 +2124,13 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}));
 
-        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //auto res = browse<1>(arr, 2, [](arrnd<int> page) {
         //    page.apply([](int value) {
         //        return value * 2;
         //    });
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return pageop(val, 2, [](arrnd<int> page) {
+            return browse(val, 2, [](arrnd<int> page) {
                 page.apply([](int value) {
                     return value * 2;
                 });
@@ -2145,7 +2145,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, 2, [](arrnd<int> page) {
+        auto res = browse(arr, 2, [](arrnd<int> page) {
             return page.transpose({1, 0});
         });
 
@@ -2155,11 +2155,11 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //auto res = browse<1>(arr, 2, [](arrnd<int> page) {
         //    return page.transpose({1, 0});
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return pageop(val, 2, [](arrnd<int> page) {
+            return browse(val, 2, [](arrnd<int> page) {
                 return page.transpose({1, 0});
             });
         });
@@ -2171,13 +2171,13 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr1({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res1 = pageop(arr1, 2, [](arrnd<int> page) {
+        auto res1 = browse(arr1, 2, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
         EXPECT_TRUE(all_equal(res1, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
 
-        auto res2 = pageop(arr1, 1, [](arrnd<int> page) {
+        auto res2 = browse(arr1, 1, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
@@ -2185,7 +2185,7 @@ TEST(arrnd_test, pageop)
 
         arrnd<int> arr2({2, 3, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
-        auto res3 = pageop(arr2, 3, [](arrnd<int> page) {
+        auto res3 = browse(arr2, 3, [](arrnd<int> page) {
             return page.sum();
         });
 
@@ -2195,11 +2195,11 @@ TEST(arrnd_test, pageop)
     {
         arrnd<arrnd<int>> arr({1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})});
 
-        //auto res = pageop<1>(arr, 2, [](arrnd<int> page) {
+        //auto res = browse<1>(arr, 2, [](arrnd<int> page) {
         //    return 0.5 * page.sum();
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return pageop(val, 2, [](arrnd<int> page) {
+            return browse(val, 2, [](arrnd<int> page) {
                 return 0.5 * page.sum();
             });
         });
@@ -2211,7 +2211,7 @@ TEST(arrnd_test, pageop)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = pageop(arr, 2, [](arrnd<int> page) {
+        auto res = browse(arr, 2, [](arrnd<int> page) {
             return arrnd<arrnd<int>>({1}, {page});
         });
 
