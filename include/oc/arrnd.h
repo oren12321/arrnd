@@ -11251,139 +11251,147 @@ namespace details {
         //    return close<this_type::depth>(value, atol, rtol);
         //}
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool all_equal(const ArCo& arr) const
         {
-            return all_match<Level>(arr);
+            return all_match<this_type::depth /*Level*/>(arr);
         }
 
-        template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr bool all_equal(const ArCo& arr) const
-        {
-            return all_equal<this_type::depth>(arr);
-        }
+        //template <arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr bool all_equal(const ArCo& arr) const
+        //{
+        //    return all_equal<this_type::depth>(arr);
+        //}
 
-        template <std::int64_t Level, typename U>
+        template </*std::int64_t Level, */typename U>
         [[nodiscard]] constexpr bool all_equal(const U& u) const
         {
-            return all_of<Level>(
+            return all_of<this_type::depth/*Level*/>(
                 [&u](const auto& a/*, const auto& b*/) {
                     return a == u/*b*/;
                 }/*,
                 u*/);
         }
 
-        template <typename U>
-        [[nodiscard]] constexpr bool all_equal(const U& u) const
-        {
-            return all_equal<this_type::depth>(u);
-        }
+        //template <typename U>
+        //[[nodiscard]] constexpr bool all_equal(const U& u) const
+        //{
+        //    return all_equal<this_type::depth>(u);
+        //}
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool all_close(const ArCo& arr,
-            const compliant_tol_type<ArCo, Level>& atol = default_atol<compliant_tol_type<ArCo, Level>>(),
-            const compliant_tol_type<ArCo, Level>& rtol = default_rtol<compliant_tol_type<ArCo, Level>>()) const
+            const compliant_tol_type<ArCo, this_type::depth /*Level*/>& atol
+            = default_atol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>(),
+            const compliant_tol_type<ArCo, this_type::depth /*Level*/>& rtol
+            = default_rtol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>()) const
         {
-            return all_match<Level>(arr, [&atol, &rtol](const auto& a, const auto& b) {
+            return all_match<this_type::depth /*Level*/>(arr, [&atol, &rtol](const auto& a, const auto& b) {
                 return oc::close(a, b, atol, rtol);
             });
         }
 
-        template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr bool all_close(const ArCo& arr,
-            const compliant_tol_type<ArCo>& atol = default_atol<compliant_tol_type<ArCo>>(),
-            const compliant_tol_type<ArCo>& rtol = default_rtol<compliant_tol_type<ArCo>>()) const
-        {
-            return all_close<this_type::depth>(arr, atol, rtol);
-        }
+        //template <arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr bool all_close(const ArCo& arr,
+        //    const compliant_tol_type<ArCo>& atol = default_atol<compliant_tol_type<ArCo>>(),
+        //    const compliant_tol_type<ArCo>& rtol = default_rtol<compliant_tol_type<ArCo>>()) const
+        //{
+        //    return all_close<this_type::depth>(arr, atol, rtol);
+        //}
 
-        template <std::int64_t Level, typename U>
+        template </*std::int64_t Level, */typename U>
             requires(!arrnd_compliant<U>)
         [[nodiscard]] constexpr bool all_close(const U& u,
-            const tol_type<U, Level>& atol = default_atol<tol_type<U, Level>>(),
-            const tol_type<U, Level>& rtol = default_rtol<tol_type<U, Level>>()) const
+            const tol_type<U, this_type::depth /*Level*/>& atol
+            = default_atol<tol_type<U, this_type::depth /*Level*/>>(),
+            const tol_type<U, this_type::depth /*Level*/>& rtol
+            = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
         {
-            return all_of<Level>(
+            return all_of<this_type::depth/*Level*/>(
                 [&u, &atol, &rtol](const auto& a/*, const auto& b*/) {
                     return oc::close(a, u/*b*/, atol, rtol);
                 }/*,
                 u*/);
         }
 
-        template <typename U>
-            requires(!arrnd_compliant<U>)
-        [[nodiscard]] constexpr bool all_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
-            const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
-        {
-            return all_close<this_type::depth>(u, atol, rtol);
-        }
+        //template <typename U>
+        //    requires(!arrnd_compliant<U>)
+        //[[nodiscard]] constexpr bool all_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
+        //    const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
+        //{
+        //    return all_close<this_type::depth>(u, atol, rtol);
+        //}
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool any_equal(const ArCo& arr) const
         {
-            return any_match<Level>(arr);
+            return any_match<this_type::depth /*Level*/>(arr);
         }
 
-        template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr bool any_equal(const ArCo& arr) const
-        {
-            return any_equal<this_type::depth>(arr);
-        }
+        //template <arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr bool any_equal(const ArCo& arr) const
+        //{
+        //    return any_equal<this_type::depth>(arr);
+        //}
 
-        template <std::int64_t Level, typename U>
+        template </*std::int64_t Level, */typename U>
         [[nodiscard]] constexpr bool any_equal(const U& u) const
         {
-            return any_of<Level>(
+            return any_of<this_type::depth/*Level*/>(
                 [&u](const auto& a/*, const auto& b*/) {
                     return a == u/*b*/;
                 }/*,
                 u*/);
         }
 
-        template <typename U>
-        [[nodiscard]] constexpr bool any_equal(const U& u) const
-        {
-            return any_equal<this_type::depth>(u);
-        }
+        //template <typename U>
+        //[[nodiscard]] constexpr bool any_equal(const U& u) const
+        //{
+        //    return any_equal<this_type::depth>(u);
+        //}
 
-        template <std::int64_t Level, arrnd_compliant ArCo>
+        template </*std::int64_t Level, */arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool any_close(const ArCo& arr,
-            const compliant_tol_type<ArCo, Level>& atol = default_atol<compliant_tol_type<ArCo, Level>>(),
-            const compliant_tol_type<ArCo, Level>& rtol = default_rtol<compliant_tol_type<ArCo, Level>>()) const
+            const compliant_tol_type<ArCo, this_type::depth /*Level*/>& atol
+            = default_atol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>(),
+            const compliant_tol_type<ArCo, this_type::depth /*Level*/>& rtol
+            = default_rtol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>()) const
         {
-            return any_match<Level>(arr, [&atol, &rtol](const auto& a, const auto& b) {
+            return any_match<this_type::depth /*Level*/>(arr, [&atol, &rtol](const auto& a, const auto& b) {
                 return oc::close(a, b, atol, rtol);
             });
         }
 
-        template <arrnd_compliant ArCo>
-        [[nodiscard]] constexpr bool any_close(const ArCo& arr,
-            const compliant_tol_type<ArCo>& atol = default_atol<compliant_tol_type<ArCo>>(),
-            const compliant_tol_type<ArCo>& rtol = default_rtol<compliant_tol_type<ArCo>>()) const
-        {
-            return any_close<this_type::depth>(arr, atol, rtol);
-        }
+        //template <arrnd_compliant ArCo>
+        //[[nodiscard]] constexpr bool any_close(const ArCo& arr,
+        //    const compliant_tol_type<ArCo>& atol = default_atol<compliant_tol_type<ArCo>>(),
+        //    const compliant_tol_type<ArCo>& rtol = default_rtol<compliant_tol_type<ArCo>>()) const
+        //{
+        //    return any_close<this_type::depth>(arr, atol, rtol);
+        //}
 
-        template <std::int64_t Level, typename U>
+        template </*std::int64_t Level, */typename U>
             requires(!arrnd_compliant<U>)
         [[nodiscard]] constexpr bool any_close(const U& u,
-            const tol_type<U, Level>& atol = default_atol<tol_type<U, Level>>(),
-            const tol_type<U, Level>& rtol = default_rtol<tol_type<U, Level>>()) const
+            const tol_type<U, this_type::depth /*Level*/>& atol
+            = default_atol<tol_type<U, this_type::depth /*Level*/>>(),
+            const tol_type<U, this_type::depth /*Level*/>& rtol
+            = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
         {
-            return any_of<Level>(
+            return any_of<this_type::depth/*Level*/>(
                 [&u, &atol, &rtol](const auto& a/*, const auto& b*/) {
                     return oc::close(a, u/*b*/, atol, rtol);
                 }/*,
                 u*/);
         }
 
-        template <typename U>
-            requires(!arrnd_compliant<U>)
-        [[nodiscard]] constexpr bool any_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
-            const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
-        {
-            return any_close<this_type::depth>(u, atol, rtol);
-        }
+        //template <typename U>
+        //    requires(!arrnd_compliant<U>)
+        //[[nodiscard]] constexpr bool any_close(const U& u, const tol_type<U>& atol = default_atol<tol_type<U>>(),
+        //    const tol_type<U>& rtol = default_rtol<tol_type<U>>()) const
+        //{
+        //    return any_close<this_type::depth>(u, atol, rtol);
+        //}
 
         // standard iterator functions
 
@@ -15320,175 +15328,175 @@ namespace details {
         return any_match<ArCo::depth>(lhs, rhs);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool all_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs.template all_equal<Level>(rhs);
+        return lhs./*template */all_equal/*<Level>*/(rhs);
     }
 
-    template <std::int64_t Level, typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs.template all_equal<Level>(lhs);
+        return rhs./*template */all_equal/*<Level>*/(lhs);
     }
 
-    template <arrnd_compliant ArCo, typename T>
-    [[nodiscard]] inline constexpr bool all_equal(const ArCo& lhs, const T& rhs)
-    {
-        return all_equal<ArCo::depth>(lhs, rhs);
-    }
+    //template <arrnd_compliant ArCo, typename T>
+    //[[nodiscard]] inline constexpr bool all_equal(const ArCo& lhs, const T& rhs)
+    //{
+    //    return all_equal<ArCo::depth>(lhs, rhs);
+    //}
 
-    template <typename T, arrnd_compliant ArCo>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool all_equal(const T& lhs, const ArCo& rhs)
-    {
-        return all_equal<ArCo::depth>(lhs, rhs);
-    }
+    //template <typename T, arrnd_compliant ArCo>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool all_equal(const T& lhs, const ArCo& rhs)
+    //{
+    //    return all_equal<ArCo::depth>(lhs, rhs);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr bool all_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2, Level>& atol
-        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2, Level>>(),
-        const typename ArCo1::template compliant_tol_type<ArCo2, Level>& rtol
-        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2, Level>>())
+        const typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth/*Level*/>& atol
+        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>>(),
+        const typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>& rtol
+        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>>())
     {
-        return lhs.template all_close<Level>(rhs, atol, rtol);
+        return lhs./*template */all_close/*<Level>*/(rhs, atol, rtol);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T, Level>& atol
-        = default_atol<typename ArCo::template tol_type<T, Level>>(),
-        const typename ArCo::template tol_type<T, Level>& rtol
-        = default_rtol<typename ArCo::template tol_type<T, Level>>())
+        const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>(),
+        const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>())
     {
-        return lhs.template all_close<Level>(rhs, atol, rtol);
+        return lhs./*template */all_close/*<Level>*/(rhs, atol, rtol);
     }
 
-    template <std::int64_t Level, typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T, Level>& atol
-        = default_atol<typename ArCo::template tol_type<T, Level>>(),
-        const typename ArCo::template tol_type<T, Level>& rtol
-        = default_rtol<typename ArCo::template tol_type<T, Level>>())
+        const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>(),
+        const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>())
     {
-        return rhs.template all_close<Level>(lhs, atol, rtol);
+        return rhs./*template */all_close/*<Level>*/(lhs, atol, rtol);
     }
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr bool all_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2>& atol
-        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2>>(),
-        const typename ArCo1::template compliant_tol_type<ArCo2>& rtol
-        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2>>())
-    {
-        return all_close<ArCo1::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr bool all_close(const ArCo1& lhs, const ArCo2& rhs,
+    //    const typename ArCo1::template compliant_tol_type<ArCo2>& atol
+    //    = default_atol<typename ArCo1::template compliant_tol_type<ArCo2>>(),
+    //    const typename ArCo1::template compliant_tol_type<ArCo2>& rtol
+    //    = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2>>())
+    //{
+    //    return all_close<ArCo1::depth>(lhs, rhs, atol, rtol);
+    //}
 
-    template <arrnd_compliant ArCo, typename T>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
-    {
-        return all_close<ArCo::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <arrnd_compliant ArCo, typename T>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
+    //    const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+    //    const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+    //{
+    //    return all_close<ArCo::depth>(lhs, rhs, atol, rtol);
+    //}
 
-    template <typename T, arrnd_compliant ArCo>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
-    {
-        return all_close<ArCo::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <typename T, arrnd_compliant ArCo>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
+    //    const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+    //    const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+    //{
+    //    return all_close<ArCo::depth>(lhs, rhs, atol, rtol);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs.template any_equal<Level>(rhs);
+        return lhs./*template */any_equal/*<Level>*/(rhs);
     }
 
-    template <std::int64_t Level, typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool any_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs.template any_equal<Level>(lhs);
+        return rhs./*template */any_equal/*<Level>*/(lhs);
     }
 
-    template <arrnd_compliant ArCo, typename T>
-    [[nodiscard]] inline constexpr bool any_equal(const ArCo& lhs, const T& rhs)
-    {
-        return any_equal<ArCo::depth>(lhs, rhs);
-    }
+    //template <arrnd_compliant ArCo, typename T>
+    //[[nodiscard]] inline constexpr bool any_equal(const ArCo& lhs, const T& rhs)
+    //{
+    //    return any_equal<ArCo::depth>(lhs, rhs);
+    //}
 
-    template <typename T, arrnd_compliant ArCo>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool any_equal(const T& lhs, const ArCo& rhs)
-    {
-        return any_equal<ArCo::depth>(lhs, rhs);
-    }
+    //template <typename T, arrnd_compliant ArCo>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool any_equal(const T& lhs, const ArCo& rhs)
+    //{
+    //    return any_equal<ArCo::depth>(lhs, rhs);
+    //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr bool any_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2, Level>& atol
-        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2, Level>>(),
-        const typename ArCo1::template compliant_tol_type<ArCo2, Level>& rtol
-        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2, Level>>())
+        const typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>& atol
+        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>>(),
+        const typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>& rtol
+        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>>())
     {
-        return lhs.template any_close<Level>(rhs, atol, rtol);
+        return lhs./*template */any_close/*<Level>*/(rhs, atol, rtol);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T, Level>& atol
-        = default_atol<typename ArCo::template tol_type<T, Level>>(),
-        const typename ArCo::template tol_type<T, Level>& rtol
-        = default_rtol<typename ArCo::template tol_type<T, Level>>())
+        const typename ArCo::template tol_type<T/*, Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T/*, Level*/>>(),
+        const typename ArCo::template tol_type<T/*, Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T/*, Level*/>>())
     {
-        return lhs.template any_close<Level>(rhs, atol, rtol);
+        return lhs./*template */any_close/*<Level>*/(rhs, atol, rtol);
     }
 
-    template <std::int64_t Level, typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T, Level>& atol
-        = default_atol<typename ArCo::template tol_type<T, Level>>(),
-        const typename ArCo::template tol_type<T, Level>& rtol
-        = default_rtol<typename ArCo::template tol_type<T, Level>>())
+        const typename ArCo::template tol_type<T/*, Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T/*, Level*/>>(),
+        const typename ArCo::template tol_type<T/*, Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T/*, Level*/>>())
     {
-        return rhs.template any_close<Level>(lhs, atol, rtol);
+        return rhs./*template */any_close/*<Level>*/(lhs, atol, rtol);
     }
 
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
-    [[nodiscard]] inline constexpr bool any_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2>& atol
-        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2>>(),
-        const typename ArCo1::template compliant_tol_type<ArCo2>& rtol
-        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2>>())
-    {
-        return any_close<ArCo1::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    //[[nodiscard]] inline constexpr bool any_close(const ArCo1& lhs, const ArCo2& rhs,
+    //    const typename ArCo1::template compliant_tol_type<ArCo2>& atol
+    //    = default_atol<typename ArCo1::template compliant_tol_type<ArCo2>>(),
+    //    const typename ArCo1::template compliant_tol_type<ArCo2>& rtol
+    //    = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2>>())
+    //{
+    //    return any_close<ArCo1::depth>(lhs, rhs, atol, rtol);
+    //}
 
-    template <arrnd_compliant ArCo, typename T>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
-    {
-        return any_close<ArCo::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <arrnd_compliant ArCo, typename T>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
+    //    const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+    //    const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+    //{
+    //    return any_close<ArCo::depth>(lhs, rhs, atol, rtol);
+    //}
 
-    template <typename T, arrnd_compliant ArCo>
-        requires(!arrnd_compliant<T>)
-    [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
-        const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
-    {
-        return any_close<ArCo::depth>(lhs, rhs, atol, rtol);
-    }
+    //template <typename T, arrnd_compliant ArCo>
+    //    requires(!arrnd_compliant<T>)
+    //[[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
+    //    const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
+    //    const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
+    //{
+    //    return any_close<ArCo::depth>(lhs, rhs, atol, rtol);
+    //}
 
     template <arrnd_compliant ArCo>
     std::ostream& ostream_operator_recursive(std::ostream& os, const ArCo& arco,
