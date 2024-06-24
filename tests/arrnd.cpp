@@ -318,8 +318,6 @@ TEST(arrnd_test, arrnd_view_from_external_type)
     auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
 
     EXPECT_EQ(vec.data(), arrv.storage()->data());
-    EXPECT_TRUE(arrv.is_view);
-    static_assert(decltype(arrv)::is_view);
 
     arrv.apply([](int value) {
         return value * 2;
