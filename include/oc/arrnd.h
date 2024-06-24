@@ -4939,6 +4939,8 @@ namespace details {
         constexpr static std::int64_t depth = calc_arrnd_depth<T>();
         constexpr static bool is_flat = depth == 0;
 
+        constexpr static bool is_view = std::is_same_v<view_storage_info<T>, data_storage_info>;
+
         template <std::int64_t Depth>
             requires(Depth >= 0)
         struct nested {
