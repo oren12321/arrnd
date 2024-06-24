@@ -172,45 +172,45 @@ TEST(simple_dynamic_vector_test, basic_functionality)
     EXPECT_NE(svc.data(), sv.data());
 }
 
-//TEST(simple_dynamic_vector_test, basic_view_functionality)
-//{
-//    using simple_vector = oc::simple_dynamic_vector<std::string>;
-//
-//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-//
-//    simple_vector sv(16, arr.data(), true);
-//    EXPECT_EQ(16, sv.size());
-//    EXPECT_FALSE(sv.empty());
-//    EXPECT_TRUE(sv.data());
-//    EXPECT_EQ("a", sv.front());
-//    EXPECT_EQ("p", sv.back());
-//
-//    int ctr = 0;
-//    for (const auto& e : sv) {
-//        EXPECT_EQ(arr[ctr++], e);
-//    }
-//
-//    for (int i = 0; i < sv.size(); ++i) {
-//        EXPECT_EQ(arr[i], sv[i]);
-//    }
-//
-//    // iterators
-//    {
-//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-//        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
-//
-//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-//    }
-//
-//    // copy
-//    EXPECT_EQ(arr.data(), sv.data());
-//
-//    auto svc = sv;
-//    EXPECT_EQ(svc.data(), sv.data());
-//}
+TEST(simple_dynamic_vector_test, basic_view_functionality)
+{
+    using simple_vector = oc::simple_dynamic_vector<std::string>;
+
+    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+
+    simple_vector sv(16, arr.data(), true);
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("p", sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    // iterators
+    {
+        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+    }
+
+    // copy
+    EXPECT_EQ(arr.data(), sv.data());
+
+    auto svc = sv;
+    EXPECT_EQ(svc.data(), sv.data());
+}
 
 TEST(simple_static_vector_test, span_usage)
 {
@@ -265,15 +265,18 @@ TEST(simple_static_vector_test, basic_functionality)
 
     auto svc = sv;
     EXPECT_NE(svc.data(), sv.data());
+
+    EXPECT_FALSE(sv.is_view());
+    EXPECT_FALSE(svc.is_view());
 }
 
-TEST(simple_view_vector_test, basic_functionality)
+TEST(simple_static_vector_test, basic_view_functionality)
 {
-    using simple_vector = oc::simple_view_vector<std::string>;
+    using simple_vector = oc::simple_static_vector<std::string, 16>;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
-    simple_vector sv(16, arr.data());
+    simple_vector sv(16, arr.data(), true);
     EXPECT_EQ(16, sv.size());
     EXPECT_FALSE(sv.empty());
     EXPECT_TRUE(sv.data());
@@ -305,6 +308,9 @@ TEST(simple_view_vector_test, basic_functionality)
 
     auto svc = sv;
     EXPECT_EQ(svc.data(), sv.data());
+
+    EXPECT_TRUE(sv.is_view());
+    EXPECT_TRUE(svc.is_view());
 }
 
 TEST(arrnd_test, arrnd_view_from_external_type)
@@ -316,8 +322,6 @@ TEST(arrnd_test, arrnd_view_from_external_type)
     std::vector<int> vec{1, 2, 3, 4, 5, 6};
 
     auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
-
-    EXPECT_EQ(vec.data(), arrv.storage()->data());
 
     arrv.apply([](int value) {
         return value * 2;

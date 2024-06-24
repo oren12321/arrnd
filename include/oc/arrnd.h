@@ -216,38 +216,47 @@ namespace details {
         using replaced_type = simple_dynamic_vector<U, Allocator>;
 
         template <typename U = value_type>
-        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr)
-            : size_(size)
+        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
+            : size_(size), is_view_(is_view)
         {
             assert(size >= 0);
             if (size > 0) {
-                data_ptr_ = alloc_.allocate(size * sizeof(value_type));
-                if (data) {
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
-                    }
-                } else if constexpr (!std::is_fundamental_v<T>) {
-                    if constexpr (std::is_default_constructible_v<T>) {
-                        std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
+                if (is_view) {
+                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+                } else {
+                    data_ptr_ = alloc_.allocate(size * sizeof(value_type));
+                    if (data) {
+                        if constexpr (std::is_copy_constructible_v<T>) {
+                            std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
+                        }
+                    } else if constexpr (!std::is_fundamental_v<T>) {
+                        if constexpr (std::is_default_constructible_v<T>) {
+                            std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
+                        }
                     }
                 }
             }
         }
 
         template <typename InputIt>
-        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last)
-            : simple_dynamic_vector(std::distance(first, last), &(*first))
+        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+            : simple_dynamic_vector(std::distance(first, last), &(*first), is_view)
         { }
 
         constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
             : alloc_(other.alloc_)
             , size_(other.size_)
+            , is_view_(other.is_view_)
         {
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::uninitialized_copy_n(
-                        reinterpret_cast<pointer>(other.data_ptr_), other.size_, reinterpret_cast<pointer>(data_ptr_));
+                if (is_view_) {
+                    data_ptr_ = other.data_ptr_;
+                } else {
+                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                            reinterpret_cast<pointer>(data_ptr_));
+                    }
                 }
             }
         }
@@ -267,13 +276,18 @@ namespace details {
 
             alloc_ = other.alloc_;
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
             if (!other.empty()) {
-                data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                if (data_ptr_) {
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
-                            reinterpret_cast<pointer>(data_ptr_));
+                if (other.is_view_) {
+                    data_ptr_ = other.data_ptr_;
+                } else {
+                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+                    if (data_ptr_) {
+                        if constexpr (std::is_copy_constructible_v<T>) {
+                            std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+                                reinterpret_cast<pointer>(data_ptr_));
+                        }
                     }
                 }
             }
@@ -284,6 +298,7 @@ namespace details {
         constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
             : alloc_(std::move(other.alloc_))
             , size_(other.size_)
+            , is_view_(other.is_view_)
         {
             data_ptr_ = other.data_ptr_;
 
@@ -306,6 +321,7 @@ namespace details {
 
             alloc_ = std::move(other.alloc_);
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
             data_ptr_ = other.data_ptr_;
 
@@ -318,10 +334,12 @@ namespace details {
         constexpr ~simple_dynamic_vector() noexcept
         {
             if (!empty()) {
-                if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+                if (!is_view_) {
+                    if constexpr (!std::is_fundamental_v<T>) {
+                        std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+                    }
+                    alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
                 }
-                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
             }
         }
 
@@ -338,6 +356,11 @@ namespace details {
         [[nodiscard]] constexpr pointer data() const noexcept
         {
             return reinterpret_cast<pointer>(data_ptr_);
+        }
+
+        [[nodiscard]] constexpr bool is_view() const noexcept
+        {
+            return is_view_;
         }
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
@@ -427,6 +450,8 @@ namespace details {
 
         size_type size_ = 0;
         std::uint8_t* data_ptr_ = nullptr;
+
+        bool is_view_ = false;
     };
 
     template <typename T, template <typename> typename Allocator = lightweight_allocator>
@@ -457,27 +482,37 @@ namespace details {
         using replaced_type = simple_static_vector<U, Size>;
 
         template <typename U = value_type>
-        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr)
+        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
             : size_(size)
+            , is_view_(is_view)
         {
             assert(size_ >= 0 && size_ <= Size);
             if (data) {
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::copy(data, std::next(data, size_), buffer_);
+                if (is_view_) {
+                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+                } else {
+                    if constexpr (std::is_copy_constructible_v<T>) {
+                        std::copy(data, std::next(data, size_), buffer_);
+                    }
                 }
             }
         }
 
         template <typename InputIt>
-        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last)
-            : simple_static_vector(std::distance(first, last), &(*first))
+        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+            : simple_static_vector(std::distance(first, last), &(*first), is_view)
         { }
 
         constexpr simple_static_vector(const simple_static_vector& other)
             : size_(other.size_)
+            , is_view_(other.is_view_)
         {
-            if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
         }
 
@@ -488,9 +523,14 @@ namespace details {
             }
 
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
-            if constexpr (std::is_copy_constructible_v<T>) {
-                std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (other.is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_copy_constructible_v<T>) {
+                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             return *this;
@@ -498,9 +538,14 @@ namespace details {
 
         constexpr simple_static_vector(simple_static_vector&& other) noexcept
             : size_(other.size_)
+            , is_view_(other.is_view_)
         {
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_move_constructible_v<T>) {
+                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             other.size_ = 0;
@@ -513,9 +558,14 @@ namespace details {
             }
 
             size_ = other.size_;
+            is_view_ = other.is_view_;
 
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+            if (other.is_view_) {
+                data_ptr_ = other.data_ptr_;
+            } else {
+                if constexpr (std::is_move_constructible_v<T>) {
+                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+                }
             }
 
             other.size_ = 0;
@@ -536,6 +586,11 @@ namespace details {
         [[nodiscard]] constexpr pointer data() const noexcept
         {
             return reinterpret_cast<pointer>(data_ptr_);
+        }
+
+        [[nodiscard]] constexpr bool is_view() const noexcept
+        {
+            return is_view_;
         }
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
@@ -624,6 +679,8 @@ namespace details {
         size_type size_ = 0;
         value_type buffer_[Size];
         std::uint8_t* data_ptr_ = reinterpret_cast<std::uint8_t*>(buffer_);
+
+        bool is_view_ = false;
     };
 
     template <typename T, std::int64_t Size>
@@ -632,216 +689,10 @@ namespace details {
     {
         return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
     }
-
-
-
-
-
-
-
-    template <typename T>
-    class simple_view_vector final {
-    public:
-        using value_type = T;
-        using size_type = std::int64_t;
-        using difference_type = std::int64_t;
-        using reference = T&;
-        using const_reference = const T&;
-        using pointer = T*;
-        using const_pointer = const T*;
-        using iterator = T*;
-        using const_iterator = const T*;
-        using reverse_iterator = std::reverse_iterator<pointer>;
-        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-
-        template <typename U>
-        using replaced_type = simple_view_vector<U>;
-
-        template <typename U = value_type>
-        explicit constexpr simple_view_vector(size_type size = 0, const U* data = nullptr)
-            : size_(size)
-        {
-            assert(size >= 0);
-            if (size > 0) {
-                data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
-            }
-        }
-
-        template <typename InputIt>
-        explicit constexpr simple_view_vector(const InputIt& first, const InputIt& last)
-            : simple_view_vector(std::distance(first, last), &(*first))
-        { }
-
-        constexpr simple_view_vector(const simple_view_vector& other)
-            : size_(other.size_)
-        {
-            if (!other.empty()) {
-                data_ptr_ = other.data_ptr_;
-            }
-        }
-
-        constexpr simple_view_vector operator=(const simple_view_vector& other)
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-
-            if (!other.empty()) {
-                data_ptr_ = other.data_ptr_;
-            }
-
-            return *this;
-        }
-
-        constexpr simple_view_vector(simple_view_vector&& other) noexcept
-            : size_(other.size_)
-        {
-            data_ptr_ = other.data_ptr_;
-
-            other.data_ptr_ = nullptr;
-            other.size_ = 0;
-        }
-
-        constexpr simple_view_vector operator=(simple_view_vector&& other) noexcept
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-
-            data_ptr_ = other.data_ptr_;
-
-            other.data_ptr_ = nullptr;
-            other.size_ = 0;
-
-            return *this;
-        }
-
-        constexpr ~simple_view_vector() noexcept = default;
-
-        [[nodiscard]] constexpr bool empty() const noexcept
-        {
-            return size_ == 0 && !data_ptr_;
-        }
-
-        [[nodiscard]] constexpr size_type size() const noexcept
-        {
-            return size_;
-        }
-
-        [[nodiscard]] constexpr pointer data() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr pointer begin() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr pointer end() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer begin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer end() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer cend() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
-        {
-            return reverse_iterator(end());
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rend() noexcept
-        {
-            return reverse_iterator(begin());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
-        {
-            return const_reverse_iterator(cend());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
-        {
-            return const_reverse_iterator(cbegin());
-        }
-
-        [[nodiscard]] constexpr const_reference back() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr reference back() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr const_reference front() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[0];
-        }
-
-        [[nodiscard]] constexpr reference front() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[0];
-        }
-
-    private:
-        size_type size_ = 0;
-        std::uint8_t* data_ptr_ = nullptr;
-    };
-
-    template <typename T, template <typename> typename Allocator = lightweight_allocator>
-    [[nodiscard]] inline constexpr bool operator==(
-        const simple_view_vector<T>& lhs, const simple_view_vector<T>& rhs)
-    {
-        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
-
-
-
-
-
-
-
 }
 
 using details::simple_dynamic_vector;
 using details::simple_static_vector;
-using details::simple_view_vector;
 }
 
 namespace oc {
@@ -1173,14 +1024,6 @@ namespace details {
         static constexpr std::int64_t size = N;
         template <typename U>
         using replaced_type = static_storage_info<U, N>;
-    };
-
-    template <typename T>
-    struct view_storage_info {
-        using storage_type = simple_view_vector<T>;
-        static constexpr std::int64_t size = std::dynamic_extent;
-        template <typename U>
-        using replaced_type = view_storage_info<U>;
     };
 
     struct arrnd_header_tag { };
@@ -3425,11 +3268,16 @@ namespace details {
 
 
 
-    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+        template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
     [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
         const InputDataIt& first_data, const InputDataIt& last_data)
     {
-        return typename ArCo::replaced_view(first_dim, last_dim, first_data, last_data);
+        ArCo res;
+        res.header() = typename ArCo::header_type(first_dim, last_dim);
+        res.storage() = std::allocate_shared<typename ArCo::storage_type>(
+            typename ArCo::template shared_ref_allocator_type<typename ArCo::storage_type>(), first_data, last_data,
+            true);
+        return res;
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
     [[nodiscard]] inline constexpr auto view(
@@ -4911,8 +4759,6 @@ namespace details {
         using replaced_type
             = arrnd<U, /*typename Storage*/ typename /*StorageInfo*/ DataStorageInfo::template replaced_type<U>,
                 /*Header*/ /*header_type*/ DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
-
-        using replaced_view = arrnd<value_type, view_storage_info<value_type>, DimsStorageInfo, SharedRefAllocator>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
