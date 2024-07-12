@@ -23,6 +23,7 @@
 #include <cxxabi.h>
 #endif
 #include <ranges>
+#include <span>
 
 namespace oc {
 namespace details {
@@ -78,19 +79,17 @@ namespace details {
     template <typename Iter, typename T>
     concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter, template <typename...> typename T>
-    concept iterator_of_template_type = std::input_iterator<Iter>&& template_type<iterator_value_type<Iter>, T>;
+    concept iterator_of_template_type = std::input_iterator<Iter> && template_type<iterator_value_type<Iter>, T>;
 
     template <typename Cont>
-    concept iterable = requires(Cont&& c) {
-                           {
-                               std::begin(c)
-                           };
-                           {
-                               std::end(c)
-                           };
-                       }/* && !
-    std::is_array_v<Cont>*/;
-    template<typename Cont>
+    concept iterable = requires(Cont&& c)
+    {
+        {std::begin(c)};
+        {std::end(c)};
+    } /* && !
+    std::is_array_v<Cont>*/
+    ;
+    template <typename Cont>
     using iterable_value_type = std::remove_reference_t<decltype(*std::begin(std::declval<Cont&>()))>;
     template <typename Cont, typename T>
     concept iterable_of_type = iterable<Cont> && requires(Cont&& c) {
@@ -99,13 +98,11 @@ namespace details {
                                                          } -> std::same_as<T>;
                                                  };
     template <typename Cont, template <typename...> typename T>
-    concept iterable_of_template_type = iterable<Cont>&& requires(Cont&& c)
-    {
-        {
-            std::remove_cvref_t<decltype(*std::begin(c))> { }
-        }
-        ->template_type<T>;
-    };
+    concept iterable_of_template_type = iterable<Cont> && requires(Cont&& c) {
+                                                              {
+                                                                  std::remove_cvref_t<decltype(*std::begin(c))>{}
+                                                                  } -> template_type<T>;
+                                                          };
 
     template <typename T>
     concept random_access_type = std::random_access_iterator<typename T::iterator>;
@@ -217,7 +214,8 @@ namespace details {
 
         template <typename U = value_type>
         explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
-            : size_(size), is_view_(is_view)
+            : size_(size)
+            , is_view_(is_view)
         {
             assert(size >= 0);
             if (size > 0) {
@@ -777,7 +775,7 @@ namespace details {
     }
 
     template </*std::floating_point*/ typename T>
-    requires(std::floating_point<T> || template_type<T, std::complex>)
+        requires(std::floating_point<T> || template_type<T, std::complex>)
     [[nodiscard]] inline constexpr T default_atol() noexcept
     {
         return T{1e-8};
@@ -796,7 +794,7 @@ namespace details {
     }
 
     template </*std::floating_point*/ typename T>
-    requires(std::floating_point<T> || template_type<T, std::complex>)
+        requires(std::floating_point<T> || template_type<T, std::complex>)
     [[nodiscard]] inline constexpr T default_rtol() noexcept
     {
         return T{1e-5};
@@ -809,8 +807,8 @@ namespace details {
     //}
 
     template <typename T1, typename T2>
-    requires((std::is_arithmetic_v<T1> || template_type<T1, std::complex>)&&(
-        std::is_arithmetic_v<T2> || template_type<T2, std::complex>))
+        requires((std::is_arithmetic_v<T1> || template_type<T1, std::complex>)
+            && (std::is_arithmetic_v<T2> || template_type<T2, std::complex>))
     [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b,
         const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(),
         const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>()) noexcept
@@ -1245,7 +1243,7 @@ namespace details {
             typename storage_type::template replaced_type<interval_type> ranges(axis + 1);
 
             std::fill(ranges.begin(), ranges.end(), interval_type::full());
-            ranges[std::ssize(ranges) - 1] = range/*.align(*std::next(dims_.cbegin(), axis))*/;
+            ranges[std::ssize(ranges) - 1] = range /*.align(*std::next(dims_.cbegin(), axis))*/;
 
             return subheader(ranges.begin(), ranges.end());
         }
@@ -1526,9 +1524,9 @@ namespace details {
             return is_reduced_dims_from(dims.begin(), dims.end());
         }
 
-
         template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr storage_type complement_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
+        [[nodiscard]] constexpr storage_type complement_dims_from(
+            const InputIt& first_dim, const InputIt& last_dim) const
         {
             assert(dims_.size() == std::distance(first_dim, last_dim));
 
@@ -1557,7 +1555,6 @@ namespace details {
         {
             return complement_dims_from(dims.begin(), dims.end());
         }
-
 
         constexpr arrnd_header(arrnd_header&& other) = default;
         constexpr arrnd_header& operator=(arrnd_header&& other) = default;
@@ -1789,14 +1786,13 @@ namespace details {
             //    firsts_[i].index = 0;
             //}
 
-            for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
+            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
                 ++indices_[hdr_.dims().size() - 1 - i];
                 current_index_ += hdr_.strides()[hdr_.dims().size() - 1 - i];
                 if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
                     return *this;
                 }
-                current_index_
-                    -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
+                current_index_ -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
                 indices_[hdr_.dims().size() - 1 - i] = 0;
             }
 
@@ -1848,15 +1844,15 @@ namespace details {
             //    current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
             //}
 
-            for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
+            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
                 --indices_[hdr_.dims().size() - 1 - i];
                 current_index_ -= hdr_.strides()[hdr_.dims().size() - 1 - i];
                 if (indices_[hdr_.dims().size() - 1 - i] > -1) {
                     return *this;
                 }
                 indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[hdr_.dims().size() - 1 - i] - 1;
-                current_index_ += (indices_[hdr_.dims().size() - 1 - i] + 1)
-                    * hdr_.strides()[hdr_.dims().size() - 1 - i];
+                current_index_
+                    += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
             }
 
             return *this;
@@ -1928,10 +1924,10 @@ namespace details {
             //}
 
             //if (std::ssize(hdr_.dims()) > 3) {
-                indices_ = storage_type(hdr_.dims().size()/* - 3*/);
-                for (size_type i = 0/*3*/; i < hdr_.dims().size(); ++i) {
-                    indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
-                }
+            indices_ = storage_type(hdr_.dims().size() /* - 3*/);
+            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
+                indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
+            }
             //}
 
             current_index_ = backward ? hdr_.last_index() : hdr_.offset();
@@ -2199,7 +2195,8 @@ namespace details {
     struct arrnd_returned_slice_iterator_tag { };
 
     template <typename Arrnd>
-    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_const_iterator;
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    class arrnd_const_iterator;
 
     template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
@@ -2456,7 +2453,8 @@ namespace details {
     };
 
     template <typename Arrnd>
-    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_const_reverse_iterator;
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    class arrnd_const_reverse_iterator;
 
     template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
@@ -2713,7 +2711,8 @@ namespace details {
     };
 
     template <typename Arrnd>
-    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_slice_const_iterator;
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    class arrnd_slice_const_iterator;
 
     template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
@@ -2988,7 +2987,8 @@ namespace details {
     };
 
     template <typename Arrnd>
-    requires std::is_same_v<typename Arrnd::tag, arrnd_tag> class arrnd_slice_reverse_const_iterator;
+        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
+    class arrnd_slice_reverse_const_iterator;
 
     template <typename Arrnd>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
@@ -3265,10 +3265,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-
-
-
-        template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+    template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
     [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
         const InputDataIt& first_data, const InputDataIt& last_data)
     {
@@ -3309,20 +3306,20 @@ namespace details {
         return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterator InputDimsIt, iterable DataCont>
-    requires(!template_type<DataCont, std::initializer_list>)
+        requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(
         const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
     {
         return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, iterable DataCont>
-    requires(!template_type<DataCont, std::initializer_list>)
+        requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
     {
         return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
     }
     template <arrnd_compliant ArCo, iterable DataCont>
-    requires(!template_type<DataCont, std::initializer_list>)
+        requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
     {
         return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
@@ -3330,11 +3327,8 @@ namespace details {
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto view(const T& value)
     {
-        return view<ArCo>({1}, &value, & value + 1);
+        return view<ArCo>({1}, &value, &value + 1);
     }
-
-
-
 
     template <arrnd_compliant Arrnd>
     class arrnd_back_insert_iterator {
@@ -3349,19 +3343,19 @@ namespace details {
 
         arrnd_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_back/*<0>*/(cont);
+            *cont_ = cont_->push_back /*<0>*/ (cont);
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_back/*<0>*/(std::move(cont));
+            *cont_ = cont_->push_back /*<0>*/ (std::move(cont));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->push_back/*<0>*/(/*Arrnd({1}, {value})*/view<Arrnd>(value));
+            *cont_ = cont_->push_back /*<0>*/ (/*Arrnd({1}, {value})*/ view<Arrnd>(value));
             return *this;
         }
 
@@ -3409,13 +3403,13 @@ namespace details {
 
         arrnd_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_front/*<0>*/(cont);
+            *cont_ = cont_->push_front /*<0>*/ (cont);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_front/*<0>*/(std::move(cont));
+            *cont_ = cont_->push_front /*<0>*/ (std::move(cont));
             return *this;
         }
 
@@ -3471,14 +3465,14 @@ namespace details {
 
         arrnd_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(cont, ind_);
+            *cont_ = cont_->insert /*<0>*/ (cont, ind_);
             ind_ += cont.header().numel();
             return *this;
         }
 
         arrnd_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(std::move(cont), ind_);
+            *cont_ = cont_->insert /*<0>*/ (std::move(cont), ind_);
             ind_ += cont.header().numel();
             return *this;
         }
@@ -3539,13 +3533,13 @@ namespace details {
 
         arrnd_slice_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_back/*<0>*/(cont, axis_);
+            *cont_ = cont_->push_back /*<0>*/ (cont, axis_);
             return *this;
         }
 
         arrnd_slice_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_back/*<0>*/(std::move(cont), axis_);
+            *cont_ = cont_->push_back /*<0>*/ (std::move(cont), axis_);
             return *this;
         }
 
@@ -3591,13 +3585,13 @@ namespace details {
 
         arrnd_slice_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(cont, 0, axis_);
+            *cont_ = cont_->insert /*<0>*/ (cont, 0, axis_);
             return *this;
         }
 
         arrnd_slice_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(std::move(cont), 0, axis_);
+            *cont_ = cont_->insert /*<0>*/ (std::move(cont), 0, axis_);
             return *this;
         }
 
@@ -3644,14 +3638,14 @@ namespace details {
 
         arrnd_slice_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(cont, ind_, axis_);
+            *cont_ = cont_->insert /*<0>*/ (cont, ind_, axis_);
             ind_ += cont.header().dims()[axis_];
             return *this;
         }
 
         arrnd_slice_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert/*<0>*/(std::move(cont), ind_, axis_);
+            *cont_ = cont_->insert /*<0>*/ (std::move(cont), ind_, axis_);
             ind_ += cont.header().dims()[axis_];
             return *this;
         }
@@ -3759,6 +3753,16 @@ namespace details {
     template </*arrnd_compliant*/ typename ArCo, std::int64_t Level = ArCo::depth>
         requires std::is_same_v<typename ArCo::tag, arrnd_tag>
     using arrnd_inner_t = arrnd_inner<ArCo, Level>::type;
+
+    template <typename ArCo, std::int64_t Depth>
+        requires(Depth >= 0)
+    struct arrnd_nested {
+        using type = typename ArCo::template replaced_type<typename arrnd_nested<ArCo, Depth - 1>::type>;
+    };
+    template <typename ArCo>
+    struct arrnd_nested<ArCo, 0> {
+        using type = ArCo;
+    };
 
     template <typename T>
     struct typed {
@@ -4219,8 +4223,7 @@ namespace details {
                 if constexpr (template_type<P, zipped_cont>) {
                     using std::begin;
                     return begin(ip.cont(), std::get<I>(ip.args())...);
-                }
-                else {
+                } else {
                     return ip.first();
                 }
             };
@@ -4240,8 +4243,7 @@ namespace details {
                 if constexpr (template_type<P, zipped_cont>) {
                     using std::end;
                     return end(ip.cont(), std::get<I>(ip.args())...);
-                }
-                else {
+                } else {
                     return ip.last();
                 }
             };
@@ -4261,8 +4263,7 @@ namespace details {
                 if constexpr (template_type<P, zipped_cont>) {
                     using std::rbegin;
                     return rbegin(ip.cont(), std::get<I>(ip.args())...);
-                }
-                else {
+                } else {
                     return ip.first();
                 }
             };
@@ -4282,8 +4283,7 @@ namespace details {
                 if constexpr (template_type<P, zipped_cont>) {
                     using std::rend;
                     return rend(ip.cont(), std::get<I>(ip.args())...);
-                }
-                else {
+                } else {
                     return ip.last();
                 }
             };
@@ -4691,7 +4691,7 @@ namespace details {
         }
 
         ArCo res(first_dim, last_dim, typename ArCo::value_type{0});
-        return res./*template */browse/*<0>*/(2, [eye_impl](auto page) {
+        return res./*template */ browse /*<0>*/ (2, [eye_impl](auto page) {
             return eye_impl(page.header().dims().front(), page.header().dims().back());
         });
     }
@@ -4711,8 +4711,6 @@ namespace details {
     //    return eye<ArCo>(std::begin(dims), std::end(dims));
     //}
 
-
-
     //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
     //    template <typename> typename SharedRefAllocator = lightweight_allocator,
     //    arrnd_header_compliant Header = arrnd_header<>/*, template <typename> typename Indexer = arrnd_indexer,
@@ -4728,8 +4726,8 @@ namespace details {
     class arrnd {
     public:
         using value_type = T;
-        using size_type = /*std::int64_t*/std::make_signed_t<typename DataStorageInfo::storage_type::size_type>;
-        using difference_type = /*std::int64_t*/size_type;
+        using size_type = /*std::int64_t*/ std::make_signed_t<typename DataStorageInfo::storage_type::size_type>;
+        using difference_type = /*std::int64_t*/ size_type;
         using reference = T&;
         using const_reference = const T&;
         using pointer = T*;
@@ -4786,16 +4784,9 @@ namespace details {
         constexpr static bool is_flat = depth == 0;
 
         template <std::int64_t Depth>
-            requires(Depth >= 0)
-        struct nested {
-            using type = replaced_type<typename nested<Depth - 1>::type>;
-        };
-        template <>
-        struct nested<0> {
-            using type = this_type;
-        };
+        using nested = arrnd_nested<this_type, Depth>;
         template <std::int64_t Depth>
-        using nested_t = typename nested<Depth>::type;
+        using nested_t = nested<Depth>::type;
 
         template <typename U, std::int64_t Level = this_type::depth>
         using tol_type = decltype(inner_value_type<Level>{} - U{});
@@ -4902,9 +4893,9 @@ namespace details {
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
-            , buffsp_(hdr_.empty()
-                      ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), first_data, last_data))
+            , buffsp_(hdr_.empty() ? nullptr
+                                   : std::allocate_shared<storage_type>(
+                                       shared_ref_allocator_type<storage_type>(), first_data, last_data))
         {
             // in case that data buffer allocated, check the number of data elements is valid
             if (buffsp_) {
@@ -4964,17 +4955,17 @@ namespace details {
         //{ }
 
         template <signed_integral_type_iterator InputDimsIt, iterable DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
+            requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
         template <signed_integral_type_iterable Cont, iterable DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
+            requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const Cont& dims, const DataCont& data)
             : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
         { }
         template <iterable DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
+            requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(std::initializer_list<size_type> dims, const DataCont& data)
             : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
         { }
@@ -5079,29 +5070,30 @@ namespace details {
         //    : arrnd(std::begin(dims), std::end(dims), value)
         //{ }
 
-        template <signed_integral_type_iterator InputDimsIt, typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func/*, Args...*/>)
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func/*, Args&&... args*/)
+        template <signed_integral_type_iterator InputDimsIt, typename Func /*, typename... Args*/>
+            requires(invocable_no_arrnd<Func /*, Args...*/>)
+        explicit constexpr arrnd(
+            const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func /*, Args&&... args*/)
             : hdr_(first_dim, last_dim)
             , buffsp_(hdr_.empty()
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), hdr_.numel()))
         {
             if (buffsp_) {
-                std::for_each(buffsp_->begin(), buffsp_->end(), [&func/*, &args...*/](auto& value) {
+                std::for_each(buffsp_->begin(), buffsp_->end(), [&func /*, &args...*/](auto& value) {
                     value = static_cast<value_type>(func(/*std::forward<Args>(args)...*/));
                 });
             }
         }
-        template <signed_integral_type_iterable Cont, typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func/*, Args...*/>)
-        explicit constexpr arrnd(const Cont& dims, Func&& func/*, Args&&... args*/)
-            : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func)/*, std::forward<Args>(args)...*/)
+        template <signed_integral_type_iterable Cont, typename Func /*, typename... Args*/>
+            requires(invocable_no_arrnd<Func /*, Args...*/>)
+        explicit constexpr arrnd(const Cont& dims, Func&& func /*, Args&&... args*/)
+            : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func) /*, std::forward<Args>(args)...*/)
         { }
-        template <typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func/*, Args...*/>)
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func/*, Args&&... args*/)
-            : arrnd(dims.begin(), dims.end(), std::forward<Func>(func)/*, std::forward<Args>(args)...*/)
+        template <typename Func /*, typename... Args*/>
+            requires(invocable_no_arrnd<Func /*, Args...*/>)
+        explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func /*, Args&&... args*/)
+            : arrnd(dims.begin(), dims.end(), std::forward<Func>(func) /*, std::forward<Args>(args)...*/)
         { }
         //template <std::integral D, std::int64_t M, typename Func, typename... Args>
         //    requires(invocable_no_arrnd<Func, Args...>)
@@ -5251,13 +5243,11 @@ namespace details {
         {
             return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](
-            std::initializer_list<interval_type> ranges) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval_type> ranges) const&
         {
             return (*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](
-            std::initializer_list<interval_type> ranges) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval_type> ranges) const&&
         {
             return std::move(*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
@@ -5351,16 +5341,16 @@ namespace details {
 
         [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
         {
-            return reshape/*<0>*/(shape);
+            return reshape /*<0>*/ (shape);
         }
 
-        template <typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, value_type/*, Args...*/>
-        [[nodiscard]] constexpr auto operator()(Pred&& pred/*, Args&&... args*/) const
+        template <typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, value_type /*, Args...*/>
+        [[nodiscard]] constexpr auto operator()(Pred&& pred /*, Args&&... args*/) const
         {
             //auto selector = std::bind(std::forward<Pred>(pred), std::placeholders::_1, std::forward<Args>(args)...);
-            auto selector = [&pred/*, &args...*/](const value_type& value) {
-                return pred(value/*, std::forward<Args>(args)...*/);
+            auto selector = [&pred /*, &args...*/](const value_type& value) {
+                return pred(value /*, std::forward<Args>(args)...*/);
             };
 
             /*    auto selector = [&args](const value_type& vt) {
@@ -5468,9 +5458,9 @@ namespace details {
         //    return copy_to(std::forward<ArCo>(dst), std::make_pair(std::begin(indices), std::end(indices)));
         //}
 
-        template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, value_type/*, Args...*/>
-        constexpr const this_type& copy_to(ArCo&& dst, Pred&& pred/*, Args&&... args*/) const
+        template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, value_type /*, Args...*/>
+        constexpr const this_type& copy_to(ArCo&& dst, Pred&& pred /*, Args&&... args*/) const
         {
             if (empty() || dst.empty()) {
                 return *this;
@@ -5624,8 +5614,8 @@ namespace details {
             return res;
         }
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -5680,7 +5670,7 @@ namespace details {
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
         {
-            return reshape/*<this_type::depth, Cont>*/(std::begin(new_dims), std::end(new_dims));
+            return reshape /*<this_type::depth, Cont>*/ (std::begin(new_dims), std::end(new_dims));
         }
         //template <std::int64_t Level>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
@@ -5689,7 +5679,7 @@ namespace details {
         //}
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
         {
-            return reshape/*<this_type::depth>*/(new_dims.begin(), new_dims.end());
+            return reshape /*<this_type::depth>*/ (new_dims.begin(), new_dims.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const U (&new_dims)[M]) const
@@ -5721,7 +5711,7 @@ namespace details {
         //    return res;
         //}
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
         {
             if (empty()) {
@@ -5730,11 +5720,11 @@ namespace details {
 
             switch (shape) {
             case arrnd_shape_preset::vector:
-                return reshape/*<Level>*/({hdr_.numel()});
+                return reshape /*<Level>*/ ({hdr_.numel()});
             case arrnd_shape_preset::row:
-                return reshape/*<Level>*/({size_type{1}, hdr_.numel()});
+                return reshape /*<Level>*/ ({size_type{1}, hdr_.numel()});
             case arrnd_shape_preset::column:
-                return reshape/*<Level>*/({hdr_.numel(), size_type{1}});
+                return reshape /*<Level>*/ ({hdr_.numel(), size_type{1}});
             default:
                 assert(false && "unknown arrnd_shape_preset value");
                 return this_type();
@@ -5745,8 +5735,8 @@ namespace details {
         //    return reshape<this_type::depth>(shape);
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -5762,8 +5752,7 @@ namespace details {
 
             size_type n = std::min({std::distance(first_new_dim, last_new_dim), hdr_.dims().size()});
 
-            typename header_type::storage_type::template replaced_type<interval_type> prev_ranges(
-                hdr_.dims().size());
+            typename header_type::storage_type::template replaced_type<interval_type> prev_ranges(hdr_.dims().size());
             std::fill(prev_ranges.begin(), prev_ranges.end(), interval_type::full());
 
             typename header_type::storage_type::template replaced_type<interval_type> new_ranges(
@@ -5827,7 +5816,7 @@ namespace details {
         template <signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
         {
-            return resize/*<this_type::depth, Cont>*/(std::begin(new_dims), std::end(new_dims));
+            return resize /*<this_type::depth, Cont>*/ (std::begin(new_dims), std::end(new_dims));
         }
         //template <std::int64_t Level>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
@@ -5836,7 +5825,7 @@ namespace details {
         //}
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
         {
-            return resize/*<this_type::depth>*/(new_dims.begin(), new_dims.end());
+            return resize /*<this_type::depth>*/ (new_dims.begin(), new_dims.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const U (&new_dims)[M]) const
@@ -5860,7 +5849,7 @@ namespace details {
         //    return append<this_type::depth, ArCo>(arr);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> push_back(const ArCo& arr, size_type axis = 0) const
         {
             size_type ind = empty() ? size_type{0} : *std::next(hdr_.dims().cbegin(), axis); /*hdr_.dims()[axis];*/
@@ -5976,9 +5965,10 @@ namespace details {
         //}
 
         template </*std::int64_t Level, */ arrnd_compliant ArCo>
-        requires(arrnd_depths_match<this_type, ArCo>)
-            //requires(Level == 0)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(const ArCo& arr, size_type ind, size_type axis = 0) const
+            requires(arrnd_depths_match<this_type, ArCo>)
+        //requires(Level == 0)
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
+            const ArCo& arr, size_type ind, size_type axis = 0) const
         {
             if (empty() && arr.empty()) {
                 assert(ind == 0);
@@ -6006,7 +5996,7 @@ namespace details {
             //    return this_type();
             //}
 
-            assert(ind >= 0 && ind <= *std::next(hdr_.dims().cbegin(), axis)/*hdr_.dims()[axis]*/);
+            assert(ind >= 0 && ind <= *std::next(hdr_.dims().cbegin(), axis) /*hdr_.dims()[axis]*/);
             assert(std::ssize(hdr_.dims()) == std::ssize(arr.header().dims()));
 
             bool same_dims_except_at_axis = std::equal(hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), axis),
@@ -6120,8 +6110,7 @@ namespace details {
         //    return repeat<this_type::depth>(count);
         //}
 
-
-        template </*std::int64_t Level, */iterator_of_template_type<std::tuple> InputIt>
+        template </*std::int64_t Level, */ iterator_of_template_type<std::tuple> InputIt>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_tuple, InputIt last_tuple) const
         {
             assert(std::distance(first_tuple, last_tuple) >= 0);
@@ -6131,7 +6120,7 @@ namespace details {
 
             std::for_each(first_tuple, last_tuple, [&res, &mid](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res./*template */push_back/*<Level>*/(mid, std::get<1>(tuple));
+                    res = res./*template */ push_back /*<Level>*/ (mid, std::get<1>(tuple));
                 }
                 mid = res;
             });
@@ -6143,20 +6132,20 @@ namespace details {
         //{
         //    return repeat<this_type::depth>(first_tuple, last_tuple);
         //}
-        template </*std::int64_t Level, */template_type<std::tuple> Tuple>
+        template </*std::int64_t Level, */ template_type<std::tuple> Tuple>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
         {
-            return repeat/*<Level>*/(count_axis_tuples.begin(), count_axis_tuples.end());
+            return repeat /*<Level>*/ (count_axis_tuples.begin(), count_axis_tuples.end());
         }
         //template <template_type<std::tuple> Tuple>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
         //{
         //    return repeat<this_type::depth>(count_axis_tuples.begin(), count_axis_tuples.end());
         //}
-        template </*std::int64_t Level, */iterable_of_template_type<std::tuple> Cont>
+        template </*std::int64_t Level, */ iterable_of_template_type<std::tuple> Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& count_axis_tuples) const
         {
-            return repeat/*<Level>*/(std::begin(count_axis_tuples), std::end(count_axis_tuples));
+            return repeat /*<Level>*/ (std::begin(count_axis_tuples), std::end(count_axis_tuples));
         }
         //template <iterable_of_template_type<std::tuple> Cont>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& count_axis_tuples) const
@@ -6174,10 +6163,7 @@ namespace details {
         //    return repeat<this_type::depth>(std::begin(count_axis_tuples), std::end(count_axis_tuples));
         //}
 
-
-
-
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_rep, InputIt last_rep) const
         {
             assert(std::distance(first_rep, last_rep) <= hdr_.dims().size());
@@ -6189,14 +6175,14 @@ namespace details {
             //this_type::template replaced_type<size_type> axes({nreps});
             //std::iota(axes.begin(), axes.end(), 0/*hdr_.dims().size() - nreps*/);
 
-            auto z = zip(zipped_iter(first_rep, last_rep)/*, zipped_cont(axes)*/);
+            auto z = zip(zipped_iter(first_rep, last_rep) /*, zipped_cont(axes)*/);
 
             auto res = *this;
             auto mid = res;
             size_type axis = 0;
             std::for_each(z.begin(), z.end(), [&res, &mid, &axis](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res./*template */push_back/*<Level>*/(mid, axis);
+                    res = res./*template */ push_back /*<Level>*/ (mid, axis);
                 }
                 ++axis;
                 mid = res;
@@ -6212,16 +6198,16 @@ namespace details {
         //template <std::int64_t Level>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> reps) const
         {
-            return repeat/*<Level>*/(reps.begin(), reps.end());
+            return repeat /*<Level>*/ (reps.begin(), reps.end());
         }
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> reps) const
         //{
         //    return repeat<this_type::depth>(reps.begin(), reps.end());
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
         {
-            return repeat/*<Level>*/(std::begin(reps), std::end(reps));
+            return repeat /*<Level>*/ (std::begin(reps), std::end(reps));
         }
         //template <signed_integral_type_iterable Cont>
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
@@ -6239,9 +6225,6 @@ namespace details {
         //    return repeat<this_type::depth>(std::begin(reps), std::end(reps));
         //}
 
-
-
-
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> axes) const
         //{
         //    auto res = *this;
@@ -6252,7 +6235,7 @@ namespace details {
         //}
 
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         //[[nodiscard]] constexpr maybe_shared_ref<this_type> remove(size_type ind, size_type count) const
         //{
         //    if (empty()) {
@@ -6302,7 +6285,7 @@ namespace details {
         //}
 
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         [[nodiscard]] constexpr maybe_shared_ref<this_type> erase(
             size_type count, size_type ind, size_type axis = 0) const
         {
@@ -6425,12 +6408,12 @@ namespace details {
         //    return remove<this_type::depth>(std::forward<Tuples>(tuples)...);
         //}
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto transform(Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto transform(Func&& func /*, Args&&... args*/) const
         {
             using transformed_type
-                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>/*, Args...*/>, Level>;
+                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level> /*, Args...*/>, Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -6442,19 +6425,19 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template transform<Level - 1, Func/*, Args...*/>(
-                    std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template transform<Level - 1, Func /*, Args...*/>(
+                    std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto transform(Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto transform(Func&& func /*, Args&&... args*/) const
         {
             using transformed_type
-                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>/*, Args...*/>, Level>;
+                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level> /*, Args...*/>, Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -6466,27 +6449,30 @@ namespace details {
             typename transformed_type::indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = func((*this)[*gen]/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = func((*this)[*gen] /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
 
-        template <typename Func/*, typename... Args*/>
-            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>/*, Args...*/>
-        [[nodiscard]] constexpr auto transform(Func&& func/*, Args&&... args*/) const
+        template <typename Func /*, typename... Args*/>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth> /*, Args...*/>
+        [[nodiscard]] constexpr auto transform(Func&& func /*, Args&&... args*/) const
         {
-            return transform<this_type::depth, Func/*, Args...*/>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return transform<this_type::depth, Func /*, Args...*/>(
+                std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-        requires(Level > 0
-            && invocable_no_arrnd<Func, inner_value_type<Level>, typename ArCo::template inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+            requires(Level > 0
+                && invocable_no_arrnd<Func, inner_value_type<Level>,
+                    typename ArCo::template inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func /*, Args&&... args*/) const
         {
-            using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
-                                                             typename ArCo::template inner_value_type<Level>/*, Args...*/>,
-                Level>;
+            using transformed_type
+                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
+                                          typename ArCo::template inner_value_type<Level> /*, Args...*/>,
+                    Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -6520,9 +6506,10 @@ namespace details {
                 Args...*/>)
         [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func/*, Args&&... args*/) const
         {
-            using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
-                                                             typename ArCo::template inner_value_type<Level>/*, Args...*/>,
-                Level>;
+            using transformed_type
+                = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
+                                          typename ArCo::template inner_value_type<Level> /*, Args...*/>,
+                    Level>;
 
             if (empty()) {
                 return transformed_type();
@@ -6531,7 +6518,7 @@ namespace details {
             if (hdr_.is_scalar()) {
                 auto val = (*this)(0);
                 auto tfunc = [&](const auto& a) -> typename transformed_type::value_type {
-                    return func(val, a/*, std::forward<Args>(args)...*/);
+                    return func(val, a /*, std::forward<Args>(args)...*/);
                 };
                 return arr.template transform<Level>(tfunc);
             }
@@ -6539,7 +6526,7 @@ namespace details {
             if (arr.header().is_scalar()) {
                 auto val = arr(0);
                 auto tfunc = [&](const auto& a) -> typename transformed_type::value_type {
-                    return func(a, val/*, std::forward<Args>(args)...*/);
+                    return func(a, val /*, std::forward<Args>(args)...*/);
                 };
                 return transform<Level>(tfunc);
             }
@@ -6549,10 +6536,10 @@ namespace details {
 
             if (arr1.header().is_reduced_dims_from(arr2.header().dims())) {
                 auto reps = arr1.header().complement_dims_from(arr2.header().dims());
-                arr1 = arr1./*template */repeat/*<Level>*/(reps);
+                arr1 = arr1./*template */ repeat /*<Level>*/ (reps);
             } else if (arr2.header().is_reduced_dims_from(arr1.header().dims())) {
                 auto reps = arr2.header().complement_dims_from(arr1.header().dims());
-                arr2 = arr2./*template */repeat/*<Level>*/(reps);
+                arr2 = arr2./*template */ repeat /*<Level>*/ (reps);
             }
 
             //if (hdr_.dims() != arr.header().dims()) {
@@ -6568,39 +6555,40 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr2.header());
 
             for (; gen && arr_gen && res_gen; ++gen, ++arr_gen, ++res_gen) {
-                res[*res_gen] = func(arr1[*gen], arr2[*arr_gen]/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = func(arr1[*gen], arr2[*arr_gen] /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
 
-        template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>, typename ArCo::value_type/*, Args...*/>
-        [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func/*, Args&&... args*/) const
+        template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>,
+                typename ArCo::value_type /*, Args...*/>
+        [[nodiscard]] constexpr auto transform(const ArCo& arr, Func&& func /*, Args&&... args*/) const
         {
-            return transform<this_type::depth, ArCo, Func/*, Args...*/>(
-                arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return transform<this_type::depth, ArCo, Func /*, Args...*/>(
+                arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>/*, Args...*/>)
-        constexpr this_type& apply(Func&& func/*, Args&&... args*/)
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level> /*, Args...*/>)
+        constexpr this_type& apply(Func&& func /*, Args&&... args*/)
         {
             if (empty()) {
                 return *this;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                (*this)[*gen].template apply<Level - 1, Func/*, Args...*/>(
-                    std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                (*this)[*gen].template apply<Level - 1, Func /*, Args...*/>(
+                    std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return *this;
         }
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>/*, Args...*/>)
-        constexpr this_type& apply(Func&& func/*, Args&&... args*/)
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level> /*, Args...*/>)
+        constexpr this_type& apply(Func&& func /*, Args&&... args*/)
         {
             if (empty()) {
                 return *this;
@@ -6620,11 +6608,12 @@ namespace details {
             return *this;
         }
 
-        template <typename Func/*, typename... Args*/>
-            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>/*, Args...*/>
-        constexpr this_type& apply(Func&& func/*, Args&&... args*/)
+        template <typename Func /*, typename... Args*/>
+            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth> /*, Args...*/>
+        constexpr this_type& apply(Func&& func /*, Args&&... args*/)
         {
-            return apply<this_type::depth, Func/*, Args...*/>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return apply<this_type::depth, Func /*, Args...*/>(
+                std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
@@ -6640,7 +6629,7 @@ namespace details {
             if (arr.header().is_scalar()) {
                 auto val = arr(0);
                 auto tfunc = [&](const auto& a) {
-                    return func(a, val/*, std::forward<Args>(args)...*/);
+                    return func(a, val /*, std::forward<Args>(args)...*/);
                 };
                 return apply<Level>(tfunc);
             }
@@ -6649,7 +6638,7 @@ namespace details {
 
             if (arr.header().is_reduced_dims_from(hdr_.dims())) {
                 auto reps = arr.header().complement_dims_from(hdr_.dims());
-                carr = arr./*template */repeat/*<Level>*/(reps);
+                carr = arr./*template */ repeat /*<Level>*/ (reps);
             }
 
             //if (hdr_.dims() != arr.header().dims()) {
@@ -6693,27 +6682,29 @@ namespace details {
 
             for (indexer_type gen(hdr_); gen; ++gen) {
                 (*this)[*gen]
-                    .template apply<Level - 1, typename ArCo::template inner_value_type<Level - 1>, Func/*, Args...*/>(
-                    arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                    .template apply<Level - 1, typename ArCo::template inner_value_type<Level - 1>, Func /*, Args...*/>(
+                        arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return *this;
         }
 
-        template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
+        template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
             requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>,
-                typename ArCo::template inner_value_type<ArCo::depth>/*, Args...*/>
-        constexpr this_type& apply(const ArCo& arr, Func&& func/*, Args&&... args*/)
+                typename ArCo::template inner_value_type<ArCo::depth> /*, Args...*/>
+        constexpr this_type& apply(const ArCo& arr, Func&& func /*, Args&&... args*/)
         {
-            return apply<this_type::depth, ArCo, Func/*, Args...*/>(
-                arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return apply<this_type::depth, ArCo, Func /*, Args...*/>(
+                arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto reduce(Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(
+                Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto reduce(Func&& func /*, Args&&... args*/) const
         {
-            using reduced_type = std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>;
+            using reduced_type
+                = std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>;
 
             if (empty()) {
                 return reduced_type();
@@ -6721,22 +6712,23 @@ namespace details {
 
             indexer_type gen(hdr_);
 
-            reduced_type res = (/*static_cast<reduced_type>*/((*this)[*gen]));
+            reduced_type res = (/*static_cast<reduced_type>*/ ((*this)[*gen]));
             ++gen;
 
             while (gen) {
-                res = func(std::forward<reduced_type>(res), (*this)[*gen]/*, std::forward<Args>(args)...*/);
+                res = func(std::forward<reduced_type>(res), (*this)[*gen] /*, std::forward<Args>(args)...*/);
                 ++gen;
             }
 
             return res;
         }
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto reduce(Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(
+                Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto reduce(Func&& func /*, Args&&... args*/) const
         {
             using reduced_type = inner_replaced_type<
-                std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>, Level - 1>;
+                std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>, Level - 1>;
 
             if (empty()) {
                 return reduced_type();
@@ -6748,43 +6740,44 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func/*, Args...*/>(
-                    std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func /*, Args...*/>(
+                    std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
         template <typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>,
-                Args...>)
+            requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>/*,
+                Args...*/>)
         [[nodiscard]] constexpr auto reduce(Func&& func/*, Args&&... args*/) const
         {
-            return reduce<this_type::depth, Func/*, Args...*/>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return reduce<this_type::depth, Func /*, Args...*/>(
+                std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, typename U, typename Func/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Func, U, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(const U& init, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename U, typename Func /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Func, U, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func /*, Args&&... args*/) const
         {
-            using folded_type = std::invoke_result_t<Func, U, inner_value_type<Level>/*, Args...*/>;
+            using folded_type = std::invoke_result_t<Func, U, inner_value_type<Level> /*, Args...*/>;
 
             if (empty()) {
                 return init;
             }
 
-            folded_type res = /*(static_cast<folded_type>*/(init)/*)*/;
+            folded_type res = /*(static_cast<folded_type>*/ (init) /*)*/;
             for (indexer_type gen{hdr_}; gen; ++gen) {
-                res = func(res, (*this)[*gen]/*, std::forward<Args>(args)...*/);
+                res = func(res, (*this)[*gen] /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
-        template <std::int64_t Level, typename U, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, U, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(const U& init, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename U, typename Func /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Func, U, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func /*, Args&&... args*/) const
         {
             using folded_type
-                = inner_replaced_type<std::invoke_result_t<Func, U, inner_value_type<Level>/*, Args...*/>, Level - 1>;
+                = inner_replaced_type<std::invoke_result_t<Func, U, inner_value_type<Level> /*, Args...*/>, Level - 1>;
 
             if (empty()) {
                 return folded_type();
@@ -6796,26 +6789,27 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template fold<Level - 1, U, Func/*, Args...*/>(
-                    init, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template fold<Level - 1, U, Func /*, Args...*/>(
+                    init, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
-        template <typename U, typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func, U, inner_value_type<this_type::depth>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(const U& init, Func&& func/*, Args&&... args*/) const
+        template <typename U, typename Func /*, typename... Args*/>
+            requires(invocable_no_arrnd<Func, U, inner_value_type<this_type::depth> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(const U& init, Func&& func /*, Args&&... args*/) const
         {
-            return fold<this_type::depth, U, Func/*, Args...*/>(
-                init, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return fold<this_type::depth, U, Func /*, Args...*/>(
+                init, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(
+                Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func /*, Args&&... args*/) const
         {
-            using reduced_type
-                = replaced_type<std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>>;
+            using reduced_type = replaced_type<
+                std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>>;
 
             if (empty()) {
                 return reduced_type();
@@ -6837,7 +6831,7 @@ namespace details {
 
             while (gen && res_gen) {
                 typename reduced_type::value_type res_element = (
-                    /*static_cast<typename reduced_type::value_type>*/((*this)[*gen]));
+                    /*static_cast<typename reduced_type::value_type>*/ ((*this)[*gen]));
                 ++gen;
                 for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
                     res_element = func(std::forward<typename reduced_type::value_type>(res_element), (*this)[*gen]/*,
@@ -6849,12 +6843,13 @@ namespace details {
 
             return res;
         }
-        template <std::int64_t Level, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Func /*, typename... Args*/>
+            requires(
+                Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func /*, Args&&... args*/) const
         {
-            using reduced_type = inner_replaced_type<
-                replaced_type<std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>/*, Args...*/>>,
+            using reduced_type = inner_replaced_type<replaced_type<std::invoke_result_t<Func, inner_value_type<Level>,
+                                                         inner_value_type<Level> /*, Args...*/>>,
                 Level - 1>;
 
             if (empty()) {
@@ -6867,8 +6862,8 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func/*, Args...*/>(
-                    axis, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func /*, Args...*/>(
+                    axis, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
@@ -6878,16 +6873,17 @@ namespace details {
                 Args...*/>)
         [[nodiscard]] constexpr auto reduce(size_type axis, Func&& func/*, Args&&... args*/) const
         {
-            return reduce<this_type::depth, Func/*, Args...*/>(axis, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return reduce<this_type::depth, Func /*, Args...*/>(
+                axis, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-            requires(
-                Level == 0 && invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+            requires(Level == 0
+                && invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func /*, Args&&... args*/) const
         {
             using folded_type = replaced_type<
-                std::invoke_result_t<Func, typename ArCo::value_type, inner_value_type<Level>/*, Args...*/>>;
+                std::invoke_result_t<Func, typename ArCo::value_type, inner_value_type<Level> /*, Args...*/>>;
 
             if (empty()) {
                 return folded_type();
@@ -6913,9 +6909,9 @@ namespace details {
 
             while (gen && res_gen && init_gen) {
                 typename folded_type::value_type res_element = (
-                    /*static_cast<typename folded_type::value_type>*/(inits[*init_gen]));
+                    /*static_cast<typename folded_type::value_type>*/ (inits[*init_gen]));
                 for (size_type i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
-                    res_element = func(res_element, (*this)[*gen]/*, std::forward<Args>(args)...*/);
+                    res_element = func(res_element, (*this)[*gen] /*, std::forward<Args>(args)...*/);
                 }
                 res[*res_gen] = std::move(res_element);
                 ++res_gen;
@@ -6924,12 +6920,13 @@ namespace details {
 
             return res;
         }
-        template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func/*, Args&&... args*/) const
+        template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+            requires(
+                Level > 0 && invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func /*, Args&&... args*/) const
         {
-            using folded_type = inner_replaced_type<
-                replaced_type<std::invoke_result_t<Func, typename ArCo::value_type, inner_value_type<Level>/*, Args...*/>>,
+            using folded_type = inner_replaced_type<replaced_type<std::invoke_result_t<Func, typename ArCo::value_type,
+                                                        inner_value_type<Level> /*, Args...*/>>,
                 Level - 1>;
 
             if (empty()) {
@@ -6942,23 +6939,24 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template fold<Level - 1, ArCo, Func/*, Args...*/>(
-                    axis, inits, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template fold<Level - 1, ArCo, Func /*, Args...*/>(
+                    axis, inits, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
-        template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-            requires(invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<this_type::depth>/*, Args...*/>)
-        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func/*, Args&&... args*/) const
+        template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+            requires(
+                invocable_no_arrnd<Func, typename ArCo::value_type, inner_value_type<this_type::depth> /*, Args...*/>)
+        [[nodiscard]] constexpr auto fold(size_type axis, const ArCo& inits, Func&& func /*, Args&&... args*/) const
         {
-            return fold<this_type::depth, ArCo, Func/*, Args...*/>(
-                axis, inits, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            return fold<this_type::depth, ArCo, Func /*, Args...*/>(
+                axis, inits, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
         }
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr this_type filter(Pred&& pred/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr this_type filter(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return this_type();
@@ -6972,7 +6970,7 @@ namespace details {
             size_type res_count{0};
 
             while (gen && res_gen) {
-                if (pred((*this)[*gen]/*, std::forward<Args>(args)...*/)) {
+                if (pred((*this)[*gen] /*, std::forward<Args>(args)...*/)) {
                     res[*res_gen] = (*this)[*gen];
                     ++res_count;
                     ++res_gen;
@@ -6985,14 +6983,14 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res./*template */resize/*<Level>*/({res_count});
+                return res./*template */ resize /*<Level>*/ ({res_count});
             }
 
             return res;
         }
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr this_type filter(Pred&& pred/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr this_type filter(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return this_type();
@@ -7004,17 +7002,18 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template filter<Level - 1, Pred/*, Args...*/>(
-                    std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template filter<Level - 1, Pred /*, Args...*/>(
+                    std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
-        template <typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/>
-        [[nodiscard]] constexpr this_type filter(Pred&& pred/*, Args&&... args*/) const
+        template <typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth> /*, Args...*/>
+        [[nodiscard]] constexpr this_type filter(Pred&& pred /*, Args&&... args*/) const
         {
-            return filter<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return filter<this_type::depth, Pred /*, Args...*/>(
+                std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo>
@@ -7052,7 +7051,7 @@ namespace details {
                 }
 
                 if (res_count < hdr_.numel()) {
-                    return res./*template */resize/*<Level>*/({res_count});
+                    return res./*template */ resize /*<Level>*/ ({res_count});
                 }
 
                 return res;
@@ -7141,9 +7140,9 @@ namespace details {
         //    return filter<this_type::depth>(replaced_type<size_type>({M}, std::begin(indices), std::end(indices)));
         //}
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto find(Pred&& pred/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto find(Pred&& pred /*, Args&&... args*/) const
         {
             using found_type = inner_replaced_type<size_type, Level>;
 
@@ -7159,7 +7158,7 @@ namespace details {
             size_type res_count{0};
 
             while (gen && res_gen) {
-                if (pred((*this)[*gen]/*, std::forward<Args>(args)...*/)) {
+                if (pred((*this)[*gen] /*, std::forward<Args>(args)...*/)) {
                     res[*res_gen] = *gen;
                     ++res_count;
                     ++res_gen;
@@ -7172,14 +7171,14 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res./*template */resize/*<Level>*/({res_count});
+                return res./*template */ resize /*<Level>*/ ({res_count});
             }
 
             return res;
         }
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-        [[nodiscard]] constexpr auto find(Pred&& pred/*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr auto find(Pred&& pred /*, Args&&... args*/) const
         {
             using found_type = inner_replaced_type<size_type, Level>;
 
@@ -7193,17 +7192,18 @@ namespace details {
             indexer_type res_gen(res.header());
 
             for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template find<Level - 1, Pred/*, Args...*/>(
-                    std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+                res[*res_gen] = (*this)[*gen].template find<Level - 1, Pred /*, Args...*/>(
+                    std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
             }
 
             return res;
         }
-        template <typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/>
-        [[nodiscard]] constexpr auto find(Pred&& pred/*, Args&&... args*/) const
+        template <typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth> /*, Args...*/>
+        [[nodiscard]] constexpr auto find(Pred&& pred /*, Args&&... args*/) const
         {
-            return find<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return find<this_type::depth, Pred /*, Args...*/>(
+                std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo>
@@ -7242,7 +7242,7 @@ namespace details {
             }
 
             if (res_count < hdr_.numel()) {
-                return res./*template */resize/*<Level>*/({res_count});
+                return res./*template */ resize /*<Level>*/ ({res_count});
             }
 
             return res;
@@ -7313,7 +7313,7 @@ namespace details {
                 ret_type res({lhs.header().dims().front(), rhs.header().dims().back()});
 
                 size_type ind = 0;
-                auto trhs = rhs./*template */transpose/*<0>*/({1, 0});
+                auto trhs = rhs./*template */ transpose /*<0>*/ ({1, 0});
                 std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}),
                     lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
                         std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}),
@@ -7330,7 +7330,7 @@ namespace details {
             }
 
             if (arr.header().is_matrix()) {
-                return browse/*<0>*/(2, [&arr, impl](auto page) {
+                return browse /*<0>*/ (2, [&arr, impl](auto page) {
                     return impl(page, arr);
                 });
             } else {
@@ -7345,7 +7345,7 @@ namespace details {
                 auto arr_pages = arr.pages(2);
                 typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.header());
 
-                return browse/*<0>*/(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
+                return browse /*<0>*/ (2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
                     return impl(page, arr_pages[*(arr_pages_gen++)]);
                 });
             }
@@ -7412,7 +7412,7 @@ namespace details {
                 return this_type({1}, det_impl(*this));
             }
 
-            return browse/*<0>*/(2, [det_impl](auto page) {
+            return browse /*<0>*/ (2, [det_impl](auto page) {
                 return det_impl(page);
             });
         }
@@ -7467,7 +7467,7 @@ namespace details {
                 return inv_impl(*this);
             }
 
-            return browse/*<0>*/(2, [inv_impl](auto page) {
+            return browse /*<0>*/ (2, [inv_impl](auto page) {
                 return inv_impl(page);
             });
         }
@@ -7887,7 +7887,7 @@ namespace details {
         //    assert(hdr_.dims().size() >= 2);
 
         //    std::function<this_type(this_type)> qr_algorithm_impl;
-        //    
+        //
         //    qr_algorithm_impl = [&](this_type arr) {
         //        assert(arr.header().is_matrix());
         //        assert(arr.header().dims().front() == arr.header().dims().back());
@@ -8363,7 +8363,6 @@ namespace details {
         //        return res;
         //    };
 
-
         //    std::function<this_type(this_type)> diag_to_matrix_impl;
 
         //    diag_to_matrix_impl = [&](this_type arr) {
@@ -8390,7 +8389,6 @@ namespace details {
 
         //        return res;
         //    };
-
 
         //    if (type == arrnd_diag_type::from_matrix) {
         //        if (hdr_.is_matrix()) {
@@ -8571,8 +8569,8 @@ namespace details {
         //    //});
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
@@ -8622,10 +8620,10 @@ namespace details {
         //{
         //    return transpose<this_type::depth, InputIt>(first_order, last_order);
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr this_type transpose(const Cont& order) const
         {
-            return transpose/*<Level>*/(std::begin(order), std::end(order));
+            return transpose /*<Level>*/ (std::begin(order), std::end(order));
         }
         //template <signed_integral_type_iterable Cont>
         //[[nodiscard]] constexpr this_type transpose(const Cont& order) const
@@ -8635,7 +8633,7 @@ namespace details {
         //template <std::int64_t Level>
         [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
         {
-            return transpose/*<Level>*/(order.begin(), order.end());
+            return transpose /*<Level>*/ (order.begin(), order.end());
         }
         //[[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
         //{
@@ -8652,9 +8650,8 @@ namespace details {
         //    return transpose<this_type::depth>(std::begin(order), std::end(order));
         //}
 
-
         //template <std::int64_t Level>
-        /*requires(Level == 0) */[[nodiscard]] constexpr this_type transpose() const
+        /*requires(Level == 0) */ [[nodiscard]] constexpr this_type transpose() const
         {
             if (empty()) {
                 return this_type();
@@ -8667,7 +8664,7 @@ namespace details {
                 std::swap(order[order.header().numel() - 1], order[order.header().numel() - 2]);
             }
 
-            return transpose/*<Level>*/(order);
+            return transpose /*<Level>*/ (order);
         }
         //template <std::int64_t Level>
         //requires(Level > 0) [[nodiscard]] constexpr this_type transpose() const
@@ -8691,7 +8688,6 @@ namespace details {
         //{
         //    return transpose<this_type::depth>();
         //}
-
 
         //template <std::int64_t Depth>
         //    requires(Depth == 0)
@@ -8743,11 +8739,11 @@ namespace details {
         //}
 
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
             bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         {
-            using expanded_type = inner_replaced_type<inner_this_type</*Level*/0>, /*Level*/0>;
+            using expanded_type = inner_replaced_type<inner_this_type</*Level*/ 0>, /*Level*/ 0>;
 
             if (empty()) {
                 return expanded_type();
@@ -8824,7 +8820,7 @@ namespace details {
             //}
 
             if (count != fixed_div) {
-                return res./*template */resize/*<Level>*/({count});
+                return res./*template */ resize /*<Level>*/ ({count});
             }
             return res;
         }
@@ -8861,8 +8857,9 @@ namespace details {
         * @note collapse should only used on valid expanded arrays
         */
         //template <std::int64_t Level>
-            //requires(Level == 1 && !this_type::is_flat)
-        [[nodiscard]] constexpr auto collapse() const requires(!this_type::is_flat)
+        //requires(Level == 1 && !this_type::is_flat)
+        [[nodiscard]] constexpr auto collapse() const
+            requires(!this_type::is_flat)
         {
             using collapsed_type = value_type;
 
@@ -8902,7 +8899,7 @@ namespace details {
             ++gen;
 
             while (gen) {
-                res = res./*template */push_back/*<Level - 1>*/((*this)[*gen], assumed_axis);
+                res = res./*template */ push_back /*<Level - 1>*/ ((*this)[*gen], assumed_axis);
                 ++gen;
             }
 
@@ -8994,12 +8991,12 @@ namespace details {
         //    return res;
         //}
 
-        template </*std::int64_t Level, */typename Func/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Func, inner_this_type</*Level*/0>/*, Args...*/>)
+        template </*std::int64_t Level, */ typename Func /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Func, inner_this_type</*Level*/ 0> /*, Args...*/>)
         [[nodiscard]] constexpr auto slide(
-            size_type axis, interval_type window, bool bounded, Func&& func/*, Args&&... args*/) const
+            size_type axis, interval_type window, bool bounded, Func&& func /*, Args&&... args*/) const
         {
-            using func_res_type = std::invoke_result_t<Func, this_type/*, Args...*/>;
+            using func_res_type = std::invoke_result_t<Func, this_type /*, Args...*/>;
             using slide_type = replaced_type<func_res_type>;
 
             if (empty()) {
@@ -9019,7 +9016,7 @@ namespace details {
 
             for (; rgr && res_gen; ++rgr, ++res_gen) {
                 res[*res_gen]
-                    = func((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]/*, std::forward<Args>(args)...*/);
+                    = func((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())] /*, std::forward<Args>(args)...*/);
             }
 
             return res;
@@ -9063,14 +9060,15 @@ namespace details {
         //    return res;
         //}
 
-        template </*std::int64_t Level, */typename ReduceFunc, typename TransformFunc/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<TransformFunc, inner_this_type</*Level*/0>/*, Args...*/>
-                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type</*Level*/0>/*, Args...*/>,
-                    std::invoke_result_t<TransformFunc, inner_this_type</*Level*/0>/*, Args...*/>>)
+        template </*std::int64_t Level, */ typename ReduceFunc, typename TransformFunc /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<TransformFunc, inner_this_type</*Level*/ 0> /*, Args...*/>
+                && invocable_no_arrnd<ReduceFunc,
+                    std::invoke_result_t<TransformFunc, inner_this_type</*Level*/ 0> /*, Args...*/>,
+                    std::invoke_result_t<TransformFunc, inner_this_type</*Level*/ 0> /*, Args...*/>>)
         [[nodiscard]] constexpr auto accumulate(size_type axis, interval_type window, bool bounded, ReduceFunc&& rfunc,
-            TransformFunc&& tfunc/*, Args&&... args*/) const
+            TransformFunc&& tfunc /*, Args&&... args*/) const
         {
-            using trans_res_type = std::invoke_result_t<TransformFunc, this_type/*, Args...*/>;
+            using trans_res_type = std::invoke_result_t<TransformFunc, this_type /*, Args...*/>;
             using acc_res_type = std::invoke_result_t<ReduceFunc, trans_res_type, trans_res_type>;
             using accumulate_type = replaced_type<acc_res_type>;
 
@@ -9093,14 +9091,15 @@ namespace details {
                 return res;
             }
 
-            res[*res_gen] = tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]/*, std::forward<Args>(args)...*/);
+            res[*res_gen]
+                = tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())] /*, std::forward<Args>(args)...*/);
             auto prev = res[*res_gen];
             ++res_gen;
             ++rgr;
 
             for (; rgr && res_gen; ++rgr, ++res_gen) {
-                res[*res_gen] = rfunc(
-                    prev, tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]/*, std::forward<Args>(args)...*/));
+                res[*res_gen] = rfunc(prev,
+                    tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())] /*, std::forward<Args>(args)...*/));
                 prev = res[*res_gen];
             }
 
@@ -9119,27 +9118,27 @@ namespace details {
         //        std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
         //}
 
-        template </*std::int64_t Level, */typename Func/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Func, this_type/*, Args...*/>)
-        constexpr auto browse(size_type page_size, Func&& func/*, Args&&... args*/) const
+        template </*std::int64_t Level, */ typename Func /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Func, this_type /*, Args...*/>)
+        constexpr auto browse(size_type page_size, Func&& func /*, Args&&... args*/) const
         {
-            constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type/*, Args...*/>, void>;
+            constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type /*, Args...*/>, void>;
             using func_res_type
-                = std::conditional_t<is_void_func, this_type, std::invoke_result_t<Func, this_type/*, Args...*/>>;
+                = std::conditional_t<is_void_func, this_type, std::invoke_result_t<Func, this_type /*, Args...*/>>;
             using returned_type
                 = std::conditional_t<arrnd_compliant<func_res_type> && same_depth<func_res_type, this_type>,
                     func_res_type, replaced_type<func_res_type>>;
 
-            auto invoke_func = [&func/*, &args...*/](auto page) {
+            auto invoke_func = [&func /*, &args...*/](auto page) {
                 if constexpr (arrnd_compliant<func_res_type> && same_depth<func_res_type, this_type>) {
                     if constexpr (is_void_func) {
-                        func(page/*, std::forward<Args>(args)...*/);
+                        func(page /*, std::forward<Args>(args)...*/);
                         return page;
                     } else {
-                        return func(page/*, std::forward<Args>(args)...*/);
+                        return func(page /*, std::forward<Args>(args)...*/);
                     }
                 } else { // in case that the returned type of func is not arrnd_compliant, then it should not be void returned type
-                    return returned_type({1}, {func(page/*, std::forward<Args>(args)...*/)});
+                    return returned_type({1}, {func(page /*, std::forward<Args>(args)...*/)});
                 }
             };
 
@@ -9185,7 +9184,7 @@ namespace details {
                 //}
                 //auto page = expanded[*exp_gen];
 
-                auto processed = invoke_func(page/*trimed_page*/ /*.template reshape<0>({page_dim1, page_dim2})*/);
+                auto processed = invoke_func(page /*trimed_page*/ /*.template reshape<0>({page_dim1, page_dim2})*/);
 
                 //processed.header() = typename decltype(page)::header_type(page.header().dims().cbegin(),
                 //    std::next(page.header().dims().cbegin(), page.header().dims().size() - page_size))
@@ -9206,7 +9205,7 @@ namespace details {
                 return *this;
             } else {
 
-                return trans_expanded.book/*template *//*collapse*//*<Level + 1>*/();
+                return trans_expanded.book /*template */ /*collapse*/ /*<Level + 1>*/ ();
             }
         }
 
@@ -9241,7 +9240,7 @@ namespace details {
         //    return res;
         //}
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         //constexpr auto pages(size_type axis, size_type division = 0,
         //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
         //{
@@ -9291,17 +9290,14 @@ namespace details {
         //        pages.header().dims().cbegin(), std::next(pages.header().dims().cbegin(), axis + 1));
         //}
 
-
-
-
         [[nodiscard]] constexpr typename this_type::template replaced_type<this_type> pages(
-            size_type page_ndims = 2/*, bool trimmed_dims = true*/) const
+            size_type page_ndims = 2 /*, bool trimmed_dims = true*/) const
         {
             assert(page_ndims > 0 && page_ndims <= std::ssize(hdr_.dims()));
 
             if (page_ndims == std::ssize(hdr_.dims())) {
                 //if (trimmed_dims) {
-                    return typename this_type::template replaced_type<this_type>({1}, {*this});
+                return typename this_type::template replaced_type<this_type>({1}, {*this});
                 //}
                 //auto dims = hdr_.dims();
                 //std::fill(dims.begin(), dims.end(), 1);
@@ -9309,7 +9305,7 @@ namespace details {
             }
 
             typename this_type::template replaced_type<this_type> /*pages;*/
-            //if (trimmed_dims) {
+                //if (trimmed_dims) {
                 pages = typename this_type::template replaced_type<this_type>(
                     hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), std::ssize(hdr_.dims()) - page_ndims));
             //} else {
@@ -9323,13 +9319,13 @@ namespace details {
 
                 const auto& subs = gen.indices();
                 for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
-                    page = page/*(*/[interval_type::at(*std::next(subs.cbegin(), axis))]/*, axis)*/;
+                    page = page /*(*/[interval_type::at(*std::next(subs.cbegin(), axis))] /*, axis)*/;
                 }
 
                 //if (trimmed_dims) {
-                    //for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
-                    //    page = page[interval_type::at(0)];
-                    //}
+                //for (size_type axis = 0; axis < std::ssize(hdr_.dims()) - page_ndims; ++axis) {
+                //    page = page[interval_type::at(0)];
+                //}
                 //}
 
                 pages[*gen] = page;
@@ -9375,11 +9371,11 @@ namespace details {
 
             typename header_type::storage_type new_dims;
             //if (this_ndims != page_ndims) {
-                new_dims = typename header_type::storage_type(this_ndims + page_ndims);
-                const auto& this_dims = hdr_.dims();
-                const auto& page_dims = (*this)[0].header().dims();
-                std::copy(this_dims.cbegin(), this_dims.cend(), new_dims.begin());
-                std::copy(page_dims.cbegin(), page_dims.cend(), std::next(new_dims.begin(), this_ndims));
+            new_dims = typename header_type::storage_type(this_ndims + page_ndims);
+            const auto& this_dims = hdr_.dims();
+            const auto& page_dims = (*this)[0].header().dims();
+            std::copy(this_dims.cbegin(), this_dims.cend(), new_dims.begin());
+            std::copy(page_dims.cbegin(), page_dims.cend(), std::next(new_dims.begin(), this_ndims));
             //}
 
             value_type res(new_dims);
@@ -9393,9 +9389,6 @@ namespace details {
 
             return res;
         }
-
-
-
 
         //[[nodiscard]] constexpr auto pages(size_type axis, size_type division = 0,
         //    bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
@@ -9424,8 +9417,8 @@ namespace details {
 
         //    return res;
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             using split_type = replaced_type<this_type>;
@@ -9486,15 +9479,15 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(interval_type::full(), arr.header().dims().size() - current_depth),
-                        current_depth - 1);
+                    split_impl(
+                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
                 size_type current_dim
                     = *std::next(arr.header().dims().cbegin(), arr.header().dims().size() - current_depth);
 
-                auto exp = arr./*template */expand/*<0>*/(arr.header().dims().size() - current_depth, division);
+                auto exp = arr./*template */ expand /*<0>*/ (arr.header().dims().size() - current_depth, division);
                 typename decltype(exp)::indexer_type exp_gen(exp.header());
 
                 for (; exp_gen; ++exp_gen) {
@@ -9516,15 +9509,15 @@ namespace details {
         //{
         //    return split<this_type::depth>(first_axis, last_axis, division);
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto split(const Cont& axes, size_type division) const
         {
-            return split/*<Level>*/(std::begin(axes), std::end(axes), division);
+            return split /*<Level>*/ (std::begin(axes), std::end(axes), division);
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, size_type division) const
         {
-            return split/*<Level>*/(axes.begin(), axes.end(), division);
+            return split /*<Level>*/ (axes.begin(), axes.end(), division);
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto split(const U (&axes)[M], size_type division) const
@@ -9567,8 +9560,8 @@ namespace details {
 
         //    return res;
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             using split_type = replaced_type<this_type>;
@@ -9637,8 +9630,8 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(interval_type::full(), arr.header().dims().size() - current_depth),
-                        current_depth - 1);
+                    split_impl(
+                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -9654,8 +9647,8 @@ namespace details {
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    split_impl(arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth),
-                        current_depth - 1);
+                    split_impl(
+                        arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
@@ -9668,8 +9661,7 @@ namespace details {
                     prev_ind = current_ind;
                 }
                 if (current_ind < current_dim) {
-                    split_impl(
-                        arr(interval_type{current_ind, current_dim}, arr.header().dims().size() - current_depth),
+                    split_impl(arr(interval_type{current_ind, current_dim}, arr.header().dims().size() - current_depth),
                         current_depth - 1);
                 }
             };
@@ -9688,16 +9680,16 @@ namespace details {
         //{
         //    return split<this_type::depth>(first_axis, last_axis, first_ind, last_ind);
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
         {
-            return split/*<Level>*/(first_axis, last_axis, std::begin(inds), std::end(inds));
+            return split /*<Level>*/ (first_axis, last_axis, std::begin(inds), std::end(inds));
         }
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt>
         [[nodiscard]] constexpr auto split(
             AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
         {
-            return split/*<Level>*/(first_axis, last_axis, inds.begin(), inds.end());
+            return split /*<Level>*/ (first_axis, last_axis, inds.begin(), inds.end());
         }
         //template <std::int64_t Level, signed_integral_type_iterator AxesIt, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, const U (&inds)[M]) const
@@ -9721,20 +9713,20 @@ namespace details {
         //    return split<this_type::depth>(first_axis, last_axis, std::begin(inds), std::end(inds));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
-            return split/*<Level>*/(std::begin(axes), std::end(axes), first_ind, last_ind);
+            return split /*<Level>*/ (std::begin(axes), std::end(axes), first_ind, last_ind);
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, const Cont& inds) const
         {
-            return split/*<Level>*/(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
+            return split /*<Level>*/ (std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, std::initializer_list<size_type> inds) const
         {
-            return split/*<Level>*/(std::begin(axes), std::end(axes), inds.begin(), inds.end());
+            return split /*<Level>*/ (std::begin(axes), std::end(axes), inds.begin(), inds.end());
         }
         //template <std::int64_t Level, signed_integral_type_iterable AxesCont, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto split(const AxesCont& axes, const U (&inds)[M]) const
@@ -9762,22 +9754,22 @@ namespace details {
         //    return split<this_type::depth>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator IndsIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterator IndsIt>
         [[nodiscard]] constexpr auto split(
             std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
-            return split/*<Level>*/(axes.begin(), axes.end(), first_ind, last_ind);
+            return split /*<Level>*/ (axes.begin(), axes.end(), first_ind, last_ind);
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, const Cont& inds) const
         {
-            return split/*<Level>*/(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
+            return split /*<Level>*/ (axes.begin(), axes.end(), std::begin(inds), std::end(inds));
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto split(
             std::initializer_list<size_type> axes, std::initializer_list<size_type> inds) const
         {
-            return split/*<Level>*/(axes.begin(), axes.end(), inds.begin(), inds.end());
+            return split /*<Level>*/ (axes.begin(), axes.end(), inds.begin(), inds.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, const U (&inds)[M]) const
@@ -9869,8 +9861,8 @@ namespace details {
 
         //    return res;
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt, signed_integral_type_iterator IndsIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr auto exclude(
             AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
@@ -9956,8 +9948,8 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
-                    exclude_impl(arr(interval_type::full(), arr.header().dims().size() - current_depth),
-                        current_depth - 1);
+                    exclude_impl(
+                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -9973,22 +9965,22 @@ namespace details {
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    exclude_impl(arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth),
-                        current_depth - 1);
+                    exclude_impl(
+                        arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind + 1 < current_ind) {
-                        exclude_impl(arr(interval_type{prev_ind + 1, current_ind},
-                                         arr.header().dims().size() - current_depth),
+                        exclude_impl(
+                            arr(interval_type{prev_ind + 1, current_ind}, arr.header().dims().size() - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind + 1 < current_dim) {
-                    exclude_impl(arr(interval_type{current_ind + 1, current_dim},
-                                     arr.header().dims().size() - current_depth),
+                    exclude_impl(
+                        arr(interval_type{current_ind + 1, current_dim}, arr.header().dims().size() - current_depth),
                         current_depth - 1);
                 }
             };
@@ -10008,16 +10000,16 @@ namespace details {
         //{
         //    return exclude<this_type::depth>(first_axis, last_axis, first_ind, last_ind);
         //}
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt, signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
         {
-            return exclude/*<Level>*/(first_axis, last_axis, std::begin(inds), std::end(inds));
+            return exclude /*<Level>*/ (first_axis, last_axis, std::begin(inds), std::end(inds));
         }
-        template </*std::int64_t Level, */signed_integral_type_iterator AxesIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterator AxesIt>
         [[nodiscard]] constexpr auto exclude(
             AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
         {
-            return exclude/*<Level>*/(first_axis, last_axis, inds.begin(), inds.end());
+            return exclude /*<Level>*/ (first_axis, last_axis, inds.begin(), inds.end());
         }
         //template <std::int64_t Level, signed_integral_type_iterator AxesIt, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, const U (&inds)[M]) const
@@ -10041,20 +10033,20 @@ namespace details {
         //    return exclude<this_type::depth>(first_axis, last_axis, std::begin(inds), std::end(inds));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont, signed_integral_type_iterator IndsIt>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
-            return exclude/*<Level>*/(std::begin(axes), std::end(axes), first_ind, last_ind);
+            return exclude /*<Level>*/ (std::begin(axes), std::end(axes), first_ind, last_ind);
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont, signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, const Cont& inds) const
         {
-            return exclude/*<Level>*/(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
+            return exclude /*<Level>*/ (std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable AxesCont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable AxesCont>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, std::initializer_list<size_type> inds) const
         {
-            return exclude/*<Level>*/(std::begin(axes), std::end(axes), inds.begin(), inds.end());
+            return exclude /*<Level>*/ (std::begin(axes), std::end(axes), inds.begin(), inds.end());
         }
         //template <std::int64_t Level, signed_integral_type_iterable AxesCont, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto exclude(const AxesCont& axes, const U (&inds)[M]) const
@@ -10082,22 +10074,22 @@ namespace details {
         //    return exclude<this_type::depth>(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator IndsIt>
+        template </*std::int64_t Level, */ signed_integral_type_iterator IndsIt>
         [[nodiscard]] constexpr auto exclude(
             std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
-            return exclude/*<Level>*/(axes.begin(), axes.end(), first_ind, last_ind);
+            return exclude /*<Level>*/ (axes.begin(), axes.end(), first_ind, last_ind);
         }
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> axes, const Cont& inds) const
         {
-            return exclude/*<Level>*/(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
+            return exclude /*<Level>*/ (axes.begin(), axes.end(), std::begin(inds), std::end(inds));
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto exclude(
             std::initializer_list<size_type> axes, std::initializer_list<size_type> inds) const
         {
-            return exclude/*<Level>*/(axes.begin(), axes.end(), inds.begin(), inds.end());
+            return exclude /*<Level>*/ (axes.begin(), axes.end(), inds.begin(), inds.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> axes, const U (&inds)[M]) const
@@ -10187,20 +10179,21 @@ namespace details {
         //    return res;
         //}
         //template <std::int64_t Level>
-            //requires(Level == 0 && !this_type::is_flat)
-        [[nodiscard]] constexpr value_type merge() const requires(!this_type::is_flat)
+        //requires(Level == 0 && !this_type::is_flat)
+        [[nodiscard]] constexpr value_type merge() const
+            requires(!this_type::is_flat)
         {
             if (empty()) {
                 return value_type();
             }
 
-            this_type res = reduce</*Level*/0>(hdr_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
-                return a./*template */push_back/*<Level>*/(b, hdr_.dims().size() - 1);
+            this_type res = reduce</*Level*/ 0>(hdr_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
+                return a./*template */ push_back /*<Level>*/ (b, hdr_.dims().size() - 1);
             });
 
             for (size_type axis = hdr_.dims().size() - 2; axis >= 0; --axis) {
-                res = res./*template */reduce</*Level*/0>(axis, [axis](const value_type& a, const value_type& b) {
-                    return a./*template */push_back/*<Level>*/(b, axis);
+                res = res./*template */ reduce</*Level*/ 0>(axis, [axis](const value_type& a, const value_type& b) {
+                    return a./*template */ push_back /*<Level>*/ (b, axis);
                 });
             }
 
@@ -10235,7 +10228,7 @@ namespace details {
         //}
 
         //template <std::int64_t Level>
-            //requires(Level == 0)
+        //requires(Level == 0)
         [[nodiscard]] constexpr this_type squeeze() const
         {
             this_type squeezed{};
@@ -10261,9 +10254,10 @@ namespace details {
         //    return squeeze<this_type::depth>();
         //}
 
-        template </*std::int64_t Level, */typename Comp/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Comp, inner_value_type</*Level*/0>, inner_value_type</*Level*/0>/*, Args...*/>)
-        [[nodiscard]] constexpr this_type sort(Comp&& comp/*, Args&&... args*/) const
+        template </*std::int64_t Level, */ typename Comp /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Comp, inner_value_type</*Level*/ 0>,
+                inner_value_type</*Level*/ 0> /*, Args...*/>)
+        [[nodiscard]] constexpr this_type sort(Comp&& comp /*, Args&&... args*/) const
         {
             if (empty()) {
                 return this_type();
@@ -10271,8 +10265,8 @@ namespace details {
 
             this_type res = clone();
 
-            std::sort(res.begin(), res.end(), [&comp/*, &args...*/](const auto& lhs, const auto& rhs) {
-                return comp(lhs, rhs/*, std::forward<Args>(args)...*/);
+            std::sort(res.begin(), res.end(), [&comp /*, &args...*/](const auto& lhs, const auto& rhs) {
+                return comp(lhs, rhs /*, std::forward<Args>(args)...*/);
             });
 
             return res;
@@ -10305,9 +10299,10 @@ namespace details {
         //    return sort<this_type::depth, Comp, Args...>(std::forward<Comp>(comp), std::forward<Args>(args)...);
         //}
 
-        template </*std::int64_t Level, */typename Comp/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Comp, inner_this_type</*Level*/0>, inner_this_type</*Level*/0>/*, Args...*/>)
-        [[nodiscard]] constexpr this_type sort(size_type axis, Comp&& comp/*, Args&&... args*/) const
+        template </*std::int64_t Level, */ typename Comp /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Comp, inner_this_type</*Level*/ 0>,
+                inner_this_type</*Level*/ 0> /*, Args...*/>)
+        [[nodiscard]] constexpr this_type sort(size_type axis, Comp&& comp /*, Args&&... args*/) const
         {
             if (empty()) {
                 return this_type();
@@ -10315,15 +10310,16 @@ namespace details {
 
             assert(axis >= 0 && axis < hdr_.dims().size());
 
-            auto expanded = expand/*<Level>*/(axis);
+            auto expanded = expand /*<Level>*/ (axis);
 
-            auto sorted = expanded./*template */sort/*<*//*Level*//*0>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+            auto sorted = expanded./*template */ sort /*<*/ /*Level*/ /*0>*/ (
+                std::forward<Comp>(comp) /*, std::forward<Args>(args)...*/);
 
-            auto reduced = sorted.template reduce</*Level*/0>([axis](const auto& acc, const auto& cur) {
-                return acc./*template */push_back/*<Level>*/(cur, axis);
+            auto reduced = sorted.template reduce</*Level*/ 0>([axis](const auto& acc, const auto& cur) {
+                return acc./*template */ push_back /*<Level>*/ (cur, axis);
             });
 
-            return reduced./*template */reshape/*<Level>*/(hdr_.dims());
+            return reduced./*template */ reshape /*<Level>*/ (hdr_.dims());
         }
         //template <std::int64_t Level, typename Comp, typename... Args>
         //    requires(Level > 0 && invocable_no_arrnd<Comp, inner_this_type<Level>, inner_this_type<Level>, Args...>)
@@ -10353,16 +10349,17 @@ namespace details {
         //    return sort<this_type::depth, Comp, Args...>(axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
         //}
 
-        template </*std::int64_t Level, */typename Comp/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Comp, inner_value_type</*Level*/0>, inner_value_type</*Level*/0>/*, Args...*/>)
-        [[nodiscard]] constexpr bool is_sorted(Comp&& comp/*, Args&&... args*/) const
+        template </*std::int64_t Level, */ typename Comp /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Comp, inner_value_type</*Level*/ 0>,
+                inner_value_type</*Level*/ 0> /*, Args...*/>)
+        [[nodiscard]] constexpr bool is_sorted(Comp&& comp /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
-            return std::is_sorted(cbegin(), cend(), [&comp/*, &args...*/](const auto& lhs, const auto& rhs) {
-                return comp(lhs, rhs/*, std::forward<Args>(args)...*/);
+            return std::is_sorted(cbegin(), cend(), [&comp /*, &args...*/](const auto& lhs, const auto& rhs) {
+                return comp(lhs, rhs /*, std::forward<Args>(args)...*/);
             });
         }
         //template <std::int64_t Level, typename Comp, typename... Args>
@@ -10395,9 +10392,10 @@ namespace details {
         //    return is_sorted<this_type::depth, Comp, Args...>(std::forward<Comp>(comp), std::forward<Args>(args)...);
         //}
 
-        template </*std::int64_t Level, */typename Comp/*, typename... Args*/>
-            requires(/*Level == 0 && */invocable_no_arrnd<Comp, inner_this_type</*Level*/0>, inner_this_type</*Level*/0>/*, Args...*/>)
-        [[nodiscard]] constexpr bool is_sorted(size_type axis, Comp&& comp/*, Args&&... args*/) const
+        template </*std::int64_t Level, */ typename Comp /*, typename... Args*/>
+            requires(/*Level == 0 && */ invocable_no_arrnd<Comp, inner_this_type</*Level*/ 0>,
+                inner_this_type</*Level*/ 0> /*, Args...*/>)
+        [[nodiscard]] constexpr bool is_sorted(size_type axis, Comp&& comp /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
@@ -10405,9 +10403,10 @@ namespace details {
 
             assert(axis >= 0 && axis < hdr_.dims().size());
 
-            auto expanded = expand/*<Level>*/(axis);
+            auto expanded = expand /*<Level>*/ (axis);
 
-            return expanded./*template */is_sorted/*<*//*Level*//*0>*/(std::forward<Comp>(comp)/*, std::forward<Args>(args)...*/);
+            return expanded./*template */ is_sorted /*<*/ /*Level*/ /*0>*/ (
+                std::forward<Comp>(comp) /*, std::forward<Args>(args)...*/);
 
             /*auto sorted = expanded.template sort<Level>(std::forward<Comp>(comp), std::forward<Args>(args)...);
 
@@ -10448,8 +10447,8 @@ namespace details {
         //        axis, std::forward<Comp>(comp), std::forward<Args>(args)...);
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
@@ -10496,15 +10495,15 @@ namespace details {
         //    return reorder<this_type::depth, InputIt>(first_order, last_order);
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto reorder(const Cont& order) const
         {
-            return reorder/*<Level>*/(std::begin(order), std::end(order));
+            return reorder /*<Level>*/ (std::begin(order), std::end(order));
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto reorder(std::initializer_list<size_type> order) const
         {
-            return reorder/*<Level>*/(order.begin(), order.end());
+            return reorder /*<Level>*/ (order.begin(), order.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto reorder(const U (&order)[M]) const
@@ -10526,10 +10525,10 @@ namespace details {
         //    return reorder<this_type::depth>(std::begin(order), std::end(order));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
-        [[nodiscard]] constexpr this_type
-            reorder(size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
+        [[nodiscard]] constexpr this_type reorder(
+            size_type axis, const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
                 return this_type();
@@ -10540,15 +10539,15 @@ namespace details {
 
             replaced_type<size_type> order({std::distance(first_order, last_order)}, first_order, last_order);
 
-            auto expanded = expand/*<Level>*/(axis);
+            auto expanded = expand /*<Level>*/ (axis);
 
             auto z = zip(zipped_cont(order), zipped_cont(expanded));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
 
-            auto reordered = expanded.template reduce</*Level*/0>([axis](const auto& acc, const auto& cur) {
-                return acc./*template */push_back/*<Level>*/(cur, axis);
+            auto reordered = expanded.template reduce</*Level*/ 0>([axis](const auto& acc, const auto& cur) {
+                return acc./*template */ push_back /*<Level>*/ (cur, axis);
             });
 
             return reordered;
@@ -10581,15 +10580,15 @@ namespace details {
         //    return reorder<this_type::depth, InputIt>(axis, first_order, last_order);
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
         {
-            return reorder/*<Level>*/(axis, std::begin(order), std::end(order));
+            return reorder /*<Level>*/ (axis, std::begin(order), std::end(order));
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto reorder(size_type axis, std::initializer_list<size_type> order) const
         {
-            return reorder/*<Level>*/(axis, order.begin(), order.end());
+            return reorder /*<Level>*/ (axis, order.begin(), order.end());
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto reorder(size_type axis, const U (&order)[M]) const
@@ -10611,8 +10610,8 @@ namespace details {
         //    return reorder<this_type::depth>(axis, std::begin(order), std::end(order));
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterator InputIt>
-            //requires(Level == 0)
+        template </*std::int64_t Level, */ signed_integral_type_iterator InputIt>
+        //requires(Level == 0)
         [[nodiscard]] constexpr auto find_adjacents(
             const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
         {
@@ -10663,7 +10662,7 @@ namespace details {
             impl(returned_type({std::distance(first_sub, last_sub)}, first_sub, last_sub), 0, false);
 
             if (res.header().numel() > actual_num_adj) {
-                return res./*template */resize/*<Level>*/({actual_num_adj});
+                return res./*template */ resize /*<Level>*/ ({actual_num_adj});
             }
             return res;
         }
@@ -10697,15 +10696,15 @@ namespace details {
         //    return find_adjacents<this_type::depth, InputIt>(first_sub, last_sub, offset);
         //}
 
-        template </*std::int64_t Level, */signed_integral_type_iterable Cont>
+        template </*std::int64_t Level, */ signed_integral_type_iterable Cont>
         [[nodiscard]] constexpr auto find_adjacents(const Cont& subs, size_type offset = 1) const
         {
-            return find_adjacents/*<Level>*/(std::begin(subs), std::end(subs), offset);
+            return find_adjacents /*<Level>*/ (std::begin(subs), std::end(subs), offset);
         }
         //template <std::int64_t Level>
         [[nodiscard]] constexpr auto find_adjacents(std::initializer_list<size_type> subs, size_type offset = 1) const
         {
-            return find_adjacents/*<Level>*/(subs.begin(), subs.end(), offset);
+            return find_adjacents /*<Level>*/ (subs.begin(), subs.end(), offset);
         }
         //template <std::int64_t Level, std::integral U, std::int64_t M>
         //[[nodiscard]] constexpr auto find_adjacents(const U (&subs)[M], size_type offset = 1) const
@@ -10727,16 +10726,16 @@ namespace details {
         //    return find_adjacents<this_type::depth>(std::begin(subs), std::end(subs), offset);
         //}
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if (!pred((*this)[*gen]/*, std::forward<Args>(args)...*/)) {
+                if (!pred((*this)[*gen] /*, std::forward<Args>(args)...*/)) {
                     return false;
                 }
             }
@@ -10744,17 +10743,17 @@ namespace details {
             return true;
         }
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if (!(*this)[*gen].template all<Level - 1, Pred/*, Args...*/>(
-                        std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
+                if (!(*this)[*gen].template all<Level - 1, Pred /*, Args...*/>(
+                        std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/)) {
                     return false;
                 }
             }
@@ -10762,11 +10761,12 @@ namespace details {
             return true;
         }
 
-        template <typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/> [[nodiscard]] constexpr bool
-        all(Pred&& pred /*, Args&&... args*/) const
+        template <typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth> /*, Args...*/>
+        [[nodiscard]] constexpr bool all(Pred&& pred /*, Args&&... args*/) const
         {
-            return all<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return all<this_type::depth, Pred /*, Args...*/>(
+                std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level = this_type::depth>
@@ -10799,7 +10799,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (!pred((*this)[*gen], arr[*arr_gen]/*, std::forward<Args>(args)...*/)) {
+                if (!pred((*this)[*gen], arr[*arr_gen] /*, std::forward<Args>(args)...*/)) {
                     return false;
                 }
             }
@@ -10829,8 +10829,8 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (!(*this)[*gen].template all_match<Level - 1, typename ArCo::value_type, Pred/*, Args...*/>(
-                        arr[*arr_gen], std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
+                if (!(*this)[*gen].template all_match<Level - 1, typename ArCo::value_type, Pred /*, Args...*/>(
+                        arr[*arr_gen], std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/)) {
                     return false;
                 }
             }
@@ -10838,13 +10838,13 @@ namespace details {
             return true;
         }
 
-        template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+        template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
             requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
-                typename ArCo::template inner_value_type<ArCo::depth>/*, Args...*/>
-        [[nodiscard]] constexpr bool all_match(const ArCo& arr, Pred&& pred/*, Args&&... args*/) const
+                typename ArCo::template inner_value_type<ArCo::depth> /*, Args...*/>
+        [[nodiscard]] constexpr bool all_match(const ArCo& arr, Pred&& pred /*, Args&&... args*/) const
         {
-            return all_match<this_type::depth, Pred, ArCo/*, Args...*/>(
-                arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return all_match<this_type::depth, Pred, ArCo /*, Args...*/>(
+                arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo>
@@ -10866,8 +10866,8 @@ namespace details {
         }
 
         template <std::int64_t Level, typename U, typename Pred>
-        requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
-            [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
+            requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
+        [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
         {
             return all<Level>([&u, &pred](const auto& a) {
                 return pred(a, u);
@@ -10875,14 +10875,15 @@ namespace details {
         }
 
         template <typename U, typename Pred>
-        requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
-            [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
+            requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
+        [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
         {
             return all_match<this_type::depth, U, Pred>(u, std::forward<Pred>(pred));
         }
 
         template <std::int64_t Level, typename U>
-        requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool all_match(const U& u) const
+            requires(!arrnd_compliant<U>)
+        [[nodiscard]] constexpr bool all_match(const U& u) const
         {
             return all<Level>([&u](const auto& a) {
                 if constexpr (arrnd_compliant<decltype(a)>) {
@@ -10894,21 +10895,22 @@ namespace details {
         }
 
         template <typename U>
-        requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool all_match(const U& u) const
+            requires(!arrnd_compliant<U>)
+        [[nodiscard]] constexpr bool all_match(const U& u) const
         {
             return all_match<this_type::depth, U>(u);
         }
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if (pred((*this)[*gen]/*, std::forward<Args>(args)...*/)) {
+                if (pred((*this)[*gen] /*, std::forward<Args>(args)...*/)) {
                     return true;
                 }
             }
@@ -10916,17 +10918,17 @@ namespace details {
             return false;
         }
 
-        template <std::int64_t Level, typename Pred/*, typename... Args*/>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>/*, Args...*/>)
-            [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
+        template <std::int64_t Level, typename Pred /*, typename... Args*/>
+            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level> /*, Args...*/>)
+        [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
         {
             if (empty()) {
                 return true;
             }
 
             for (indexer_type gen(hdr_); gen; ++gen) {
-                if ((*this)[*gen].template any<Level - 1, Pred/*, Args...*/>(
-                        std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
+                if ((*this)[*gen].template any<Level - 1, Pred /*, Args...*/>(
+                        std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/)) {
                     return true;
                 }
             }
@@ -10934,11 +10936,12 @@ namespace details {
             return false;
         }
 
-        template <typename Pred/*, typename... Args*/>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>/*, Args...*/> [[nodiscard]] constexpr bool
-        any(Pred&& pred /*, Args&&... args*/) const
+        template <typename Pred /*, typename... Args*/>
+            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth> /*, Args...*/>
+        [[nodiscard]] constexpr bool any(Pred&& pred /*, Args&&... args*/) const
         {
-            return any<this_type::depth, Pred/*, Args...*/>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return any<this_type::depth, Pred /*, Args...*/>(
+                std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level = this_type::depth>
@@ -10971,7 +10974,7 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (pred((*this)[*gen], arr[*arr_gen]/*, std::forward<Args>(args)...*/)) {
+                if (pred((*this)[*gen], arr[*arr_gen] /*, std::forward<Args>(args)...*/)) {
                     return true;
                 }
             }
@@ -11001,8 +11004,8 @@ namespace details {
             typename ArCo::indexer_type arr_gen(arr.header());
 
             for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if ((*this)[*gen].template any_match<Level - 1, typename ArCo::value_type, Pred/*, Args...*/>(
-                        arr[*arr_gen], std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/)) {
+                if ((*this)[*gen].template any_match<Level - 1, typename ArCo::value_type, Pred /*, Args...*/>(
+                        arr[*arr_gen], std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/)) {
                     return true;
                 }
             }
@@ -11010,13 +11013,13 @@ namespace details {
             return false;
         }
 
-        template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
+        template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
             requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
-                typename ArCo::template inner_value_type<ArCo::depth>/*, Args...*/>
-        [[nodiscard]] constexpr bool any_match(const ArCo& arr, Pred&& pred/*, Args&&... args*/) const
+                typename ArCo::template inner_value_type<ArCo::depth> /*, Args...*/>
+        [[nodiscard]] constexpr bool any_match(const ArCo& arr, Pred&& pred /*, Args&&... args*/) const
         {
-            return any_match<this_type::depth, Pred, ArCo/*, Args...*/>(
-                arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+            return any_match<this_type::depth, Pred, ArCo /*, Args...*/>(
+                arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
         }
 
         template <std::int64_t Level, arrnd_compliant ArCo>
@@ -11038,8 +11041,8 @@ namespace details {
         }
 
         template <std::int64_t Level, typename U, typename Pred>
-        requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
-            [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
+            requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
+        [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
         {
             return any<Level>([&u, &pred](const auto& a) {
                 return pred(a, u);
@@ -11047,14 +11050,15 @@ namespace details {
         }
 
         template <typename U, typename Pred>
-        requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
-            [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
+            requires(!arrnd_compliant<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
+        [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
         {
             return any_match<this_type::depth, U, Pred>(u, std::forward<Pred>(pred));
         }
 
         template <std::int64_t Level, typename U>
-        requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool any_match(const U& u) const
+            requires(!arrnd_compliant<U>)
+        [[nodiscard]] constexpr bool any_match(const U& u) const
         {
             return any<Level>([&u](const auto& a) {
                 if constexpr (arrnd_compliant<decltype(a)>) {
@@ -11066,7 +11070,8 @@ namespace details {
         }
 
         template <typename U>
-        requires(!arrnd_compliant<U>) [[nodiscard]] constexpr bool any_match(const U& u) const
+            requires(!arrnd_compliant<U>)
+        [[nodiscard]] constexpr bool any_match(const U& u) const
         {
             return any_match<this_type::depth, U>(u);
         }
@@ -11080,7 +11085,7 @@ namespace details {
         //}
 
         template <std::int64_t Level, typename Pred>
-        requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
+            requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
         {
             return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
@@ -11089,7 +11094,7 @@ namespace details {
         }
 
         template <typename Pred>
-        requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
+            requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
         {
             return all<this_type::depth>(axis, std::forward<Pred>(pred));
@@ -11128,7 +11133,7 @@ namespace details {
         //}
 
         template <std::int64_t Level, typename Pred>
-        requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
+            requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
         {
             return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
@@ -11137,7 +11142,7 @@ namespace details {
         }
 
         template <typename Pred>
-        requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
+            requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
         {
             return any<this_type::depth>(axis, std::forward<Pred>(pred));
@@ -11219,14 +11224,14 @@ namespace details {
             });
         }
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr replaced_type<bool> close(const ArCo& arr,
             const compliant_tol_type<ArCo, this_type::depth /*Level*/>& atol
             = default_atol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>(),
             const compliant_tol_type<ArCo, this_type::depth /*Level*/>& rtol
             = default_rtol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>()) const
         {
-            return transform</*Level*/this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
+            return transform</*Level*/ this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
                 return oc::close(a, b, atol, rtol);
             });
         }
@@ -11242,8 +11247,10 @@ namespace details {
         template </*std::int64_t Level, */ typename U>
             requires(!arrnd_compliant<U>)
         [[nodiscard]] constexpr replaced_type<bool> close(const U& value,
-            const tol_type<U, this_type::depth /*Level*/>& atol = default_atol<tol_type<U, this_type::depth /*Level*/>>(),
-            const tol_type<U, this_type::depth /*Level*/>& rtol = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
+            const tol_type<U, this_type::depth /*Level*/>& atol
+            = default_atol<tol_type<U, this_type::depth /*Level*/>>(),
+            const tol_type<U, this_type::depth /*Level*/>& rtol
+            = default_rtol<tol_type<U, this_type::depth /*Level*/>>()) const
         {
             return transform<this_type::depth /*Level*/>(
                 [&atol, &rtol, &value](const auto& a/*, const auto& b*/) {
@@ -11261,7 +11268,7 @@ namespace details {
         //    return close<this_type::depth>(value, atol, rtol);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool all_equal(const ArCo& arr) const
         {
             return all_match<this_type::depth /*Level*/>(arr);
@@ -11273,7 +11280,7 @@ namespace details {
         //    return all_equal<this_type::depth>(arr);
         //}
 
-        template </*std::int64_t Level, */typename U>
+        template </*std::int64_t Level, */ typename U>
         [[nodiscard]] constexpr bool all_equal(const U& u) const
         {
             return all<this_type::depth/*Level*/>(
@@ -11289,7 +11296,7 @@ namespace details {
         //    return all_equal<this_type::depth>(u);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool all_close(const ArCo& arr,
             const compliant_tol_type<ArCo, this_type::depth /*Level*/>& atol
             = default_atol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>(),
@@ -11309,7 +11316,7 @@ namespace details {
         //    return all_close<this_type::depth>(arr, atol, rtol);
         //}
 
-        template </*std::int64_t Level, */typename U>
+        template </*std::int64_t Level, */ typename U>
             requires(!arrnd_compliant<U>)
         [[nodiscard]] constexpr bool all_close(const U& u,
             const tol_type<U, this_type::depth /*Level*/>& atol
@@ -11332,7 +11339,7 @@ namespace details {
         //    return all_close<this_type::depth>(u, atol, rtol);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool any_equal(const ArCo& arr) const
         {
             return any_match<this_type::depth /*Level*/>(arr);
@@ -11344,7 +11351,7 @@ namespace details {
         //    return any_equal<this_type::depth>(arr);
         //}
 
-        template </*std::int64_t Level, */typename U>
+        template </*std::int64_t Level, */ typename U>
         [[nodiscard]] constexpr bool any_equal(const U& u) const
         {
             return any<this_type::depth/*Level*/>(
@@ -11360,7 +11367,7 @@ namespace details {
         //    return any_equal<this_type::depth>(u);
         //}
 
-        template </*std::int64_t Level, */arrnd_compliant ArCo>
+        template </*std::int64_t Level, */ arrnd_compliant ArCo>
         [[nodiscard]] constexpr bool any_close(const ArCo& arr,
             const compliant_tol_type<ArCo, this_type::depth /*Level*/>& atol
             = default_atol<compliant_tol_type<ArCo, this_type::depth /*Level*/>>(),
@@ -11380,7 +11387,7 @@ namespace details {
         //    return any_close<this_type::depth>(arr, atol, rtol);
         //}
 
-        template </*std::int64_t Level, */typename U>
+        template </*std::int64_t Level, */ typename U>
             requires(!arrnd_compliant<U>)
         [[nodiscard]] constexpr bool any_close(const U& u,
             const tol_type<U, this_type::depth /*Level*/>& atol
@@ -11834,172 +11841,157 @@ namespace details {
 
         [[nodiscard]] constexpr auto begin(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto begin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto cbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto cend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(
-                    *this, ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
 
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
             return empty()
                 ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+                : slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+                : slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
+                : const_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::begin));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto cend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
             return empty()
                 ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
+                : const_reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag)
         {
             return empty()
                 ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+                : reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
         [[nodiscard]] constexpr auto crend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
             return empty()
                 ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
+                : const_reverse_slice_iterator(
+                    *this, ranger_type(hdr_, axis, interval_type{0, 0}, false, arrnd_iterator_start_position::rend));
         }
 
         [[nodiscard]] constexpr auto abs() const
@@ -12242,7 +12234,8 @@ namespace details {
         std::shared_ptr<bool> original_valid_creator_ = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
         std::weak_ptr<bool> is_creator_valid_{};
         const this_type* creator_ = nullptr;
-        bool treat_as_pages_ = false; // useful for specific operations e.g. for operator* to decide between element wise and matrix multiplication
+        bool treat_as_pages_
+            = false; // useful for specific operations e.g. for operator* to decide between element wise and matrix multiplication
     };
 
     // arrnd type deduction by constructors
@@ -12277,7 +12270,6 @@ namespace details {
     //arrnd(const D (&)[M], const InputDataIt&, const InputDataIt&)
     //    -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-
     template <signed_integral_type_iterator InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = lightweight_allocator>
@@ -12292,7 +12284,6 @@ namespace details {
         template <typename> typename SharedRefAllocator = lightweight_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-
 
     template <signed_integral_type_iterator InputDimsIt, iterable DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
@@ -12312,28 +12303,28 @@ namespace details {
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-
-    template <typename Func/*, typename... Args*/,
-        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func/*, Args...*/>>,
+    template <typename Func /*, typename... Args*/,
+        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = lightweight_allocator,
         signed_integral_type_iterator InputDimsIt>
-    requires(invocable_no_arrnd<Func/*, Args...*/>) arrnd(const InputDimsIt&, const InputDimsIt&, Func&&/*, Args&&...*/)
-        -> arrnd<std::invoke_result_t<Func/*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <typename Func/*, typename... Args*/,
-        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func/*, Args...*/>>,
+        requires(invocable_no_arrnd<Func /*, Args...*/>)
+    arrnd(const InputDimsIt&, const InputDimsIt&, Func&& /*, Args&&...*/)
+        -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <typename Func /*, typename... Args*/,
+        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = lightweight_allocator, signed_integral_type_iterable Cont>
-    requires(invocable_no_arrnd<Func/*, Args...*/>) arrnd(const Cont&, Func&&/*, Args&&...*/)
-        -> arrnd<std::invoke_result_t<Func/*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <typename Func/*, typename... Args*/,
-        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func/*, Args...*/>>,
+        requires(invocable_no_arrnd<Func /*, Args...*/>)
+    arrnd(const Cont&, Func&& /*, Args&&...*/)
+        -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <typename Func /*, typename... Args*/,
+        typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = lightweight_allocator>
-    requires(invocable_no_arrnd<Func/*, Args...*/>)
-        arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&&/*, Args&&...*/)
-            -> arrnd<std::invoke_result_t<Func/*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-
+        requires(invocable_no_arrnd<Func /*, Args...*/>)
+    arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&& /*, Args&&...*/)
+        -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     // free arrnd iterator functions
 
@@ -12627,7 +12618,8 @@ namespace details {
     }
 
     template <arrnd_compliant First, arrnd_compliant Second, typename Third, typename... Others>
-    requires(arrnd_compliant<Third> || std::signed_integral<Third>) [[nodiscard]] inline constexpr First
+        requires(arrnd_compliant<Third> || std::signed_integral<Third>)
+    [[nodiscard]] inline constexpr First
         concat(const First& first, const Second& second, const Third& third, Others&&... others)
     {
         if constexpr (sizeof...(Others) == 0) {
@@ -12760,11 +12752,11 @@ namespace details {
     //    return insert<ArCo1::depth, ArCo1, ArCo2>(lhs, rhs, ind);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr auto insert(
         const ArCo1& lhs, const ArCo2& rhs, typename ArCo1::size_type ind, typename ArCo1::size_type axis = 0)
     {
-        return lhs./*template */insert/*<Level>*/(rhs, ind, axis);
+        return lhs./*template */ insert /*<Level>*/ (rhs, ind, axis);
     }
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     //[[nodiscard]] inline constexpr auto insert(
@@ -12851,7 +12843,6 @@ namespace details {
     //    return repeat<ArCo::depth>(arr, std::begin(count_axis_tuples), std::end(count_axis_tuples));
     //}
 
-
     //template </*std::int64_t Level, */arrnd_compliant ArCo, signed_integral_type_iterator InputIt>
     //[[nodiscard]] inline constexpr auto repeat(const ArCo& arr, InputIt first_rep, InputIt last_rep)
     //{
@@ -12892,7 +12883,6 @@ namespace details {
     //{
     //    return repeat<ArCo::depth>(arr, std::begin(reps), std::end(reps));
     //}
-
 
     //template </*std::int64_t Level, */arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto remove(
@@ -12937,52 +12927,52 @@ namespace details {
     //    return arr.empty();
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return arr.template reduce<Level>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template reduce<Level>(std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
-    template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto reduce(const ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return reduce<ArCo::depth>(arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
-    }
-
-    template <std::int64_t Level, arrnd_compliant ArCo, typename T, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func/*, Args&&... args*/)
-    {
-        return arr.template fold<Level>(init, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
-    }
-    template <arrnd_compliant ArCo, typename T, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func/*, Args&&... args*/)
-    {
-        return fold<ArCo::depth>(arr, init, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return reduce<ArCo::depth>(arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo, typename T, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func /*, Args&&... args*/)
+    {
+        return arr.template fold<Level>(init, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
+    }
+    template <arrnd_compliant ArCo, typename T, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto fold(const ArCo& arr, const T& init, Func&& func /*, Args&&... args*/)
+    {
+        return fold<ArCo::depth>(arr, init, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
+    }
+
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
     [[nodiscard]] inline constexpr auto reduce(
-        const ArCo& arr, typename ArCo::size_type axis, Func&& func/*, Args&&... args*/)
+        const ArCo& arr, typename ArCo::size_type axis, Func&& func /*, Args&&... args*/)
     {
-        return arr.template reduce<Level>(axis, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template reduce<Level>(axis, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
-    template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
+    template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
     [[nodiscard]] inline constexpr auto reduce(
-        const ArCo& arr, typename ArCo::size_type axis, Func&& func/*, Args&&... args*/)
+        const ArCo& arr, typename ArCo::size_type axis, Func&& func /*, Args&&... args*/)
     {
-        return reduce<ArCo::depth>(arr, axis, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return reduce<ArCo::depth>(arr, axis, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Func/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Func /*, typename... Args*/>
     [[nodiscard]] inline constexpr auto fold(
-        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func/*, Args&&... args*/)
+        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func /*, Args&&... args*/)
     {
-        return arr.template fold<Level>(axis, inits, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template fold<Level>(axis, inits, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
-    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Func/*, typename... Args*/>
+    template <arrnd_compliant ArCo1, arrnd_compliant ArCo2, typename Func /*, typename... Args*/>
     [[nodiscard]] inline constexpr auto fold(
-        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func/*, Args&&... args*/)
+        const ArCo1& arr, typename ArCo1::size_type axis, const ArCo2& inits, Func&& func /*, Args&&... args*/)
     {
-        return fold<ArCo1::depth>(arr, axis, inits, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return fold<ArCo1::depth>(arr, axis, inits, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
     //template <std::int64_t Level, arrnd_compliant ArCo>
@@ -12998,14 +12988,14 @@ namespace details {
     //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
     [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
         return arr.template all<Level>(axis, std::forward<Pred>(pred));
     }
 
     template <arrnd_compliant ArCo, typename Pred>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr auto all(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
         return all<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
@@ -13048,14 +13038,14 @@ namespace details {
     //}
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename Pred>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
     [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
         return arr.template any<Level>(axis, std::forward<Pred>(pred));
     }
 
     template <arrnd_compliant ArCo, typename Pred>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
     [[nodiscard]] inline constexpr auto any(const ArCo& arr, typename ArCo::size_type axis, Pred&& pred)
     {
         return any<ArCo::depth>(arr, axis, std::forward<Pred>(pred));
@@ -13169,95 +13159,96 @@ namespace details {
         return prod<ArCo::depth>(arr, axis);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return arr.template transform<Level>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template transform<Level>(std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
-        return lhs.template transform<Level>(rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return lhs.template transform<Level>(rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto transform(const ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return transform<ArCo::depth>(arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return transform<ArCo::depth>(arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    [[nodiscard]] inline constexpr auto transform(const ArCo& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
-        return transform<ArCo::depth>(lhs, rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return transform<ArCo::depth>(lhs, rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    inline constexpr auto& apply(ArCo&& arr, Func&& func/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    inline constexpr auto& apply(ArCo&& arr, Func&& func /*, Args&&... args*/)
     {
-        return arr.template apply<Level>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template apply<Level>(std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    inline constexpr auto& apply(ArCo&& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    inline constexpr auto& apply(ArCo&& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
-        return lhs.template apply<Level>(rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return lhs.template apply<Level>(rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    inline constexpr auto& apply(ArCo&& arr, Func&& func/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    inline constexpr auto& apply(ArCo&& arr, Func&& func /*, Args&&... args*/)
     {
         return apply<std::remove_cvref_t<ArCo>::depth>(
-            std::forward<ArCo>(arr), std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            std::forward<ArCo>(arr), std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    inline constexpr auto& apply(ArCo&& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    inline constexpr auto& apply(ArCo&& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
         return apply<std::remove_cvref_t<ArCo>::depth>(
-            std::forward<ArCo>(lhs), rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+            std::forward<ArCo>(lhs), rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    inline constexpr auto& apply(ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    inline constexpr auto& apply(ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return arr.template apply<Level>(std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr.template apply<Level>(std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    inline constexpr auto& apply(ArCo& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    inline constexpr auto& apply(ArCo& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
-        return lhs.template apply<Level>(rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return lhs.template apply<Level>(rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    inline constexpr auto& apply(ArCo& arr, Func&& func/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    inline constexpr auto& apply(ArCo& arr, Func&& func /*, Args&&... args*/)
     {
-        return apply<std::remove_cvref_t<ArCo>::depth>(arr, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return apply<std::remove_cvref_t<ArCo>::depth>(arr, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <arrnd_compliant ArCo, typename U, typename Func/*, typename... Args*/>
+    template <arrnd_compliant ArCo, typename U, typename Func /*, typename... Args*/>
         requires arrnd_compliant<U>
-    inline constexpr auto& apply(ArCo& lhs, const U& rhs, Func&& func/*, Args&&... args*/)
+    inline constexpr auto& apply(ArCo& lhs, const U& rhs, Func&& func /*, Args&&... args*/)
     {
-        return apply<std::remove_cvref_t<ArCo>::depth>(lhs, rhs, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return apply<std::remove_cvref_t<ArCo>::depth>(
+            lhs, rhs, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template filter<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template filter<Level>(std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
-    template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto filter(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return filter<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return filter<ArCo::depth>(arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -13271,15 +13262,15 @@ namespace details {
         return filter<ArCo1::depth>(arr, selector);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template find<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template find<Level>(std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
-    template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+    [[nodiscard]] inline constexpr auto find(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return find<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return find<ArCo::depth>(arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -13412,18 +13403,16 @@ namespace details {
     //    return transpose<ArCo::depth>(arr, std::begin(order), std::end(order));
     //}
 
-
-    template </*std::int64_t Level, */arrnd_compliant ArCo>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
     {
-        return arr./*template */transpose/*<Level>*/();
+        return arr./*template */ transpose /*<Level>*/ ();
     }
     //template <arrnd_compliant ArCo>
     //[[nodiscard]] inline constexpr auto transpose(const ArCo& arr)
     //{
     //    return arr.template transpose<ArCo::depth>();
     //}
-
 
     //template <std::int64_t Depth, arrnd_compliant ArCo>
     //    requires(Depth >= 0)
@@ -13495,7 +13484,7 @@ namespace details {
         const typename ArCo1::template compliant_tol_type<ArCo2>& rtol
         = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2>>())
     {
-        return lhs./*template */close/*<ArCo1::depth>*/(rhs, atol, rtol);
+        return lhs./*template */ close /*<ArCo1::depth>*/ (rhs, atol, rtol);
     }
 
     template <arrnd_compliant ArCo, typename T>
@@ -13504,7 +13493,7 @@ namespace details {
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return lhs./*template */close/*<ArCo::depth>*/(rhs, atol, rtol);
+        return lhs./*template */ close /*<ArCo::depth>*/ (rhs, atol, rtol);
     }
 
     template <typename T, arrnd_compliant ArCo>
@@ -13513,7 +13502,7 @@ namespace details {
         const typename ArCo::template tol_type<T>& atol = default_atol<typename ArCo::template tol_type<T>>(),
         const typename ArCo::template tol_type<T>& rtol = default_rtol<typename ArCo::template tol_type<T>>())
     {
-        return rhs./*template */close/*<ArCo::depth>*/(lhs, atol, rtol);
+        return rhs./*template */ close /*<ArCo::depth>*/ (lhs, atol, rtol);
     }
 
     template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -14932,11 +14921,12 @@ namespace details {
     //    return merge<ArCo::depth - 1>(arr);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Func/*, typename... Args*/>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename Func /*, typename... Args*/>
     [[nodiscard]] inline constexpr auto slide(const ArCo& arr, typename ArCo::size_type axis,
-        typename ArCo::interval_type window, bool bounded, Func&& func/*, Args&&... args*/)
+        typename ArCo::interval_type window, bool bounded, Func&& func /*, Args&&... args*/)
     {
-        return arr./*template */slide/*<Level>*/(axis, window, bounded, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr./*template */ slide /*<Level>*/ (
+            axis, window, bounded, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
     //template <arrnd_compliant ArCo, typename Func, typename... Args>
@@ -14951,8 +14941,8 @@ namespace details {
         typename ArCo::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc/*,
         Args&&... args*/)
     {
-        return arr./*template */accumulate/*<Level>*/(axis, window, bounded, std::forward<ReduceFunc>(rfunc),
-            std::forward<TransformFunc>(tfunc)/*, std::forward<Args>(args)...*/);
+        return arr./*template */ accumulate /*<Level>*/ (axis, window, bounded, std::forward<ReduceFunc>(rfunc),
+            std::forward<TransformFunc>(tfunc) /*, std::forward<Args>(args)...*/);
     }
 
     //template <arrnd_compliant ArCo, typename ReduceFunc, typename TransformFunc, typename... Args>
@@ -14964,10 +14954,11 @@ namespace details {
     //        std::forward<TransformFunc>(tfunc), std::forward<Args>(args)...);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename Func/*, typename... Args*/>
-    inline constexpr auto browse(const ArCo& arr, typename ArCo::size_type page_size, Func&& func/*, Args&&... args*/)
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename Func /*, typename... Args*/>
+    inline constexpr auto browse(const ArCo& arr, typename ArCo::size_type page_size, Func&& func /*, Args&&... args*/)
     {
-        return arr./*template */browse/*<Level>*/(page_size, std::forward<Func>(func)/*, std::forward<Args>(args)...*/);
+        return arr./*template */ browse /*<Level>*/ (
+            page_size, std::forward<Func>(func) /*, std::forward<Args>(args)...*/);
     }
 
     //template <arrnd_compliant ArCo, typename Func, typename... Args>
@@ -15170,12 +15161,11 @@ namespace details {
     //    return find_adjacents<ArCo::depth>(arr, std::begin(subs), std::end(subs), offset);
     //}
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool all(
-        const ArCo& arr, Pred&& pred /*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+    [[nodiscard]] inline constexpr bool all(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template all<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template all<Level>(std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -15184,11 +15174,11 @@ namespace details {
         return arr.template all<Level>();
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
-        //requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred /*, typename... Args*/>
+    //requires arrnd_compliant<U>
+    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred /*, Args&&... args*/)
     {
-        return lhs.template all_match<Level>(rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return lhs.template all_match<Level>(rhs, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename U>
@@ -15198,7 +15188,7 @@ namespace details {
     }
 
     template <std::int64_t Level, typename U, arrnd_compliant ArCo, typename Pred>
-    requires (!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool all_match(const U& lhs, const ArCo& rhs, Pred&& pred)
     {
         return rhs.template all_match<Level>(lhs, [&pred](const auto& a, const auto& b) {
@@ -15207,18 +15197,17 @@ namespace details {
     }
 
     template <std::int64_t Level, typename U, arrnd_compliant ArCo>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool all_match(const U& lhs, const ArCo& rhs)
     {
         return rhs.template all_match<Level>(lhs);
     }
 
-    template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr bool all(
-        const ArCo& arr, Pred&& pred /*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+    [[nodiscard]] inline constexpr bool all(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return all<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return all<ArCo::depth>(arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo>
@@ -15227,11 +15216,11 @@ namespace details {
         return all<ArCo::depth>(arr);
     }
 
-    template <arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
-        //requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename U, typename Pred /*, typename... Args*/>
+    //requires arrnd_compliant<U>
+    [[nodiscard]] inline constexpr bool all_match(const ArCo& lhs, const U& rhs, Pred&& pred /*, Args&&... args*/)
     {
-        return all_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return all_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo, typename U>
@@ -15241,25 +15230,24 @@ namespace details {
     }
 
     template <typename U, arrnd_compliant ArCo, typename Pred>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool all_match(const U& lhs, const ArCo& rhs, Pred&& pred)
     {
         return all_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred));
     }
 
     template <typename U, arrnd_compliant ArCo>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool all_match(const U& lhs, const ArCo& rhs)
     {
         return all_match<ArCo::depth>(lhs, rhs);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool any(
-        const ArCo& arr, Pred&& pred /*, Args&&... args*/)
+    template <std::int64_t Level, arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<Level>>)
+    [[nodiscard]] inline constexpr bool any(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return arr.template any<Level>(std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return arr.template any<Level>(std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo>
@@ -15268,21 +15256,22 @@ namespace details {
         return arr.template any<Level>();
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
+    template <std::int64_t Level, arrnd_compliant ArCo, typename U, typename Pred /*, typename... Args*/>
         requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred /*, Args&&... args*/)
     {
-        return lhs.template any_match<Level>(rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return lhs.template any_match<Level>(rhs, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <std::int64_t Level, arrnd_compliant ArCo, typename U>
-    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
+        requires arrnd_compliant<U>
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
     {
         return lhs.template any_match<Level>(rhs);
     }
 
     template <std::int64_t Level, typename U, arrnd_compliant ArCo, typename Pred>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool any_match(const U& lhs, const ArCo& rhs, Pred&& pred)
     {
         return rhs.template any_match<Level>(lhs, [&pred](const auto& a, const auto& b) {
@@ -15291,18 +15280,17 @@ namespace details {
     }
 
     template <std::int64_t Level, typename U, arrnd_compliant ArCo>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool any_match(const U& lhs, const ArCo& rhs)
     {
         return rhs.template any_match<Level>(lhs);
     }
 
-    template <arrnd_compliant ArCo, typename Pred/*, typename... Args*/>
-    requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
-    [[nodiscard]] inline constexpr bool any(
-        const ArCo& arr, Pred&& pred /*, Args&&... args*/)
+    template <arrnd_compliant ArCo, typename Pred /*, typename... Args*/>
+        requires(invocable_no_arrnd<Pred, typename ArCo::template inner_value_type<ArCo::depth>>)
+    [[nodiscard]] inline constexpr bool any(const ArCo& arr, Pred&& pred /*, Args&&... args*/)
     {
-        return any<ArCo::depth>(arr, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return any<ArCo::depth>(arr, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo>
@@ -15311,44 +15299,45 @@ namespace details {
         return any<ArCo::depth>(arr);
     }
 
-    template <arrnd_compliant ArCo, typename U, typename Pred/*, typename... Args*/>
+    template <arrnd_compliant ArCo, typename U, typename Pred /*, typename... Args*/>
         requires arrnd_compliant<U>
-    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred/*, Args&&... args*/)
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs, Pred&& pred /*, Args&&... args*/)
     {
-        return any_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred)/*, std::forward<Args>(args)...*/);
+        return any_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred) /*, std::forward<Args>(args)...*/);
     }
 
     template <arrnd_compliant ArCo, typename U>
-    requires arrnd_compliant<U> [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
+        requires arrnd_compliant<U>
+    [[nodiscard]] inline constexpr bool any_match(const ArCo& lhs, const U& rhs)
     {
         return any_match<ArCo::depth>(lhs, rhs);
     }
 
     template <typename U, arrnd_compliant ArCo, typename Pred>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool any_match(const U& lhs, const ArCo& rhs, Pred&& pred)
     {
         return any_match<ArCo::depth>(lhs, rhs, std::forward<Pred>(pred));
     }
 
     template <typename U, arrnd_compliant ArCo>
-    requires(!arrnd_compliant<U>)
+        requires(!arrnd_compliant<U>)
     [[nodiscard]] inline constexpr bool any_match(const U& lhs, const ArCo& rhs)
     {
         return any_match<ArCo::depth>(lhs, rhs);
     }
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool all_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs./*template */all_equal/*<Level>*/(rhs);
+        return lhs./*template */ all_equal /*<Level>*/ (rhs);
     }
 
-    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */ typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs./*template */all_equal/*<Level>*/(lhs);
+        return rhs./*template */ all_equal /*<Level>*/ (lhs);
     }
 
     //template <arrnd_compliant ArCo, typename T>
@@ -15364,17 +15353,17 @@ namespace details {
     //    return all_equal<ArCo::depth>(lhs, rhs);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr bool all_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth/*Level*/>& atol
+        const typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>& atol
         = default_atol<typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>>(),
         const typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>& rtol
         = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2, ArCo1::depth /*Level*/>>())
     {
-        return lhs./*template */all_close/*<Level>*/(rhs, atol, rtol);
+        return lhs./*template */ all_close /*<Level>*/ (rhs, atol, rtol);
     }
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename T>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_close(const ArCo& lhs, const T& rhs,
         const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& atol
@@ -15382,10 +15371,10 @@ namespace details {
         const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& rtol
         = default_rtol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>())
     {
-        return lhs./*template */all_close/*<Level>*/(rhs, atol, rtol);
+        return lhs./*template */ all_close /*<Level>*/ (rhs, atol, rtol);
     }
 
-    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */ typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool all_close(const T& lhs, const ArCo& rhs,
         const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& atol
@@ -15393,7 +15382,7 @@ namespace details {
         const typename ArCo::template tol_type<T, ArCo::depth /*Level*/>& rtol
         = default_rtol<typename ArCo::template tol_type<T, ArCo::depth /*Level*/>>())
     {
-        return rhs./*template */all_close/*<Level>*/(lhs, atol, rtol);
+        return rhs./*template */ all_close /*<Level>*/ (lhs, atol, rtol);
     }
 
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -15424,17 +15413,17 @@ namespace details {
     //    return all_close<ArCo::depth>(lhs, rhs, atol, rtol);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_equal(const ArCo& lhs, const T& rhs)
     {
-        return lhs./*template */any_equal/*<Level>*/(rhs);
+        return lhs./*template */ any_equal /*<Level>*/ (rhs);
     }
 
-    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */ typename T, arrnd_compliant ArCo>
         requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool any_equal(const T& lhs, const ArCo& rhs)
     {
-        return rhs./*template */any_equal/*<Level>*/(lhs);
+        return rhs./*template */ any_equal /*<Level>*/ (lhs);
     }
 
     //template <arrnd_compliant ArCo, typename T>
@@ -15450,34 +15439,34 @@ namespace details {
     //    return any_equal<ArCo::depth>(lhs, rhs);
     //}
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo1, arrnd_compliant ArCo2>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo1, arrnd_compliant ArCo2>
     [[nodiscard]] inline constexpr bool any_close(const ArCo1& lhs, const ArCo2& rhs,
-        const typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>& atol
-        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>>(),
-        const typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>& rtol
-        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2/*, Level*/>>())
+        const typename ArCo1::template compliant_tol_type<ArCo2 /*, Level*/>& atol
+        = default_atol<typename ArCo1::template compliant_tol_type<ArCo2 /*, Level*/>>(),
+        const typename ArCo1::template compliant_tol_type<ArCo2 /*, Level*/>& rtol
+        = default_rtol<typename ArCo1::template compliant_tol_type<ArCo2 /*, Level*/>>())
     {
-        return lhs./*template */any_close/*<Level>*/(rhs, atol, rtol);
+        return lhs./*template */ any_close /*<Level>*/ (rhs, atol, rtol);
     }
 
-    template </*std::int64_t Level, */arrnd_compliant ArCo, typename T>
+    template </*std::int64_t Level, */ arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
-        const typename ArCo::template tol_type<T/*, Level*/>& atol
-        = default_atol<typename ArCo::template tol_type<T/*, Level*/>>(),
-        const typename ArCo::template tol_type<T/*, Level*/>& rtol
-        = default_rtol<typename ArCo::template tol_type<T/*, Level*/>>())
+        const typename ArCo::template tol_type<T /*, Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T /*, Level*/>>(),
+        const typename ArCo::template tol_type<T /*, Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T /*, Level*/>>())
     {
-        return lhs./*template */any_close/*<Level>*/(rhs, atol, rtol);
+        return lhs./*template */ any_close /*<Level>*/ (rhs, atol, rtol);
     }
 
-    template </*std::int64_t Level, */typename T, arrnd_compliant ArCo>
+    template </*std::int64_t Level, */ typename T, arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
-        const typename ArCo::template tol_type<T/*, Level*/>& atol
-        = default_atol<typename ArCo::template tol_type<T/*, Level*/>>(),
-        const typename ArCo::template tol_type<T/*, Level*/>& rtol
-        = default_rtol<typename ArCo::template tol_type<T/*, Level*/>>())
+        const typename ArCo::template tol_type<T /*, Level*/>& atol
+        = default_atol<typename ArCo::template tol_type<T /*, Level*/>>(),
+        const typename ArCo::template tol_type<T /*, Level*/>& rtol
+        = default_rtol<typename ArCo::template tol_type<T /*, Level*/>>())
     {
-        return rhs./*template */any_close/*<Level>*/(lhs, atol, rtol);
+        return rhs./*template */ any_close /*<Level>*/ (lhs, atol, rtol);
     }
 
     //template <arrnd_compliant ArCo1, arrnd_compliant ArCo2>
@@ -15578,7 +15567,7 @@ namespace details {
         //    carco = arco;
         typename ArCo::size_type nvectical_spaces = 0;
         typename ArCo::size_type ndepth_spaces = 0;
-        return ostream_operator_recursive(os, arco/*carco*/, nvectical_spaces, ndepth_spaces);
+        return ostream_operator_recursive(os, arco /*carco*/, nvectical_spaces, ndepth_spaces);
     }
 
     struct arrnd_json_manip {
@@ -15607,7 +15596,7 @@ namespace details {
             ajm.os_ << "{\n";
             ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
                     << type_name<typename ArCo::template inner_value_type<ArCo::depth>>() << "\"\n";
-            to_json(ajm.os_, arco/*carco*/, nvertical_spaces);
+            to_json(ajm.os_, arco /*carco*/, nvertical_spaces);
             ajm.os_ << "}";
             return ajm.os_;
         }
@@ -15758,11 +15747,8 @@ using details::concat;
 //using details::is_banded;
 //using details::find_adjacents;
 
-
 //using details::all;
 //using details::any;
-
-
 
 //using details::diag;
 //using details::reorder;
@@ -15770,7 +15756,6 @@ using details::concat;
 //using details::tril;
 //using details::triu;
 //using details::nest; // deprecated
-
 
 using details::slide;
 using details::accumulate;
@@ -15789,7 +15774,6 @@ using details::all_equal;
 using details::all_close;
 using details::any_equal;
 using details::any_close;
-
 
 using details::sum;
 using details::prod;
