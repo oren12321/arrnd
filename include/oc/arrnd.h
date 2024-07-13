@@ -15450,6 +15450,7 @@ namespace details {
     }
 
     template </*std::int64_t Level, */ arrnd_compliant ArCo, typename T>
+        requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool any_close(const ArCo& lhs, const T& rhs,
         const typename ArCo::template tol_type<T /*, Level*/>& atol
         = default_atol<typename ArCo::template tol_type<T /*, Level*/>>(),
@@ -15460,6 +15461,7 @@ namespace details {
     }
 
     template </*std::int64_t Level, */ typename T, arrnd_compliant ArCo>
+        requires(!arrnd_compliant<T>)
     [[nodiscard]] inline constexpr bool any_close(const T& lhs, const ArCo& rhs,
         const typename ArCo::template tol_type<T /*, Level*/>& atol
         = default_atol<typename ArCo::template tol_type<T /*, Level*/>>(),
