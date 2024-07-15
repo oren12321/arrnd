@@ -25,6 +25,12 @@
 #include <ranges>
 #include <span>
 
+#ifdef __COMPILE_CUDA__
+__global__ void dummy_kernel()
+{
+}
+#endif
+
 namespace oc {
 namespace details {
     // reference: http://stackoverflow.com/a/20170989/1593077

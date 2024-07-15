@@ -1,6 +1,10 @@
 # oc-arrnd
 
-A C++ implementation of flexible N dimensional array (no GPU usage) including std compatibility
+A C++ implementation of flexible N dimensional array (for CUDA usage, define __COMPILE_CUDA__ before including header file) including std compatibility.
+In order to support C++20 standard, minimum CUDA version 12.5.1 should be used. CUDA currently no supported via docker file. For CUDA compilation with CMake use the following command:
+```console
+cmake -DUSE_CUDA=TRUE ..
+```
 
 Usage example (simple matrices multiplication):
 
