@@ -3857,13 +3857,13 @@ namespace details {
         return variadic_and(std::get<I>(std::forward<Tuple>(t1)) <= std::get<I>(std::forward<Tuple>(t2))...);
     }
 
-    template <typename Tuple, std::size_t... I>
-    constexpr auto tuple_max(Tuple&& t, std::index_sequence<I...>)
-    {
-        return std::max({
-            std::get<I>(std::forward<Tuple>(t))...,
-        });
-    }
+    //template <typename Tuple, std::size_t... I>
+    //constexpr auto tuple_max(Tuple&& t, std::index_sequence<I...>)
+    //{
+    //    return std::max({
+    //        std::get<I>(std::forward<Tuple>(t))...,
+    //    });
+    //}
 
     template <typename Cont, typename... Args>
     class zipped_cont {
@@ -4078,12 +4078,14 @@ namespace details {
             {
                 auto impl
                     = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
-                          return std::forward_as_tuple(
-                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                          return std::max({
+                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...,
+                          });
                       };
 
                 auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+                //return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return diffs;
             }
 
             std::tuple<typename ItPack::iter_type...> data_;
@@ -4202,12 +4204,16 @@ namespace details {
             {
                 auto impl
                     = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
-                          return std::forward_as_tuple(
-                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                          //return std::forward_as_tuple(
+                          //    (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...);
+                          return std::max({
+                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...,
+                          });
                       };
 
                 auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+                //return tuple_max(diffs, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return diffs;
             }
 
             std::tuple<typename ItPack::riter_type...> data_;
