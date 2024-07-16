@@ -26,9 +26,7 @@
 #include <span>
 
 #ifdef __COMPILE_CUDA__
-__global__ void dummy_kernel()
-{
-}
+// CUDA code
 #endif
 
 namespace oc {
