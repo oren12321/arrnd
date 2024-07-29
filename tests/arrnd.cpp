@@ -117,6 +117,59 @@
 //}
 
 
+TEST(simple_allocator, can_allocate_and_deallocate_memory)
+{
+    using namespace oc;
+
+    simple_allocator<int> alloc;
+
+    int* p = alloc.allocate(2);
+
+    p[0] = 0;
+    p[1] = 1;
+
+    EXPECT_EQ(p[0], 0);
+    EXPECT_EQ(p[1], 1);
+
+    alloc.deallocate(p, 2);
+}
+
+TEST(simple_allocator, throws_exception_if_allocation_fails)
+{
+    using namespace oc;
+
+    simple_allocator<int> alloc;
+
+    EXPECT_THROW(int* p = alloc.allocate(std::numeric_limits<std::size_t>::max() / sizeof(int)), std::bad_alloc);
+}
+
+TEST(simple_allocator, is_different_from_another_in_case_of_different_size_type)
+{
+    using namespace oc;
+
+    simple_allocator<int> alloc1;
+    simple_allocator<char> alloc2;
+
+    EXPECT_EQ(alloc1, alloc1);
+    EXPECT_NE(alloc1, alloc2);
+}
+
+TEST(simple_allocator, is_copyable_and_movable)
+{
+    using namespace oc;
+
+    simple_allocator<int> alloc1;
+    EXPECT_EQ(simple_allocator<int>(alloc1), alloc1);
+
+    EXPECT_NE(simple_allocator<char>(alloc1), alloc1);
+
+    simple_allocator<int> alloc1_copy(alloc1);
+    simple_allocator<char> other_alloc1_copy(alloc1);
+
+    EXPECT_EQ(simple_allocator<int>(std::move(alloc1)), alloc1_copy);
+    EXPECT_NE(simple_allocator<int>(std::move(alloc1_copy)), other_alloc1_copy);
+}
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::simple_dynamic_vector<std::string>;

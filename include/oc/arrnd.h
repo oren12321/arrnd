@@ -149,51 +149,86 @@ using details::const_array_cast;
 namespace oc {
 namespace details {
     template <typename T>
-    class lightweight_allocator {
-    public:
+    struct simple_allocator {
         using value_type = T;
-        using pointer = T*;
-        using const_pointer = const T*;
-        using reference = T&;
-        using const_reference = const T&;
-        using size_type = std::int64_t;
-        using difference_type = std::int64_t;
 
-        constexpr lightweight_allocator() = default;
-        constexpr lightweight_allocator(const lightweight_allocator& other) = default;
-        constexpr lightweight_allocator& operator=(const lightweight_allocator& other) = default;
-        constexpr lightweight_allocator(lightweight_allocator&& other) = default;
-        constexpr lightweight_allocator& operator=(lightweight_allocator&& other) = default;
-        constexpr ~lightweight_allocator() = default;
+        simple_allocator() = default;
 
         template <typename U>
-        constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept
-        { }
+        constexpr simple_allocator(const simple_allocator<U>&) noexcept {}
 
-        [[nodiscard]] constexpr pointer allocate(size_type n)
+        [[nodiscard]] constexpr T* allocate(std::size_t n)
         {
-            assert(n > 0);
-            auto p = reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
-            if (!p) {
-                throw std::bad_alloc{};
-            }
-            return p;
+            assert(n > 0); // if n == 0 the returned value is unspecified
+            return static_cast<T*>(::operator new[](n * sizeof(value_type)));
         }
 
-        constexpr void deallocate(pointer p, size_type n) noexcept
+        constexpr void deallocate(T* p, std::size_t n) noexcept
         {
-            assert(p && n > 0);
-            operator delete[](p, n * sizeof(value_type));
+            assert(n > 0); // n should be > 0 since n == 0 is undefined
+            ::operator delete[](p, n * sizeof(value_type));
         }
     };
+
+    template <typename T, typename U>
+    [[nodiscard]] constexpr bool operator==(const simple_allocator<T>&, const simple_allocator<U>&)
+    {
+        return sizeof(T) == sizeof(U);
+    }
+
+    template <typename T, typename U>
+    [[nodiscard]] constexpr bool operator!=(const simple_allocator<T>& lhs, const simple_allocator<U>& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
+    //template <typename T>
+    //class lightweight_allocator {
+    //public:
+    //    using value_type = T;
+    //    using pointer = T*;
+    //    using const_pointer = const T*;
+    //    using reference = T&;
+    //    using const_reference = const T&;
+    //    using size_type = std::int64_t;
+    //    using difference_type = std::int64_t;
+
+    //    constexpr lightweight_allocator() = default;
+    //    constexpr lightweight_allocator(const lightweight_allocator& other) = default;
+    //    constexpr lightweight_allocator& operator=(const lightweight_allocator& other) = default;
+    //    constexpr lightweight_allocator(lightweight_allocator&& other) = default;
+    //    constexpr lightweight_allocator& operator=(lightweight_allocator&& other) = default;
+    //    constexpr ~lightweight_allocator() = default;
+
+    //    template <typename U>
+    //    constexpr lightweight_allocator(const lightweight_allocator<U>&) noexcept
+    //    { }
+
+    //    [[nodiscard]] constexpr pointer allocate(size_type n)
+    //    {
+    //        assert(n > 0);
+    //        auto p = reinterpret_cast<pointer>(operator new[](n * sizeof(value_type)));
+    //        if (!p) {
+    //            throw std::bad_alloc{};
+    //        }
+    //        return p;
+    //    }
+
+    //    constexpr void deallocate(pointer p, size_type n) noexcept
+    //    {
+    //        assert(p && n > 0);
+    //        operator delete[](p, n * sizeof(value_type));
+    //    }
+    //};
 }
 
-using details::lightweight_allocator;
+//using details::lightweight_allocator;
+using details::simple_allocator;
 }
 
 namespace oc {
 namespace details {
-    template <typename T, template <typename> typename Allocator = lightweight_allocator>
+    template <typename T, template <typename> typename Allocator = simple_allocator>
     class simple_dynamic_vector final {
     public:
         using value_type = T;
@@ -452,7 +487,7 @@ namespace details {
         bool is_view_ = false;
     };
 
-    template <typename T, template <typename> typename Allocator = lightweight_allocator>
+    template <typename T, template <typename> typename Allocator = simple_allocator>
     [[nodiscard]] inline constexpr bool operator==(
         const simple_dynamic_vector<T, Allocator>& lhs, const simple_dynamic_vector<T, Allocator>& rhs)
     {
@@ -1008,7 +1043,7 @@ using details::interval_type_iterable;
 
 namespace oc {
 namespace details {
-    template <typename T, template <typename> typename Allocator = lightweight_allocator>
+    template <typename T, template <typename> typename Allocator = simple_allocator>
     struct dynamic_storage_info {
         using storage_type = simple_dynamic_vector<T, Allocator>;
         static constexpr std::int64_t size = std::dynamic_extent;
@@ -4718,16 +4753,16 @@ namespace details {
     //}
 
     //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
-    //    template <typename> typename SharedRefAllocator = lightweight_allocator,
+    //    template <typename> typename SharedRefAllocator = simple_allocator,
     //    arrnd_header_compliant Header = arrnd_header<>/*, template <typename> typename Indexer = arrnd_indexer,
     //    template <typename> typename Ranger = arrnd_axis_ranger*/>
     //template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename StorageInfo = dynamic_storage_info<T>,
     //    arrnd_header_compliant Header = arrnd_header<>,
-    //    template <typename> typename SharedRefAllocator = lightweight_allocator/*, template <typename> typename Indexer = arrnd_indexer,
+    //    template <typename> typename SharedRefAllocator = simple_allocator/*, template <typename> typename Indexer = arrnd_indexer,
     //    template <typename> typename Ranger = arrnd_axis_ranger*/>
     template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename DataStorageInfo = dynamic_storage_info<T>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator/*, template <typename> typename Indexer = arrnd_indexer,
+        template <typename> typename SharedRefAllocator = simple_allocator/*, template <typename> typename Indexer = arrnd_indexer,
         template <typename> typename Ranger = arrnd_axis_ranger*/>
     class arrnd {
     public:
@@ -12248,71 +12283,71 @@ namespace details {
 
     /*template <typename DataStorageInfo = dynamic_storage_info<T>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>*/
+        template <typename> typename SharedRefAllocator = simple_allocator>*/
 
     template <signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt,
         typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, std::input_iterator InputDataIt,
         typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <std::input_iterator InputDataIt,
         typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const InputDataIt&,
         const InputDataIt& a)
         -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     //template <std::integral D, std::int64_t M, std::input_iterator InputDataIt,
     //    typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
     //    typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-    //    template <typename> typename SharedRefAllocator = lightweight_allocator>
+    //    template <typename> typename SharedRefAllocator = simple_allocator>
     //arrnd(const D (&)[M], const InputDataIt&, const InputDataIt&)
     //    -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <signed_integral_type_iterator InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, std::initializer_list<U>) -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <signed_integral_type_iterator InputDimsIt, iterable DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, iterable DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <iterable DataCont, typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator,
+        template <typename> typename SharedRefAllocator = simple_allocator,
         signed_integral_type_iterator InputDimsIt>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&& /*, Args&&...*/)
@@ -12320,14 +12355,14 @@ namespace details {
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator, signed_integral_type_iterable Cont>
+        template <typename> typename SharedRefAllocator = simple_allocator, signed_integral_type_iterable Cont>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
     arrnd(const Cont&, Func&& /*, Args&&...*/)
         -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
-        template <typename> typename SharedRefAllocator = lightweight_allocator>
+        template <typename> typename SharedRefAllocator = simple_allocator>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&& /*, Args&&...*/)
         -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
