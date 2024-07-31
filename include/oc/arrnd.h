@@ -226,6 +226,799 @@ namespace details {
 using details::simple_allocator;
 }
 
+
+
+
+namespace oc {
+namespace details {
+    template <typename T, typename Allocator = simple_allocator<T>>
+    class simple_vector final {
+        static_assert(std::is_same_v<T, typename Allocator::value_type>);
+    public:
+        using value_type = T;
+        using allocator_type = Allocator;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using const_pointer = const T*;
+        using iterator = T*;
+        using const_iterator = const T*;
+        using reverse_iterator = std::reverse_iterator<pointer>;
+        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+
+        simple_vector() = default;
+
+        explicit constexpr simple_vector(size_type size)
+            : size_(size)
+            , capacity_(size)
+        {
+            if (size > 0) {
+                ptr_ = alloc_.allocate(size);
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::uninitialized_default_construct_n(ptr_, size);
+                }
+            }
+        }
+
+        explicit constexpr simple_vector(size_type size, const value_type& value)
+            : size_(size)
+            , capacity_(size)
+        {
+            if (size > 0) {
+                ptr_ = alloc_.allocate(size);
+                std::uninitialized_fill_n(ptr_, size, value);
+            }
+        }
+
+        template <typename InputIt>
+            requires std::input_iterator<InputIt>
+        explicit constexpr simple_vector(InputIt first, InputIt last)
+            : size_(std::distance(first, last))
+            , capacity_(std::distance(first, last))
+        {
+            difference_type dist = std::distance(first, last);
+            if (dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+            if (dist > 0) {
+                ptr_ = alloc_.allocate(dist);
+                std::uninitialized_copy_n(first, dist, ptr_);
+            }
+        }
+
+        constexpr void clear()
+        {
+            if (!empty()) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_, size_);
+                }
+            }
+            size_ = 0;
+        }
+
+        constexpr simple_vector(const simple_vector& other)
+            : alloc_(other.alloc_)
+            , size_(other.size_)
+            , capacity_(other.capacity_)
+        {
+            if (other.capacity_ > 0) {
+                ptr_ = alloc_.allocate(other.capacity_);
+                std::uninitialized_copy_n(other.ptr_, other.size_, ptr_);
+            }
+        }
+
+        constexpr simple_vector& operator=(const simple_vector& other)
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            if (capacity_ > 0) {
+                clear();
+                alloc_.deallocate(ptr_, capacity_);
+                capacity_ = 0;
+            }
+
+            alloc_ = other.alloc_;
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+
+            if (other.capacity_ > 0) {
+                ptr_ = other.alloc_.allocate(other.capacity_);
+                std::uninitialized_copy_n(other.ptr_, other.size_, ptr_);
+            }
+
+            return *this;
+        }
+
+        constexpr simple_vector(simple_vector&& other) noexcept
+            : alloc_(std::move(other.alloc_))
+            , size_(other.size_)
+            , capacity_(other.capacity_)
+        {
+            ptr_ = other.ptr_;
+
+            other.data_ptr_ = nullptr;
+            other.size_ = 0;
+            other.capacity_ = 0;
+        }
+        
+        constexpr simple_vector operator=(simple_vector&& other) noexcept
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            if (capacity_ > 0) {
+                clear();
+                alloc_.deallocate(ptr_, capacity_);
+                capacity_ = 0;
+            }
+
+            alloc_ = std::move(other.alloc_);
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            ptr_ = other.ptr_;
+
+            other.data_ptr_ = nullptr;
+            other.size_ = 0;
+            other.capacity_ = 0;
+
+            return *this;
+        }
+
+        constexpr ~simple_vector() noexcept
+        {
+            if (size_ > 0) {
+                clear();
+            }
+            if (capacity_ > 0) {
+                alloc_.deallocate(ptr_, capacity_);
+            }
+        }
+
+        [[nodiscard]] constexpr bool empty() const noexcept
+        {
+            return size_ == 0;
+        }
+
+        [[nodiscard]] constexpr size_type size() const noexcept
+        {
+            return size_;
+        }
+
+        [[nodiscard]] constexpr size_type capacity() const noexcept
+        {
+            return capacity_;
+        }
+
+        [[nodiscard]] constexpr pointer data() const noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        constexpr void resize(size_type count)
+        {
+            if (count == 0) {
+                clear();
+            }
+            else if (count < size_) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_ + count, size_ - count);
+                }
+                size_ = count;
+            }
+            else if (count > size_) {
+                if (count <= capacity_) {
+                    if constexpr (!std::is_fundamental_v<value_type>) {
+                        std::uninitialized_default_construct_n(ptr_ + size_, count - size_);
+                    }
+                    size_ = count;
+                }
+                else {
+                    pointer new_ptr = alloc_.allocate(count);
+                    std::uninitialized_move_n(ptr_, size_, new_ptr);
+                    if constexpr (!std::is_fundamental_v<value_type>) {
+                        std::uninitialized_default_construct_n(new_ptr + size_, count - size_);
+                    }
+
+                    if (capacity_ > 0) {
+                        alloc_.deallocate(ptr_, capacity_);
+                    }
+
+                    size_ = count;
+                    capacity_ = count;
+                    ptr_ = new_ptr;
+                }
+            }
+        }
+
+        constexpr void reserve(size_type new_cap)
+        {
+            if (new_cap > capacity_) {
+                pointer new_ptr = alloc_.allocate(new_cap);
+                std::uninitialized_move_n(ptr_, size_, new_ptr);
+
+                alloc_.deallocate(ptr_, capacity_);
+                ptr_ = new_ptr;
+                capacity_ = new_cap;
+            }
+        }
+
+        constexpr void append(size_type count)
+        {
+            if (size_ + count < capacity_ && size_ + count > size_) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::uninitialized_default_construct_n(ptr_ + size_, count);
+                }
+                size_ += count;
+            } else if (size_ + count >= capacity_) {
+                size_type new_cap = static_cast<size_type>(1.5 * (size_ + count));
+                pointer new_ptr = alloc_.allocate(new_cap);
+                std::uninitialized_move_n(ptr_, size_, new_ptr);
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::uninitialized_default_construct_n(new_ptr + size_, count);
+                }
+                alloc_.deallocate(ptr_, capacity_);
+
+                ptr_ = new_ptr;
+                capacity_ = new_cap;
+                size_ += count;
+            }
+        }
+
+        constexpr void shrink_to_fit()
+        {
+            if (capacity_ > size_) {
+                pointer new_ptr = alloc_.allocate(size_);
+                std::uninitialized_move_n(ptr_, size_, new_ptr);
+
+                alloc_.deallocate(ptr_, capacity_);
+                ptr_ = new_ptr;
+                capacity_ = size_;
+            }
+        }
+
+        [[nodiscard]] constexpr pointer begin() noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr pointer end() noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cend() const noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+        {
+            return std::make_reverse_iterator(end());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+        {
+            return std::make_reverse_iterator(begin());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+        {
+            return std::make_reverse_iterator(cend());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+        {
+            return std::make_reverse_iterator(cbegin());
+        }
+
+        [[nodiscard]] constexpr const_reference back() const noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr reference back() noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr const_reference front() const noexcept
+        {
+            return ptr_[0];
+        }
+
+        [[nodiscard]] constexpr reference front() noexcept
+        {
+            return ptr_[0];
+        }
+
+        template <typename InputIt>
+            requires std::input_iterator<InputIt>
+        constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
+        {
+            difference_type in_dist = std::distance(first, last);
+            if (in_dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (in_dist == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(in_dist);
+            
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + in_dist;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - in_dist);
+
+            std::copy(first, last, new_pos);
+
+            return new_pos;
+        }
+
+        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        {
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (count == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(count);
+
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + count;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - count);
+
+            std::fill_n(new_pos, count, value);
+
+            return new_pos;
+        }
+
+        constexpr iterator erase(const_iterator first, const_iterator last)
+        {
+            difference_type dist = std::distance(first, last);
+            if (dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type first_dist = std::distance(cbegin(), first);
+            if (first_dist < 0 || first_dist > size_) {
+                throw std::invalid_argument("unbound input first");
+            }
+
+            difference_type last_dist = std::distance(cbegin(), last);
+            if (last_dist < 0 || last_dist > size_) {
+                throw std::invalid_argument("unbound input last");
+            }
+
+            if (dist == 0) {
+                return ptr_ + last_dist - 1;
+            }
+
+            //std::move(rbegin(), rbegin() + size_ - last_dist, rbegin() + dist);
+            std::move(last, cend(), ptr_ + first_dist);
+
+            resize(size_ - dist);
+
+            return ptr_ + last_dist - 1;
+        }
+
+        constexpr iterator erase(const_iterator pos)
+        {
+            return erase(pos, pos + 1);
+        }
+
+    private:
+        size_type size_ = 0;
+        size_type capacity_ = 0;
+        pointer ptr_ = nullptr;
+        allocator_type alloc_;
+    };
+
+    template <typename T, typename Allocator>
+    [[nodiscard]] inline constexpr bool operator==(
+        const simple_vector<T, Allocator>& lhs, const simple_vector<T, Allocator>& rhs)
+    {
+        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+    }
+
+    template <typename T, std::size_t Capacity>
+    class simple_array final {
+        static_assert(Capacity > 0);
+
+    public:
+        using value_type = T;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using const_pointer = const T*;
+        using iterator = T*;
+        using const_iterator = const T*;
+        using reverse_iterator = std::reverse_iterator<pointer>;
+        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+
+        simple_array() = default;
+
+        explicit constexpr simple_array(size_type size)
+            : size_(size)
+        {
+            if (size > Capacity) {
+                throw std::invalid_argument("size bigger than maximum capacity");
+            }
+        }
+
+        template <typename U>
+        explicit constexpr simple_array(size_type size, const U& value)
+            : simple_array(size) {
+            std::fill_n(ptr_, size, value);
+        }
+
+        template <typename InputIt>
+            requires std::input_iterator<InputIt>
+        explicit constexpr simple_array(InputIt first, InputIt last)
+            : simple_array(std::distance(first, last))
+        {
+            difference_type dist = std::distance(first, last);
+            if (dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+            if (dist > 0) {
+                std::copy_n(first, dist, ptr_);
+            }
+        }
+
+        constexpr void clear()
+        {
+            if (!empty()) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_, size_);
+                }
+            }
+            size_ = 0;
+        }
+
+        constexpr simple_array(const simple_array& other)
+            : simple_array(other.ptr_, other.ptr_ + other.size_)
+        { }
+
+        constexpr simple_array operator=(const simple_array& other)
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            if (other.empty()) {
+                clear();
+                return *this;
+            }
+
+            std::copy(other.ptr_, other.ptr_ + other.size_, ptr_);
+            if constexpr (!std::is_fundamental_v<value_type>) {
+                if (other.size_ < size_) {
+                    std::destroy_n(ptr_ + other.size_, size_ - other.size_);
+                }
+            }
+            size_ = other.size_;
+
+            return *this;
+        }
+
+        constexpr simple_array(simple_array&& other) noexcept
+            : size_(other.size_)
+        {
+            std::move(other.ptr_, other.ptr_ + other.size_, ptr_);
+
+            other.size_ = 0;
+        }
+
+        constexpr simple_array operator=(simple_array&& other) noexcept
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            if (other.empty()) {
+                clear();
+                return *this;
+            }
+
+            std::move(other.ptr_, other.ptr_ + other.size_, ptr_);
+            if constexpr (!std::is_fundamental_v<value_type>) {
+                if (other.size_ < size_) {
+                    std::destroy_n(ptr_ + other.size_, size_ - other.size_);
+                }
+            }
+            size_ = other.size_;
+
+            other.size_ = 0;
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr bool empty() const noexcept
+        {
+            return size_ == 0;
+        }
+
+        [[nodiscard]] constexpr size_type size() const noexcept
+        {
+            return size_;
+        }
+
+        [[nodiscard]] constexpr size_type capacity() const noexcept
+        {
+            return Capacity;
+        }
+
+        [[nodiscard]] constexpr pointer data() const noexcept
+        {
+            return const_cast<pointer>(ptr_);
+        }
+
+        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        constexpr void resize(size_type count)
+        {
+            if (count > Capacity) {
+                throw std::invalid_argument("resize count > Capacity");
+            }
+
+            if (count < size_) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_ + count, size_ - count);
+                }
+                size_ = count;
+            }
+            else if (count > size_) {
+                size_ = count;
+            }
+        }
+
+        constexpr void reserve(size_type new_cap)
+        {
+            if (new_cap != Capacity) {
+                throw std::invalid_argument("new capacity different from fixed Capacity");
+            }
+        }
+
+        constexpr void append(size_type count)
+        {
+            if (size_ + count > Capacity) {
+                throw std::invalid_argument("append size is bigger than fixed Capacity");
+            }
+            size_ += count;
+        }
+
+        constexpr void shrink_to_fit()
+        {
+            // noop since Capacity is fixed value
+        }
+
+        [[nodiscard]] constexpr pointer begin() noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr pointer end() noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cend() const noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+        {
+            return std::make_reverse_iterator(end());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+        {
+            return std::make_reverse_iterator(begin());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+        {
+            return std::make_reverse_iterator(cend());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+        {
+            return std::make_reverse_iterator(cbegin());
+        }
+
+        [[nodiscard]] constexpr const_reference back() const noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr reference back() noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr const_reference front() const noexcept
+        {
+            return ptr_[0];
+        }
+
+        [[nodiscard]] constexpr reference front() noexcept
+        {
+            return ptr_[0];
+        }
+
+        template <typename InputIt>
+            requires std::input_iterator<InputIt>
+        constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
+        {
+            difference_type in_dist = std::distance(first, last);
+            if (in_dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (in_dist == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(in_dist);
+
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + in_dist;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - in_dist);
+
+            std::copy(first, last, new_pos);
+
+            return new_pos;
+        }
+
+        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        {
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (count == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(count);
+
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + count;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - count);
+
+            std::fill_n(new_pos, count, value);
+
+            return new_pos;
+        }
+
+        constexpr iterator erase(const_iterator first, const_iterator last)
+        {
+            difference_type dist = std::distance(first, last);
+            if (dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type first_dist = std::distance(cbegin(), first);
+            if (first_dist < 0 || first_dist > size_) {
+                throw std::invalid_argument("unbound input first");
+            }
+
+            difference_type last_dist = std::distance(cbegin(), last);
+            if (last_dist < 0 || last_dist > size_) {
+                throw std::invalid_argument("unbound input last");
+            }
+
+            if (dist == 0) {
+                return ptr_ + last_dist - 1;
+            }
+
+            //std::move(rbegin(), rbegin() + size_ - last_dist, rbegin() + dist);
+            std::move(last, cend(), ptr_ + first_dist);
+
+            resize(size_ - dist);
+
+            return ptr_ + last_dist - 1;
+        }
+
+        constexpr iterator erase(const_iterator pos)
+        {
+            return erase(pos, pos + 1);
+        }
+
+    private:
+        value_type ptr_[Capacity];
+        size_type size_ = 0;
+    };
+
+    template <typename T, std::size_t Capacity>
+    [[nodiscard]] inline constexpr bool operator==(
+        const simple_array<T, Capacity>& lhs, const simple_array<T, Capacity>& rhs)
+    {
+        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+    }
+}
+
+using details::simple_vector;
+using details::simple_array;
+}
+
+
+
+
+
+
 namespace oc {
 namespace details {
     template <typename T, template <typename> typename Allocator = simple_allocator>

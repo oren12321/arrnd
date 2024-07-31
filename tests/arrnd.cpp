@@ -170,6 +170,598 @@ TEST(simple_allocator, is_copyable_and_movable)
     EXPECT_NE(simple_allocator<int>(std::move(alloc1_copy)), other_alloc1_copy);
 }
 
+TEST(simple_vector, methods)
+{
+    using namespace oc;
+
+    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+
+    simple_vector<std::string> sv(arr.cbegin(), arr.cend());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("p", sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    sv.resize(24);
+    EXPECT_EQ(24, sv.capacity());
+    EXPECT_EQ(24, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.append(1);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(25, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.append(5);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(50);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(45);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.shrink_to_fit();
+    EXPECT_EQ(30, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    // insert erase
+    {
+        std::string data[]{"A", "B", "C"};
+        simple_vector<std::string> vec(data, data + 3);
+
+        std::string data2[]{"D", "E"};
+
+        // push_back
+        vec.insert(vec.cend(), data2, data2 + 2);
+
+        // push_front
+        vec.insert(vec.cbegin(), data2, data2 + 2);
+
+        // push_middle
+        vec.insert(vec.cbegin() + 2, data2, data2 + 2);
+
+        std::vector<std::string> tmp{"D", "E", "D", "E", "A", "B", "C", "D", "E"};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
+
+        // pop_back
+        vec.erase(vec.begin() + 7, vec.end());
+
+        // pop_middle
+        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
+
+        // pop_front
+        vec.erase(vec.cbegin(), vec.cbegin() + 2);
+
+        std::vector<std::string> tmp2{"A", "B", "C"};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
+    }
+
+    // iterators
+    {
+        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+        simple_vector<int> vec1(arr1.cbegin(), arr1.cend());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+    }
+}
+
+TEST(simple_vector, int_methods)
+{
+    using namespace oc;
+
+    std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+    simple_vector<int> sv(arr.cbegin(), arr.cend());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    EXPECT_EQ(16, sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    sv.resize(24);
+    EXPECT_EQ(24, sv.capacity());
+    EXPECT_EQ(24, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.append(1);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(25, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.append(5);
+    EXPECT_EQ(37, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(50);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.reserve(45);
+    EXPECT_EQ(50, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    sv.shrink_to_fit();
+    EXPECT_EQ(30, sv.capacity());
+    EXPECT_EQ(30, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    // insert erase
+    {
+        int data[]{1, 2, 3};
+        simple_vector<int> vec(data, data + 3);
+
+        int data2[]{4, 5};
+
+        // push_back
+        vec.insert(vec.cend(), data2, data2 + 2);
+
+        // push_front
+        vec.insert(vec.cbegin(), data2, data2 + 2);
+
+        // push_middle
+        vec.insert(vec.cbegin() + 2, data2, data2 + 2);
+
+        std::vector<int> tmp{4, 5, 4, 5, 1, 2, 3, 4, 5};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
+
+        // pop_back
+        vec.erase(vec.begin() + 7, vec.end());
+
+        // pop_middle
+        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
+
+        // pop_front
+        vec.erase(vec.cbegin(), vec.cbegin() + 2);
+
+        std::vector<int> tmp2{1, 2, 3};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
+    }
+
+    // iterators
+    {
+        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+        simple_vector<int> vec1(arr1.cbegin(), arr1.cend());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+    }
+}
+
+TEST(simple_vector, insert)
+{
+    using namespace oc;
+
+    simple_vector<int> c1(3, 100);
+    {
+        std::array<int, 3> res{100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int val1 = 200;
+    auto it = c1.begin();
+    it = c1.insert(it, &val1, &val1 + 1);
+    {
+        std::array<int, 4> res{200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    c1.insert(it, 2, 300);
+    {
+        std::array<int, 6> res{300, 300, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    it = c1.begin();
+
+    std::vector<int> c2(2, 400);
+    c1.insert(std::next(it, 2), c2.begin(), c2.end());
+    {
+        std::array<int, 8> res{300, 300, 400, 400, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int arr[]{501, 502, 503};
+    c1.insert(c1.begin(), arr, arr + std::size(arr));
+    {
+        std::array<int, 11> res{501, 502, 503, 300, 300, 400, 400, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int c3[]{601, 602, 603};
+    c1.insert(c1.end(), c3, c3 + 3);
+    {
+        std::array<int, 14> res{501, 502, 503, 300, 300, 400, 400, 200, 100, 100, 100, 601, 602, 603};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+}
+
+TEST(simple_vector, erase)
+{
+    using namespace oc;
+
+    int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    simple_vector<int> c(data, data + std::size(data));
+
+    c.erase(c.begin());
+    {
+        std::array<int, 9> res{1, 2, 3, 4, 5, 6, 7, 8, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+
+    c.erase(c.begin() + 2, c.begin() + 5);
+    {
+        std::array<int, 6> res{1, 2, 6, 7, 8, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+
+    for (auto it = c.begin(); it != c.end();) {
+        if (*it % 2 == 0) {
+            it = c.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    {
+        std::array<int, 3> res{1, 7, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+}
+
+TEST(simple_array, methods)
+{
+    using namespace oc;
+
+    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+
+    simple_array<std::string, 16> sv(arr.cbegin(), arr.cend());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("p", sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    //EXPECT_THROW(sv.resize(24), std::length_error); // assertion failure
+    sv.resize(8);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(8, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    EXPECT_EQ("h", sv.back());
+    sv.resize(9);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(9, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("h", sv.back());
+
+    //EXPECT_THROW(sv.expand(10), std::length_error); // assertion failure
+    sv.append(1);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(10, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ("a", sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    // reserve and shrink_to_fit are noop
+    sv.shrink_to_fit();
+    EXPECT_THROW(sv.reserve(1000), std::invalid_argument);
+    EXPECT_EQ(16, sv.capacity());
+
+        // insert erase
+    {
+        std::string data[]{"A", "B", "C"};
+        simple_array<std::string, 16> vec(data, data + 3);
+
+        std::string data2[]{"D", "E"};
+
+        // push_back
+        vec.insert(vec.cend(), &data2[0], data2 + 2);
+
+        // push_front
+        vec.insert(vec.cbegin(), &data2[0], data2 + 2);
+
+        // push_middle
+        vec.insert(vec.cbegin() + 2, &data2[0], data2 + 2);
+
+        std::vector<std::string> tmp{"D", "E", "D", "E", "A", "B", "C", "D", "E"};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
+
+        // pop_back
+        vec.erase(vec.cbegin() + 7, vec.cend());
+
+        // pop_middle
+        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
+
+        // pop_front
+        vec.erase(vec.cbegin(), vec.cbegin() + 2);
+
+        std::vector<std::string> tmp2{"A", "B", "C"};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
+    }
+
+    // iterators
+    {
+        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+        simple_array<int, 5> vec1(arr1.cbegin(), arr1.cend());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+    }
+}
+
+TEST(simple_array, int_methods)
+{
+    using namespace oc;
+
+    std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+    simple_array<int, 16> sv(arr.cbegin(), arr.cend());
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(16, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    EXPECT_EQ(16, sv.back());
+
+    int ctr = 0;
+    for (const auto& e : sv) {
+        EXPECT_EQ(arr[ctr++], e);
+    }
+
+    for (int i = 0; i < sv.size(); ++i) {
+        EXPECT_EQ(arr[i], sv[i]);
+    }
+
+    //EXPECT_THROW(sv.resize(24), std::length_error); // assertion failure
+    sv.resize(8);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(8, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    EXPECT_EQ(8, sv.back());
+    sv.resize(9);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(9, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("h", sv.back());
+
+    //EXPECT_THROW(sv.expand(10), std::length_error); // assertion failure
+    sv.append(1);
+    EXPECT_EQ(16, sv.capacity());
+    EXPECT_EQ(10, sv.size());
+    EXPECT_FALSE(sv.empty());
+    EXPECT_TRUE(sv.data());
+    EXPECT_EQ(1, sv.front());
+    //EXPECT_EQ("", sv.back());
+
+    // reserve and shrink_to_fit are noop
+    sv.shrink_to_fit();
+    EXPECT_THROW(sv.reserve(1000), std::invalid_argument);
+    EXPECT_EQ(16, sv.capacity());
+
+    // insert erase
+    {
+        int data[]{1, 2, 3};
+        simple_array<int, 16> vec(data, data + 3);
+
+        int data2[]{4, 5};
+
+        // push_back
+        vec.insert(vec.cend(), &data2[0], data2 + 2);
+
+        // push_front
+        vec.insert(vec.cbegin(), &data2[0], data2 + 2);
+
+        // push_middle
+        vec.insert(vec.cbegin() + 2, &data2[0], data2 + 2);
+
+        std::vector<int> tmp{4, 5, 4, 5, 1, 2, 3, 4, 5};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
+
+        // pop_back
+        vec.erase(vec.cbegin() + 7, vec.cend());
+
+        // pop_middle
+        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
+
+        // pop_front
+        vec.erase(vec.cbegin(), vec.cbegin() + 2);
+
+        std::vector<int> tmp2{1, 2, 3};
+
+        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
+    }
+
+    // iterators
+    {
+        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+        simple_array<int, 5> vec1(arr1.cbegin(), arr1.cend());
+
+        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+    }
+}
+
+TEST(simple_array, insert)
+{
+    using namespace oc;
+
+    simple_array<int, 14> c1(3, 100);
+    {
+        std::array<int, 3> res{100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int val1 = 200;
+    auto it = c1.begin();
+    it = c1.insert(it, &val1, &val1 + 1);
+    {
+        std::array<int, 4> res{200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    c1.insert(it, 2, 300);
+    {
+        std::array<int, 6> res{300, 300, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    it = c1.begin();
+
+    std::vector<int> c2(2, 400);
+    c1.insert(std::next(it, 2), c2.begin(), c2.end());
+    {
+        std::array<int, 8> res{300, 300, 400, 400, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int arr[]{501, 502, 503};
+    c1.insert(c1.begin(), arr, arr + std::size(arr));
+    {
+        std::array<int, 11> res{501, 502, 503, 300, 300, 400, 400, 200, 100, 100, 100};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+
+    int c3[]{601, 602, 603};
+    c1.insert(c1.end(), c3, c3 + 3);
+    {
+        std::array<int, 14> res{501, 502, 503, 300, 300, 400, 400, 200, 100, 100, 100, 601, 602, 603};
+        EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
+    }
+}
+
+TEST(simple_array, erase)
+{
+    using namespace oc;
+
+    int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    simple_array<int, 10> c(data, data + std::size(data));
+
+    c.erase(c.begin());
+    {
+        std::array<int, 9> res{1, 2, 3, 4, 5, 6, 7, 8, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+
+    c.erase(c.begin() + 2, c.begin() + 5);
+    {
+        std::array<int, 6> res{1, 2, 6, 7, 8, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+
+    for (auto it = c.begin(); it != c.end();) {
+        if (*it % 2 == 0) {
+            it = c.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    {
+        std::array<int, 3> res{1, 7, 9};
+        EXPECT_TRUE(std::equal(c.cbegin(), c.cend(), res.cbegin(), res.cend()));
+    }
+}
+
 TEST(simple_dynamic_vector_test, span_and_iterators_usage)
 {
     using simple_vector = oc::simple_dynamic_vector<std::string>;
