@@ -1136,9 +1136,9 @@ TEST(modulo_test, modulo_opration_can_be_perform_on_positive_zero_or_negative_nu
 TEST(interval_test, initialization)
 {
     oc::interval i1{};
-    EXPECT_EQ(0, i1.start());
-    EXPECT_EQ(1, i1.stop());
-    EXPECT_EQ(1, i1.step());
+    EXPECT_EQ(0, i1.start);
+    EXPECT_EQ(1, i1.stop);
+    EXPECT_EQ(1, i1.step);
 
     //oc::interval i2{1}; // deprecated
     //EXPECT_EQ(1, i2.start());
@@ -1146,85 +1146,99 @@ TEST(interval_test, initialization)
     //EXPECT_EQ(1, i2.step());
 
     oc::interval i3{1, 2};
-    EXPECT_EQ(1, i3.start());
-    EXPECT_EQ(2, i3.stop());
-    EXPECT_EQ(1, i3.step());
+    EXPECT_EQ(1, i3.start);
+    EXPECT_EQ(2, i3.stop);
+    EXPECT_EQ(1, i3.step);
 
     oc::interval i4{1, 2, 3};
-    EXPECT_EQ(1, i4.start());
-    EXPECT_EQ(2, i4.stop());
-    EXPECT_EQ(3, i4.step());
+    EXPECT_EQ(1, i4.start);
+    EXPECT_EQ(2, i4.stop);
+    EXPECT_EQ(3, i4.step);
 }
 
-TEST(interval_test, reverse)
-{
-    oc::interval i{oc::reverse(oc::interval{1, 2, 3})};
-    EXPECT_EQ(2, i.start());
-    EXPECT_EQ(1, i.stop());
-    EXPECT_EQ(-3, i.step());
-}
-
-TEST(interval_test, modulo)
-{
-    oc::interval i{oc::modulo(oc::interval{-26, 26, -1}, 5)};
-    EXPECT_EQ(4, i.start());
-    EXPECT_EQ(1, i.stop());
-    EXPECT_EQ(-1, i.step());
-}
-
-TEST(interval_test, forward)
-{
-    oc::interval i1{oc::forward(oc::interval{1, 2, 3})};
-    EXPECT_EQ(1, i1.start());
-    EXPECT_EQ(2, i1.stop());
-    EXPECT_EQ(3, i1.step());
-
-    oc::interval i2{oc::forward(oc::interval{2, 1, -3})};
-    EXPECT_EQ(1, i2.start());
-    EXPECT_EQ(2, i2.stop());
-    EXPECT_EQ(3, i2.step());
-}
+//TEST(interval_test, reverse)
+//{
+//    oc::interval i{oc::reverse(oc::interval{1, 2, 3})};
+//    EXPECT_EQ(2, i.start());
+//    EXPECT_EQ(1, i.stop());
+//    EXPECT_EQ(-3, i.step());
+//}
+//
+//TEST(interval_test, modulo)
+//{
+//    oc::interval i{oc::modulo(oc::interval{-26, 26, -1}, 5)};
+//    EXPECT_EQ(4, i.start());
+//    EXPECT_EQ(1, i.stop());
+//    EXPECT_EQ(-1, i.step());
+//}
+//
+//TEST(interval_test, forward)
+//{
+//    oc::interval i1{oc::forward(oc::interval{1, 2, 3})};
+//    EXPECT_EQ(1, i1.start());
+//    EXPECT_EQ(2, i1.stop());
+//    EXPECT_EQ(3, i1.step());
+//
+//    oc::interval i2{oc::forward(oc::interval{2, 1, -3})};
+//    EXPECT_EQ(1, i2.start());
+//    EXPECT_EQ(2, i2.stop());
+//    EXPECT_EQ(3, i2.step());
+//}
 
 TEST(interval_test, presets)
 {
     oc::interval<std::int64_t> i1 = oc::interval<std::int64_t>::at(5);
-    EXPECT_EQ(5, i1.start());
-    EXPECT_EQ(6, i1.stop());
-    EXPECT_EQ(1, i1.step());
-    EXPECT_EQ(oc::interval_hint::none, i1.hint());
-    EXPECT_EQ(oc::interval<std::int64_t>(5, 6, 1, oc::interval_hint::none), i1);
+    EXPECT_EQ(5, i1.start);
+    EXPECT_EQ(6, i1.stop);
+    EXPECT_EQ(1, i1.step);
+    EXPECT_FALSE(i1.is_unbound());
+    EXPECT_FALSE(i1.is_empty());
+    EXPECT_TRUE(i1.is_legal(5, 6));
+    //EXPECT_EQ(oc::interval<std::int64_t>(5, 6, 1, oc::interval_hint::none), i1);
 
     //oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5); // deprecated
     //EXPECT_EQ(0, i2.start());
     //EXPECT_EQ(5, i2.stop());
     //EXPECT_EQ(1, i2.step());
     oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(2);
-    EXPECT_EQ(2, i2.step());
-    EXPECT_EQ(oc::interval_hint::full, i2.hint());
-    EXPECT_EQ(oc::interval<std::int64_t>(std::rand(), std::rand(), 2, oc::interval_hint::full), i2);
-    EXPECT_EQ(oc::interval<std::int64_t>(0, 6, 2, oc::interval_hint::none), i2.align(6));
+    EXPECT_EQ(2, i2.step);
+    EXPECT_TRUE(i2.is_unbound());
+    EXPECT_FALSE(i2.is_empty());
+    EXPECT_FALSE(i2.is_legal(5, 6));
+    //EXPECT_EQ(oc::interval_hint::full, i2.hint());
+    //EXPECT_EQ(oc::interval<std::int64_t>(std::rand(), std::rand(), 2, oc::interval_hint::full), i2);
+    //EXPECT_EQ(oc::interval<std::int64_t>(0, 6, 2, oc::interval_hint::none), i2.align(6));
+    EXPECT_EQ((oc::interval<std::int64_t>{0, 6, 2}), i2.bound(0, 6));
 
     //oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5); // deprecated
     //EXPECT_EQ(5, i3.start());
     //EXPECT_EQ(10, i3.stop());
     //EXPECT_EQ(1, i3.step());
     oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(6, 2);
-    EXPECT_EQ(6, i3.start());
-    EXPECT_EQ(2, i3.step());
-    EXPECT_EQ(oc::interval_hint::from, i3.hint());
-    EXPECT_EQ(oc::interval<std::int64_t>(6, std::rand(), 2, oc::interval_hint::from), i3);
-    EXPECT_EQ(oc::interval<std::int64_t>(6, 10, 2, oc::interval_hint::none), i3.align(10));
+    EXPECT_EQ(6, i3.start);
+    EXPECT_EQ(2, i3.step);
+    EXPECT_TRUE(i3.is_unbound());
+    EXPECT_FALSE(i3.is_empty());
+    EXPECT_FALSE(i3.is_legal(5, 6));
+    //EXPECT_EQ(oc::interval_hint::from, i3.hint());
+    //EXPECT_EQ(oc::interval<std::int64_t>(6, std::rand(), 2, oc::interval_hint::from), i3);
+    //EXPECT_EQ(oc::interval<std::int64_t>(6, 10, 2, oc::interval_hint::none), i3.align(10));
+    EXPECT_EQ((oc::interval<std::int64_t>{6, 10, 2}), i3.bound(std::rand(), 10));
 
     oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5, 3);
-    EXPECT_EQ(0, i4.start());
-    EXPECT_EQ(5, i4.stop());
-    EXPECT_EQ(3, i4.step());
-    EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::to), i4);
-    EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::none), i4.align(10));
+    EXPECT_EQ(5, i4.stop);
+    EXPECT_EQ(3, i4.step);
+    EXPECT_TRUE(i4.is_unbound());
+    EXPECT_FALSE(i4.is_empty());
+    EXPECT_FALSE(i4.is_legal(5, 6));
+    //EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::to), i4);
+    //EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::none), i4.align(10));
+    EXPECT_EQ((oc::interval<std::int64_t>{0, 5, 3}), i4.bound(0, std::rand()));
 
     oc::interval<std::int64_t> i5 = oc::interval<std::int64_t>::between(1, 5, 5);
-    EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5);
-    EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5.align(std::rand()));
+    //EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5);
+    //EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5.align(std::rand()));
+    EXPECT_EQ((oc::interval<std::int64_t>{1, 5, 5}), i5.bound(std::rand(), std::rand()));
 }
 
 //TEST(dummy, dummy)

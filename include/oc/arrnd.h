@@ -2008,136 +2008,229 @@ using details::modulo;
 using details::sign;
 }
 
+
 namespace oc {
-namespace details {
-    enum class interval_hint { full, from, to, none };
+//namespace experimental {
+    namespace details {
+        /*
+        * @note represents half open interval
+        */
+        template <std::signed_integral T = std::int64_t>
+        struct interval {
+            using size_type = T;
 
-    /**
-    * @note half open interval
-    */
-    template <std::signed_integral T = std::int64_t>
-    class interval {
-    public:
-        // interval type might cause ignoring values of interval's start or stop values
-        constexpr interval(T start, T stop, T step = 1, interval_hint type = interval_hint::none) noexcept
-            : start_(start)
-            , stop_(stop)
-            , step_(step)
-            , hint_(type)
-        { }
+            size_type start = 0;
+            size_type stop = 1;
+            size_type step = 1;
 
-        constexpr interval() = default; // interval of first element
-        constexpr interval(const interval&) = default;
-        constexpr interval& operator=(const interval&) = default;
-        constexpr interval(interval&) = default;
-        constexpr interval& operator=(interval&) = default;
+            static constexpr size_type unboundn = std::numeric_limits<size_type>::min();
+            static constexpr size_type unboundp = std::numeric_limits<size_type>::max();
 
-        [[nodiscard]] constexpr T start() const noexcept
-        {
-            return start_;
-        }
-
-        [[nodiscard]] constexpr T stop() const noexcept
-        {
-            return stop_;
-        }
-
-        [[nodiscard]] constexpr T step() const noexcept
-        {
-            return step_;
-        }
-
-        [[nodiscard]] constexpr interval_hint hint() const noexcept
-        {
-            return hint_;
-        }
-
-        // returns normalize type from dimension, useful in case of interval types that are not none
-        [[nodiscard]] constexpr interval align(T dim) const noexcept
-        {
-            switch (hint_) {
-            case interval_hint::none:
-                return *this;
-            case interval_hint::full:
-                return interval{0, dim, step_, interval_hint::none};
-            case interval_hint::from:
-                return interval{start_, dim, step_, interval_hint::none};
-            case interval_hint::to:
-                return interval{0, stop_, step_, interval_hint::none};
+            [[nodiscard]] static constexpr interval full(size_type nstep = 1) noexcept
+            {
+                return interval{unboundn, unboundp, nstep};
             }
 
-            return *this;
-        }
+            [[nodiscard]] static constexpr interval from(size_type nstart, size_type nstep = 1) noexcept
+            {
+                return interval{nstart, unboundp, nstep};
+            }
 
-        [[nodiscard]] static constexpr interval full(T step = 1) noexcept
+            [[nodiscard]] static constexpr interval to(size_type nstop, size_type nstep = 1) noexcept
+            {
+                return interval{unboundn, nstop, nstep};
+            }
+
+            [[nodiscard]] static constexpr interval at(size_type pos) noexcept
+            {
+                return interval{pos, pos + 1, 1};
+            }
+
+            [[nodiscard]] static constexpr interval between(
+                size_type nstart, size_type nstop, size_type nstep = 1) noexcept
+            {
+                return interval{nstart, nstop, nstep};
+            }
+
+            [[nodiscard]] constexpr bool is_unbound() const noexcept
+            {
+                return start == unboundn || stop == unboundp;
+            }
+
+            [[nodiscard]] constexpr bool is_empty() const noexcept
+            {
+                return start == stop;
+            }
+
+            [[nodiscard]] constexpr bool is_legal(size_type start_limit, size_type stop_limit) const noexcept
+            {
+                return start <= stop && start >= start_limit && stop <= stop_limit && step >= 1;
+            }
+
+            [[nodiscard]] constexpr interval bound(size_type nstart, size_type nstop) const noexcept
+            {
+                return interval{start == unboundn ? nstart : start, stop == unboundp ? nstop : stop, step};
+            }
+
+            [[nodiscard]] constexpr size_type size() const
+            {
+                if (start > stop) {
+                    throw std::runtime_error("invalid size - illegal interval");
+                }
+                if (is_unbound()) {
+                    return unboundp;
+                }
+                if (is_empty()) {
+                    return 0;
+                }
+                if (start < 0 && stop > unboundp + start) {
+                    throw std::overflow_error("size does not fit size_type");
+                }
+                return static_cast<size_type>(std::ceil(static_cast<double>(std::abs(stop - start)) / step));
+            }
+        };
+
+        template <std::signed_integral T>
+        [[nodiscard]] constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
         {
-            return interval{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), step, interval_hint::full};
+            return lhs.start == rhs.start && lhs.stop == rhs.stop && lhs.step == rhs.step;
         }
-
-        [[nodiscard]] static constexpr interval from(T start, T step = 1)
-        {
-            return interval{start, std::numeric_limits<T>::max(), step, interval_hint::from};
-        }
-
-        [[nodiscard]] static constexpr interval to(T stop, T step = 1) noexcept
-        {
-            return interval{0, stop, step, interval_hint::to};
-        }
-
-        [[nodiscard]] static constexpr interval at(T pos) noexcept
-        {
-            return interval{pos, pos + 1};
-        }
-
-        [[nodiscard]] static constexpr interval between(T start, T stop, T step = 1) noexcept
-        {
-            return interval{start, stop, step};
-        }
-
-    private:
-        T start_{0};
-        T stop_{1};
-        T step_{1};
-        interval_hint hint_{interval_hint::none};
-    };
-
-    template <std::signed_integral T>
-    [[nodiscard]] inline constexpr interval<T> reverse(const interval<T>& i) noexcept
-    {
-        return interval<T>{i.stop(), i.start(), -i.step()};
     }
-
-    template <std::signed_integral T>
-    [[nodiscard]] inline constexpr interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
-    {
-        return interval<T>{modulo(i.start(), modulus), modulo(i.stop(), modulus), i.step()};
-    }
-
-    template <std::signed_integral T>
-    [[nodiscard]] inline constexpr interval<T> forward(const interval<T>& i) noexcept
-    {
-        return i.step() < T{0} ? reverse(i) : i;
-    }
-
-    template <std::signed_integral T>
-    [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
-    {
-        return (lhs.hint() == interval_hint::none && rhs.hint() == interval_hint::none && lhs.start() == rhs.start()
-                   && lhs.stop() == rhs.stop() && lhs.step() == rhs.step())
-            || (lhs.hint() == interval_hint::full && rhs.hint() == interval_hint::full && lhs.step() == rhs.step())
-            || (lhs.hint() == interval_hint::from && rhs.hint() == interval_hint::from && lhs.start() == rhs.start()
-                && lhs.step() == rhs.step())
-            || (lhs.hint() == interval_hint::to && rhs.hint() == interval_hint::to && lhs.start() == 0
-                && rhs.start() == 0 && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
-    }
+    using details::interval;
+//}
 }
 
-using details::interval_hint;
-using details::interval;
 
-using details::modulo;
-using details::reverse;
-using details::forward;
+namespace oc {
+namespace details {
+    //enum class interval_hint { full, from, to, none };
+
+    ///**
+    //* @note half open interval
+    //*/
+    //template <std::signed_integral T = std::int64_t>
+    //class interval {
+    //public:
+    //    // interval type might cause ignoring values of interval's start or stop values
+    //    constexpr interval(T start, T stop, T step = 1, interval_hint type = interval_hint::none) noexcept
+    //        : start_(start)
+    //        , stop_(stop)
+    //        , step_(step)
+    //        , hint_(type)
+    //    { }
+
+    //    constexpr interval() = default; // interval of first element
+    //    constexpr interval(const interval&) = default;
+    //    constexpr interval& operator=(const interval&) = default;
+    //    constexpr interval(interval&) = default;
+    //    constexpr interval& operator=(interval&) = default;
+
+    //    [[nodiscard]] constexpr T start() const noexcept
+    //    {
+    //        return start_;
+    //    }
+
+    //    [[nodiscard]] constexpr T stop() const noexcept
+    //    {
+    //        return stop_;
+    //    }
+
+    //    [[nodiscard]] constexpr T step() const noexcept
+    //    {
+    //        return step_;
+    //    }
+
+    //    [[nodiscard]] constexpr interval_hint hint() const noexcept
+    //    {
+    //        return hint_;
+    //    }
+
+    //    // returns normalize type from dimension, useful in case of interval types that are not none
+    //    [[nodiscard]] constexpr interval align(T dim) const noexcept
+    //    {
+    //        switch (hint_) {
+    //        case interval_hint::none:
+    //            return *this;
+    //        case interval_hint::full:
+    //            return interval{0, dim, step_, interval_hint::none};
+    //        case interval_hint::from:
+    //            return interval{start_, dim, step_, interval_hint::none};
+    //        case interval_hint::to:
+    //            return interval{0, stop_, step_, interval_hint::none};
+    //        }
+
+    //        return *this;
+    //    }
+
+    //    [[nodiscard]] static constexpr interval full(T step = 1) noexcept
+    //    {
+    //        return interval{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(), step, interval_hint::full};
+    //    }
+
+    //    [[nodiscard]] static constexpr interval from(T start, T step = 1)
+    //    {
+    //        return interval{start, std::numeric_limits<T>::max(), step, interval_hint::from};
+    //    }
+
+    //    [[nodiscard]] static constexpr interval to(T stop, T step = 1) noexcept
+    //    {
+    //        return interval{0, stop, step, interval_hint::to};
+    //    }
+
+    //    [[nodiscard]] static constexpr interval at(T pos) noexcept
+    //    {
+    //        return interval{pos, pos + 1};
+    //    }
+
+    //    [[nodiscard]] static constexpr interval between(T start, T stop, T step = 1) noexcept
+    //    {
+    //        return interval{start, stop, step};
+    //    }
+
+    //private:
+    //    T start_{0};
+    //    T stop_{1};
+    //    T step_{1};
+    //    interval_hint hint_{interval_hint::none};
+    //};
+
+    //template <std::signed_integral T>
+    //[[nodiscard]] inline constexpr interval<T> reverse(const interval<T>& i) noexcept
+    //{
+    //    return interval<T>{i.stop(), i.start(), -i.step()};
+    //}
+
+    //template <std::signed_integral T>
+    //[[nodiscard]] inline constexpr interval<T> modulo(const interval<T>& i, const T& modulus) noexcept
+    //{
+    //    return interval<T>{modulo(i.start(), modulus), modulo(i.stop(), modulus), i.step()};
+    //}
+
+    //template <std::signed_integral T>
+    //[[nodiscard]] inline constexpr interval<T> forward(const interval<T>& i) noexcept
+    //{
+    //    return i.step() < T{0} ? reverse(i) : i;
+    //}
+
+    //template <std::signed_integral T>
+    //[[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
+    //{
+    //    return (lhs.hint() == interval_hint::none && rhs.hint() == interval_hint::none && lhs.start() == rhs.start()
+    //               && lhs.stop() == rhs.stop() && lhs.step() == rhs.step())
+    //        || (lhs.hint() == interval_hint::full && rhs.hint() == interval_hint::full && lhs.step() == rhs.step())
+    //        || (lhs.hint() == interval_hint::from && rhs.hint() == interval_hint::from && lhs.start() == rhs.start()
+    //            && lhs.step() == rhs.step())
+    //        || (lhs.hint() == interval_hint::to && rhs.hint() == interval_hint::to && lhs.start() == 0
+    //            && rhs.start() == 0 && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
+    //}
+}
+
+//using details::interval_hint;
+//using details::interval;
+//
+//using details::modulo;
+//using details::reverse;
+//using details::forward;
 }
 
 namespace oc {
@@ -2305,8 +2398,8 @@ namespace details {
             auto valid_ranges = [&]() {
                 return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
                     std::logical_and<>{}, [](const auto& r, auto d) {
-                        auto nr = r.align(d);
-                        return (nr.start() <= nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
+                        auto nr = r.bound(0, d);
+                        return (nr.start <= nr.stop && nr.step >= 1) && (nr.start >= 0 && nr.stop <= d);
                     });
             };
             assert(valid_ranges());
@@ -2316,8 +2409,8 @@ namespace details {
             res.dims_ = storage_type(std::ssize(dims_));
             std::transform(first_range, std::next(first_range, nranges), dims_.cbegin(), res.dims_.begin(),
                 [](const auto& r, auto d) {
-                    auto nr = r.align(d);
-                    return static_cast<size_type>(std::ceil(static_cast<double>(nr.stop() - nr.start()) / nr.step()));
+                    auto nr = r.bound(0, d);
+                    return nr.size();//static_cast<size_type>(std::ceil(static_cast<double>(nr.stop - nr.start) / nr.step));
                 });
             std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
 
@@ -2339,9 +2432,9 @@ namespace details {
             res.offset_ = offset_;
             for (size_type i = 0; i < nranges; ++i) {
                 auto s = *std::next(strides_.cbegin(), i);
-                auto nr = (*std::next(first_range, i)).align(*std::next(dims_.cbegin(), i));
-                *std::next(res.strides_.begin(), i) = s * nr.step();
-                res.offset_ += s * nr.start();
+                auto nr = (*std::next(first_range, i)).bound(0, *std::next(dims_.cbegin(), i));
+                *std::next(res.strides_.begin(), i) = s * nr.step;
+                res.offset_ += s * nr.start;
             }
             std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
 
@@ -3137,17 +3230,17 @@ namespace details {
             interval_type window = interval_type(0, 0, 1), bool is_window_contained = true,
             arrnd_iterator_start_position start_pos = arrnd_iterator_start_position::begin)
             : fixed_axis_(fixed_axis)
-            , left_window_size_(-window.start())
-            , right_window_size_(window.stop())
-            , window_step_(window.step())
+            , left_window_size_(-window.start)
+            , right_window_size_(window.stop)
+            , window_step_(window.step)
             , is_window_contained_(is_window_contained)
         {
             assert(fixed_axis_ >= 0 && fixed_axis_ < hdr.dims().size());
-            assert(window.start() <= 0 && window.stop() >= 0);
+            assert(window.start <= 0 && window.stop >= 0);
 
             fixed_axis_dim_ = *std::next(hdr.dims().cbegin(), fixed_axis_);
 
-            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
+            assert(window.stop - window.start <= fixed_axis_dim_ && window.step <= fixed_axis_dim_);
 
             ranges_ = storage_type(hdr.dims().size());
             for (size_type i = 0; i < hdr.dims().size(); ++i) {
@@ -3294,12 +3387,12 @@ namespace details {
 
         constexpr arrnd_axis_ranger& change_window(interval_type window) noexcept
         {
-            assert(window.start() <= 0 && window.stop() >= 0);
-            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
+            assert(window.start <= 0 && window.stop >= 0);
+            assert(window.stop - window.start <= fixed_axis_dim_ && window.step <= fixed_axis_dim_);
 
-            left_window_size_ = -window.start();
-            right_window_size_ = window.stop();
-            window_step_ = window.step();
+            left_window_size_ = -window.start;
+            right_window_size_ = window.stop;
+            window_step_ = window.step;
             ranges_[fixed_axis_] = compute_current_index_interval();
             return *this;
         }
@@ -3993,7 +4086,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
         }
 
     private:
@@ -4141,7 +4234,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
         }
 
     private:
@@ -4269,7 +4362,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_reverse_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
         }
 
     private:
@@ -4420,7 +4513,7 @@ namespace details {
         [[nodiscard]] constexpr difference_type operator-(
             const arrnd_slice_reverse_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return (*far_)[far_.fixed_axis()].start - (*other.far_)[far_.fixed_axis()].start;
         }
 
     private:
@@ -10180,7 +10273,7 @@ namespace details {
 
             ranger_type rgr(hdr_, axis, window, bounded);
 
-            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() : axis_dim;
+            size_type res_numel = bounded ? axis_dim - window.stop + window.start : axis_dim;
 
             slide_type res({res_numel});
             typename slide_type::indexer_type res_gen(res.header());
@@ -10253,7 +10346,7 @@ namespace details {
 
             ranger_type rgr(hdr_, axis, window, bounded);
 
-            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() : axis_dim;
+            size_type res_numel = bounded ? axis_dim - window.stop + window.start : axis_dim;
 
             accumulate_type res({res_numel});
             typename accumulate_type::indexer_type res_gen(res.header());
