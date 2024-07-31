@@ -345,7 +345,7 @@ namespace details {
             other.capacity_ = 0;
         }
         
-        constexpr simple_vector operator=(simple_vector&& other) noexcept
+        constexpr simple_vector& operator=(simple_vector&& other) noexcept
         {
             if (this == &other) {
                 return *this;
@@ -721,7 +721,7 @@ namespace details {
             : simple_array(other.ptr_, other.ptr_ + other.size_)
         { }
 
-        constexpr simple_array operator=(const simple_array& other)
+        constexpr simple_array& operator=(const simple_array& other)
         {
             if (this == &other) {
                 return *this;
@@ -751,7 +751,7 @@ namespace details {
             other.size_ = 0;
         }
 
-        constexpr simple_array operator=(simple_array&& other) noexcept
+        constexpr simple_array& operator=(simple_array&& other) noexcept
         {
             if (this == &other) {
                 return *this;
@@ -1008,10 +1008,347 @@ namespace details {
     {
         return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
     }
+
+
+
+
+
+
+
+    template <typename T>
+    class simple_view final {
+    public:
+        using value_type = T;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using const_pointer = const T*;
+        using iterator = T*;
+        using const_iterator = const T*;
+        using reverse_iterator = std::reverse_iterator<pointer>;
+        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+
+        simple_view() = default;
+        
+        explicit constexpr simple_view(std::span<value_type> sp, size_type capacity = 0)
+            : size_(sp.size())
+            , capacity_(capacity > 0 ? capacity : sp.size())
+            , ptr_(sp.data())
+        {
+        }
+
+        constexpr void clear()
+        {
+            if (!empty()) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_, size_);
+                }
+            }
+            size_ = 0;
+        }
+
+        constexpr simple_view(const simple_view& other)
+            : size_(other.size_)
+            , capacity_(other.capacity_)
+            , ptr_(other.ptr_)
+        {
+        }
+
+        constexpr simple_view& operator=(const simple_view& other)
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            ptr_ = other.ptr_;
+
+            return *this;
+        }
+
+        constexpr simple_view(simple_view&& other) noexcept
+            : size_(other.size_)
+            , capacity_(other.capacity_)
+            , ptr_(other.ptr_)
+        {
+            other.data_ptr_ = nullptr;
+            other.size_ = 0;
+            other.capacity_ = 0;
+        }
+
+        constexpr simple_view& operator=(simple_view&& other) noexcept
+        {
+            if (this == &other) {
+                return *this;
+            }
+
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            ptr_ = other.ptr_;
+
+            other.data_ptr_ = nullptr;
+            other.size_ = 0;
+            other.capacity_ = 0;
+
+            return *this;
+        }
+
+        ~simple_view() = default;
+
+        [[nodiscard]] constexpr bool empty() const noexcept
+        {
+            return size_ == 0;
+        }
+
+        [[nodiscard]] constexpr size_type size() const noexcept
+        {
+            return size_;
+        }
+
+        [[nodiscard]] constexpr size_type capacity() const noexcept
+        {
+            return capacity_;
+        }
+
+        [[nodiscard]] constexpr pointer data() const noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+        {
+            assert(index < size_);
+            return ptr_[index];
+        }
+
+        constexpr void resize(size_type count)
+        {
+            if (count == 0) {
+                clear();
+            } else if (count < size_) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::destroy_n(ptr_ + count, size_ - count);
+                }
+                size_ = count;
+            } else if (count > size_) {
+                if (count <= capacity_) {
+                    if constexpr (!std::is_fundamental_v<value_type>) {
+                        std::uninitialized_default_construct_n(ptr_ + size_, count - size_);
+                    }
+                    size_ = count;
+                } else {
+                    throw std::invalid_argument("resize count argument bigger than fixed capacity");
+                }
+            }
+        }
+
+        constexpr void reserve(size_type new_cap)
+        {
+            if (new_cap > capacity_) {
+                throw std::invalid_argument("reserve new_cap bigger than fixed capacity");
+            }
+        }
+
+        constexpr void append(size_type count)
+        {
+            if (size_ + count <= capacity_ && size_ + count > size_) {
+                if constexpr (!std::is_fundamental_v<value_type>) {
+                    std::uninitialized_default_construct_n(ptr_ + size_, count);
+                }
+                size_ += count;
+            } else if (size_ + count > capacity_) {
+                throw std::invalid_argument("unable to append more than fixed capacity");
+            }
+        }
+
+        constexpr void shrink_to_fit()
+        {
+            capacity_ = size_;
+        }
+
+        [[nodiscard]] constexpr pointer begin() noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr pointer end() noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+        {
+            return ptr_;
+        }
+
+        [[nodiscard]] constexpr const_pointer cend() const noexcept
+        {
+            return ptr_ + size_;
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
+        {
+            return std::make_reverse_iterator(end());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
+        {
+            return std::make_reverse_iterator(begin());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
+        {
+            return std::make_reverse_iterator(cend());
+        }
+
+        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
+        {
+            return std::make_reverse_iterator(cbegin());
+        }
+
+        [[nodiscard]] constexpr const_reference back() const noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr reference back() noexcept
+        {
+            return ptr_[size_ - 1];
+        }
+
+        [[nodiscard]] constexpr const_reference front() const noexcept
+        {
+            return ptr_[0];
+        }
+
+        [[nodiscard]] constexpr reference front() noexcept
+        {
+            return ptr_[0];
+        }
+
+        template <typename InputIt>
+            requires std::input_iterator<InputIt>
+        constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
+        {
+            difference_type in_dist = std::distance(first, last);
+            if (in_dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (in_dist == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(in_dist);
+
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + in_dist;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - in_dist);
+
+            std::copy(first, last, new_pos);
+
+            return new_pos;
+        }
+
+        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        {
+            difference_type pos_dist = std::distance(cbegin(), pos);
+            if (pos_dist < 0 || pos_dist > size_) {
+                throw std::invalid_argument("unbound input pos");
+            }
+
+            if (count == 0) {
+                return ptr_ + pos_dist;
+            }
+
+            append(count);
+
+            auto new_pos = begin() + pos_dist;
+
+            //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
+
+            auto rpos_start = rbegin() + count;
+            auto rpos_stop = rend() - pos_dist;
+            std::move(rpos_start, rpos_stop, rpos_start - count);
+
+            std::fill_n(new_pos, count, value);
+
+            return new_pos;
+        }
+
+        constexpr iterator erase(const_iterator first, const_iterator last)
+        {
+            difference_type dist = std::distance(first, last);
+            if (dist < 0) {
+                throw std::invalid_argument("negative distance between iterators");
+            }
+
+            difference_type first_dist = std::distance(cbegin(), first);
+            if (first_dist < 0 || first_dist > size_) {
+                throw std::invalid_argument("unbound input first");
+            }
+
+            difference_type last_dist = std::distance(cbegin(), last);
+            if (last_dist < 0 || last_dist > size_) {
+                throw std::invalid_argument("unbound input last");
+            }
+
+            if (dist == 0) {
+                return ptr_ + last_dist - 1;
+            }
+
+            //std::move(rbegin(), rbegin() + size_ - last_dist, rbegin() + dist);
+            std::move(last, cend(), ptr_ + first_dist);
+
+            resize(size_ - dist);
+
+            return ptr_ + last_dist - 1;
+        }
+
+        constexpr iterator erase(const_iterator pos)
+        {
+            return erase(pos, pos + 1);
+        }
+
+    private:
+        size_type size_ = 0;
+        size_type capacity_ = 0;
+        pointer ptr_ = nullptr;
+    };
+
+    template <typename T>
+    [[nodiscard]] inline constexpr bool operator==(const simple_view<T>& lhs, const simple_view<T>& rhs)
+    {
+        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+    }
+
+
+
+
+
 }
 
 using details::simple_vector;
 using details::simple_array;
+using details::simple_view;
 }
 
 
