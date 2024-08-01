@@ -1361,7 +1361,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
             for (typename arrnd_header<>::size_type j = 0; j < hdr.dims()[1]; ++j) {
                 for (typename arrnd_header<>::size_type k = 0; k < hdr.dims()[2]; ++k) {
                     typename arrnd_header<>::size_type subs_data[]{i, j, k};
-                    typename arrnd_header<>::storage_type subs(3, subs_data);
+                    typename arrnd_header<>::storage_type subs(/*3, subs_data*/subs_data, subs_data + 3);
                     EXPECT_EQ(hdr.ind2subs(hdr.subs2ind(subs)), subs);
                 }
             }
@@ -1373,7 +1373,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
             for (typename arrnd_header<>::size_type j = 0; j < shdr.dims()[1]; ++j) {
                 for (typename arrnd_header<>::size_type k = 0; k < shdr.dims()[2]; ++k) {
                     typename arrnd_header<>::size_type subs_data[]{i, j, k};
-                    typename arrnd_header<>::storage_type subs(3, subs_data);
+                    typename arrnd_header<>::storage_type subs(/*3, subs_data*/subs_data, subs_data + 3);
                     EXPECT_EQ(shdr.ind2subs(shdr.subs2ind(subs)), subs);
                 }
             }
