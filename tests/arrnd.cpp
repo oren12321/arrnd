@@ -862,202 +862,202 @@ TEST(simple_view, methods)
     }
 }
 
-
-TEST(simple_dynamic_vector_test, span_and_iterators_usage)
-{
-    using simple_vector = oc::simple_dynamic_vector<std::string>;
-
-    auto count_elements = [](std::span<const std::string> s) {
-        return s.size();
-    };
-
-    simple_vector sv(2, std::array<std::string, 2>{"first string", "second string"}.data());
-    EXPECT_EQ(2, count_elements(sv));
-    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) {
-        return s.find("string") != std::string::npos;
-    }));
-}
-
-TEST(simple_dynamic_vector_test, basic_functionality)
-{
-    using simple_vector = oc::simple_dynamic_vector<std::string>;
-
-    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-
-    simple_vector sv(16, arr.data());
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("p", sv.back());
-
-    int ctr = 0;
-    for (const auto& e : sv) {
-        EXPECT_EQ(arr[ctr++], e);
-    }
-
-    for (int i = 0; i < sv.size(); ++i) {
-        EXPECT_EQ(arr[i], sv[i]);
-    }
-
-    // iterators
-    {
-        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
-
-        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-    }
-
-    // copy
-    EXPECT_NE(arr.data(), sv.data());
-
-    auto svc = sv;
-    EXPECT_NE(svc.data(), sv.data());
-}
-
-TEST(simple_dynamic_vector_test, basic_view_functionality)
-{
-    using simple_vector = oc::simple_dynamic_vector<std::string>;
-
-    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-
-    simple_vector sv(16, arr.data(), true);
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("p", sv.back());
-
-    int ctr = 0;
-    for (const auto& e : sv) {
-        EXPECT_EQ(arr[ctr++], e);
-    }
-
-    for (int i = 0; i < sv.size(); ++i) {
-        EXPECT_EQ(arr[i], sv[i]);
-    }
-
-    // iterators
-    {
-        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
-
-        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-    }
-
-    // copy
-    EXPECT_EQ(arr.data(), sv.data());
-
-    auto svc = sv;
-    EXPECT_EQ(svc.data(), sv.data());
-}
-
-TEST(simple_static_vector_test, span_usage)
-{
-    using simple_vector = oc::simple_static_vector<std::string, 2>;
-
-    auto count_elements = [](std::span<const std::string> s) {
-        return s.size();
-    };
-
-    simple_vector sv(2, std::array<std::string, 2>{"first string", "second string"}.data());
-    EXPECT_EQ(2, count_elements(sv));
-    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) {
-        return s.find("string") != std::string::npos;
-    }));
-}
-
-TEST(simple_static_vector_test, basic_functionality)
-{
-    using simple_vector = oc::simple_static_vector<std::string, 16>;
-
-    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-
-    simple_vector sv(16, arr.data());
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("p", sv.back());
-
-    int ctr = 0;
-    for (const auto& e : sv) {
-        EXPECT_EQ(arr[ctr++], e);
-    }
-
-    for (int i = 0; i < sv.size(); ++i) {
-        EXPECT_EQ(arr[i], sv[i]);
-    }
-
-    // iterators
-    {
-        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-        oc::simple_static_vector<int, 5> vec1(5, arr1.data());
-
-        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-    }
-
-    // copy
-    EXPECT_NE(arr.data(), sv.data());
-
-    auto svc = sv;
-    EXPECT_NE(svc.data(), sv.data());
-
-    EXPECT_FALSE(sv.is_view());
-    EXPECT_FALSE(svc.is_view());
-}
-
-TEST(simple_static_vector_test, basic_view_functionality)
-{
-    using simple_vector = oc::simple_static_vector<std::string, 16>;
-
-    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-
-    simple_vector sv(16, arr.data(), true);
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("p", sv.back());
-
-    int ctr = 0;
-    for (const auto& e : sv) {
-        EXPECT_EQ(arr[ctr++], e);
-    }
-
-    for (int i = 0; i < sv.size(); ++i) {
-        EXPECT_EQ(arr[i], sv[i]);
-    }
-
-    // iterators
-    {
-        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-        oc::simple_static_vector<int, 5> vec1(5, arr1.data());
-
-        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-    }
-
-    // copy
-    EXPECT_EQ(arr.data(), sv.data());
-
-    auto svc = sv;
-    EXPECT_EQ(svc.data(), sv.data());
-
-    EXPECT_TRUE(sv.is_view());
-    EXPECT_TRUE(svc.is_view());
-}
+//
+//TEST(simple_dynamic_vector_test, span_and_iterators_usage)
+//{
+//    using simple_vector = oc::simple_dynamic_vector<std::string>;
+//
+//    auto count_elements = [](std::span<const std::string> s) {
+//        return s.size();
+//    };
+//
+//    simple_vector sv(2, std::array<std::string, 2>{"first string", "second string"}.data());
+//    EXPECT_EQ(2, count_elements(sv));
+//    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) {
+//        return s.find("string") != std::string::npos;
+//    }));
+//}
+//
+//TEST(simple_dynamic_vector_test, basic_functionality)
+//{
+//    using simple_vector = oc::simple_dynamic_vector<std::string>;
+//
+//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+//
+//    simple_vector sv(16, arr.data());
+//    EXPECT_EQ(16, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("p", sv.back());
+//
+//    int ctr = 0;
+//    for (const auto& e : sv) {
+//        EXPECT_EQ(arr[ctr++], e);
+//    }
+//
+//    for (int i = 0; i < sv.size(); ++i) {
+//        EXPECT_EQ(arr[i], sv[i]);
+//    }
+//
+//    // iterators
+//    {
+//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+//        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
+//
+//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+//    }
+//
+//    // copy
+//    EXPECT_NE(arr.data(), sv.data());
+//
+//    auto svc = sv;
+//    EXPECT_NE(svc.data(), sv.data());
+//}
+//
+//TEST(simple_dynamic_vector_test, basic_view_functionality)
+//{
+//    using simple_vector = oc::simple_dynamic_vector<std::string>;
+//
+//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+//
+//    simple_vector sv(16, arr.data(), true);
+//    EXPECT_EQ(16, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("p", sv.back());
+//
+//    int ctr = 0;
+//    for (const auto& e : sv) {
+//        EXPECT_EQ(arr[ctr++], e);
+//    }
+//
+//    for (int i = 0; i < sv.size(); ++i) {
+//        EXPECT_EQ(arr[i], sv[i]);
+//    }
+//
+//    // iterators
+//    {
+//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+//        oc::simple_dynamic_vector<int> vec1(5, arr1.data());
+//
+//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+//    }
+//
+//    // copy
+//    EXPECT_EQ(arr.data(), sv.data());
+//
+//    auto svc = sv;
+//    EXPECT_EQ(svc.data(), sv.data());
+//}
+//
+//TEST(simple_static_vector_test, span_usage)
+//{
+//    using simple_vector = oc::simple_static_vector<std::string, 2>;
+//
+//    auto count_elements = [](std::span<const std::string> s) {
+//        return s.size();
+//    };
+//
+//    simple_vector sv(2, std::array<std::string, 2>{"first string", "second string"}.data());
+//    EXPECT_EQ(2, count_elements(sv));
+//    EXPECT_EQ(2, std::count_if(sv.begin(), sv.end(), [](const auto& s) {
+//        return s.find("string") != std::string::npos;
+//    }));
+//}
+//
+//TEST(simple_static_vector_test, basic_functionality)
+//{
+//    using simple_vector = oc::simple_static_vector<std::string, 16>;
+//
+//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+//
+//    simple_vector sv(16, arr.data());
+//    EXPECT_EQ(16, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("p", sv.back());
+//
+//    int ctr = 0;
+//    for (const auto& e : sv) {
+//        EXPECT_EQ(arr[ctr++], e);
+//    }
+//
+//    for (int i = 0; i < sv.size(); ++i) {
+//        EXPECT_EQ(arr[i], sv[i]);
+//    }
+//
+//    // iterators
+//    {
+//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+//        oc::simple_static_vector<int, 5> vec1(5, arr1.data());
+//
+//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+//    }
+//
+//    // copy
+//    EXPECT_NE(arr.data(), sv.data());
+//
+//    auto svc = sv;
+//    EXPECT_NE(svc.data(), sv.data());
+//
+//    EXPECT_FALSE(sv.is_view());
+//    EXPECT_FALSE(svc.is_view());
+//}
+//
+//TEST(simple_static_vector_test, basic_view_functionality)
+//{
+//    using simple_vector = oc::simple_static_vector<std::string, 16>;
+//
+//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+//
+//    simple_vector sv(16, arr.data(), true);
+//    EXPECT_EQ(16, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("p", sv.back());
+//
+//    int ctr = 0;
+//    for (const auto& e : sv) {
+//        EXPECT_EQ(arr[ctr++], e);
+//    }
+//
+//    for (int i = 0; i < sv.size(); ++i) {
+//        EXPECT_EQ(arr[i], sv[i]);
+//    }
+//
+//    // iterators
+//    {
+//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+//        oc::simple_static_vector<int, 5> vec1(5, arr1.data());
+//
+//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+//    }
+//
+//    // copy
+//    EXPECT_EQ(arr.data(), sv.data());
+//
+//    auto svc = sv;
+//    EXPECT_EQ(svc.data(), sv.data());
+//
+//    EXPECT_TRUE(sv.is_view());
+//    EXPECT_TRUE(svc.is_view());
+//}
 
 TEST(arrnd_test, arrnd_view_from_external_type)
 {
@@ -1121,17 +1121,17 @@ TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
         EXPECT_TRUE(close(1.0 + 1.0i, 1.0 + 1.0i));
     }
 }
-
-TEST(modulo_test, modulo_opration_can_be_perform_on_positive_zero_or_negative_number)
-{
-    using namespace oc;
-
-    EXPECT_EQ(0, modulo(0, 5));
-    EXPECT_EQ(1, modulo(1, 5));
-    EXPECT_EQ(1, modulo(26, 5));
-    EXPECT_EQ(4, modulo(-1, 5));
-    EXPECT_EQ(4, modulo(-26, 5));
-}
+//
+//TEST(modulo_test, modulo_opration_can_be_perform_on_positive_zero_or_negative_number)
+//{
+//    using namespace oc;
+//
+//    EXPECT_EQ(0, modulo(0, 5));
+//    EXPECT_EQ(1, modulo(1, 5));
+//    EXPECT_EQ(1, modulo(26, 5));
+//    EXPECT_EQ(4, modulo(-1, 5));
+//    EXPECT_EQ(4, modulo(-26, 5));
+//}
 
 TEST(interval_test, initialization)
 {

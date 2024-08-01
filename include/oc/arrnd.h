@@ -231,6 +231,16 @@ using details::simple_allocator;
 
 namespace oc {
 namespace details {
+    struct simple_cont_tag { };
+    template <typename T>
+    concept simple_cont_compliant = std::is_same_v<typename std::remove_cvref_t<T>::tag, simple_cont_tag>;
+
+    template <simple_cont_compliant ScCo1, simple_cont_compliant ScCo2>
+    [[nodiscard]] inline constexpr bool operator==(const ScCo1& lhs, const ScCo2& rhs)
+    {
+        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+    }
+
     template <typename T, typename Allocator = simple_allocator<T>>
     class simple_vector final {
         static_assert(std::is_same_v<T, typename Allocator::value_type>);
@@ -247,6 +257,8 @@ namespace details {
         using const_iterator = const T*;
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+
+        using tag = simple_cont_tag;
 
         simple_vector() = default;
 
@@ -663,12 +675,12 @@ namespace details {
         allocator_type alloc_;
     };
 
-    template <typename T, typename Allocator>
+    /*template <typename T, typename Allocator>
     [[nodiscard]] inline constexpr bool operator==(
         const simple_vector<T, Allocator>& lhs, const simple_vector<T, Allocator>& rhs)
     {
         return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
+    }*/
 
     template <typename T, std::size_t Capacity>
     class simple_array final {
@@ -686,6 +698,8 @@ namespace details {
         using const_iterator = const T*;
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+
+        using tag = simple_cont_tag;
 
         simple_array() = default;
 
@@ -1022,12 +1036,12 @@ namespace details {
         size_type size_ = 0;
     };
 
-    template <typename T, std::size_t Capacity>
+    /*template <typename T, std::size_t Capacity>
     [[nodiscard]] inline constexpr bool operator==(
         const simple_array<T, Capacity>& lhs, const simple_array<T, Capacity>& rhs)
     {
         return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
+    }*/
 
 
 
@@ -1050,6 +1064,8 @@ namespace details {
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
+        using tag = simple_cont_tag;
+
         simple_view() = default;
         
         explicit constexpr simple_view(std::span<value_type> sp, size_type capacity = 0)
@@ -1058,6 +1074,12 @@ namespace details {
             , ptr_(sp.data())
         {
         }
+
+        template <std::input_iterator InputIt>
+        explicit constexpr simple_view(InputIt first, InputIt last)
+            : simple_view(std::span<value_type>(
+                const_cast<pointer>(reinterpret_cast<const_pointer>(&(*first))), std::distance(first, last)))
+        { }
 
         constexpr void clear()
         {
@@ -1364,11 +1386,11 @@ namespace details {
         pointer ptr_ = nullptr;
     };
 
-    template <typename T>
+    /*template <typename T>
     [[nodiscard]] inline constexpr bool operator==(const simple_view<T>& lhs, const simple_view<T>& rhs)
     {
         return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
+    }*/
 
 
 
@@ -1386,507 +1408,507 @@ using details::simple_view;
 
 
 
-namespace oc {
-namespace details {
-    template <typename T, template <typename> typename Allocator = simple_allocator>
-    class simple_dynamic_vector final {
-    public:
-        using value_type = T;
-        using allocator_type = Allocator<std::uint8_t>;
-        using size_type = std::int64_t;
-        using difference_type = std::int64_t;
-        using reference = T&;
-        using const_reference = const T&;
-        using pointer = T*;
-        using const_pointer = const T*;
-        using iterator = T*;
-        using const_iterator = const T*;
-        using reverse_iterator = std::reverse_iterator<pointer>;
-        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-
-        template <typename U>
-        using replaced_type = simple_dynamic_vector<U, Allocator>;
-
-        template <typename U = value_type>
-        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
-            : size_(size)
-            , is_view_(is_view)
-        {
-            assert(size >= 0);
-            if (size > 0) {
-                if (is_view) {
-                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
-                } else {
-                    data_ptr_ = alloc_.allocate(size * sizeof(value_type));
-                    if (data) {
-                        if constexpr (std::is_copy_constructible_v<T>) {
-                            std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
-                        }
-                    } else if constexpr (!std::is_fundamental_v<T>) {
-                        if constexpr (std::is_default_constructible_v<T>) {
-                            std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
-                        }
-                    }
-                }
-            }
-        }
-
-        template <typename InputIt>
-        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last, bool is_view = false)
-            : simple_dynamic_vector(std::distance(first, last), &(*first), is_view)
-        { }
-
-        constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
-            : alloc_(other.alloc_)
-            , size_(other.size_)
-            , is_view_(other.is_view_)
-        {
-            if (!other.empty()) {
-                if (is_view_) {
-                    data_ptr_ = other.data_ptr_;
-                } else {
-                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
-                            reinterpret_cast<pointer>(data_ptr_));
-                    }
-                }
-            }
-        }
-
-        constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            if (!empty()) {
-                if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
-                }
-                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
-            }
-
-            alloc_ = other.alloc_;
-            size_ = other.size_;
-            is_view_ = other.is_view_;
-
-            if (!other.empty()) {
-                if (other.is_view_) {
-                    data_ptr_ = other.data_ptr_;
-                } else {
-                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
-                    if (data_ptr_) {
-                        if constexpr (std::is_copy_constructible_v<T>) {
-                            std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
-                                reinterpret_cast<pointer>(data_ptr_));
-                        }
-                    }
-                }
-            }
-
-            return *this;
-        }
-
-        constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
-            : alloc_(std::move(other.alloc_))
-            , size_(other.size_)
-            , is_view_(other.is_view_)
-        {
-            data_ptr_ = other.data_ptr_;
-
-            other.data_ptr_ = nullptr;
-            other.size_ = 0;
-        }
-
-        constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            if (!empty()) {
-                if constexpr (!std::is_fundamental_v<T>) {
-                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
-                }
-                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
-            }
-
-            alloc_ = std::move(other.alloc_);
-            size_ = other.size_;
-            is_view_ = other.is_view_;
-
-            data_ptr_ = other.data_ptr_;
-
-            other.data_ptr_ = nullptr;
-            other.size_ = 0;
-
-            return *this;
-        }
-
-        constexpr ~simple_dynamic_vector() noexcept
-        {
-            if (!empty()) {
-                if (!is_view_) {
-                    if constexpr (!std::is_fundamental_v<T>) {
-                        std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
-                    }
-                    alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
-                }
-            }
-        }
-
-        [[nodiscard]] constexpr bool empty() const noexcept
-        {
-            return size_ == 0 && !data_ptr_;
-        }
-
-        [[nodiscard]] constexpr size_type size() const noexcept
-        {
-            return size_;
-        }
-
-        [[nodiscard]] constexpr pointer data() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr bool is_view() const noexcept
-        {
-            return is_view_;
-        }
-
-        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr pointer begin() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr pointer end() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer begin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer end() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer cend() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
-        {
-            return reverse_iterator(end());
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rend() noexcept
-        {
-            return reverse_iterator(begin());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
-        {
-            return const_reverse_iterator(cend());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
-        {
-            return const_reverse_iterator(cbegin());
-        }
-
-        [[nodiscard]] constexpr const_reference back() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr reference back() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr const_reference front() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[0];
-        }
-
-        [[nodiscard]] constexpr reference front() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[0];
-        }
-
-    private:
-        allocator_type alloc_;
-
-        size_type size_ = 0;
-        std::uint8_t* data_ptr_ = nullptr;
-
-        bool is_view_ = false;
-    };
-
-    template <typename T, template <typename> typename Allocator = simple_allocator>
-    [[nodiscard]] inline constexpr bool operator==(
-        const simple_dynamic_vector<T, Allocator>& lhs, const simple_dynamic_vector<T, Allocator>& rhs)
-    {
-        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
-
-    template <typename T, std::int64_t Size>
-    class simple_static_vector final {
-        static_assert(Size >= 0);
-
-    public:
-        using value_type = T;
-        using size_type = std::int64_t;
-        using difference_type = std::int64_t;
-        using reference = T&;
-        using const_reference = const T&;
-        using pointer = T*;
-        using const_pointer = const T*;
-        using iterator = T*;
-        using const_iterator = const T*;
-        using reverse_iterator = std::reverse_iterator<pointer>;
-        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-
-        template <typename U>
-        using replaced_type = simple_static_vector<U, Size>;
-
-        template <typename U = value_type>
-        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
-            : size_(size)
-            , is_view_(is_view)
-        {
-            assert(size_ >= 0 && size_ <= Size);
-            if (data) {
-                if (is_view_) {
-                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
-                } else {
-                    if constexpr (std::is_copy_constructible_v<T>) {
-                        std::copy(data, std::next(data, size_), buffer_);
-                    }
-                }
-            }
-        }
-
-        template <typename InputIt>
-        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last, bool is_view = false)
-            : simple_static_vector(std::distance(first, last), &(*first), is_view)
-        { }
-
-        constexpr simple_static_vector(const simple_static_vector& other)
-            : size_(other.size_)
-            , is_view_(other.is_view_)
-        {
-            if (is_view_) {
-                data_ptr_ = other.data_ptr_;
-            } else {
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
-                }
-            }
-        }
-
-        constexpr simple_static_vector operator=(const simple_static_vector& other)
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-            is_view_ = other.is_view_;
-
-            if (other.is_view_) {
-                data_ptr_ = other.data_ptr_;
-            } else {
-                if constexpr (std::is_copy_constructible_v<T>) {
-                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
-                }
-            }
-
-            return *this;
-        }
-
-        constexpr simple_static_vector(simple_static_vector&& other) noexcept
-            : size_(other.size_)
-            , is_view_(other.is_view_)
-        {
-            if (is_view_) {
-                data_ptr_ = other.data_ptr_;
-            } else {
-                if constexpr (std::is_move_constructible_v<T>) {
-                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
-                }
-            }
-
-            other.size_ = 0;
-        }
-
-        constexpr simple_static_vector operator=(simple_static_vector&& other) noexcept
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-            is_view_ = other.is_view_;
-
-            if (other.is_view_) {
-                data_ptr_ = other.data_ptr_;
-            } else {
-                if constexpr (std::is_move_constructible_v<T>) {
-                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
-                }
-            }
-
-            other.size_ = 0;
-
-            return *this;
-        }
-
-        [[nodiscard]] constexpr bool empty() const noexcept
-        {
-            return size_ == 0;
-        }
-
-        [[nodiscard]] constexpr size_type size() const noexcept
-        {
-            return size_;
-        }
-
-        [[nodiscard]] constexpr pointer data() const noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr bool is_view() const noexcept
-        {
-            return is_view_;
-        }
-
-        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-        {
-            assert(index >= 0 && index < size_);
-            return reinterpret_cast<const_pointer>(data_ptr_)[index];
-        }
-
-        [[nodiscard]] constexpr pointer begin() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr pointer end() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer begin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer end() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_);
-        }
-
-        [[nodiscard]] constexpr const_pointer cend() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
-        {
-            return reverse_iterator(end());
-        }
-
-        [[nodiscard]] constexpr reverse_iterator rend() noexcept
-        {
-            return reverse_iterator(begin());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
-        {
-            return const_reverse_iterator(cend());
-        }
-
-        [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
-        {
-            return const_reverse_iterator(cbegin());
-        }
-
-        [[nodiscard]] constexpr const_reference back() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr reference back() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr const_reference front() const noexcept
-        {
-            return reinterpret_cast<const_pointer>(data_ptr_)[0];
-        }
-
-        [[nodiscard]] constexpr reference front() noexcept
-        {
-            return reinterpret_cast<pointer>(data_ptr_)[0];
-        }
-
-    private:
-        size_type size_ = 0;
-        value_type buffer_[Size];
-        std::uint8_t* data_ptr_ = reinterpret_cast<std::uint8_t*>(buffer_);
-
-        bool is_view_ = false;
-    };
-
-    template <typename T, std::int64_t Size>
-    [[nodiscard]] inline constexpr bool operator==(
-        const simple_static_vector<T, Size>& lhs, const simple_static_vector<T, Size>& rhs)
-    {
-        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
-}
-
-using details::simple_dynamic_vector;
-using details::simple_static_vector;
-}
+//namespace oc {
+//namespace details {
+//    template <typename T, template <typename> typename Allocator = simple_allocator>
+//    class simple_dynamic_vector final {
+//    public:
+//        using value_type = T;
+//        using allocator_type = Allocator<std::uint8_t>;
+//        using size_type = std::int64_t;
+//        using difference_type = std::int64_t;
+//        using reference = T&;
+//        using const_reference = const T&;
+//        using pointer = T*;
+//        using const_pointer = const T*;
+//        using iterator = T*;
+//        using const_iterator = const T*;
+//        using reverse_iterator = std::reverse_iterator<pointer>;
+//        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+//
+//        template <typename U>
+//        using replaced_type = simple_dynamic_vector<U, Allocator>;
+//
+//        template <typename U = value_type>
+//        explicit constexpr simple_dynamic_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
+//            : size_(size)
+//            , is_view_(is_view)
+//        {
+//            assert(size >= 0);
+//            if (size > 0) {
+//                if (is_view) {
+//                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+//                } else {
+//                    data_ptr_ = alloc_.allocate(size * sizeof(value_type));
+//                    if (data) {
+//                        if constexpr (std::is_copy_constructible_v<T>) {
+//                            std::uninitialized_copy_n(data, size, reinterpret_cast<pointer>(data_ptr_));
+//                        }
+//                    } else if constexpr (!std::is_fundamental_v<T>) {
+//                        if constexpr (std::is_default_constructible_v<T>) {
+//                            std::uninitialized_default_construct_n(reinterpret_cast<pointer>(data_ptr_), size);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        template <typename InputIt>
+//        explicit constexpr simple_dynamic_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+//            : simple_dynamic_vector(std::distance(first, last), &(*first), is_view)
+//        { }
+//
+//        constexpr simple_dynamic_vector(const simple_dynamic_vector& other)
+//            : alloc_(other.alloc_)
+//            , size_(other.size_)
+//            , is_view_(other.is_view_)
+//        {
+//            if (!other.empty()) {
+//                if (is_view_) {
+//                    data_ptr_ = other.data_ptr_;
+//                } else {
+//                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+//                    if constexpr (std::is_copy_constructible_v<T>) {
+//                        std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+//                            reinterpret_cast<pointer>(data_ptr_));
+//                    }
+//                }
+//            }
+//        }
+//
+//        constexpr simple_dynamic_vector operator=(const simple_dynamic_vector& other)
+//        {
+//            if (this == &other) {
+//                return *this;
+//            }
+//
+//            if (!empty()) {
+//                if constexpr (!std::is_fundamental_v<T>) {
+//                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+//                }
+//                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
+//            }
+//
+//            alloc_ = other.alloc_;
+//            size_ = other.size_;
+//            is_view_ = other.is_view_;
+//
+//            if (!other.empty()) {
+//                if (other.is_view_) {
+//                    data_ptr_ = other.data_ptr_;
+//                } else {
+//                    data_ptr_ = alloc_.allocate(size_ * sizeof(value_type));
+//                    if (data_ptr_) {
+//                        if constexpr (std::is_copy_constructible_v<T>) {
+//                            std::uninitialized_copy_n(reinterpret_cast<pointer>(other.data_ptr_), other.size_,
+//                                reinterpret_cast<pointer>(data_ptr_));
+//                        }
+//                    }
+//                }
+//            }
+//
+//            return *this;
+//        }
+//
+//        constexpr simple_dynamic_vector(simple_dynamic_vector&& other) noexcept
+//            : alloc_(std::move(other.alloc_))
+//            , size_(other.size_)
+//            , is_view_(other.is_view_)
+//        {
+//            data_ptr_ = other.data_ptr_;
+//
+//            other.data_ptr_ = nullptr;
+//            other.size_ = 0;
+//        }
+//
+//        constexpr simple_dynamic_vector operator=(simple_dynamic_vector&& other) noexcept
+//        {
+//            if (this == &other) {
+//                return *this;
+//            }
+//
+//            if (!empty()) {
+//                if constexpr (!std::is_fundamental_v<T>) {
+//                    std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+//                }
+//                alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
+//            }
+//
+//            alloc_ = std::move(other.alloc_);
+//            size_ = other.size_;
+//            is_view_ = other.is_view_;
+//
+//            data_ptr_ = other.data_ptr_;
+//
+//            other.data_ptr_ = nullptr;
+//            other.size_ = 0;
+//
+//            return *this;
+//        }
+//
+//        constexpr ~simple_dynamic_vector() noexcept
+//        {
+//            if (!empty()) {
+//                if (!is_view_) {
+//                    if constexpr (!std::is_fundamental_v<T>) {
+//                        std::destroy_n(reinterpret_cast<pointer>(data_ptr_), size_);
+//                    }
+//                    alloc_.deallocate(data_ptr_, size_ * sizeof(value_type));
+//                }
+//            }
+//        }
+//
+//        [[nodiscard]] constexpr bool empty() const noexcept
+//        {
+//            return size_ == 0 && !data_ptr_;
+//        }
+//
+//        [[nodiscard]] constexpr size_type size() const noexcept
+//        {
+//            return size_;
+//        }
+//
+//        [[nodiscard]] constexpr pointer data() const noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr bool is_view() const noexcept
+//        {
+//            return is_view_;
+//        }
+//
+//        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+//        {
+//            assert(index >= 0 && index < size_);
+//            return reinterpret_cast<pointer>(data_ptr_)[index];
+//        }
+//
+//        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+//        {
+//            assert(index >= 0 && index < size_);
+//            return reinterpret_cast<pointer>(data_ptr_)[index];
+//        }
+//
+//        [[nodiscard]] constexpr pointer begin() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr pointer end() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer begin() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer end() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer cend() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
+//        {
+//            return reverse_iterator(end());
+//        }
+//
+//        [[nodiscard]] constexpr reverse_iterator rend() noexcept
+//        {
+//            return reverse_iterator(begin());
+//        }
+//
+//        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
+//        {
+//            return const_reverse_iterator(cend());
+//        }
+//
+//        [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
+//        {
+//            return const_reverse_iterator(cbegin());
+//        }
+//
+//        [[nodiscard]] constexpr const_reference back() const noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
+//        }
+//
+//        [[nodiscard]] constexpr reference back() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
+//        }
+//
+//        [[nodiscard]] constexpr const_reference front() const noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[0];
+//        }
+//
+//        [[nodiscard]] constexpr reference front() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[0];
+//        }
+//
+//    private:
+//        allocator_type alloc_;
+//
+//        size_type size_ = 0;
+//        std::uint8_t* data_ptr_ = nullptr;
+//
+//        bool is_view_ = false;
+//    };
+//
+//    template <typename T, template <typename> typename Allocator = simple_allocator>
+//    [[nodiscard]] inline constexpr bool operator==(
+//        const simple_dynamic_vector<T, Allocator>& lhs, const simple_dynamic_vector<T, Allocator>& rhs)
+//    {
+//        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+//    }
+//
+//    template <typename T, std::int64_t Size>
+//    class simple_static_vector final {
+//        static_assert(Size >= 0);
+//
+//    public:
+//        using value_type = T;
+//        using size_type = std::int64_t;
+//        using difference_type = std::int64_t;
+//        using reference = T&;
+//        using const_reference = const T&;
+//        using pointer = T*;
+//        using const_pointer = const T*;
+//        using iterator = T*;
+//        using const_iterator = const T*;
+//        using reverse_iterator = std::reverse_iterator<pointer>;
+//        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
+//
+//        template <typename U>
+//        using replaced_type = simple_static_vector<U, Size>;
+//
+//        template <typename U = value_type>
+//        explicit constexpr simple_static_vector(size_type size = 0, const U* data = nullptr, bool is_view = false)
+//            : size_(size)
+//            , is_view_(is_view)
+//        {
+//            assert(size_ >= 0 && size_ <= Size);
+//            if (data) {
+//                if (is_view_) {
+//                    data_ptr_ = reinterpret_cast<std::uint8_t*>(const_cast<U*>(data));
+//                } else {
+//                    if constexpr (std::is_copy_constructible_v<T>) {
+//                        std::copy(data, std::next(data, size_), buffer_);
+//                    }
+//                }
+//            }
+//        }
+//
+//        template <typename InputIt>
+//        explicit constexpr simple_static_vector(const InputIt& first, const InputIt& last, bool is_view = false)
+//            : simple_static_vector(std::distance(first, last), &(*first), is_view)
+//        { }
+//
+//        constexpr simple_static_vector(const simple_static_vector& other)
+//            : size_(other.size_)
+//            , is_view_(other.is_view_)
+//        {
+//            if (is_view_) {
+//                data_ptr_ = other.data_ptr_;
+//            } else {
+//                if constexpr (std::is_copy_constructible_v<T>) {
+//                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+//                }
+//            }
+//        }
+//
+//        constexpr simple_static_vector operator=(const simple_static_vector& other)
+//        {
+//            if (this == &other) {
+//                return *this;
+//            }
+//
+//            size_ = other.size_;
+//            is_view_ = other.is_view_;
+//
+//            if (other.is_view_) {
+//                data_ptr_ = other.data_ptr_;
+//            } else {
+//                if constexpr (std::is_copy_constructible_v<T>) {
+//                    std::copy(other.buffer_, other.buffer_ + other.size_, buffer_);
+//                }
+//            }
+//
+//            return *this;
+//        }
+//
+//        constexpr simple_static_vector(simple_static_vector&& other) noexcept
+//            : size_(other.size_)
+//            , is_view_(other.is_view_)
+//        {
+//            if (is_view_) {
+//                data_ptr_ = other.data_ptr_;
+//            } else {
+//                if constexpr (std::is_move_constructible_v<T>) {
+//                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+//                }
+//            }
+//
+//            other.size_ = 0;
+//        }
+//
+//        constexpr simple_static_vector operator=(simple_static_vector&& other) noexcept
+//        {
+//            if (this == &other) {
+//                return *this;
+//            }
+//
+//            size_ = other.size_;
+//            is_view_ = other.is_view_;
+//
+//            if (other.is_view_) {
+//                data_ptr_ = other.data_ptr_;
+//            } else {
+//                if constexpr (std::is_move_constructible_v<T>) {
+//                    std::move(other.buffer_, other.buffer_ + other.size_, buffer_);
+//                }
+//            }
+//
+//            other.size_ = 0;
+//
+//            return *this;
+//        }
+//
+//        [[nodiscard]] constexpr bool empty() const noexcept
+//        {
+//            return size_ == 0;
+//        }
+//
+//        [[nodiscard]] constexpr size_type size() const noexcept
+//        {
+//            return size_;
+//        }
+//
+//        [[nodiscard]] constexpr pointer data() const noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr bool is_view() const noexcept
+//        {
+//            return is_view_;
+//        }
+//
+//        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
+//        {
+//            assert(index >= 0 && index < size_);
+//            return reinterpret_cast<pointer>(data_ptr_)[index];
+//        }
+//
+//        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
+//        {
+//            assert(index >= 0 && index < size_);
+//            return reinterpret_cast<const_pointer>(data_ptr_)[index];
+//        }
+//
+//        [[nodiscard]] constexpr pointer begin() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr pointer end() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer begin() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer end() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_);
+//        }
+//
+//        [[nodiscard]] constexpr const_pointer cend() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_) + size_;
+//        }
+//
+//        [[nodiscard]] constexpr reverse_iterator rbegin() noexcept
+//        {
+//            return reverse_iterator(end());
+//        }
+//
+//        [[nodiscard]] constexpr reverse_iterator rend() noexcept
+//        {
+//            return reverse_iterator(begin());
+//        }
+//
+//        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept
+//        {
+//            return const_reverse_iterator(cend());
+//        }
+//
+//        [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept
+//        {
+//            return const_reverse_iterator(cbegin());
+//        }
+//
+//        [[nodiscard]] constexpr const_reference back() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_)[size_ - 1];
+//        }
+//
+//        [[nodiscard]] constexpr reference back() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[size_ - 1];
+//        }
+//
+//        [[nodiscard]] constexpr const_reference front() const noexcept
+//        {
+//            return reinterpret_cast<const_pointer>(data_ptr_)[0];
+//        }
+//
+//        [[nodiscard]] constexpr reference front() noexcept
+//        {
+//            return reinterpret_cast<pointer>(data_ptr_)[0];
+//        }
+//
+//    private:
+//        size_type size_ = 0;
+//        value_type buffer_[Size];
+//        std::uint8_t* data_ptr_ = reinterpret_cast<std::uint8_t*>(buffer_);
+//
+//        bool is_view_ = false;
+//    };
+//
+//    template <typename T, std::int64_t Size>
+//    [[nodiscard]] inline constexpr bool operator==(
+//        const simple_static_vector<T, Size>& lhs, const simple_static_vector<T, Size>& rhs)
+//    {
+//        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+//    }
+//}
+//
+//using details::simple_dynamic_vector;
+//using details::simple_static_vector;
+//}
 
 namespace oc {
 namespace details {
@@ -2016,12 +2038,12 @@ namespace details {
         return abs(a - b) <= (atol > reps ? atol : reps);
     }
 
-    template <std::integral T1, std::integral T2>
-    [[nodiscard]] inline constexpr auto modulo(const T1& value, const T2& modulus) noexcept
-        -> decltype((value % modulus) + modulus)
-    {
-        return ((value % modulus) + modulus) % modulus;
-    }
+    //template <std::integral T1, std::integral T2>
+    //[[nodiscard]] inline constexpr auto modulo(const T1& value, const T2& modulus) noexcept
+    //    -> decltype((value % modulus) + modulus)
+    //{
+    //    return ((value % modulus) + modulus) % modulus;
+    //}
 
     template <typename T>
     [[nodiscard]] inline constexpr auto sign(const T& value)
@@ -2034,7 +2056,7 @@ using details::default_atol;
 using details::default_rtol;
 
 using details::close;
-using details::modulo;
+//using details::modulo;
 using details::sign;
 }
 
@@ -2131,8 +2153,8 @@ namespace oc {
 }
 
 
-namespace oc {
-namespace details {
+//namespace oc {
+//namespace details {
     //enum class interval_hint { full, from, to, none };
 
     ///**
@@ -2253,7 +2275,7 @@ namespace details {
     //        || (lhs.hint() == interval_hint::to && rhs.hint() == interval_hint::to && lhs.start() == 0
     //            && rhs.start() == 0 && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
     //}
-}
+//}
 
 //using details::interval_hint;
 //using details::interval;
@@ -2261,7 +2283,7 @@ namespace details {
 //using details::modulo;
 //using details::reverse;
 //using details::forward;
-}
+//}
 
 namespace oc {
 namespace details {
@@ -2297,27 +2319,35 @@ using details::interval_type_iterable;
 namespace oc {
 namespace details {
     template <typename T, template <typename> typename Allocator = simple_allocator>
-    struct revised_dynamic_storage_info {
+    struct dynamic_storage_info {
             using storage_type = simple_vector<T, Allocator<T>>;
             static constexpr std::int64_t size = std::dynamic_extent;
             template <typename U>
-            using replaced_type = revised_dynamic_storage_info<U, Allocator>;
+            using replaced_type = dynamic_storage_info<U, Allocator>;
     };
 
-    template <typename T, template <typename> typename Allocator = simple_allocator>
+    /*template <typename T, template <typename> typename Allocator = simple_allocator>
     struct dynamic_storage_info {
         using storage_type = simple_dynamic_vector<T, Allocator>;
         static constexpr std::int64_t size = std::dynamic_extent;
         template <typename U>
         using replaced_type = dynamic_storage_info<U, Allocator>;
-    };
+    };*/
 
     template <typename T, std::int64_t N>
     struct static_storage_info {
-        using storage_type = simple_static_vector<T, N>;
+        using storage_type = /*simple_static_vector*/simple_array<T, N>;
         static constexpr std::int64_t size = N;
         template <typename U>
         using replaced_type = static_storage_info<U, N>;
+    };
+
+    template <typename T>
+    struct view_storage_info {
+        using storage_type = simple_view<T>;
+        static constexpr std::int64_t size = std::dynamic_extent;
+        template <typename U>
+        using replaced_type = view_storage_info<T>;
     };
 
     struct arrnd_header_tag { };
@@ -2325,7 +2355,7 @@ namespace details {
     concept arrnd_header_compliant = std::is_same_v<typename T::tag, arrnd_header_tag>;
 
     //template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
-    template <typename StorageInfo = revised_dynamic_storage_info<std::int64_t>>
+    template <typename StorageInfo = dynamic_storage_info<std::int64_t>>
     class arrnd_header {
     public:
         using storage_info = StorageInfo;
@@ -2996,7 +3026,7 @@ using details::arrnd_header_tag;
 using details::arrnd_header_compliant;
 using details::arrnd_header;
 
-using details::revised_dynamic_storage_info;
+using details::dynamic_storage_info;
 using details::dynamic_storage_info;
 using details::static_storage_info;
 }
@@ -4569,12 +4599,19 @@ namespace details {
     [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
         const InputDataIt& first_data, const InputDataIt& last_data)
     {
-        ArCo res;
+        using res_type = typename ArCo::view_type;
+        res_type res;
+        res.header() = typename res_type::header_type(first_dim, last_dim);
+        res.storage() = std::allocate_shared<typename res_type::storage_type>(
+            typename res_type::template shared_ref_allocator_type<typename res_type::storage_type>(), first_data,
+            last_data);
+        return res;
+        /*ArCo res;
         res.header() = typename ArCo::header_type(first_dim, last_dim);
         res.storage() = std::allocate_shared<typename ArCo::storage_type>(
             typename ArCo::template shared_ref_allocator_type<typename ArCo::storage_type>(), first_data, last_data,
             true);
-        return res;
+        return res;*/
     }
     template <arrnd_compliant ArCo, signed_integral_type_iterable Cont, std::input_iterator InputDataIt>
     [[nodiscard]] inline constexpr auto view(
@@ -6026,7 +6063,7 @@ namespace details {
     //    template <typename> typename SharedRefAllocator = simple_allocator/*, template <typename> typename Indexer = arrnd_indexer,
     //    template <typename> typename Ranger = arrnd_axis_ranger*/>
     template <typename T, /*random_access_type Storage = simple_dynamic_vector<T>*/typename DataStorageInfo = dynamic_storage_info<T>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator/*, template <typename> typename Indexer = arrnd_indexer,
         template <typename> typename Ranger = arrnd_axis_ranger*/>
     class arrnd {
@@ -6063,6 +6100,8 @@ namespace details {
         using replaced_type
             = arrnd<U, /*typename Storage*/ typename /*StorageInfo*/ DataStorageInfo::template replaced_type<U>,
                 /*Header*/ /*header_type*/ DimsStorageInfo, SharedRefAllocator /*, Indexer, Ranger*/>;
+
+        using view_type = arrnd<T, view_storage_info<T>, DimsStorageInfo, SharedRefAllocator>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -13551,19 +13590,19 @@ namespace details {
         template <typename> typename SharedRefAllocator = simple_allocator>*/
 
     template <signed_integral_type_iterator InputDimsIt, std::input_iterator InputDataIt,
-        typename DataStorageInfo = revised_dynamic_storage_info<iterator_value_type<InputDataIt>>,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, std::input_iterator InputDataIt,
-        typename DataStorageInfo = revised_dynamic_storage_info<iterator_value_type<InputDataIt>>,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <std::input_iterator InputDataIt,
-        typename DataStorageInfo = revised_dynamic_storage_info<iterator_value_type<InputDataIt>>,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const InputDataIt&,
@@ -13577,41 +13616,41 @@ namespace details {
     //    -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <signed_integral_type_iterator InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, std::initializer_list<U>) -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <signed_integral_type_iterator InputDimsIt, iterable DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <signed_integral_type_iterable Cont, iterable DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <iterable DataCont, typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const DataCont&)
         -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator,
         signed_integral_type_iterator InputDimsIt>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
@@ -13619,14 +13658,14 @@ namespace details {
         -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator, signed_integral_type_iterable Cont>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
     arrnd(const Cont&, Func&& /*, Args&&...*/)
         -> arrnd<std::invoke_result_t<Func /*, Args...*/>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename Func /*, typename... Args*/,
         typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func /*, Args...*/>>,
-        typename DimsStorageInfo = revised_dynamic_storage_info<std::int64_t>,
+        typename DimsStorageInfo = dynamic_storage_info<std::int64_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
         requires(invocable_no_arrnd<Func /*, Args...*/>)
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&& /*, Args&&...*/)
