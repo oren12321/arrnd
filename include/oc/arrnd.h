@@ -2065,9 +2065,10 @@ namespace oc {
 //namespace experimental {
 namespace details {
     /*
-        * @note represents half open interval
-        */
-    template <std::signed_integral T = std::int64_t>
+    * @note represents right-open interval
+    */
+    template <typename T = std::int64_t>
+        requires(std::is_signed_v<T>)
     class interval {
     public:
         using size_type = T;
@@ -2080,12 +2081,12 @@ namespace details {
             , stop_(stop)
             , step_(step)
         {
-            if (start > stop || step < 1) {
+            if (start > stop || step <= 0) {
                 throw std::invalid_argument("invalid interval");
             }
 
-            if (start != neginf && stop != posinf) {
-                if (start < 0 && stop > posinf + start) {
+            if constexpr (std::is_integral_v<size_type>) {
+                if (start != neginf && stop != posinf && start < 0 && stop > posinf + start) {
                     throw std::overflow_error("interval absdiff does not fit size_type");
                 }
             }
@@ -2191,7 +2192,8 @@ namespace details {
     template <std::signed_integral T>
     [[nodiscard]] constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
-        return lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step();
+        return (empty(lhs) && empty(rhs))
+            || (lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
     }
 }
 using details::interval;
