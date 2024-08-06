@@ -2095,8 +2095,42 @@ namespace details {
         constexpr interval() = default; // interval of first element
         constexpr interval(const interval&) = default;
         constexpr interval& operator=(const interval&) = default;
-        constexpr interval(interval&) = default;
-        constexpr interval& operator=(interval&) = default;
+        constexpr interval(interval&&) = default;
+        constexpr interval& operator=(interval&&) = default;
+
+        template <typename U>
+        constexpr interval(const interval<U>& other) noexcept
+            : start_(static_cast<T>(other.start()))
+            , stop_(static_cast<T>(other.stop()))
+            , step_(static_cast<T>(other.step()))
+        { }
+
+        template <typename U>
+        constexpr interval& operator=(const interval<U>& other) noexcept
+        {
+            start_ = static_cast<T>(other.start());
+            stop_ = static_cast<T>(other.stop());
+            step_ = static_cast<T>(other.step());
+
+            return *this;
+        }
+
+        template <typename U>
+        constexpr interval(interval<U>&& other) noexcept
+            : start_(static_cast<T>(other.start()))
+            , stop_(static_cast<T>(other.stop()))
+            , step_(static_cast<T>(other.step()))
+        { }
+
+        template <typename U>
+        constexpr interval& operator=(interval<U>&& other) noexcept
+        {
+            start_ = static_cast<T>(other.start());
+            stop_ = static_cast<T>(other.stop());
+            step_ = static_cast<T>(other.step());
+
+            return *this;
+        }
 
         [[nodiscard]] constexpr size_type start() const noexcept
         {
