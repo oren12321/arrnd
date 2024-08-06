@@ -2068,7 +2068,7 @@ namespace details {
     * @note represents right-open interval
     */
     template <typename T = std::int64_t>
-        requires(std::is_signed_v<T>)
+        requires(std::is_fundamental_v<T>)
     class interval {
     public:
         using size_type = T;
@@ -2076,7 +2076,7 @@ namespace details {
         static constexpr size_type neginf = std::numeric_limits<size_type>::min();
         static constexpr size_type posinf = std::numeric_limits<size_type>::max();
 
-        constexpr interval(T start, T stop, T step = 1)
+        constexpr interval(size_type start, size_type stop, size_type step = 1)
             : start_(start)
             , stop_(stop)
             , step_(step)
@@ -2085,7 +2085,7 @@ namespace details {
                 throw std::invalid_argument("invalid interval");
             }
 
-            if constexpr (std::is_integral_v<size_type>) {
+            if constexpr (std::is_integral_v<size_type> && std::is_signed_v<size_type>) {
                 if (start != neginf && stop != posinf && start < 0 && stop > posinf + start) {
                     throw std::overflow_error("interval absdiff does not fit size_type");
                 }
@@ -2144,32 +2144,36 @@ namespace details {
         size_type step_ = 1;
     };
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool isbound(interval<T> ival) noexcept
     {
-        return ival.start() != interval<T>::neginf && ival.stop() != interval<T>::posinf;
+        if constexpr (std::is_signed_v<T>) {
+            return ival.start() != interval<T>::neginf && ival.stop() != interval<T>::posinf;
+        } else {
+            return ival.stop() != interval<T>::posinf;
+        }
     }
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool isunbound(interval<T> ival) noexcept
     {
         return !isbound(ival);
     }
 
-    template <std::signed_integral T>
-    [[nodiscard]] inline constexpr bool isbetween(
-        interval<T> ival, std::signed_integral auto start, std::signed_integral auto stop) noexcept
+    template <typename T> requires(std::is_fundamental_v<T>)
+    [[nodiscard]] inline constexpr bool isbetween(interval<T> ival, auto start, auto stop) noexcept
+        requires(std::is_fundamental_v<decltype(start)> and std::is_fundamental_v<decltype(stop)>)
     {
         return !empty(ival) && ival.start() >= start && ival.stop() <= stop;
     }
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool empty(interval<T> ival) noexcept
     {
         return ival.start() == ival.stop();
     }
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr T absdiff(interval<T> ival) noexcept
     {
         if (empty(ival)) {
@@ -2181,15 +2185,19 @@ namespace details {
         return static_cast<T>(std::ceil(static_cast<double>(std::abs(ival.stop() - ival.start())) / ival.step()));
     }
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr interval<T> bound(
         interval<T> ival, std::signed_integral auto start, std::signed_integral auto stop)
     {
-        return interval<T>{ival.start() == interval<T>::neginf ? start : ival.start(),
-            ival.stop() == interval<T>::posinf ? stop : ival.stop(), ival.step()};
+        if constexpr (std::is_signed_v<T>) {
+            return interval<T>{ival.start() == interval<T>::neginf ? start : ival.start(),
+                ival.stop() == interval<T>::posinf ? stop : ival.stop(), ival.step()};
+        } else {
+            return interval<T>{ival.start(), ival.stop() == interval<T>::posinf ? stop : ival.stop(), ival.step()};
+        }
     }
 
-    template <std::signed_integral T>
+    template <typename T> requires(std::is_fundamental_v<T>)
     [[nodiscard]] constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
         return (empty(lhs) && empty(rhs))
