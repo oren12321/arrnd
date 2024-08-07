@@ -2098,40 +2098,6 @@ namespace details {
         constexpr interval(interval&&) = default;
         constexpr interval& operator=(interval&&) = default;
 
-        template <typename U>
-        constexpr interval(const interval<U>& other) noexcept
-            : start_(static_cast<T>(other.start()))
-            , stop_(static_cast<T>(other.stop()))
-            , step_(static_cast<T>(other.step()))
-        { }
-
-        template <typename U>
-        constexpr interval& operator=(const interval<U>& other) noexcept
-        {
-            start_ = static_cast<T>(other.start());
-            stop_ = static_cast<T>(other.stop());
-            step_ = static_cast<T>(other.step());
-
-            return *this;
-        }
-
-        template <typename U>
-        constexpr interval(interval<U>&& other) noexcept
-            : start_(static_cast<T>(other.start()))
-            , stop_(static_cast<T>(other.stop()))
-            , step_(static_cast<T>(other.step()))
-        { }
-
-        template <typename U>
-        constexpr interval& operator=(interval<U>&& other) noexcept
-        {
-            start_ = static_cast<T>(other.start());
-            stop_ = static_cast<T>(other.stop());
-            step_ = static_cast<T>(other.step());
-
-            return *this;
-        }
-
         [[nodiscard]] constexpr size_type start() const noexcept
         {
             return start_;
@@ -2149,7 +2115,11 @@ namespace details {
 
         [[nodiscard]] static constexpr interval full(size_type step = 1) noexcept
         {
-            return interval{neginf, posinf, step};
+            if constexpr (std::is_signed_v<size_type>) {
+                return interval{neginf, posinf, step};
+            } else {
+                return interval{0, posinf, step};
+            }
         }
 
         [[nodiscard]] static constexpr interval from(size_type start, size_type step = 1) noexcept
@@ -2159,7 +2129,11 @@ namespace details {
 
         [[nodiscard]] static constexpr interval to(size_type stop, size_type step = 1) noexcept
         {
-            return interval{neginf, stop, step};
+            if constexpr (std::is_signed_v<size_type>) {
+                return interval{neginf, stop, step};
+            } else {
+                return interval{0, stop, step};
+            }
         }
 
         [[nodiscard]] static constexpr interval at(size_type pos) noexcept
@@ -2178,7 +2152,8 @@ namespace details {
         size_type step_ = 1;
     };
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool isbound(interval<T> ival) noexcept
     {
         if constexpr (std::is_signed_v<T>) {
@@ -2188,26 +2163,30 @@ namespace details {
         }
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool isunbound(interval<T> ival) noexcept
     {
         return !isbound(ival);
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool isbetween(interval<T> ival, auto start, auto stop) noexcept
         requires(std::is_fundamental_v<decltype(start)> and std::is_fundamental_v<decltype(stop)>)
     {
         return !empty(ival) && ival.start() >= start && ival.stop() <= stop;
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool empty(interval<T> ival) noexcept
     {
         return ival.start() == ival.stop();
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr T absdiff(interval<T> ival) noexcept
     {
         if (empty(ival)) {
@@ -2216,12 +2195,17 @@ namespace details {
         if (isunbound(ival)) {
             return interval<T>::posinf;
         }
-        return static_cast<T>(std::ceil(static_cast<double>(std::abs(ival.stop() - ival.start())) / ival.step()));
+        if constexpr (std::is_signed_v<T>) {
+            return static_cast<T>(std::ceil(static_cast<double>(std::abs(ival.stop() - ival.start())) / ival.step()));
+        } else {
+            return static_cast<T>(std::ceil(static_cast<double>(ival.stop() - ival.start()) / ival.step()));
+        }
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
-    [[nodiscard]] inline constexpr interval<T> bound(
-        interval<T> ival, std::signed_integral auto start, std::signed_integral auto stop)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
+    [[nodiscard]] inline constexpr interval<T> bound(interval<T> ival, auto start, auto stop)
+        requires(std::is_fundamental_v<decltype(start)> && std::is_fundamental_v<decltype(stop)>)
     {
         if constexpr (std::is_signed_v<T>) {
             return interval<T>{ival.start() == interval<T>::neginf ? start : ival.start(),
@@ -2231,7 +2215,8 @@ namespace details {
         }
     }
 
-    template <typename T> requires(std::is_fundamental_v<T>)
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] constexpr bool operator==(const interval<T>& lhs, const interval<T>& rhs) noexcept
     {
         return (empty(lhs) && empty(rhs))
