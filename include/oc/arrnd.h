@@ -152,20 +152,25 @@ namespace details {
     struct simple_allocator {
         using value_type = T;
 
+        static constexpr std::size_t max_size = std::size_t(-1) / sizeof(T);
+
         simple_allocator() = default;
 
         template <typename U>
-        constexpr simple_allocator(const simple_allocator<U>&) noexcept {}
+        constexpr simple_allocator(const simple_allocator<U>&) noexcept
+        { }
 
         [[nodiscard]] constexpr T* allocate(std::size_t n)
         {
-            assert(n > 0); // if n == 0 the returned value is unspecified
+            if (n > max_size) {
+                throw std::bad_alloc{};
+            }
             return static_cast<T*>(::operator new[](n * sizeof(value_type)));
         }
 
         constexpr void deallocate(T* p, std::size_t n) noexcept
         {
-            assert(n > 0); // n should be > 0 since n == 0 is undefined
+            assert("pre " && p != nullptr);
             ::operator delete[](p, n * sizeof(value_type));
         }
     };
@@ -226,9 +231,6 @@ namespace details {
 using details::simple_allocator;
 }
 
-
-
-
 namespace oc {
 namespace details {
     struct simple_cont_tag { };
@@ -244,6 +246,7 @@ namespace details {
     template <typename T, typename Allocator = simple_allocator<T>>
     class simple_vector final {
         static_assert(std::is_same_v<T, typename Allocator::value_type>);
+
     public:
         using value_type = T;
         using allocator_type = Allocator;
@@ -356,7 +359,7 @@ namespace details {
             other.size_ = 0;
             other.capacity_ = 0;
         }
-        
+
         constexpr simple_vector& operator=(simple_vector&& other) noexcept
         {
             if (this == &other) {
@@ -427,21 +430,18 @@ namespace details {
         {
             if (count == 0) {
                 clear();
-            }
-            else if (count < size_) {
+            } else if (count < size_) {
                 if constexpr (!std::is_fundamental_v<value_type>) {
                     std::destroy_n(ptr_ + count, size_ - count);
                 }
                 size_ = count;
-            }
-            else if (count > size_) {
+            } else if (count > size_) {
                 if (count <= capacity_) {
                     if constexpr (!std::is_fundamental_v<value_type>) {
                         std::uninitialized_default_construct_n(ptr_ + size_, count - size_);
                     }
                     size_ = count;
-                }
-                else {
+                } else {
                     pointer new_ptr = alloc_.allocate(count);
                     std::uninitialized_move_n(ptr_, size_, new_ptr);
                     if constexpr (!std::is_fundamental_v<value_type>) {
@@ -465,7 +465,9 @@ namespace details {
                 pointer new_ptr = alloc_.allocate(new_cap);
                 std::uninitialized_move_n(ptr_, size_, new_ptr);
 
-                alloc_.deallocate(ptr_, capacity_);
+                if (capacity_ > 0) {
+                    alloc_.deallocate(ptr_, capacity_);
+                }
                 ptr_ = new_ptr;
                 capacity_ = new_cap;
             }
@@ -473,19 +475,21 @@ namespace details {
 
         constexpr void append(size_type count)
         {
-            if (size_ + count < capacity_ && size_ + count > size_) {
+            if (size_ + count <= capacity_ && size_ + count > size_) {
                 if constexpr (!std::is_fundamental_v<value_type>) {
                     std::uninitialized_default_construct_n(ptr_ + size_, count);
                 }
                 size_ += count;
-            } else if (size_ + count >= capacity_) {
+            } else if (size_ + count > capacity_) {
                 size_type new_cap = static_cast<size_type>(1.5 * (size_ + count));
                 pointer new_ptr = alloc_.allocate(new_cap);
                 std::uninitialized_move_n(ptr_, size_, new_ptr);
                 if constexpr (!std::is_fundamental_v<value_type>) {
                     std::uninitialized_default_construct_n(new_ptr + size_, count);
                 }
-                alloc_.deallocate(ptr_, capacity_);
+                if (capacity_ > 0) {
+                    alloc_.deallocate(ptr_, capacity_);
+                }
 
                 ptr_ = new_ptr;
                 capacity_ = new_cap;
@@ -594,7 +598,7 @@ namespace details {
             }
 
             append(in_dist);
-            
+
             auto new_pos = begin() + pos_dist;
 
             //std::move(new_pos, ptr_ + size_ - in_dist, new_pos + in_dist);
