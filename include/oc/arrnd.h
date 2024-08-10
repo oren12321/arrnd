@@ -2184,6 +2184,14 @@ namespace details {
 
     template <typename T>
         requires(std::is_fundamental_v<T>)
+    [[nodiscard]] inline constexpr bool isbetween(interval<T> ival, auto value) noexcept
+        requires(std::is_fundamental_v<decltype(value)>)
+    {
+        return !empty(ival) && value >= ival.start() && value < ival.stop();
+    }
+
+    template <typename T>
+        requires(std::is_fundamental_v<T>)
     [[nodiscard]] inline constexpr bool empty(interval<T> ival) noexcept
     {
         return ival.start() == ival.stop();
@@ -2438,6 +2446,973 @@ namespace details {
     struct arrnd_header_tag { };
     template <typename T>
     concept arrnd_header_compliant = std::is_same_v<typename T::tag, arrnd_header_tag>;
+
+    template <typename T>
+    struct overflow_check_multiplies {
+        constexpr T operator()(T lhs, T rhs) const
+        {
+            if (lhs > std::numeric_limits<T>::max() / rhs) {
+                throw std::overflow_error("invalid multiplication");
+            }
+            return lhs * rhs;
+        }
+    };
+
+    template <typename T>
+    struct overflow_check_plus {
+        constexpr T operator()(T lhs, T rhs) const
+        {
+            if (lhs > std::numeric_limits<T>::max() - rhs) {
+                throw std::overflow_error("invalid addition");
+            }
+            return lhs + rhs;
+        }
+    };
+
+    /*template <typename InputIt>
+    [[nodiscard]] inline constexpr bool is_valid_dims(InputIt first_dim, InputIt last_dim)
+    {
+        if constexpr (std::is_signed_v<std::iter_value_t<InputIt>>) {
+            return std::all_of(first_dim, last_dim, [](auto dim) {
+                return dim >= 0;
+            });
+        } else {
+            return true;
+        }
+    }
+
+    template <typename InputIt1, typename InputIt2>
+    [[nodiscard]] inline constexpr bool is_valid_boundaries(
+        InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_boundary, InputIt2 last_boundary)
+    {
+        return std::distance(first_dim, last_dim) >= std::distance(first_boundary, last_boundary)
+            && std::transform_reduce(
+                first_boundary, last_boundary, first_dim, true, std::logical_and<>{}, [](auto boundary, auto dim) {
+                    return empty(boundary) || isbetween(bound(boundary, 0, dim), 0, dim);
+                });
+    }
+
+    template <typename InputIt1, typename InputIt2, typename IntervalType>
+    [[nodiscard]] inline constexpr bool is_valid_strides(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
+        InputIt2 last_stride, IntervalType indices_boundary)
+    {
+        return std::distance(first_dim, last_dim) == std::distance(first_stride, last_stride)
+            && indices_boundary.start()
+                + std::transform_reduce(first_dim, last_dim, first_stride, std::iter_value_t<InputIt1>{0},
+                    std::plus<>{},
+                    [](auto dim, auto stride) {
+                        return (dim - 1) * stride;
+                    })
+            < indices_boundary.stop();
+    }
+
+    template <typename InputIt, typename IntervalType>
+    [[nodiscard]] inline constexpr bool is_valid_indices_boundary(
+        InputIt first_dim, InputIt last_dim, IntervalType indices_boundary)
+    {
+        auto num_elem = std::reduce(first_dim, last_dim, std::iter_value_t<InputIt>{0},
+            overflow_check_multiplies<std::iter_value_t<InputIt>>{});
+
+        return indices_boundary.start() >= 0 && indices_boundary.stop() <= num_elem;
+    }*/
+
+    enum class arrnd_hint : std::size_t {
+        none = 0,
+        continuous = std::size_t{1} << 0,
+        sliced = std::size_t{1} << 1,
+        transposed = std::size_t{1} << 2,
+    };
+
+    [[nodiscard]] inline constexpr arrnd_hint operator|(const arrnd_hint& lhs, const arrnd_hint& rhs) noexcept
+    {
+        return static_cast<arrnd_hint>(static_cast<std::underlying_type_t<arrnd_hint>>(lhs)
+            | static_cast<std::underlying_type_t<arrnd_hint>>(rhs));
+    }
+
+    inline constexpr arrnd_hint& operator|=(arrnd_hint& lhs, const arrnd_hint& rhs) noexcept
+    {
+        return (lhs = lhs | rhs);
+    }
+
+    [[nodiscard]] inline constexpr arrnd_hint operator&(const arrnd_hint& lhs, const arrnd_hint& rhs) noexcept
+    {
+        return static_cast<arrnd_hint>(static_cast<std::underlying_type_t<arrnd_hint>>(lhs)
+            & static_cast<std::underlying_type_t<arrnd_hint>>(rhs));
+    }
+
+    inline constexpr arrnd_hint& operator&=(arrnd_hint& lhs, const arrnd_hint& rhs) noexcept
+    {
+        return (lhs = lhs & rhs);
+    }
+
+    [[nodiscard]] inline constexpr arrnd_hint operator~(const arrnd_hint& s) noexcept
+    {
+        return static_cast<arrnd_hint>(~static_cast<std::underlying_type_t<arrnd_hint>>(s));
+    }
+
+    [[nodiscard]] inline constexpr auto to_underlying(const arrnd_hint& s) noexcept
+    {
+        return static_cast<std::underlying_type_t<arrnd_hint>>(s);
+    }
+
+    enum class arrnd_squeeze_type {
+        left,
+        right,
+        trim,
+        full,
+    };
+
+    template <typename StorageInfo = dynamic_storage_info<std::size_t>>
+        requires(std::is_same_v<std::size_t, typename StorageInfo::storage_type::value_type>)
+    class arrnd_info {
+    public:
+        using extent_storage_type = typename StorageInfo::storage_type;
+        using extent_type = typename extent_storage_type::value_type;
+
+        using boundary_type = interval<extent_type>;
+
+        constexpr arrnd_info() = default;
+        constexpr arrnd_info(const arrnd_info&) = default;
+        constexpr arrnd_info& operator=(const arrnd_info&) = default;
+        constexpr arrnd_info(arrnd_info&&) = default;
+        constexpr arrnd_info& operator=(arrnd_info&&) = default;
+
+        template <typename InputIt>
+            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt>>)
+        constexpr arrnd_info(InputIt first_dim, InputIt last_dim)
+        {
+            if (std::distance(first_dim, last_dim) < 0) {
+                throw std::invalid_argument("invalid input iterators distance < 0");
+            }
+
+            if (std::distance(first_dim, last_dim) == 0 || std::any_of(first_dim, last_dim, [](auto dim) {
+                    return dim == 0;
+                })) {
+                return;
+            }
+
+            dims_.reserve(std::distance(first_dim, last_dim));
+            dims_.insert(dims_.cend(), first_dim, last_dim);
+
+            strides_.resize(std::distance(first_dim, last_dim));
+            std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), extent_type{1},
+                overflow_check_multiplies<extent_type>{});
+
+            if (strides_[0] > std::numeric_limits<extent_type>::max() / dims_[0]) {
+                throw std::overflow_error("invalid multiplication");
+            }
+            indices_boundary_ = boundary_type(extent_type{0}, strides_[0] * dims_[0]);
+
+            hints_ = arrnd_hint::continuous;
+        }
+
+        template <typename Cont>
+        explicit constexpr arrnd_info(const Cont& dims)
+            : arrnd_info(std::begin(dims), std::end(dims))
+        { }
+
+        explicit constexpr arrnd_info(std::initializer_list<extent_type> dims)
+            : arrnd_info(dims.begin(), dims.end())
+        { }
+
+        // for maximum flexibility, a constructor that sets the class members and check their validity.
+        // this constructor may add hints in addition to the hints argument.
+        template <typename InputIt1, typename InputIt2>
+            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt1>>
+                && std::is_same_v<extent_type, std::iter_value_t<InputIt2>>)
+        explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
+            InputIt2 last_stride, boundary_type indices_boundary, arrnd_hint hints)
+        {
+            if (std::distance(first_dim, last_dim) < 0) {
+                throw std::invalid_argument("invalid input iterators distance < 0");
+            }
+
+            if (std::distance(first_dim, last_dim) != std::distance(first_stride, last_stride)) {
+                throw std::invalid_argument("invalid strides - different number from dimensions");
+            }
+
+            //if (!std::is_sorted(first_stride, last_stride, std::greater<>{})) {
+            //    throw std::invalid_argument("invalid strides - not sorted in descending order");
+            //}
+
+            if (std::distance(first_dim, last_dim) == 0) {
+                if (!empty(indices_boundary)) {
+                    throw std::invalid_argument("invalid indices boundary");
+                }
+                hints_ = hints | arrnd_hint::continuous;
+                return;
+            }
+
+            if (std::any_of(first_dim, last_dim, [](auto dim) {
+                    return dim == 0;
+                })) {
+                hints_ = hints | arrnd_hint::continuous;
+                return;
+            }
+
+            extent_type num_elem
+                = std::reduce(first_dim, last_dim, extent_type{1}, overflow_check_multiplies<extent_type>{});
+
+            if (indices_boundary.stop() - indices_boundary.start() != num_elem) {
+                if (to_underlying(hints & arrnd_hint::continuous)) {
+                    throw std::invalid_argument("invalid hint - not continuous according to dims and indices boundary");
+                }
+                hints_ |= arrnd_hint::sliced;
+            } else {
+                hints_ |= arrnd_hint::continuous;
+            }
+
+            dims_.reserve(std::distance(first_dim, last_dim));
+            dims_.insert(std::cend(dims_), first_dim, last_dim);
+
+            strides_.reserve(std::distance(first_stride, last_stride));
+            strides_.insert(std::cend(strides_), first_stride, last_stride);
+
+            indices_boundary_ = indices_boundary;
+
+            hints_ |= hints;
+        }
+
+        template <typename Cont1, typename Cont2>
+        explicit constexpr arrnd_info(
+            const Cont1& dims, const Cont2& strides, boundary_type indices_boundary, arrnd_hint hints)
+            : arrnd_info(
+                std::begin(dims), std::end(dims), std::begin(strides), std::end(strides), indices_boundary, hints)
+        { }
+
+        explicit constexpr arrnd_info(std::initializer_list<extent_type> dims,
+            std::initializer_list<extent_type> strides, boundary_type indices_boundary, arrnd_hint hints)
+            : arrnd_info(dims.begin(), dims.end(), strides.begin(), strides.end(), indices_boundary, hints)
+        { }
+
+        // the constructor tries deducing the hints value according to its parameters
+        template <typename InputIt1, typename InputIt2>
+            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt1>>
+                && std::is_same_v<extent_type, std::iter_value_t<InputIt2>>)
+        explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
+            InputIt2 last_stride, boundary_type indices_boundary)
+            : arrnd_info(first_dim, last_dim, first_stride, last_stride, indices_boundary, arrnd_hint::none)
+        { }
+
+        template <typename Cont1, typename Cont2>
+        explicit constexpr arrnd_info(
+            const Cont1& dims, const Cont2& strides, boundary_type indices_boundary)
+            : arrnd_info(
+                std::begin(dims), std::end(dims), std::begin(strides), std::end(strides), indices_boundary)
+        { }
+
+        explicit constexpr arrnd_info(std::initializer_list<extent_type> dims,
+            std::initializer_list<extent_type> strides, boundary_type indices_boundary)
+            : arrnd_info(dims.begin(), dims.end(), strides.begin(), strides.end(), indices_boundary)
+        { }
+        
+        // empty arrnd info with specified hints e.g. an empty slice
+        explicit constexpr arrnd_info(arrnd_hint hints)
+            : hints_(arrnd_hint::continuous | hints)
+        { }
+
+        [[nodiscard]] constexpr const extent_storage_type& dims() const noexcept
+        {
+            return dims_;
+        }
+
+        [[nodiscard]] constexpr const extent_storage_type& strides() const noexcept
+        {
+            return strides_;
+        }
+
+        [[nodiscard]] constexpr const boundary_type& indices_boundary() const noexcept
+        {
+            return indices_boundary_;
+        }
+
+        [[nodiscard]] constexpr arrnd_hint hints() const noexcept
+        {
+            return hints_;
+        }
+
+    private:
+        extent_storage_type dims_;
+        extent_storage_type strides_;
+        boundary_type indices_boundary_{0, 0};
+        arrnd_hint hints_{arrnd_hint::continuous};
+    };
+
+    template <typename StorageInfo, typename InputIt>
+        requires(std::is_same_v<typename arrnd_info<StorageInfo>::boundary_type, std::iter_value_t<InputIt>>)
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
+        const arrnd_info<StorageInfo>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
+    {
+        if (std::distance(first_dim_boundary, last_dim_boundary) < 0) {
+            throw std::invalid_argument("invalid input iterators distance < 0");
+        }
+
+        if (std::size(ai.dims()) == 0 && std::distance(first_dim_boundary, last_dim_boundary) == 0) {
+            return arrnd_info<StorageInfo>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+        }
+
+        if (std::size(ai.dims()) < std::distance(first_dim_boundary, last_dim_boundary)) {
+            throw std::invalid_argument("invalid dim boundaries - different number from dims");
+        }
+
+        typename StorageInfo::template replaced_type<typename arrnd_info<StorageInfo>::boundary_type>::storage_type
+            bounded_dim_boundaries(first_dim_boundary, last_dim_boundary);
+
+        std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.dims()),
+            std::begin(bounded_dim_boundaries), [](auto boundary, auto dim) {
+                return bound(boundary, 0, dim);
+            });
+
+        if (!std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
+                std::begin(ai.dims()), true, std::logical_and<>{}, [](auto boundary, auto dim) {
+                    return isbetween(boundary, 0, dim);
+                })) {
+            throw std::out_of_range("invalid dim boundaries - not suitable for dims");
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims = ai.dims();
+        std::transform(
+            std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(dims), [](auto boundary) {
+                return absdiff(boundary);
+            });
+
+        if (std::any_of(std::begin(dims), std::end(dims), [](auto dim) {
+                return dim == 0;
+            })) {
+            return arrnd_info<StorageInfo>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+        }
+
+        if (std::equal(std::begin(dims), std::end(dims), std::begin(ai.dims()), std::end(ai.dims()))) {
+            return ai;
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(std::begin(ai.strides()), std::end(ai.strides()));
+
+        std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.strides()),
+            std::begin(strides), [](auto boundary, auto stride) {
+                if (boundary.step()
+                    > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+                    throw std::overflow_error("invalid multiplication");
+                }
+                return boundary.step() * stride;
+            });
+
+        typename arrnd_info<StorageInfo>::extent_type offset = ai.indices_boundary().start()
+            + std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
+                std::begin(ai.strides()), typename arrnd_info<StorageInfo>::extent_type{0},
+                overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{}, [](auto boundary, auto stride) {
+                    if (boundary.start()
+                        > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+                        throw std::overflow_error("invalid multiplication");
+                    }
+                    return boundary.start() * stride;
+                });
+
+        typename arrnd_info<StorageInfo>::extent_type max_index = std::transform_reduce(std::begin(dims),
+            std::end(dims), std::begin(strides), typename arrnd_info<StorageInfo>::extent_type{0},
+            overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{}, [](auto dim, auto stride) {
+                if (dim - 1 > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+                    throw std::overflow_error("invalid multiplication");
+                }
+                return (dim - 1) * stride;
+            });
+
+        typename arrnd_info<StorageInfo>::boundary_type indices_boundary(offset, offset + max_index + 1);
+
+        typename arrnd_info<StorageInfo>::extent_type num_elem
+            = std::reduce(std::begin(dims), std::end(dims), typename arrnd_info<StorageInfo>::extent_type{1},
+                overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+
+        arrnd_hint hints = ai.hints() | arrnd_hint::sliced;
+        if (max_index + 1 == num_elem) {
+            hints |= arrnd_hint::continuous;
+        } else {
+            hints &= ~arrnd_hint::continuous;
+        }
+
+        return arrnd_info<StorageInfo>(dims, strides, indices_boundary, hints);
+    }
+
+    template <typename StorageInfo, typename Cont>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
+        const arrnd_info<StorageInfo>& ai, const Cont& dim_boundaries)
+    {
+        return slice(ai, std::begin(dim_boundaries), std::end(dim_boundaries));
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(const arrnd_info<StorageInfo>& ai,
+        std::initializer_list<typename arrnd_info<StorageInfo>::boundary_type> dim_boundaries)
+    {
+        return slice(ai, dim_boundaries.begin(), dim_boundaries.end());
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(const arrnd_info<StorageInfo>& ai,
+        typename arrnd_info<StorageInfo>::boundary_type dim_boundary,
+        typename arrnd_info<StorageInfo>::extent_type axis)
+    {
+        if (std::size(ai.dims()) == 0) {
+            throw std::invalid_argument("invalid arrnd info");
+        }
+
+        if (axis >= std::size(ai.dims())) {
+            throw std::out_of_range("invalid axis");
+        }
+
+        typename StorageInfo::template replaced_type<typename arrnd_info<StorageInfo>::boundary_type>::storage_type
+            dim_boundaries(std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
+
+        dim_boundaries[axis] = dim_boundary;
+
+        return slice(ai, dim_boundaries);
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> squeeze(const arrnd_info<StorageInfo>& ai,
+        arrnd_squeeze_type squeeze_type,
+        typename arrnd_info<StorageInfo>::extent_type max_count
+        = std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max())
+    {
+        if (squeeze_type == arrnd_squeeze_type::full
+            && max_count != std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max()) {
+            throw std::invalid_argument("invalid squeeze type - no max count support for full squeeze type");
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+
+        if (squeeze_type == arrnd_squeeze_type::left || squeeze_type == arrnd_squeeze_type::trim) {
+            typename arrnd_info<StorageInfo>::extent_type left_ones_count = 0;
+            auto dims_it = std::begin(dims);
+            while (*dims_it == 1 && left_ones_count < max_count) {
+                ++dims_it;
+                ++left_ones_count;
+            }
+            if (left_ones_count > 0) {
+                dims.erase(std::begin(dims), std::next(std::begin(dims), left_ones_count));
+                dims.shrink_to_fit();
+
+                strides.erase(std::begin(strides), std::next(std::begin(strides), left_ones_count));
+                strides.shrink_to_fit();
+            }
+        }
+
+        if (squeeze_type == arrnd_squeeze_type::right || squeeze_type == arrnd_squeeze_type::trim) {
+            typename arrnd_info<StorageInfo>::extent_type right_ones_count = 0;
+            auto dims_it = std::rbegin(dims);
+            while (*dims_it == 1 && right_ones_count < max_count) {
+                ++dims_it;
+                ++right_ones_count;
+            }
+            if (right_ones_count > 0) {
+                dims.erase(std::next(std::begin(dims), std::size(dims) - right_ones_count), std::end(dims));
+                dims.shrink_to_fit();
+
+                strides.erase(std::next(std::begin(strides), std::size(strides) - right_ones_count), std::end(strides));
+                strides.shrink_to_fit();
+            }
+        }
+
+        if (squeeze_type == arrnd_squeeze_type::full) {
+            if (std::any_of(std::begin(dims), std::end(dims), [](auto dim) {
+                    return dim == 1;
+                })) {
+                typename arrnd_info<StorageInfo>::extent_type not_one_index = 0;
+                for (typename arrnd_info<StorageInfo>::extent_type i = 0; i < std::size(dims); ++i) {
+                    if (dims[i] != 1) {
+                        dims[not_one_index] = dims[i];
+                        strides[not_one_index] = strides[i];
+                        ++not_one_index;
+                    }
+                }
+
+                dims.resize(not_one_index);
+                dims.shrink_to_fit();
+
+                strides.resize(not_one_index);
+                strides.shrink_to_fit();
+            }
+        }
+
+        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints());
+    }
+
+    template <typename StorageInfo, typename InputIt>
+        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<InputIt>>)
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
+        const arrnd_info<StorageInfo>& ai, InputIt first_axis, InputIt last_axis)
+    {
+        if (std::distance(first_axis, last_axis) != std::size(ai.dims())) {
+            throw std::invalid_argument("invalid input iterators distance != number of dims");
+        }
+
+        if (empty(ai)) {
+            return ai;
+        }
+
+        if (std::size(ai.dims()) == 0) {
+            if (*first_axis != 0) {
+                throw std::out_of_range("invalid axis value");
+            }
+            return ai;
+        }
+
+        if (std::any_of(first_axis, last_axis, [&ai](std::size_t axis) {
+                return axis >= std::size(ai.dims());
+            })) {
+            throw std::out_of_range("invalid axis value");
+        }
+
+        auto is_unique_axes = [](InputIt first, InputIt last) {
+            typename arrnd_info<StorageInfo>::extent_storage_type sorted_axes(first, last);
+            std::sort(std::begin(sorted_axes), std::end(sorted_axes));
+            return std::adjacent_find(std::begin(sorted_axes), std::end(sorted_axes)) == std::end(sorted_axes);
+        };
+
+        if (is_unique_axes(first_axis, last_axis)) {
+            throw std::invalid_argument("not unique axes");
+        }
+
+        if (std::is_sorted(first_axis, last_axis)) {
+            return ai;
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims(std::size(ai.dims()));
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(std::size(ai.strides()));
+
+        typename arrnd_info<StorageInfo>::extent_type i = 0;
+        for (auto axes_it = first_axis; axes_it != last_axis; ++axes_it, ++i) {
+            dims[i] = ai.dims()[*axes_it];
+            strides[i] = ai.strides()[*axes_it];
+        }
+
+        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+    }
+
+    template <typename StorageInfo, typename Cont>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
+        const arrnd_info<StorageInfo>& ai, const Cont& axes)
+    {
+        return transpose(ai, std::begin(axes), std::end(axes));
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
+        const arrnd_info<StorageInfo>& ai, std::initializer_list<typename arrnd_info<StorageInfo>::extent_type> axes)
+    {
+        return transpose(ai, axes.begin(), axes.end());
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> swap(const arrnd_info<StorageInfo>& ai,
+        typename arrnd_info<StorageInfo>::extent_type first_axis = 0,
+        typename arrnd_info<StorageInfo>::extent_type second_axis = 1)
+    {
+        if (std::size(ai.dims()) < 2) {
+            throw std::invalid_argument("unsupported operation - number of dims < 2");
+        }
+
+        if (first_axis >= std::size(ai.dims()) || second_axis >= std::size(ai.dims())) {
+            throw std::out_of_range("invalid axis value");
+        }
+
+        if (first_axis == second_axis) {
+            return ai;
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+
+        std::swap(dims[first_axis], dims[second_axis]);
+        std::swap(strides[first_axis], strides[second_axis]);
+
+        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> move(const arrnd_info<StorageInfo>& ai,
+        typename arrnd_info<StorageInfo>::extent_type src_axis = 0,
+        typename arrnd_info<StorageInfo>::extent_type dst_axis = 1)
+    {
+        if (std::size(ai.dims()) < 2) {
+            throw std::invalid_argument("unsupported operation - number of dims < 2");
+        }
+
+        if (src_axis >= std::size(ai.dims()) || dst_axis >= std::size(ai.dims())) {
+            throw std::out_of_range("invalid axis value");
+        }
+
+        if (src_axis == dst_axis) {
+            return ai;
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+
+        auto src_dim = dims[src_axis];
+        dims.erase(std::next(std::begin(dims), src_axis));
+        dims.insert(std::next(std::begin(dims), dst_axis), 1, src_dim);
+
+        auto src_stride = strides[src_axis];
+        strides.erase(std::next(std::begin(strides), src_axis));
+        strides.insert(std::next(std::begin(strides), dst_axis), 1, src_stride);
+
+        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> roll(const arrnd_info<StorageInfo>& ai, int offset = 1)
+    {
+        if (empty(ai) || std::size(ai.dims()) == 1 || offset == 0) {
+            return ai;
+        }
+
+        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+
+        typename arrnd_info<StorageInfo>::extent_type wrapped_offset
+            = static_cast<typename arrnd_info<StorageInfo>::extent_type>(std::abs(offset)) % std::size(ai.dims());
+
+        if (offset > 0) {
+            std::rotate(std::rbegin(dims), std::next(std::rbegin(dims), wrapped_offset), std::rend(dims));
+            std::rotate(std::rbegin(strides), std::next(std::rbegin(strides), wrapped_offset), std::rend(strides));
+        } else {
+            std::rotate(std::begin(dims), std::next(std::begin(dims), wrapped_offset), std::end(dims));
+            std::rotate(std::begin(strides), std::next(std::begin(strides), wrapped_offset), std::end(strides));
+        }
+
+        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageInfo>::extent_type total(
+        const arrnd_info<StorageInfo>& ai)
+    {
+        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()), typename arrnd_info<StorageInfo>::extent_type{1},
+            overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageInfo>::extent_type size(
+        const arrnd_info<StorageInfo>& ai)
+    {
+        return std::size(ai.dims());
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool empty(const arrnd_info<StorageInfo>& ai)
+    {
+        return size(ai) == 0;
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool iscontinuous(const arrnd_info<StorageInfo>& ai)
+    {
+        return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::continuous));
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool isslice(const arrnd_info<StorageInfo>& ai)
+    {
+        return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::sliced));
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool isvector(const arrnd_info<StorageInfo>& ai)
+    {
+        return size(ai) == 1;
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool ismatrix(const arrnd_info<StorageInfo>& ai)
+    {
+        return size(ai) == 2;
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool isrow(const arrnd_info<StorageInfo>& ai)
+    {
+        return ismatrix(ai) && ai.dims().front() == 1;
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool iscolumn(const arrnd_info<StorageInfo>& ai)
+    {
+        return ismatrix(ai) && ai.dims().back() == 1;
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool isscalar(const arrnd_info<StorageInfo>& ai)
+    {
+        return total(ai) == 1;
+    }
+
+    template <typename StorageInfo, typename InputIt>
+        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<InputIt>>)
+    constexpr typename arrnd_info<StorageInfo>::extent_type
+        sub2ind(const arrnd_info<StorageInfo>& ai, InputIt first_sub, InputIt last_sub)
+    {
+        if (std::distance(first_sub, last_sub) <= 0) {
+            throw std::invalid_argument("invalid input iterators distance <= 0");
+        }
+
+        if (std::distance(first_sub, last_sub) > size(ai)) {
+            throw std::invalid_argument("bad sub iterators distance > ndi.ndims");
+        }
+
+        if (empty(ai)) {
+            throw std::invalid_argument("undefined operation for empty arrnd info");
+        }
+
+        if (!std::transform_reduce(first_sub, last_sub,
+                std::next(std::begin(ai.dims()), std::size(ai.dims()) - std::distance(first_sub, last_sub)), true,
+                std::logical_and<>{}, [](auto sub, auto dim) {
+                    return sub < dim;
+                })) {
+            throw std::out_of_range("invalid subs - not suitable for dims");
+        }
+
+        return ai.indices_boundary().start()
+            + std::transform_reduce(first_sub, last_sub,
+                std::next(std::begin(ai.dims()), std::size(ai.strides()) - std::distance(first_sub, last_sub)),
+                typename arrnd_info<StorageInfo>::extent_type{0},
+                overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{},
+                overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+    }
+
+    template <typename StorageInfo, typename Cont>
+    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(const arrnd_info<StorageInfo>& ai, const Cont& subs)
+    {
+        return sub2ind(ai, std::begin(subs), std::end(subs));
+    }
+
+    template <typename StorageInfo>
+    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(
+        const arrnd_info<StorageInfo>& ai, std::initializer_list<typename arrnd_info<StorageInfo>::extent_type> subs)
+    {
+        return sub2ind(ai, subs.begin(), subs.end());
+    }
+
+    template <typename StorageInfo, typename OutputIt>
+        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<OutputIt>>)
+    constexpr void ind2sub(
+        const arrnd_info<StorageInfo>& ai, typename arrnd_info<StorageInfo>::extent_type ind, OutputIt d_sub)
+    {
+        if (empty(ai)) {
+            throw std::invalid_argument("undefined operation for empty arrnd info");
+        }
+
+        if (!isbetween(ai.indices_boundary(), ind)) {
+            throw std::out_of_range("invalid ind - not inside indices boundary");
+        }
+
+        for (typename arrnd_info<StorageInfo>::extent_type i = 0; i < std::size(ai.dims()); ++i) {
+            *d_sub = (ai.dims()[i] > 1 ? ((ind - ai.indices_boundary().start()) / ai.strides()[i]) % ai.dims()[i] : 0);
+            ++d_sub;
+        }
+    }
+
+    //template <typename StorageInfo = dynamic_storage_info<std::size_t>>
+    //class arrnd_dimensionality {
+    //public:
+    //    using extent_storage_type = typename StorageInfo::storage_type;
+
+    //    using extent_type = typename extent_storage_type::value_type;
+    //    static_assert(std::is_same_v<std::size_t, extent_type>);
+
+    //    using boundary_type = interval<extent_type>;
+    //    using boundary_storage_type = typename StorageInfo::template replaced_type<boundary_type>::storage_type;
+
+    //    constexpr arrnd_dimensionality() = default;
+    //    constexpr arrnd_dimensionality(const arrnd_dimensionality&) = default;
+    //    constexpr arrnd_dimensionality& operator=(const arrnd_dimensionality&) = default;
+    //    constexpr arrnd_dimensionality(arrnd_dimensionality&&) = default;
+    //    constexpr arrnd_dimensionality& operator=(arrnd_dimensionality&&) = default;
+
+    //    template <typename InputIt>
+    //        requires(std::is_same_v<extent_type, std::iter_value_t<InputIt>>)
+    //    constexpr arrnd_dimensionality(InputIt first_dim, InputIt last_dim)
+    //    {
+    //        if (!is_valid_dims(first_dim, last_dim)) {
+    //            throw std::invalid_argument("invalid dimensions");
+    //        }
+
+    //        if (std::any_of(first_dim, last_dim, [](auto dim) {
+    //                return dim == 0;
+    //            })) {
+    //            return;
+    //        }
+
+    //        dims_.insert(dims_.cbegin(), first_dim, last_dim);
+
+    //        boundaries_.resize(std::distance(first_dim, last_dim));
+
+    //        std::transform(first_dim, last_dim, boundaries_.begin(), [](auto dim) {
+    //            return interval_type(0, dim);
+    //        });
+    //    }
+
+    //    template <typename Cont>
+    //    explicit constexpr arrnd_dimensionality(const Cont& dims)
+    //        : arrnd_dimensionality(std::begin(dims), std::end(dims))
+    //    { }
+
+    //    explicit constexpr arrnd_dimensionality(std::initializer_list<extent_type> dims)
+    //        : arrnd_dimensionality(dims.begin(), dims.end())
+    //    { }
+
+    //    template <typename InputIt1, typename InputIt2>
+    //        requires(std::is_same_v<extent_type, std::iter_value_t<InputIt1>>
+    //            && std::is_same_v<boundary_type, std::iter_value_t<InputIt2>>)
+    //    explicit constexpr arrnd_dimensionality(
+    //        InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_boundary, InputIt2 last_boundary)
+    //    {
+    //        if (!is_valid_dims(first_dim, last_dim)) {
+    //            throw std::invalid_argument("invalid dimensions");
+    //        }
+
+    //        if (!is_valid_boundaries(first_dim, last_dim, first_boundary, last_boundary)) {
+    //            throw std::invalid_argument("invalid boundaries");
+    //        }
+
+    //        if (std::any_of(first_dim, last_dim, [](auto dim) {
+    //                return dim == 0;
+    //            })) {
+    //            return;
+    //        }
+
+    //        if (std::any_of(first_boundary, last_boundary, [](auto boundary) {
+    //                return empty(boundary);
+    //            })) {
+    //            return;
+    //        }
+
+    //        dims_.reserve(std::distance(first_dim, last_dim));
+    //        dims_.insert(dims_.cbegin(), first_dim, last_dim);
+
+    //        boundaries_.reserve(std::distance(first_dim, last_dim));
+    //        boundaries_.insert(boundaries_.cbegin(), first_boundary, last_boundary);
+
+    //        if (std::distance(first_dim, last_dim) > std::distance(first_boundary, last_boundary)) {
+    //            boundaries_.insert(boundaries_.cend(),
+    //                std::distance(first_dim, last_dim) - std::distance(first_boundary, last_boundary),
+    //                boundary_type::full());
+    //        }
+
+    //        std::transform(first_dim, last_dim, boundaries_.cbegin(), boundaries_.begin(), [](auto dim, auto boundary) {
+    //            return bound(boundary, 0, dim);
+    //        });
+    //    }
+
+    //    template <typename Cont1, typename Cont2>
+    //    explicit constexpr arrnd_dimensionality(const Cont1& dims, const Cont2& boundaries)
+    //        : arrnd_dimensionality(std::begin(dims), std::end(dims), std::begin(boundaries), std::end(boundaries))
+    //    { }
+
+    //    explicit constexpr arrnd_dimensionality(
+    //        std::initializer_list<extent_type> dims, std::initializer_list<boundary_type> boundaries)
+    //        : arrnd_dimensionality(dims.begin(), dims.end(), boundaries.begin(), boundaries.end())
+    //    { }
+
+    //    [[nodiscard]] constexpr const extent_storage_type& dims() const noexcept
+    //    {
+    //        return dims_;
+    //    }
+
+    //    [[nodiscard]] constexpr const boundary_storage_type& boundaries() const noexcept
+    //    {
+    //        return boundaries_;
+    //    }
+
+    //private:
+    //    extent_storage_type dims_;
+    //    boundary_storage_type boundaries_;
+    //};
+
+    //template <typename StorageInfo, typename InputIt>
+    //    requires(std::is_same_v<typename arrnd_dimensionality<StorageInfo>::boundary_type, std::iter_value_t<InputIt>>)
+    //[[nodiscard]] inline constexpr arrnd_dimensionality<StorageInfo> slice(
+    //    const arrnd_dimensionality<StorageInfo>& ad, InputIt first_inner_boundary, InputIt last_inner_boundary)
+    //{
+    //    typename arrnd_dimensionality<StorageInfo>::extent_storage_type pseudo_dims(ad.dims().size());
+
+    //    std::transform(ad.boundaries().cbegin(), ad.boundaries().cend(), pseudo_dims.begin(), [](auto boundary) {
+    //        return absdiff(boundary);
+    //    });
+
+    //    if (!is_valid_boundaries(pseudo_dims.cbegin(), pseudo_dims.cend(), first_inner_boundary, last_inner_boundary)) {
+    //        throw std::invalid_argument("invalid inner boundaries");
+    //    }
+
+    //    typename arrnd_dimensionality<StorageInfo>::boundary_storage_type bound_inner_boundaries;
+
+    //    bound_inner_boundaries.reserve(ad.dims().size());
+    //    bound_inner_boundaries.insert(bound_inner_boundaries.cbegin(), first_inner_boundary, last_inner_boundary);
+
+    //    if (ad.dims().size() > std::distance(first_inner_boundary, last_inner_boundary)) {
+    //        bound_inner_boundaries.insert(bound_inner_boundaries.cend(),
+    //            ad.dims().size() - std::distance(first_inner_boundary, last_inner_boundary),
+    //            arrnd_dimensionality<StorageInfo>::boundary_type::full());
+    //    }
+
+    //    std::transform(pseudo_dims.cbegin(), pseudo_dims.cend(), bound_inner_boundaries.cbegin(),
+    //        bound_inner_boundaries.begin(), [](auto dim, auto boundary) {
+    //            return bound(boundary, 0, dim);
+    //        });
+
+    //    typename arrnd_dimensionality<StorageInfo>::boundary_storage_type boundaries = ad.boundaries();
+
+    //    std::transform(ad.boundaries().cbegin(), ad.boundaries().cend(), bound_inner_boundaries.cbegin(),
+    //        boundaries.begin(), [](auto boundary, auto inner_boundary) {
+    //            if (empty(inner_boundary)) {
+    //                return inner_boundary;
+    //            }
+    //            return
+    //                typename arrnd_dimensionality<StorageInfo>::boundary_type(boundary.start() + inner_boundary.start(),
+    //                    boundary.start() + inner_boundary.stop(), boundary.step() * inner_boundary.step());
+    //        });
+
+    //    return arrnd_dimensionality<StorageInfo>(ad.dims(), boundaries);
+    //}
+
+    //template <typename StorageInfo, typename Cont>
+    //[[nodiscard]] inline constexpr arrnd_dimensionality<StorageInfo> slice(
+    //    const arrnd_dimensionality<StorageInfo>& ad, const Cont& inner_boundaries)
+    //{
+    //    return slice(ad, std::begin(inner_boundaries), std::end(inner_boundaries));
+    //}
+
+    //template <typename StorageInfo>
+    //[[nodiscard]] inline constexpr arrnd_dimensionality<StorageInfo> slice(const arrnd_dimensionality<StorageInfo>& ad,
+    //    std::initializer_list<typename arrnd_dimensionality<StorageInfo>::interval_type> inner_boundaries)
+    //{
+    //    return slice(ad, inner_boundaries.begin(), inner_boundaries.end());
+    //}
+
+    //template <typename StorageInfo>
+    //[[nodiscard]] inline constexpr arrnd_dimensionality<StorageInfo> slice(const arrnd_dimensionality<StorageInfo>& ad,
+    //    typename arrnd_dimensionality<StorageInfo>::boundary_type inner_boundary,
+    //    typename arrnd_dimensionality<StorageInfo>::extent_storage_type::size_type axis = 0)
+    //{
+    //    if (axis >= std::size(ad.dims())) {
+    //        throw std::invalid_argument("invalid axis");
+    //    }
+
+    //    typename arrnd_dimensionality<StorageInfo>::boundary_storage_type inner_boundaries(
+    //        std::size(ad.dims()), arrnd_dimensionality<StorageInfo>::boundary_type::full());
+
+    //    inner_boundaries[axis] = inner_boundary;
+
+    //    return slice(ad, inner_boundaries);
+    //}
+
+    //template <typename StorageInfo>
+    //[[nodiscard]] inline constexpr bool empty(const arrnd_dimensionality<StorageInfo>& ad)
+    //{
+    //    return std::size(ad.dims()) == 0;
+    //}
+
 
     //template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
     template <typename StorageInfo = dynamic_storage_info<std::int64_t>>
