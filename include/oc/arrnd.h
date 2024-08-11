@@ -3877,29 +3877,29 @@ namespace details {
             return subs;
         }
 
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr bool is_reduced_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
-        {
-            size_type ndims = std::distance(first_dim, last_dim);
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr bool is_reduced_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
+        //{
+        //    size_type ndims = std::distance(first_dim, last_dim);
 
-            assert(ndims >= 0);
+        //    assert(ndims >= 0);
 
-            if (dims_.size() != ndims) {
-                return false;
-            }
+        //    if (dims_.size() != ndims) {
+        //        return false;
+        //    }
 
-            return !std::equal(dims_.cbegin(), dims_.cend(), first_dim)
-                && std::transform_reduce(
-                    dims_.cbegin(), dims_.cend(), first_dim, true, std::logical_and<>{}, [](auto d1, auto d2) {
-                        return d1 == d2 || d1 == size_type{1};
-                    });
-        }
+        //    return !std::equal(dims_.cbegin(), dims_.cend(), first_dim)
+        //        && std::transform_reduce(
+        //            dims_.cbegin(), dims_.cend(), first_dim, true, std::logical_and<>{}, [](auto d1, auto d2) {
+        //                return d1 == d2 || d1 == size_type{1};
+        //            });
+        //}
 
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr bool is_reduced_dims_from(const Cont& dims) const
-        {
-            return is_reduced_dims_from(std::begin(dims), std::end(dims));
-        }
+        //template <signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr bool is_reduced_dims_from(const Cont& dims) const
+        //{
+        //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
+        //}
 
         //template <std::signed_integral U, std::int64_t M>
         //[[nodiscard]] constexpr bool is_reduced_dims_from(const U (&dims)[M]) const
@@ -3907,31 +3907,31 @@ namespace details {
         //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
         //}
 
-        [[nodiscard]] constexpr bool is_reduced_dims_from(std::initializer_list<size_type> dims) const
-        {
-            return is_reduced_dims_from(dims.begin(), dims.end());
-        }
+        //[[nodiscard]] constexpr bool is_reduced_dims_from(std::initializer_list<size_type> dims) const
+        //{
+        //    return is_reduced_dims_from(dims.begin(), dims.end());
+        //}
 
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr storage_type complement_dims_from(
-            const InputIt& first_dim, const InputIt& last_dim) const
-        {
-            assert(dims_.size() == std::distance(first_dim, last_dim));
+        //template <signed_integral_type_iterator InputIt>
+        //[[nodiscard]] constexpr storage_type complement_dims_from(
+        //    const InputIt& first_dim, const InputIt& last_dim) const
+        //{
+        //    assert(dims_.size() == std::distance(first_dim, last_dim));
 
-            storage_type comp_dims(dims_.size());
+        //    storage_type comp_dims(dims_.size());
 
-            std::transform(dims_.cbegin(), dims_.cend(), first_dim, comp_dims.begin(), [](auto rd, auto cd) {
-                return cd - rd + 1;
-            });
+        //    std::transform(dims_.cbegin(), dims_.cend(), first_dim, comp_dims.begin(), [](auto rd, auto cd) {
+        //        return cd - rd + 1;
+        //    });
 
-            return comp_dims;
-        }
+        //    return comp_dims;
+        //}
 
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr storage_type complement_dims_from(const Cont& dims) const
-        {
-            return complement_dims_from(std::begin(dims), std::end(dims));
-        }
+        //template <signed_integral_type_iterable Cont>
+        //[[nodiscard]] constexpr storage_type complement_dims_from(const Cont& dims) const
+        //{
+        //    return complement_dims_from(std::begin(dims), std::end(dims));
+        //}
 
         //template <std::signed_integral U, std::int64_t M>
         //[[nodiscard]] constexpr storage_type complement_dims_from(const U (&dims)[M]) const
@@ -3939,10 +3939,10 @@ namespace details {
         //    return complement_dims_from(std::begin(dims), std::end(dims));
         //}
 
-        [[nodiscard]] constexpr storage_type complement_dims_from(std::initializer_list<size_type> dims) const
-        {
-            return complement_dims_from(dims.begin(), dims.end());
-        }
+        //[[nodiscard]] constexpr storage_type complement_dims_from(std::initializer_list<size_type> dims) const
+        //{
+        //    return complement_dims_from(dims.begin(), dims.end());
+        //}
 
         constexpr arrnd_header(arrnd_header&& other) = default;
         constexpr arrnd_header& operator=(arrnd_header&& other) = default;
@@ -8945,11 +8945,40 @@ namespace details {
             auto arr1 = *this;
             auto arr2 = arr;
 
-            if (arr1.header().is_reduced_dims_from(arr2.header().dims())) {
-                auto reps = arr1.header().complement_dims_from(arr2.header().dims());
+            auto is_reduced_dims = [](auto rdims, auto odims) {
+                if (std::size(rdims) != std::size(odims)) {
+                    return false;
+                }
+
+                return !std::equal(std::begin(rdims), std::end(rdims), std::begin(odims), std::end(odims))
+                    && std::transform_reduce(std::begin(rdims), std::end(rdims), std::begin(odims), true,
+                        std::logical_and<>{}, [](auto d1, auto d2) {
+                            return d1 == d2 || d1 == 1;
+                        });
+            };
+
+            auto complement_dims = [](auto rdims, auto odims) {
+                assert(std::size(rdims) == std::size(odims));
+
+                typename header_type::storage_type comp_dims(std::size(rdims));
+
+                std::transform(
+                    std::begin(rdims), std::end(rdims), std::begin(odims), std::begin(comp_dims), [](auto rd, auto cd) {
+                        return cd - rd + 1;
+                    });
+
+                return comp_dims;
+            };
+
+            //if (arr1.header().is_reduced_dims_from(arr2.header().dims())) {
+            if (is_reduced_dims(arr1.header().dims(), arr2.header().dims())) {
+                //auto reps = arr1.header().complement_dims_from(arr2.header().dims());
+                auto reps = complement_dims(arr1.header().dims(), arr2.header().dims());
                 arr1 = arr1./*template */ repeat /*<Level>*/ (reps);
-            } else if (arr2.header().is_reduced_dims_from(arr1.header().dims())) {
-                auto reps = arr2.header().complement_dims_from(arr1.header().dims());
+            //} else if (arr2.header().is_reduced_dims_from(arr1.header().dims())) {
+            } else if (is_reduced_dims(arr2.header().dims(), arr1.header().dims())) {
+                //auto reps = arr2.header().complement_dims_from(arr1.header().dims());
+                auto reps = complement_dims(arr2.header().dims(), arr1.header().dims());
                 arr2 = arr2./*template */ repeat /*<Level>*/ (reps);
             }
 
@@ -9047,8 +9076,35 @@ namespace details {
 
             auto carr = arr;
 
-            if (arr.header().is_reduced_dims_from(hdr_.dims())) {
-                auto reps = arr.header().complement_dims_from(hdr_.dims());
+            auto is_reduced_dims = [](auto rdims, auto odims) {
+                if (std::size(rdims) != std::size(odims)) {
+                    return false;
+                }
+
+                return !std::equal(std::begin(rdims), std::end(rdims), std::begin(odims), std::end(odims))
+                    && std::transform_reduce(std::begin(rdims), std::end(rdims), std::begin(odims), true,
+                        std::logical_and<>{}, [](auto d1, auto d2) {
+                            return d1 == d2 || d1 == 1;
+                        });
+            };
+
+            auto complement_dims = [](auto rdims, auto odims) {
+                assert(std::size(rdims) == std::size(odims));
+
+                typename header_type::storage_type comp_dims(std::size(rdims));
+
+                std::transform(
+                    std::begin(rdims), std::end(rdims), std::begin(odims), std::begin(comp_dims), [](auto rd, auto cd) {
+                        return cd - rd + 1;
+                    });
+
+                return comp_dims;
+            };
+
+            //if (arr.header().is_reduced_dims_from(hdr_.dims())) {
+            if (is_reduced_dims(arr.header().dims(), hdr_.dims())) {
+                //auto reps = arr.header().complement_dims_from(hdr_.dims());
+                auto reps = complement_dims(arr.header().dims(), hdr_.dims());
                 carr = arr./*template */ repeat /*<Level>*/ (reps);
             }
 
