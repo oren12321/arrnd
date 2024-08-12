@@ -1709,6 +1709,25 @@ TEST(arrnd_indexer, random_access)
     EXPECT_EQ(expected_inds_list[5], gen[3]);
 }
 
+TEST(experimental_arrnd_indexer, random_access)
+{
+    using namespace oc::experimental;
+
+    const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
+    oc::arrnd_info hdr(dims);
+
+    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
+
+    arrnd_indexer gen(hdr, arrnd_iterator_position::rbegin);
+
+    EXPECT_EQ(expected_inds_list[0], gen[0]);
+    EXPECT_EQ(expected_inds_list[1], gen[5]);
+    EXPECT_EQ(expected_inds_list[2], gen[4]);
+    EXPECT_EQ(expected_inds_list[3], gen[1]);
+    EXPECT_EQ(expected_inds_list[4], gen[2]);
+    EXPECT_EQ(expected_inds_list[5], gen[3]);
+}
+
 //TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
 //{
 //    using namespace oc;

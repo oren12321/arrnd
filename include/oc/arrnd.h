@@ -4332,13 +4332,14 @@ public:
     {
         assert(index >= 0 && index < total(ai_));
 
-        index_type advance_count = index - curr_rel_ind_;
-        if (advance_count > 0) {
-            return ((*this) + advance_count).curr_abs_ind_;
+        if (index > curr_rel_ind_) {
+            return (*this + (index - curr_rel_ind_)).curr_abs_ind_;
         }
-        if (advance_count < 0) {
-            return ((*this) - (-advance_count)).curr_abs_ind_;
+
+        if (index < curr_rel_ind_) {
+            return (*this - (curr_rel_ind_ - index)).curr_abs_ind_;
         }
+
         return curr_abs_ind_;
     }
 
