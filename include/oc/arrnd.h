@@ -2584,6 +2584,7 @@ namespace details {
         using extent_type = typename extent_storage_type::value_type;
 
         using boundary_type = interval<extent_type>;
+        using boundary_storage_type = typename StorageInfo::template replaced_type<boundary_type>::storage_type;
 
         constexpr arrnd_info() = default;
         constexpr arrnd_info(const arrnd_info&) = default;
@@ -2648,6 +2649,8 @@ namespace details {
             //if (!std::is_sorted(first_stride, last_stride, std::greater<>{})) {
             //    throw std::invalid_argument("invalid strides - not sorted in descending order");
             //}
+
+            hints_ = arrnd_hint::none;
 
             if (std::distance(first_dim, last_dim) == 0) {
                 if (!empty(indices_boundary)) {
@@ -2769,8 +2772,8 @@ namespace details {
             throw std::invalid_argument("invalid dim boundaries - different number from dims");
         }
 
-        typename StorageInfo::template replaced_type<typename arrnd_info<StorageInfo>::boundary_type>::storage_type
-            bounded_dim_boundaries(first_dim_boundary, last_dim_boundary);
+        typename arrnd_info<StorageInfo>::boundary_storage_type bounded_dim_boundaries(
+            first_dim_boundary, last_dim_boundary);
 
         std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.dims()),
             std::begin(bounded_dim_boundaries), [](auto boundary, auto dim) {
@@ -2874,8 +2877,8 @@ namespace details {
             throw std::out_of_range("invalid axis");
         }
 
-        typename StorageInfo::template replaced_type<typename arrnd_info<StorageInfo>::boundary_type>::storage_type
-            dim_boundaries(std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
+        typename arrnd_info<StorageInfo>::boundary_storage_type dim_boundaries(
+            std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
 
         dim_boundaries[axis] = dim_boundary;
 
@@ -4328,19 +4331,19 @@ public:
         return subs_;
     }
 
-    [[nodiscard]] constexpr index_type operator[](index_type index) const noexcept
+    [[nodiscard]] constexpr arrnd_indexer operator[](index_type index) const noexcept
     {
         assert(index >= 0 && index < total(ai_));
 
         if (index > curr_rel_ind_) {
-            return (*this + (index - curr_rel_ind_)).curr_abs_ind_;
+            return *this + (index - curr_rel_ind_);
         }
 
         if (index < curr_rel_ind_) {
-            return (*this - (curr_rel_ind_ - index)).curr_abs_ind_;
+            return *this - (curr_rel_ind_ - index);
         }
 
-        return curr_abs_ind_;
+        return *this;
     }
 
 private:
@@ -4353,6 +4356,139 @@ private:
 
     arrnd_iterator_position pos_{arrnd_iterator_position::end};
 };
+
+
+
+template <typename ArrndInfo = arrnd_info<>>
+class arrnd_window_slider final {
+public:
+    using info_type = ArrndInfo;
+    using index_type = typename info_type::extent_type;
+
+    template <typename InputIt>
+    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_boundary, InputIt last_dim_boundary, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : ai_(slice(ai, first_dim_boundary, last_dim_boundary))
+        , curr_window_(size(ai))
+    {
+        typename info_type::extent_storage_type indexer_dims(size(ai));
+        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(ai_.dims()), std::begin(indexer_dims),
+            [](auto dim, auto sdim) {
+                return dim - sdim + 1;
+            });
+
+        indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
+
+        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), std::begin(ai_.dims()),
+            std::begin(curr_window_), [](auto sub, auto dim) {
+                return typename info_type::boundary_type(sub, sub + dim);
+            });
+    }
+
+    constexpr arrnd_window_slider() = default;
+    constexpr arrnd_window_slider(const arrnd_window_slider&) = default;
+    constexpr arrnd_window_slider& operator=(const arrnd_window_slider&) = default;
+    constexpr arrnd_window_slider(arrnd_window_slider&&) noexcept = default;
+    constexpr arrnd_window_slider& operator=(arrnd_window_slider&&) noexcept = default;
+    constexpr ~arrnd_window_slider() = default;
+
+    constexpr arrnd_window_slider& operator++() noexcept
+    {
+        ++indexer_;
+
+        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(indexer_.subs()),
+            std::begin(curr_window_), [](auto boundary, auto sub) {
+                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
+            });
+
+        return *this;
+    }
+
+    constexpr arrnd_window_slider operator++(int) noexcept
+    {
+        arrnd_window_slider<info_type> temp{*this};
+        ++(*this);
+        return temp;
+    }
+
+    constexpr arrnd_window_slider& operator+=(index_type count) noexcept
+    {
+        for (index_type i = 0; i < count; ++i) {
+            ++(*this);
+        }
+        return *this;
+    }
+
+    arrnd_window_slider operator+(index_type count) const noexcept
+    {
+        arrnd_window_slider<info_type> temp{*this};
+        temp += count;
+        return temp;
+    }
+
+    constexpr arrnd_window_slider& operator--() noexcept
+    {
+        --indexer_;
+
+        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(indexer_.subs()),
+            std::begin(curr_window_), [](auto boundary, auto sub) {
+                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
+            });
+
+        return *this;
+    }
+
+    constexpr arrnd_window_slider operator--(int) noexcept
+    {
+        arrnd_window_slider<info_type> temp{*this};
+        --(*this);
+        return temp;
+    }
+
+    constexpr arrnd_window_slider& operator-=(index_type count) noexcept
+    {
+        for (index_type i = 0; i < count; ++i) {
+            --(*this);
+        }
+        return *this;
+    }
+
+    constexpr arrnd_window_slider operator-(index_type count) const noexcept
+    {
+        arrnd_window_slider<info_type> temp{*this};
+        temp -= count;
+        return temp;
+    }
+
+    [[nodiscard]] explicit constexpr operator bool() const noexcept
+    {
+        return static_cast<bool>(indexer_);
+    }
+
+    [[nodiscard]] constexpr const typename info_type::boundary_storage_type& operator*() const noexcept
+    {
+        return curr_window_;
+    }
+
+    [[nodiscard]] constexpr index_type operator[](index_type index) const noexcept
+    {
+        auto subs = indexer_[index].subs();
+
+        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(subs), std::begin(curr_window_),
+            [](auto boundary, auto sub) {
+                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
+            });
+    }
+
+private:
+    info_type ai_;
+
+    arrnd_indexer<info_type> indexer_;
+
+    typename info_type::boundary_storage_type curr_window_;
+};
+
+
+
 }
 
 namespace oc {
