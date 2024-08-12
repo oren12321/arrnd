@@ -1728,22 +1728,22 @@ TEST(experimental_arrnd_indexer, random_access)
     EXPECT_EQ(expected_inds_list[5], *(gen[3]));
 }
 
-TEST(experimental_window_slider, dummy)
-{
-    oc::arrnd_info ai({/*2*/ 4, 5});
-
-    std::vector<oc::interval<std::size_t>> window{/*oc::interval<std::size_t>::full(),*/
-        oc::interval<std::size_t>::between(0, 2), oc::interval<std::size_t>::between(0, 3)};
-
-    for (oc::experimental::arrnd_window_slider ws(ai, std::begin(window), std::end(window)); ws; ++ws) {
-        std::cout << "{ ";
-        for (auto b : *ws) {
-            std::cout << b << " ";
-        }
-        std::cout << "}\n";
-        std::cout << slice(ai, *ws) << "\n";
-    }
-}
+//TEST(experimental_window_slider, dummy)
+//{
+//    oc::arrnd_info ai({/*2*/ 4, 5});
+//
+//    std::vector<oc::interval<std::size_t>> window{/*oc::interval<std::size_t>::full(),*/
+//        oc::interval<std::size_t>::between(0, 2), oc::interval<std::size_t>::between(0, 3)};
+//
+//    for (oc::experimental::arrnd_window_slider ws(ai, std::begin(window), std::end(window)); ws; ++ws) {
+//        std::cout << "{ ";
+//        for (auto b : *ws) {
+//            std::cout << b << " ";
+//        }
+//        std::cout << "}\n";
+//        std::cout << slice(ai, *ws) << "\n";
+//    }
+//}
 
 //TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
 //{
