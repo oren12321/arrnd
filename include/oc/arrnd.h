@@ -3127,9 +3127,15 @@ namespace details {
     }
 
     template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool isslice(const arrnd_info<StorageInfo>& ai)
+    [[nodiscard]] inline constexpr bool issliced(const arrnd_info<StorageInfo>& ai)
     {
         return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::sliced));
+    }
+
+    template <typename StorageInfo>
+    [[nodiscard]] inline constexpr bool istransposed(const arrnd_info<StorageInfo>& ai)
+    {
+        return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::transposed));
     }
 
     template <typename StorageInfo>
@@ -4135,6 +4141,30 @@ using details::arrnd_header;
 using details::dynamic_storage_info;
 using details::dynamic_storage_info;
 using details::static_storage_info;
+
+using details::arrnd_hint;
+using details::to_underlying;
+using details::arrnd_squeeze_type;
+using details::arrnd_info;
+using details::slice;
+using details::squeeze;
+using details::transpose;
+using details::swap;
+using details::move;
+using details::roll;
+using details::sub2ind;
+using details::ind2sub;
+using details::total;
+using details::size;
+using details::empty;
+using details::iscontinuous;
+using details::issliced;
+using details::istransposed;
+using details::isvector;
+using details::ismatrix;
+using details::isrow;
+using details::iscolumn;
+using details::isscalar;
 }
 
 namespace oc {
