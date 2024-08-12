@@ -2984,7 +2984,7 @@ namespace details {
             return std::adjacent_find(std::begin(sorted_axes), std::end(sorted_axes)) == std::end(sorted_axes);
         };
 
-        if (is_unique_axes(first_axis, last_axis)) {
+        if (!is_unique_axes(first_axis, last_axis)) {
             throw std::invalid_argument("not unique axes");
         }
 
@@ -4165,6 +4165,193 @@ using details::ismatrix;
 using details::isrow;
 using details::iscolumn;
 using details::isscalar;
+}
+
+namespace oc::experimental {
+enum class arrnd_iterator_position { none, begin, end, rbegin, rend };
+
+template <typename ArrndInfo = arrnd_info<>>
+class arrnd_indexer final {
+public:
+    using info_type = ArrndInfo;
+    using sub_storage_type = typename info_type::extent_storage_type;
+    using index_type = typename info_type::extent_type;
+
+    explicit constexpr arrnd_indexer(
+        const info_type& ai, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : ai_(ai)
+        , subs_(size(ai))
+        , pos_(empty(ai) ? arrnd_iterator_position::end : start_pos)
+    {
+        if (!empty(ai)) {
+            if (start_pos == arrnd_iterator_position::begin || start_pos == arrnd_iterator_position::rend) {
+                std::fill(std::begin(subs_), std::end(subs_), index_type{0});
+                curr_abs_ind_ = ai.indices_boundary().start();
+                curr_rel_ind_ = index_type{0};
+            } else {
+                std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(subs_), [](auto dim) {
+                    return dim - index_type{1};
+                });
+                curr_abs_ind_ = ai.indices_boundary().stop() - index_type{1};
+                curr_rel_ind_ = total(ai) - index_type{1};
+            }
+        }
+    }
+
+    constexpr arrnd_indexer() = default;
+    constexpr arrnd_indexer(const arrnd_indexer&) = default;
+    constexpr arrnd_indexer& operator=(const arrnd_indexer&) = default;
+    constexpr arrnd_indexer(arrnd_indexer&&) noexcept = default;
+    constexpr arrnd_indexer& operator=(arrnd_indexer&&) noexcept = default;
+    constexpr ~arrnd_indexer() = default;
+
+    constexpr arrnd_indexer& operator++() noexcept
+    {
+        if (pos_ == arrnd_iterator_position::end) {
+            return *this;
+        }
+
+        if (pos_ == arrnd_iterator_position::rend) {
+            pos_ = arrnd_iterator_position::begin;
+            return *this;
+        }
+
+        ++curr_rel_ind_;
+
+        for (index_type i = size(ai_); i > 0; --i) {
+            ++subs_[i - 1];
+            curr_abs_ind_ += ai_.strides()[i - 1];
+            if (subs_[i - 1] < ai_.dims()[i - 1]) {
+                return *this;
+            }
+            curr_abs_ind_ -= ai_.strides()[i - 1] * subs_[i - 1];
+            subs_[i - 1] = 0;
+        }
+
+        std::transform(std::begin(ai_.dims()), std::end(ai_.dims()), std::begin(subs_), [](auto dim) {
+            return dim - index_type{1};
+        });
+        curr_abs_ind_ = ai_.indices_boundary().stop() - index_type{1};
+        curr_rel_ind_ = total(ai_) - index_type{1};
+        pos_ = arrnd_iterator_position::end;
+
+        return *this;
+    }
+
+    constexpr arrnd_indexer operator++(int) noexcept
+    {
+        arrnd_indexer<info_type> temp{*this};
+        ++(*this);
+        return temp;
+    }
+
+    constexpr arrnd_indexer& operator+=(index_type count) noexcept
+    {
+        for (index_type i = 0; i < count; ++i) {
+            ++(*this);
+        }
+        return *this;
+    }
+
+    arrnd_indexer operator+(index_type count) const noexcept
+    {
+        arrnd_indexer<info_type> temp{*this};
+        temp += count;
+        return temp;
+    }
+
+    constexpr arrnd_indexer& operator--() noexcept
+    {
+        if (pos_ == arrnd_iterator_position::rend) {
+            return *this;
+        }
+
+        if (pos_ == arrnd_iterator_position::end) {
+            pos_ = arrnd_iterator_position::rbegin;
+            return *this;
+        }
+
+        --curr_rel_ind_;
+
+        for (index_type i = size(ai_); i > 0; --i) {
+            if (subs_[i - 1] >= 1) {
+                --subs_[i - 1];
+                curr_abs_ind_ -= ai_.strides()[i - 1];
+                return *this;
+            }
+            subs_[i - 1] = ai_.dims()[i - 1] - index_type{1};
+            curr_abs_ind_ += ai_.strides()[i - 1] * subs_[i - 1];
+        }
+        
+        std::fill(std::begin(subs_), std::end(subs_), index_type{0});
+        curr_abs_ind_ = ai_.indices_boundary().start();
+        curr_rel_ind_ = index_type{0};
+        pos_ = arrnd_iterator_position::rend;
+
+        return *this;
+    }
+
+    constexpr arrnd_indexer operator--(int) noexcept
+    {
+        arrnd_indexer<info_type> temp{*this};
+        --(*this);
+        return temp;
+    }
+
+    constexpr arrnd_indexer& operator-=(index_type count) noexcept
+    {
+        for (index_type i = 0; i < count; ++i) {
+            --(*this);
+        }
+        return *this;
+    }
+
+    constexpr arrnd_indexer operator-(index_type count) const noexcept
+    {
+        arrnd_indexer<info_type> temp{*this};
+        temp -= count;
+        return temp;
+    }
+
+    [[nodiscard]] explicit constexpr operator bool() const noexcept
+    {
+        return !(pos_ == arrnd_iterator_position::end || pos_ == arrnd_iterator_position::rend);
+    }
+
+    [[nodiscard]] constexpr index_type operator*() const noexcept
+    {
+        return curr_abs_ind_;
+    }
+
+    [[nodiscard]] constexpr const sub_storage_type& subs() const noexcept
+    {
+        return subs_;
+    }
+
+    [[nodiscard]] constexpr index_type operator[](index_type index) const noexcept
+    {
+        assert(index >= 0 && index < total(ai_));
+
+        index_type advance_count = index - curr_rel_ind_;
+        if (advance_count > 0) {
+            return ((*this) + advance_count).curr_abs_ind_;
+        }
+        if (advance_count < 0) {
+            return ((*this) - (-advance_count)).curr_abs_ind_;
+        }
+        return curr_abs_ind_;
+    }
+
+private:
+    info_type ai_;
+
+    sub_storage_type subs_;
+
+    index_type curr_abs_ind_{0};
+    index_type curr_rel_ind_{0};
+
+    arrnd_iterator_position pos_{arrnd_iterator_position::end};
+};
 }
 
 namespace oc {
