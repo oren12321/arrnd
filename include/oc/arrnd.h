@@ -24,6 +24,7 @@
 #endif
 #include <ranges>
 #include <span>
+#include <bitset>
 
 namespace oc {
 namespace details {
@@ -2234,6 +2235,18 @@ namespace details {
         return (empty(lhs) && empty(rhs))
             || (lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
     }
+
+    template <typename T>
+    inline constexpr std::ostream& operator<<(std::ostream& os, const interval<T>& ival)
+    {
+        if (empty(ival)) {
+            os << "empty";
+            return os;
+        }
+
+        os << "[" << ival.start() << "," << ival.stop() << "," << ival.step() << ")";
+        return os;
+    }
 }
 using details::interval;
 using details::isbound;
@@ -2521,6 +2534,7 @@ namespace details {
         continuous = std::size_t{1} << 0,
         sliced = std::size_t{1} << 1,
         transposed = std::size_t{1} << 2,
+        bitscount = 3,
     };
 
     [[nodiscard]] inline constexpr arrnd_hint operator|(const arrnd_hint& lhs, const arrnd_hint& rhs) noexcept
@@ -3211,6 +3225,38 @@ namespace details {
             *d_sub = (ai.dims()[i] > 1 ? ((ind - ai.indices_boundary().start()) / ai.strides()[i]) % ai.dims()[i] : 0);
             ++d_sub;
         }
+    }
+
+    template <typename StorageInfo>
+    inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageInfo>& ai)
+    {
+        if (empty(ai)) {
+            os << "empty";
+            return os;
+        }
+
+        auto print_vec = [&os](const auto& vec) {
+            os << '[';
+            std::for_each_n(std::cbegin(vec), std::ssize(vec) - 1, [&os](const auto& e) {
+                os << e << ' ';
+            });
+            os << *std::next(std::cbegin(vec), std::ssize(vec) - 1) << ']';
+        };
+
+        os << "total: " << total(ai) << '\n';
+        os << "dims: ";
+        print_vec(ai.dims());
+        os << '\n';
+        os << "strides: ";
+        print_vec(ai.strides());
+        os << '\n';
+        os << "indices_boundary: " << ai.indices_boundary() << "\n";
+        os << "hints (transposed|sliced|continuous): "
+           << std::bitset<to_underlying(arrnd_hint::bitscount)>(to_underlying(ai.hints())) << "\n";
+        os << "props (vector|matrix|row|column|scalar): " << isvector(ai) << ismatrix(ai) << isrow(ai) << iscolumn(ai)
+           << isscalar(ai);
+
+        return os;
     }
 
     //template <typename StorageInfo = dynamic_storage_info<std::size_t>>
