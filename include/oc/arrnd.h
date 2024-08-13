@@ -4366,19 +4366,48 @@ public:
     using index_type = typename info_type::extent_type;
 
     template <typename InputIt>
-    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_boundary, InputIt last_dim_boundary, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : ai_(slice(ai, first_dim_boundary, last_dim_boundary))
+        requires(std::is_same_v<index_type, std::iter_value_t<InputIt>>)
+    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_size, InputIt last_dim_size, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : ai_(first_dim_size, last_dim_size)
         , curr_window_(size(ai))
     {
+        if (size(ai) != std::distance(first_dim_size, last_dim_size)) {
+            throw std::invalid_argument("invalid dim sizes - different from number of dims");
+        }
+
         typename info_type::extent_storage_type indexer_dims(size(ai));
-        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(ai_.dims()), std::begin(indexer_dims),
+        std::transform(std::begin(ai.dims()), std::end(ai.dims()), first_dim_size, std::begin(indexer_dims),
             [](auto dim, auto sdim) {
                 return dim - sdim + 1;
             });
 
         indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
 
-        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), std::begin(ai_.dims()),
+        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), first_dim_size, std::begin(curr_window_),
+            [](auto sub, auto dim) {
+                return typename info_type::boundary_type(sub, sub + dim);
+            });
+    }
+
+    explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis = 0,
+        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : curr_window_(size(ai))
+    {
+        if (axis >= size(ai)) {
+            throw std::out_of_range("invalid axis");
+        }
+
+        typename info_type::extent_storage_type indexer_dims(size(ai), 1);
+        indexer_dims[axis] = ai.dims()[axis];
+
+        indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
+
+        typename info_type::extent_storage_type window_dims(ai.dims());
+        window_dims[axis] = 1;
+
+        ai_ = info_type(window_dims);
+
+        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), std::begin(window_dims),
             std::begin(curr_window_), [](auto sub, auto dim) {
                 return typename info_type::boundary_type(sub, sub + dim);
             });
