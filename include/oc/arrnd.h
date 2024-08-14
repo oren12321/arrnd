@@ -4364,12 +4364,13 @@ class arrnd_window_slider final {
 public:
     using info_type = ArrndInfo;
     using index_type = typename info_type::extent_type;
+    using window_type = typename info_type::boundary_storage_type;
 
     template <typename InputIt>
         requires(std::is_same_v<index_type, std::iter_value_t<InputIt>>)
-    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_size, InputIt last_dim_size, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : ai_(first_dim_size, last_dim_size)
-        , curr_window_(size(ai))
+    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_size, InputIt last_dim_size,
+        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : curr_window_(size(ai))
     {
         if (size(ai) != std::distance(first_dim_size, last_dim_size)) {
             throw std::invalid_argument("invalid dim sizes - different from number of dims");
@@ -4404,8 +4405,6 @@ public:
 
         typename info_type::extent_storage_type window_dims(ai.dims());
         window_dims[axis] = 1;
-
-        ai_ = info_type(window_dims);
 
         std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), std::begin(window_dims),
             std::begin(curr_window_), [](auto sub, auto dim) {
@@ -4493,7 +4492,7 @@ public:
         return static_cast<bool>(indexer_);
     }
 
-    [[nodiscard]] constexpr const typename info_type::boundary_storage_type& operator*() const noexcept
+    [[nodiscard]] constexpr const window_type& operator*() const noexcept
     {
         return curr_window_;
     }
@@ -4509,11 +4508,9 @@ public:
     }
 
 private:
-    info_type ai_;
-
     arrnd_indexer<info_type> indexer_;
 
-    typename info_type::boundary_storage_type curr_window_;
+    window_type curr_window_;
 };
 
 
