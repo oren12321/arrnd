@@ -4168,8 +4168,11 @@ template <typename ArrndInfo = arrnd_info<>>
 class arrnd_indexer final {
 public:
     using info_type = ArrndInfo;
-    using sub_storage_type = typename info_type::extent_storage_type;
+
     using index_type = typename info_type::extent_type;
+    using size_type = typename info_type::extent_type;
+
+    using sub_storage_type = typename info_type::extent_storage_type;
 
     explicit constexpr arrnd_indexer(
         const info_type& ai, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
@@ -4239,15 +4242,15 @@ public:
         return temp;
     }
 
-    constexpr arrnd_indexer& operator+=(index_type count) noexcept
+    constexpr arrnd_indexer& operator+=(size_type count) noexcept
     {
-        for (index_type i = 0; i < count; ++i) {
+        for (size_type i = 0; i < count; ++i) {
             ++(*this);
         }
         return *this;
     }
 
-    arrnd_indexer operator+(index_type count) const noexcept
+    arrnd_indexer operator+(size_type count) const noexcept
     {
         arrnd_indexer<info_type> temp{*this};
         temp += count;
@@ -4292,15 +4295,15 @@ public:
         return temp;
     }
 
-    constexpr arrnd_indexer& operator-=(index_type count) noexcept
+    constexpr arrnd_indexer& operator-=(size_type count) noexcept
     {
-        for (index_type i = 0; i < count; ++i) {
+        for (size_type i = 0; i < count; ++i) {
             --(*this);
         }
         return *this;
     }
 
-    constexpr arrnd_indexer operator-(index_type count) const noexcept
+    constexpr arrnd_indexer operator-(size_type count) const noexcept
     {
         arrnd_indexer<info_type> temp{*this};
         temp -= count;
