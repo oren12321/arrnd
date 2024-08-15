@@ -4396,7 +4396,7 @@ public:
 
 private:
     interval_type ival_;
-    arrnd_sliding_window_type type_;
+    arrnd_sliding_window_type type_{arrnd_sliding_window_type::complete};
 };
 
 template <typename T>
@@ -4444,6 +4444,12 @@ public:
             throw std::invalid_argument("invalid window size - bigger than number of dims");
         }
 
+        if (std::any_of(first_dim_neigh, last_dim_neigh, [](auto neigh) {
+            return isunbound(neigh.ival());
+            })) {
+            throw std::invalid_argument("arrnd_window_slider currently not support unbound intervals");
+        }
+
         if (!std::transform_reduce(std::begin(ai.dims()),
                 std::next(std::begin(ai.dims()), std::distance(first_dim_neigh, last_dim_neigh)), first_dim_neigh, true,
                 std::logical_and<>{}, [](auto dim, auto neigh) {
@@ -4462,7 +4468,6 @@ public:
                         arrnd_sliding_window_type::complete);
                 });
         }
-        // TODO: handle unbound neighs
 
         typename info_type::extent_storage_type indexer_dims(size(ai));
         std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(window_), std::begin(indexer_dims),
