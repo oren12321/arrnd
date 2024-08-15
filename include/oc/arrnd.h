@@ -78,7 +78,8 @@ namespace details {
     template <typename Iter>
     using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
     template <typename Iter, typename T>
-    concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
+    concept iterator_of_type = std::is_same_v<T, std::iter_value_t<Iter>>;
+    //concept iterator_of_type = std::input_iterator<Iter> && std::is_same_v<T, iterator_value_type<Iter>>;
     template <typename Iter, template <typename...> typename T>
     concept iterator_of_template_type = std::input_iterator<Iter> && template_type<iterator_value_type<Iter>, T>;
 
@@ -2580,13 +2581,12 @@ namespace details {
         requires(std::is_same_v<std::size_t, typename StorageInfo::storage_type::value_type>)
     class arrnd_info {
     public:
-        using storage_info = StorageInfo;
+        using storage_info_type = StorageInfo;
 
-        using extent_storage_type = typename storage_info::storage_type;
+        using extent_storage_type = typename storage_info_type::storage_type;
         using extent_type = typename extent_storage_type::value_type;
 
         using boundary_type = interval<extent_type>;
-        using boundary_storage_type = typename storage_info::template replaced_type<boundary_type>::storage_type;
 
         constexpr arrnd_info() = default;
         constexpr arrnd_info(const arrnd_info&) = default;
@@ -2594,8 +2594,7 @@ namespace details {
         constexpr arrnd_info(arrnd_info&&) = default;
         constexpr arrnd_info& operator=(arrnd_info&&) = default;
 
-        template <typename InputIt>
-            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt>>)
+        template <iterator_of_type<extent_type> InputIt>
         constexpr arrnd_info(InputIt first_dim, InputIt last_dim)
         {
             if (std::distance(first_dim, last_dim) < 0) {
@@ -2623,7 +2622,7 @@ namespace details {
             hints_ = arrnd_hint::continuous;
         }
 
-        template <typename Cont>
+        template <iterable_of_type<extent_type> Cont>
         explicit constexpr arrnd_info(const Cont& dims)
             : arrnd_info(std::begin(dims), std::end(dims))
         { }
@@ -2634,9 +2633,7 @@ namespace details {
 
         // for maximum flexibility, a constructor that sets the class members and check their validity.
         // this constructor may add hints in addition to the hints argument.
-        template <typename InputIt1, typename InputIt2>
-            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt1>>
-                && std::is_same_v<extent_type, std::iter_value_t<InputIt2>>)
+        template <iterator_of_type<extent_type> InputIt1, iterator_of_type<extent_type> InputIt2>
         explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
             InputIt2 last_stride, boundary_type indices_boundary, arrnd_hint hints)
         {
@@ -2647,10 +2644,6 @@ namespace details {
             if (std::distance(first_dim, last_dim) != std::distance(first_stride, last_stride)) {
                 throw std::invalid_argument("invalid strides - different number from dimensions");
             }
-
-            //if (!std::is_sorted(first_stride, last_stride, std::greater<>{})) {
-            //    throw std::invalid_argument("invalid strides - not sorted in descending order");
-            //}
 
             hints_ = arrnd_hint::none;
 
@@ -2692,7 +2685,7 @@ namespace details {
             hints_ |= hints;
         }
 
-        template <typename Cont1, typename Cont2>
+        template <iterable_of_type<extent_type> Cont1, iterable_of_type<extent_type> Cont2>
         explicit constexpr arrnd_info(
             const Cont1& dims, const Cont2& strides, boundary_type indices_boundary, arrnd_hint hints)
             : arrnd_info(
@@ -2705,15 +2698,13 @@ namespace details {
         { }
 
         // the constructor tries deducing the hints value according to its parameters
-        template <typename InputIt1, typename InputIt2>
-            requires(std::is_same_v<extent_type, std::iter_value_t<InputIt1>>
-                && std::is_same_v<extent_type, std::iter_value_t<InputIt2>>)
+        template <iterator_of_type<extent_type> InputIt1, iterator_of_type<extent_type> InputIt2>
         explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
             InputIt2 last_stride, boundary_type indices_boundary)
             : arrnd_info(first_dim, last_dim, first_stride, last_stride, indices_boundary, arrnd_hint::none)
         { }
 
-        template <typename Cont1, typename Cont2>
+        template <iterable_of_type<extent_type> Cont1, iterable_of_type<extent_type> Cont2>
         explicit constexpr arrnd_info(
             const Cont1& dims, const Cont2& strides, boundary_type indices_boundary)
             : arrnd_info(
@@ -2757,8 +2748,7 @@ namespace details {
         arrnd_hint hints_{arrnd_hint::continuous};
     };
 
-    template <typename StorageInfo, typename InputIt>
-        requires(std::is_same_v<typename arrnd_info<StorageInfo>::boundary_type, std::iter_value_t<InputIt>>)
+    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::boundary_type> InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
         const arrnd_info<StorageInfo>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
     {
@@ -2774,8 +2764,9 @@ namespace details {
             throw std::invalid_argument("invalid dim boundaries - different number from dims");
         }
 
-        typename arrnd_info<StorageInfo>::boundary_storage_type bounded_dim_boundaries(
-            first_dim_boundary, last_dim_boundary);
+        typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
+            typename arrnd_info<StorageInfo>::boundary_type>::storage_type
+            bounded_dim_boundaries(first_dim_boundary, last_dim_boundary);
 
         std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.dims()),
             std::begin(bounded_dim_boundaries), [](auto boundary, auto dim) {
@@ -2852,7 +2843,7 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, indices_boundary, hints);
     }
 
-    template <typename StorageInfo, typename Cont>
+    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::boundary_type> Cont>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
         const arrnd_info<StorageInfo>& ai, const Cont& dim_boundaries)
     {
@@ -2879,8 +2870,9 @@ namespace details {
             throw std::out_of_range("invalid axis");
         }
 
-        typename arrnd_info<StorageInfo>::boundary_storage_type dim_boundaries(
-            std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
+        typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
+            typename arrnd_info<StorageInfo>::boundary_type>::storage_type
+            dim_boundaries(std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
 
         dim_boundaries[axis] = dim_boundary;
 
@@ -2957,8 +2949,7 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints());
     }
 
-    template <typename StorageInfo, typename InputIt>
-        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<InputIt>>)
+    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
         const arrnd_info<StorageInfo>& ai, InputIt first_axis, InputIt last_axis)
     {
@@ -3009,7 +3000,7 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo, typename Cont>
+    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::extent_type> Cont>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
         const arrnd_info<StorageInfo>& ai, const Cont& axes)
     {
@@ -3173,8 +3164,7 @@ namespace details {
         return total(ai) == 1;
     }
 
-    template <typename StorageInfo, typename InputIt>
-        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<InputIt>>)
+    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> InputIt>
     constexpr typename arrnd_info<StorageInfo>::extent_type
         sub2ind(const arrnd_info<StorageInfo>& ai, InputIt first_sub, InputIt last_sub)
     {
@@ -3206,7 +3196,7 @@ namespace details {
                 overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
     }
 
-    template <typename StorageInfo, typename Cont>
+    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::extent_type> Cont>
     constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(const arrnd_info<StorageInfo>& ai, const Cont& subs)
     {
         return sub2ind(ai, std::begin(subs), std::end(subs));
@@ -3219,8 +3209,7 @@ namespace details {
         return sub2ind(ai, subs.begin(), subs.end());
     }
 
-    template <typename StorageInfo, typename OutputIt>
-        requires(std::is_same_v<typename arrnd_info<StorageInfo>::extent_type, std::iter_value_t<OutputIt>>)
+    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> OutputIt>
     constexpr void ind2sub(
         const arrnd_info<StorageInfo>& ai, typename arrnd_info<StorageInfo>::extent_type ind, OutputIt d_sub)
     {
@@ -4427,10 +4416,10 @@ class arrnd_window_slider final {
 public:
     using info_type = ArrndInfo;
     using index_type = typename info_type::extent_type;
-    using boundary_storage_type = typename info_type::boundary_storage_type;
+    using boundary_storage_type = typename info_type::storage_info_type::template replaced_type<typename info_type::boundary_type>::storage_type;
 
     using neigh_type = sliding_window_neigh<std::make_signed_t<index_type>>;
-    using window_type = typename info_type::storage_info::template replaced_type<neigh_type>::storage_type;
+    using window_type = typename info_type::storage_info_type::template replaced_type<neigh_type>::storage_type;
 
     template <typename InputIt>
         requires(std::is_same_v<neigh_type, std::iter_value_t<InputIt>>)
