@@ -2580,11 +2580,13 @@ namespace details {
         requires(std::is_same_v<std::size_t, typename StorageInfo::storage_type::value_type>)
     class arrnd_info {
     public:
-        using extent_storage_type = typename StorageInfo::storage_type;
+        using storage_info = StorageInfo;
+
+        using extent_storage_type = typename storage_info::storage_type;
         using extent_type = typename extent_storage_type::value_type;
 
         using boundary_type = interval<extent_type>;
-        using boundary_storage_type = typename StorageInfo::template replaced_type<boundary_type>::storage_type;
+        using boundary_storage_type = typename storage_info::template replaced_type<boundary_type>::storage_type;
 
         constexpr arrnd_info() = default;
         constexpr arrnd_info(const arrnd_info&) = default;
@@ -4357,59 +4359,154 @@ private:
     arrnd_iterator_position pos_{arrnd_iterator_position::end};
 };
 
+enum class arrnd_sliding_window_type {
+    complete,
+    partial,
+};
 
+template <typename T = std::int64_t>
+    requires(std::is_signed_v<T>)
+class sliding_window_neigh {
+public:
+    using interval_type = interval<T>;
+    using boundary_type = interval<std::make_unsigned_t<T>>;
+
+    sliding_window_neigh(
+        const interval_type& ival, arrnd_sliding_window_type type = arrnd_sliding_window_type::complete)
+        : ival_(ival)
+        , type_(type)
+    { }
+
+    constexpr sliding_window_neigh() = default;
+    constexpr sliding_window_neigh(const sliding_window_neigh&) = default;
+    constexpr sliding_window_neigh& operator=(const sliding_window_neigh&) = default;
+    constexpr sliding_window_neigh(sliding_window_neigh&&) noexcept = default;
+    constexpr sliding_window_neigh& operator=(sliding_window_neigh&&) noexcept = default;
+    constexpr ~sliding_window_neigh() = default;
+
+    [[nodiscard]] constexpr const interval_type& ival() const noexcept
+    {
+        return ival_;
+    }
+
+    [[nodiscard]] constexpr arrnd_sliding_window_type type() const noexcept
+    {
+        return type_;
+    }
+
+private:
+    interval_type ival_;
+    arrnd_sliding_window_type type_;
+};
+
+template <typename T>
+    requires(std::is_signed_v<T>)
+[[nodiscard]] inline constexpr typename sliding_window_neigh<T>::boundary_type
+    boundary(const sliding_window_neigh<T>& neigh, typename sliding_window_neigh<T>::boundary_type::size_type sub,
+        typename sliding_window_neigh<T>::boundary_type::size_type dim)
+{
+    if (neigh.type() == arrnd_sliding_window_type::complete) {
+        return typename sliding_window_neigh<T>::boundary_type(sub,
+            sub + static_cast<typename sliding_window_neigh<T>::boundary_type::size_type>(absdiff(neigh.ival())),
+            static_cast<typename sliding_window_neigh<T>::boundary_type::size_type>(neigh.ival().step()));
+    }
+
+    auto before
+        = static_cast<typename sliding_window_neigh<T>::boundary_type::size_type>(std::abs(neigh.ival().start()));
+    auto nstart = (sub < before ? 0 : sub - before);
+
+    auto after = static_cast<typename sliding_window_neigh<T>::boundary_type::size_type>(neigh.ival().stop());
+    auto nstop = (sub + after > dim ? dim : sub + after);
+
+    return typename sliding_window_neigh<T>::boundary_type(
+        nstart, nstop, static_cast<typename sliding_window_neigh<T>::boundary_type::size_type>(neigh.ival().step()));
+}
 
 template <typename ArrndInfo = arrnd_info<>>
 class arrnd_window_slider final {
 public:
     using info_type = ArrndInfo;
     using index_type = typename info_type::extent_type;
-    using window_type = typename info_type::boundary_storage_type;
+    using boundary_storage_type = typename info_type::boundary_storage_type;
+
+    using neigh_type = sliding_window_neigh<std::make_signed_t<index_type>>;
+    using window_type = typename info_type::storage_info::template replaced_type<neigh_type>::storage_type;
 
     template <typename InputIt>
-        requires(std::is_same_v<index_type, std::iter_value_t<InputIt>>)
-    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_size, InputIt last_dim_size,
+        requires(std::is_same_v<neigh_type, std::iter_value_t<InputIt>>)
+    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_dim_neigh, InputIt last_dim_neigh,
         arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : curr_window_(size(ai))
+        : ai_(ai)
+        , window_(size(ai))
+        , curr_boundaries_(size(ai))
     {
-        if (size(ai) != std::distance(first_dim_size, last_dim_size)) {
-            throw std::invalid_argument("invalid dim sizes - different from number of dims");
+        if (size(ai) < std::distance(first_dim_neigh, last_dim_neigh)) {
+            throw std::invalid_argument("invalid window size - bigger than number of dims");
         }
 
+        if (!std::transform_reduce(std::begin(ai.dims()),
+                std::next(std::begin(ai.dims()), std::distance(first_dim_neigh, last_dim_neigh)), first_dim_neigh, true,
+                std::logical_and<>{}, [](auto dim, auto neigh) {
+                    return neigh.ival().start() <= 0 && neigh.ival().stop() >= 0 && absdiff(neigh.ival()) <= dim;
+                })) {
+            throw std::invalid_argument("invalid window");
+        }
+
+        std::copy(first_dim_neigh, last_dim_neigh, std::begin(window_));
+        if (size(ai) > std::distance(first_dim_neigh, last_dim_neigh)) {
+            std::transform(std::next(std::begin(ai.dims()), std::distance(first_dim_neigh, last_dim_neigh)),
+                std::end(ai.dims()), std::next(std::begin(window_), std::distance(first_dim_neigh, last_dim_neigh)),
+                [](auto dim) {
+                    return neigh_type(typename neigh_type::interval_type(
+                                          0, static_cast<typename neigh_type::interval_type::size_type>(dim)),
+                        arrnd_sliding_window_type::complete);
+                });
+        }
+        // TODO: handle unbound neighs
+
         typename info_type::extent_storage_type indexer_dims(size(ai));
-        std::transform(std::begin(ai.dims()), std::end(ai.dims()), first_dim_size, std::begin(indexer_dims),
-            [](auto dim, auto sdim) {
-                return dim - sdim + 1;
+        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(window_), std::begin(indexer_dims),
+            [](auto dim, auto neigh) {
+                return neigh.type() == arrnd_sliding_window_type::complete ? dim - absdiff(neigh.ival()) + 1 : dim;
             });
 
         indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
 
-        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), first_dim_size, std::begin(curr_window_),
-            [](auto sub, auto dim) {
-                return typename info_type::boundary_type(sub, sub + dim);
-            });
+        for (index_type i = 0; i < size(ai); ++i) {
+            curr_boundaries_[i] = boundary(window_[i], indexer_.subs()[i], ai.dims()[i]);
+        }
     }
 
-    explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis = 0,
+    template <iterable Cont>
+    explicit constexpr arrnd_window_slider(
+        const info_type& ai, const Cont& window, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        : arrnd_window_slider(ai, std::begin(window), std::end(window), start_pos)
+    { }
+
+    explicit constexpr arrnd_window_slider(const info_type& ai, std::initializer_list<neigh_type> window,
         arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : curr_window_(size(ai))
+        : arrnd_window_slider(ai, window.begin(), window.end(), start_pos)
+    { }
+
+    explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis,
+        const neigh_type& neigh = neigh_type(typename neigh_type::interval_type(0, 1), arrnd_sliding_window_type::complete),
+        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
     {
         if (axis >= size(ai)) {
             throw std::out_of_range("invalid axis");
         }
 
-        typename info_type::extent_storage_type indexer_dims(size(ai), 1);
-        indexer_dims[axis] = ai.dims()[axis];
+        window_type window(size(ai));
 
-        indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
+        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(window), [](auto dim) {
+            return neigh_type(
+                typename neigh_type::interval_type(0, static_cast<typename neigh_type::interval_type::size_type>(dim)),
+                arrnd_sliding_window_type::complete);
+        });
 
-        typename info_type::extent_storage_type window_dims(ai.dims());
-        window_dims[axis] = 1;
+        window[axis] = neigh;
 
-        std::transform(std::begin(indexer_.subs()), std::end(indexer_.subs()), std::begin(window_dims),
-            std::begin(curr_window_), [](auto sub, auto dim) {
-                return typename info_type::boundary_type(sub, sub + dim);
-            });
+        *this = arrnd_window_slider(ai, window, start_pos);
     }
 
     constexpr arrnd_window_slider() = default;
@@ -4423,10 +4520,9 @@ public:
     {
         ++indexer_;
 
-        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(indexer_.subs()),
-            std::begin(curr_window_), [](auto boundary, auto sub) {
-                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
-            });
+        for (index_type i = 0; i < size(ai_); ++i) {
+            curr_boundaries_[i] = boundary(window_[i], indexer_.subs()[i], ai_.dims()[i]);
+        }
 
         return *this;
     }
@@ -4457,10 +4553,9 @@ public:
     {
         --indexer_;
 
-        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(indexer_.subs()),
-            std::begin(curr_window_), [](auto boundary, auto sub) {
-                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
-            });
+        for (index_type i = 0; i < size(ai_); ++i) {
+            curr_boundaries_[i] = boundary(window_[i], indexer_.subs()[i], ai_.dims()[i]);
+        }
 
         return *this;
     }
@@ -4492,25 +4587,27 @@ public:
         return static_cast<bool>(indexer_);
     }
 
-    [[nodiscard]] constexpr const window_type& operator*() const noexcept
+    [[nodiscard]] constexpr const boundary_storage_type& operator*() const noexcept
     {
-        return curr_window_;
+        return curr_boundaries_;
     }
 
     [[nodiscard]] constexpr index_type operator[](index_type index) const noexcept
     {
         auto subs = indexer_[index].subs();
 
-        std::transform(std::begin(curr_window_), std::end(curr_window_), std::begin(subs), std::begin(curr_window_),
-            [](auto boundary, auto sub) {
-                return typename info_type::boundary_type(sub, boundary.stop() - boundary.start() + sub);
-            });
+        for (index_type i = 0; i < size(ai_); ++i) {
+            curr_boundaries_[i] = boundary(window_[i], subs[i], ai_.dims()[i]);
+        }
     }
 
 private:
+    info_type ai_;
+    window_type window_;
+
     arrnd_indexer<info_type> indexer_;
 
-    window_type curr_window_;
+    boundary_storage_type curr_boundaries_;
 };
 
 
