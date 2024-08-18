@@ -1554,7 +1554,8 @@ TEST(arrnd_test, can_return_slice)
     {
         EXPECT_TRUE(
             oc::all_equal(Integer_array{}, (Integer_array{}[std::initializer_list<oc::interval<std::int64_t>>{}])));
-        EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[{{0, 2}, {0, 5, 2}}])));
+        //EXPECT_TRUE(oc::all_equal(Integer_array{}, (Integer_array{}[{{0, 2}, {0, 5, 2}}])));
+        EXPECT_THROW((Integer_array{}[{{0, 2}, {0, 5, 2}}]), std::invalid_argument);
     }
 
     // ranges in dims
@@ -1575,10 +1576,10 @@ TEST(arrnd_test, can_return_slice)
         EXPECT_TRUE(oc::all_equal(tarr2, sarr2));
         EXPECT_EQ(arr.storage()->data(), sarr2.storage()->data());
 
-        // nranges > ndims - ignore extra ranges
-        Integer_array sarr3{arr[{{0, 3, 2}, {0, 1}, {0, 1}, {100, 101, 5}}]};
-        EXPECT_TRUE(oc::all_equal(sarr1, sarr3));
-        EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
+        // nranges > ndims - ignore extra ranges - throws exception
+        //Integer_array sarr3{arr[{{0, 3, 2}, {0, 1}, {0, 1}, {100, 101, 5}}]};
+        //EXPECT_TRUE(oc::all_equal(sarr1, sarr3));
+        //EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
 
         // out of range and negative indices
         //Integer_array sarr4{ arr[{{-1, 3, -2}, {1}, {-2}}] }; // assertion failure
@@ -1949,7 +1950,7 @@ TEST(arrnd_test, clone)
     carr[{0, 0, 0}] = 0;
     EXPECT_FALSE(oc::all_equal(carr, sarr));
 
-    Integer_array csubarr{sarr[{{1, 2}, {0, 1}, {0, 1}}] .clone()};
+    Integer_array csubarr{sarr[{{1, 2}, {0, 1}, {0, 1}}].clone()};
     EXPECT_TRUE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
     csubarr[{0, 0, 0}] = 5;
     EXPECT_FALSE(oc::all_equal((sarr[{{1, 2}, {0, 1}, {0, 1}}]), csubarr));
@@ -3239,13 +3240,13 @@ TEST(arrnd_test, complex_array)
         arrnd<int> carr({3, 4, 2, 5, 6}, data);
 
         int i = 0;
-        for (auto ind = carr.indexer(arrnd_iterator_start_position::begin); ind; ++ind) {
+        for (auto ind = carr.indexer(arrnd_iterator_position::begin); ind; ++ind) {
             EXPECT_EQ(carr[*ind], data[i++]);
         }
         EXPECT_EQ(i, std::ssize(data));
 
         i = std::ssize(data) - 1;
-        for (auto ind = carr.indexer(arrnd_iterator_start_position::rbegin); ind; --ind) {
+        for (auto ind = carr.indexer(arrnd_iterator_position::rbegin); ind; --ind) {
             EXPECT_EQ(carr[*ind], data[i--]);
         }
         EXPECT_EQ(i, -1);
@@ -3285,8 +3286,8 @@ TEST(arrnd_test, ostream_operator)
             ss << oc::arrnd_json << arr;
             EXPECT_EQ("{\n"
                       "    \"base_type\": \"int\"\n"
-                      "    \"header\": \"numel: 6\\ndims: [6]\\nstrides: [1]\\noffset: 0\\nlast_index: 5\\nflags: "
-                      "vector(1), matrix(0), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                      "    \"header\": \"total: 6\\ndims: [6]\\nstrides: [1]\\nindices_boundary: [0,6,1)\\nhints "
+                      "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 10000\",\n"
                       "    \"values\": \"[1 2 3 4 5 6]\"\n"
                       "}",
                 ss.str());
@@ -3322,22 +3323,22 @@ TEST(arrnd_test, ostream_operator)
         {
             ss.str(std::string{});
             ss << arr.header();
-            EXPECT_EQ("numel: 12\n"
+            EXPECT_EQ("total: 12\n"
                       "dims: [2 1 2 3]\n"
                       "strides: [6 6 3 1]\n"
-                      "offset: 0\n"
-                      "last_index: 11\n"
-                      "flags: vector(0), matrix(0), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)",
+                      "indices_boundary: [0,12,1)\n"
+                      "hints (transposed|sliced|continuous): 001\n"
+                      "props (vector|matrix|row|column|scalar): 00000",
                 ss.str());
 
             ss.str(std::string{});
             ss << slice.squeeze().header();
-            EXPECT_EQ("numel: 4\n"
+            EXPECT_EQ("total: 4\n"
                       "dims: [2 2]\n"
                       "strides: [3 2]\n"
-                      "offset: 6\n"
-                      "last_index: 11\n"
-                      "flags: vector(0), matrix(1), row(0), column(0), scalar(0), slice(1), reordered(0), continuous(0)",
+                      "indices_boundary: [6,12,1)\n"
+                      "hints (transposed|sliced|continuous): 010\n"
+                      "props (vector|matrix|row|column|scalar): 01000",
                 ss.str());
         }
     }
@@ -3372,12 +3373,12 @@ TEST(arrnd_test, ostream_operator)
             EXPECT_EQ(
                 "{\n"
                 "    \"base_type\": \"int\"\n"
-                "    \"header\": \"numel: 2\\ndims: [2]\\nstrides: [1]\\noffset: 0\\nlast_index: 1\\nflags: vector(1), "
-                "matrix(0), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "    \"header\": \"total: 2\\ndims: [2]\\nstrides: [1]\\nindices_boundary: [0,2,1)\\nhints "
+                "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 10000\",\n"
                 "    \"arrays\": [\n"
                 "        {\n"
-                "            \"header\": \"numel: 2\\ndims: [1 2]\\nstrides: [2 1]\\noffset: 0\\nlast_index: "
-                "1\\nflags: vector(0), matrix(1), row(1), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "            \"header\": \"total: 2\\ndims: [1 2]\\nstrides: [2 1]\\nindices_boundary: [0,2,1)\\nhints "
+                "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 01100\",\n"
                 "            \"arrays\": [\n"
                 "                {\n"
                 "                    \"header\": \"empty\",\n"
@@ -3390,17 +3391,19 @@ TEST(arrnd_test, ostream_operator)
                 "            ]\n"
                 "        },\n"
                 "        {\n"
-                "            \"header\": \"numel: 4\\ndims: [2 2]\\nstrides: [2 1]\\noffset: 0\\nlast_index: "
-                "3\\nflags: vector(0), matrix(1), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "            \"header\": \"total: 4\\ndims: [2 2]\\nstrides: [2 1]\\nindices_boundary: [0,4,1)\\nhints "
+                "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 01000\",\n"
                 "            \"arrays\": [\n"
                 "                {\n"
-                "                    \"header\": \"numel: 5\\ndims: [5]\\nstrides: [1]\\noffset: 0\\nlast_index: "
-                "4\\nflags: vector(1), matrix(0), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "                    \"header\": \"total: 5\\ndims: [5]\\nstrides: [1]\\nindices_boundary: "
+                "[0,5,1)\\nhints (transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): "
+                "10000\",\n"
                 "                    \"values\": \"[1 2 3 4 5]\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"numel: 12\\ndims: [2 1 2 3]\\nstrides: [6 6 3 1]\\noffset: "
-                "0\\nlast_index: 11\\nflags: vector(0), matrix(0), row(0), column(0), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "                    \"header\": \"total: 12\\ndims: [2 1 2 3]\\nstrides: [6 6 3 "
+                "1]\\nindices_boundary: [0,12,1)\\nhints (transposed|sliced|continuous): 001\\nprops "
+                "(vector|matrix|row|column|scalar): 00000\",\n"
                 "                    \"values\": \"[[[[6 7 8]\\n   [9 10 11]]]\\n [[[12 13 14]\\n   [15 16 17]]]]\"\n"
                 "                },\n"
                 "                {\n"
@@ -3408,8 +3411,9 @@ TEST(arrnd_test, ostream_operator)
                 "                    \"values\": \"empty\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"numel: 4\\ndims: [4 1]\\nstrides: [1 1]\\noffset: 0\\nlast_index: "
-                "3\\nflags: vector(0), matrix(1), row(0), column(1), scalar(0), slice(0), reordered(0), continuous(1)\",\n"
+                "                    \"header\": \"total: 4\\ndims: [4 1]\\nstrides: [1 1]\\nindices_boundary: "
+                "[0,4,1)\\nhints (transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): "
+                "01010\",\n"
                 "                    \"values\": \"[[18]\\n [19]\\n [20]\\n [21]]\"\n"
                 "                }\n"
                 "            ]\n"

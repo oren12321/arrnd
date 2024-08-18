@@ -656,7 +656,7 @@ TEST(arrnd_test, squeeze)
 
         arrnd<int> sarr = slice.squeeze();
         EXPECT_TRUE(all_equal(sarr, arrnd<int>({2, 2}, {9, 10, 13, 14})));
-        EXPECT_TRUE(sarr.header().is_slice());
+        EXPECT_TRUE(issliced(sarr.header()));
     }
 
     {
@@ -686,15 +686,15 @@ TEST(arrnd_test, can_access_relative_array_indices)
 
     arrnd<int> arr({3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-    for (auto i = 0; i < arr.header().numel(); ++i) {
+    for (auto i = 0; i < total(arr.header()); ++i) {
         EXPECT_EQ(arr[i], arr(i));
     }
 
     auto slc = arr[{interval<>::at(2), interval<>::full(), interval<>::from(1, 2)}];
     std::vector<int> slc_values{18, 20, 22, 24};
 
-    EXPECT_EQ(slc_values.size(), slc.header().numel());
-    for (auto i = 0; i < slc.header().numel(); ++i) {
+    EXPECT_EQ(slc_values.size(), total(slc.header()));
+    for (auto i = 0; i < total(slc.header()); ++i) {
         EXPECT_EQ(slc_values[i], slc(i));
     }
 }
@@ -1286,20 +1286,20 @@ TEST(arrnd_test, can_be_explicitly_be_casted_to_value_type_if_scalar)
 {
     {
         oc::arrnd<double> arr({1}, 0.5);
-        EXPECT_TRUE(arr.header().is_scalar());
+        EXPECT_TRUE(oc::isscalar(arr.header()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
         oc::arrnd<double> arr({1, 1, 1}, 0.5);
-        EXPECT_TRUE(arr.header().is_scalar());
+        EXPECT_TRUE(oc::isscalar(arr.header()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
         oc::arrnd<double> arr({3, 1, 2}, {0.1, 0.2, 0.3, 0.4, 0.5, 0.6});
         auto slc = arr[{oc::interval<>::at(2), oc::interval<>::at(0), oc::interval<>::at(1)}];
-        EXPECT_TRUE(slc.header().is_scalar());
+        EXPECT_TRUE(oc::isscalar(slc.header()));
         EXPECT_EQ(0.6, static_cast<double>(slc));
     }
 }
@@ -1332,7 +1332,7 @@ TEST(arrnd_test, can_return_its_data)
     Integer_array arr{{3, 1, 2}, 0};
 
     const auto& storage = *arr.storage();
-    for (std::int64_t i = 0; i < arr.header().numel(); ++i) {
+    for (std::int64_t i = 0; i < oc::total(arr.header()); ++i) {
         EXPECT_EQ(0, storage[i]);
     }
 }
@@ -1411,47 +1411,47 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
     const int data[] = {1, 2, 3, 4, 5, 6};
 
     Integer_array arr1d{{6}, data};
-    const std::int64_t* dims1d{arr1d.header().dims().data()};
-    for (std::int64_t i = 0; i < dims1d[0]; ++i) {
+    const std::size_t* dims1d{arr1d.header().dims().data()};
+    for (std::size_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ((arr1d[{i}]), data[i]);
     }
     //EXPECT_EQ(1, (arr1d[{ 6 }])); // assertion failure
     //EXPECT_EQ(6, (arr1d[{ -1 }])); // assertion failure
-    for (std::int64_t i = 0; i < dims1d[0]; ++i) {
+    for (std::size_t i = 0; i < dims1d[0]; ++i) {
         arr1d[{i}] = 0;
         EXPECT_EQ((arr1d[{i}]), 0);
     }
 
     Integer_array arr2d{{3, 2}, data};
-    const std::int64_t* dims2d{arr2d.header().dims().data()};
-    for (std::int64_t i = 0; i < dims2d[0]; ++i) {
-        for (std::int64_t j = 0; j < dims2d[1]; ++j) {
+    const std::size_t* dims2d{arr2d.header().dims().data()};
+    for (std::size_t i = 0; i < dims2d[0]; ++i) {
+        for (std::size_t j = 0; j < dims2d[1]; ++j) {
             EXPECT_EQ((arr2d[{i, j}]), data[i * dims2d[1] + j]);
         }
     }
     //EXPECT_EQ(1, (arr2d[{ 3, 2 }])); // assertion failure
     //EXPECT_EQ(6, (arr2d[{ -1, -1 }])); // assertion failure
-    for (std::int64_t i = 0; i < dims2d[0]; ++i) {
-        for (std::int64_t j = 0; j < dims2d[1]; ++j) {
+    for (std::size_t i = 0; i < dims2d[0]; ++i) {
+        for (std::size_t j = 0; j < dims2d[1]; ++j) {
             arr2d[{i, j}] = 0;
             EXPECT_EQ((arr2d[{i, j}]), 0);
         }
     }
 
     Integer_array arr3d{{3, 1, 2}, data};
-    const std::int64_t* dims3d{arr3d.header().dims().data()};
-    for (std::int64_t k = 0; k < dims3d[0]; ++k) {
-        for (std::int64_t i = 0; i < dims3d[1]; ++i) {
-            for (std::int64_t j = 0; j < dims3d[2]; ++j) {
+    const std::size_t* dims3d{arr3d.header().dims().data()};
+    for (std::size_t k = 0; k < dims3d[0]; ++k) {
+        for (std::size_t i = 0; i < dims3d[1]; ++i) {
+            for (std::size_t j = 0; j < dims3d[2]; ++j) {
                 EXPECT_EQ((arr3d[{k, i, j}]), data[k * (dims3d[1] * dims3d[2]) + i * dims3d[2] + j]);
             }
         }
     }
     //EXPECT_EQ(1, (arr3d[{ 3, 1, 2 }])); // assertion failure
     //EXPECT_EQ(6, (arr3d[{ -1, -1, -1 }])); // assertion failure
-    for (std::int64_t k = 0; k < dims3d[0]; ++k) {
-        for (std::int64_t i = 0; i < dims3d[1]; ++i) {
-            for (std::int64_t j = 0; j < dims3d[2]; ++j) {
+    for (std::size_t k = 0; k < dims3d[0]; ++k) {
+        for (std::size_t i = 0; i < dims3d[1]; ++i) {
+            for (std::size_t j = 0; j < dims3d[2]; ++j) {
                 arr3d[{k, i, j}] = 0;
                 EXPECT_EQ((arr3d[{k, i, j}]), 0);
             }
@@ -1477,13 +1477,13 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
         const int rdata[6]{0};
 
         Integer_array arr1({6}, 0.5);
-        for (std::int64_t i = 0; i < 6; ++i) {
+        for (std::size_t i = 0; i < 6; ++i) {
             EXPECT_EQ(rdata[i], (arr1[{i}]));
         }
 
         const double data2[]{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
         Integer_array arr2({6}, data2);
-        for (std::int64_t i = 0; i < 6; ++i) {
+        for (std::size_t i = 0; i < 6; ++i) {
             EXPECT_EQ(rdata[i], (arr2[{i}]));
         }
     }
@@ -1511,9 +1511,9 @@ TEST(arrnd_test, have_read_write_access_to_slice)
 
     Integer_array sarr{arr[{{0, 2}, {1, 2}, {0, 2}, {1, 3, 2}}]};
 
-    for (std::int64_t k = 0; k < rdims[0]; ++k) {
-        for (std::int64_t i = 0; i < rdims[1]; ++i) {
-            for (std::int64_t j = 0; j < rdims[2]; ++j) {
+    for (std::size_t k = 0; k < rdims[0]; ++k) {
+        for (std::size_t i = 0; i < rdims[1]; ++i) {
+            for (std::size_t j = 0; j < rdims[2]; ++j) {
                 EXPECT_EQ((rarr[{k, i, j}]), (sarr[{k, static_cast<std::int64_t>(0), i, j}]));
             }
         }

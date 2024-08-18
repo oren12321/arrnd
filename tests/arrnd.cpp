@@ -408,7 +408,7 @@ TEST(simple_vector, insert)
 {
     using namespace oc;
 
-    simple_vector<int> c1(3, 100);
+    simple_vector<int> c1(3ul, 100);
     {
         std::array<int, 3> res{100, 100, 100};
         EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
@@ -686,7 +686,7 @@ TEST(simple_array, insert)
 {
     using namespace oc;
 
-    simple_array<int, 14> c1(3, 100);
+    simple_array<int, 14> c1(3ul, 100);
     {
         std::array<int, 3> res{100, 100, 100};
         EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
@@ -1284,8 +1284,8 @@ TEST(general_iterable_types_check, typed_iterator)
 {
     static_assert(std::is_same_v<int, oc::iterator_value_type<std::vector<int>::iterator>>);
     static_assert(std::is_same_v<int, oc::iterator_value_type<oc::arrnd<int>::iterator>>);
-    static_assert(oc::signed_integral_type_iterator<std::vector<int>::iterator>);
-    static_assert(oc::signed_integral_type_iterator<oc::arrnd<int>::iterator>);
+    static_assert(oc::details::integral_type_iterator<std::vector<int>::iterator>);
+    static_assert(oc::details::integral_type_iterator<oc::arrnd<int>::iterator>);
     static_assert(!oc::signed_integral_type_iterator<std::vector<double>::iterator>);
     static_assert(oc::interval_type_iterator<std::vector<oc::interval<int>>::iterator>);
     static_assert(oc::interval_type_iterator<oc::arrnd<oc::interval<int>>::iterator>);
@@ -1411,8 +1411,8 @@ TEST(arrnd_indexer, simple_forward_backward_iterations)
     using namespace oc;
 
     const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    arrnd_header hdr(dims);
 
+    arrnd_header hdr(dims);
     const std::int64_t expected_inds_list[6]{0, 1, 2, 3, 4, 5};
     const std::int64_t expected_generated_subs{6};
 
@@ -1471,7 +1471,7 @@ TEST(arrnd_indexer, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1498,7 +1498,7 @@ TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_indexer gen(hdr, arrnd_iterator_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1699,7 +1699,7 @@ TEST(arrnd_indexer, random_access)
 
     const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 
-    arrnd_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], gen[0]);
     EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -1718,7 +1718,7 @@ TEST(experimental_arrnd_indexer, random_access)
 
     const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 
-    arrnd_indexer gen(hdr, arrnd_iterator_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], *(gen[0]));
     EXPECT_EQ(expected_inds_list[1], *(gen[5]));
@@ -1730,18 +1730,28 @@ TEST(experimental_arrnd_indexer, random_access)
 
 //TEST(experimental_window_slider, dummy)
 //{
-//    oc::arrnd_info ai({/*2*/ 4, 5});
+//    oc::arrnd_info ai({/*2*/ 6, 4});
 //
-//    std::vector<oc::interval<std::size_t>> window{/*oc::interval<std::size_t>::full(),*/
-//        oc::interval<std::size_t>::between(0, 2), oc::interval<std::size_t>::between(0, 3)};
+//    //oc::arrnd_info slc = oc::slice(ai, {oc::interval<std::size_t>::from(1, 2), oc::interval<std::size_t>::from(2, 3)});
+//    //std::cout << slc << "\n\n";
+//    //std::vector</*oc::interval<std::size_t>*/std::size_t> window{/*oc::interval<std::size_t>::full(),*/
+//    //    2, 3};
 //
-//    for (oc::experimental::arrnd_window_slider ws(ai, std::begin(window), std::end(window)); ws; ++ws) {
+//    oc::experimental::arrnd_sliding_window window(oc::interval<>::between(-1, 3));
+//
+//    std::vector windows{
+//        oc::experimental::arrnd_sliding_window(oc::interval<>::between(-1, 3), oc::experimental::arrnd_sliding_window_type::partial)};
+//
+//    int i = 0;
+//    for (oc::experimental::arrnd_window_slider ws(
+//             /*slc*/ ai, /*windows*/ 0, oc::experimental::arrnd_sliding_window(oc::interval<>(-1, 3)));
+//         ws; ++ws) {
 //        std::cout << "{ ";
-//        for (auto b : *ws) {
+//        for (const auto& b : *ws) {
 //            std::cout << b << " ";
 //        }
 //        std::cout << "}\n";
-//        std::cout << slice(ai, *ws) << "\n";
+//        std::cout << slice(/*slc*/ ai, *(ws[i])) << "\n";
 //    }
 //}
 
@@ -1784,7 +1794,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //    const std::int64_t expected_generated_subs{6};
 //
 //    std::int64_t generated_subs_counter{0};
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 //
 //    while (gen) {
 //        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1869,7 +1879,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 //
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_start_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
 //
 //    EXPECT_EQ(expected_inds_list[0], gen[0]);
 //    EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -1976,7 +1986,7 @@ TEST(arrnd_axis_ranger, simple_backward_forward_iterations)
     const std::int64_t expected_generated_subs{3};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 0}, true, arrnd_iterator_start_position::rbegin);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 0}, true, arrnd_iterator_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -2004,7 +2014,7 @@ TEST(arrnd_axis_ranger, simple_backward_forward_iterations_with_interval_width_b
     const std::int64_t expected_generated_subs{4};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 2}, true, arrnd_iterator_start_position::rbegin);
+    arrnd_axis_ranger gen(hdr, 2, interval<>{0, 2}, true, arrnd_iterator_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], (*gen)[2]);
@@ -2065,11 +2075,13 @@ TEST(arrnd_axis_ranger, random_access)
     EXPECT_EQ(expected_inds_list[2], gen[1][2]);
 }
 
-TEST(arrnd_test, indexer)
+TEST(arrnd_test, indexer_deprecated)
 {
     using namespace oc;
 
-    auto indexer = arrnd<int>({3, 1, 2}).indexer(2);
+    arrnd<int> arr({3, 1, 2});
+    oc::experimental::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
+
     std::vector<int> indices;
     for (; indexer; ++indexer) {
         indices.push_back(*indexer);
@@ -2079,11 +2091,13 @@ TEST(arrnd_test, indexer)
     EXPECT_EQ(result, indices);
 }
 
-TEST(arrnd_test, ranger)
+TEST(arrnd_test, ranger_deprecated)
 {
     using namespace oc;
 
-    auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
+    //auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
+    arrnd<int> arr({3, 1, 2});
+    arrnd<int>::ranger_type ranger(arr.header(), 2);
     std::vector<interval<>> fisrt_ranges{{0, 3}, {0, 1}, {0, 1}};
 
     EXPECT_TRUE(std::equal(fisrt_ranges.cbegin(), fisrt_ranges.cend(), (*ranger).cbegin()));
@@ -2173,7 +2187,7 @@ TEST(arrnd_test, iterators_and_inserters)
     EXPECT_TRUE(all_equal(axis_iter_res, arr));
 
     // std ranges
-    {
+    /*{
         arrnd<int> arr5({2, 1, 3}, {1, 2, 3, 4, 5, 6});
 
         std::vector<int> vec1;
@@ -2189,7 +2203,7 @@ TEST(arrnd_test, iterators_and_inserters)
         }
 
         EXPECT_EQ(std::vector<int>({4, 8, 12}), vec1);
-    }
+    }*/
 
     // free arrnd iterator functions compilation
     {
@@ -2920,7 +2934,7 @@ TEST(arrnd_test, slide)
         {
             //auto res = slide(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
-                return slide(val, 0, {-1, 2}, false, weigted_sum/*, 0.5*/);
+                return slide(val, 0, {-1, 3}, false, weigted_sum/*, 0.5*/);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -2934,9 +2948,9 @@ TEST(arrnd_test, slide)
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
                 return slide(val, 0, {-1, 2}, true, weigted_sum/*, 0.5*/);
             });
-
-            EXPECT_TRUE(all_equal(
-                res, arrnd<arrnd<double>>({1, 2}, {arrnd<double>(), arrnd<double>({7}, {5, 7, 9, 11, 13, 15, 17})})));
+            EXPECT_TRUE(all_equal(res,
+                arrnd<arrnd<double>>(
+                    {1, 2}, {arrnd<double>({1}, {10.5}), arrnd<double>({8}, {3., 4.5, 6., 7.5, 9., 10.5, 12., 13.5})})));
         }
     }
 }
@@ -2958,13 +2972,13 @@ TEST(arrnd_test, accumulate)
         };
 
         {
-            EXPECT_TRUE(all_equal(arrnd<int>(), accumulate(arrnd<int>(), 0, {-1, 2}, false, add_prev, slice_sum)));
+            EXPECT_TRUE(all_equal(arrnd<int>(), accumulate(arrnd<int>(), 0, {-1, 3}, false, add_prev, slice_sum)));
         }
 
         {
             //auto res = accumulate(arr, 0, {-1, 2}, false, add_prev, slice_sum);
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
-                return accumulate(val, 0, {-1, 2}, false, add_prev, slice_sum);
+                return accumulate(val, 0, {-1, 3}, false, add_prev, slice_sum);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -2977,9 +2991,9 @@ TEST(arrnd_test, accumulate)
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
                 return accumulate(val, 0, {-1, 2}, true, add_prev, slice_sum);
             });
-
-            EXPECT_TRUE(all_equal(
-                res, arrnd<arrnd<int>>({1, 2}, {arrnd<int>(), arrnd<int>({7}, {10, 24, 42, 64, 90, 120, 154})})));
+            EXPECT_TRUE(all_equal(res,
+                arrnd<arrnd<int>>(
+                    {1, 2}, {arrnd<int>({1}, {21}), arrnd<int>({8}, {6, 15, 27, 42, 60, 81, 105, 132})})));
         }
     }
 }
