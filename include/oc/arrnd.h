@@ -2119,6 +2119,41 @@ namespace details {
             return step_;
         }
 
+        // conversion from interval<size_type> to interval<U>
+        template <typename U>
+            requires(std::is_fundamental_v<U>)
+        [[nodiscard]] constexpr operator interval<U>() const
+        {
+            if constexpr (std::is_same_v<size_type, U>) {
+                return *this;
+            } else {
+                // conversion of negative values from signed to unsigned is undefined
+                if constexpr (std::is_signed_v<size_type> && std::is_unsigned_v<U>) {
+                    if (start_ < 0 || stop_ < 0) {
+                        throw std::overflow_error(
+                            "invalid interval casting - undifned conversion from negative signed to unsigned");
+                    }
+                }
+
+                if (start_ < std::numeric_limits<U>::min() || start_ > std::numeric_limits<U>::max()) {
+                    throw std::overflow_error(
+                        "invalid interval casting - start value is not fit to converted size type");
+                }
+
+                if (stop_ < std::numeric_limits<U>::min() || stop_ > std::numeric_limits<U>::max()) {
+                    throw std::overflow_error(
+                        "invalid interval casting - stop value is not fit to converted size type");
+                }
+
+                if (step_ < std::numeric_limits<U>::min() || step_ > std::numeric_limits<U>::max()) {
+                    throw std::overflow_error(
+                        "invalid interval casting - step value is not fit to converted size type");
+                }
+
+                return interval<U>(start_, stop_, step_);
+            }
+        }
+
         [[nodiscard]] static constexpr interval full(size_type step = 1) noexcept
         {
             if constexpr (std::is_signed_v<size_type>) {
@@ -2433,6 +2468,23 @@ namespace details {
                                                                } -> template_type<interval>;
                                                        };
 
+    template <typename Iter>
+    using iterator_value_t = std::iter_value_t<Iter>;
+
+    template <typename Cont>
+    using iterable_value_t = std::remove_cvref_t<decltype(*std::begin(std::declval<Cont>()))>;
+
+    template <typename Iter>
+    concept iterator_of_type_integral = std::integral<iterator_value_t<Iter>>;
+
+    template <typename Cont>
+    concept iterable_of_type_integral = iterable<Cont> && std::integral<iterable_value_t<Cont>>;
+
+    template <typename Iter>
+    concept iterator_of_type_interval = template_type<iterator_value_t<Iter>, interval>;
+
+    template <typename Cont>
+    concept iterable_of_type_interval = iterable<Cont> && template_type<iterable_value_t<Cont>, interval>;
 }
 
 using details::signed_integral_type_iterator;
@@ -2612,7 +2664,7 @@ namespace details {
         constexpr arrnd_info(arrnd_info&&) = default;
         constexpr arrnd_info& operator=(arrnd_info&&) = default;
 
-        template <iterator_of_type<extent_type> InputIt>
+        template <iterator_of_type_integral InputIt>
         constexpr arrnd_info(InputIt first_dim, InputIt last_dim)
         {
             if (std::distance(first_dim, last_dim) < 0) {
@@ -2623,6 +2675,14 @@ namespace details {
                     return dim == 0;
                 })) {
                 return;
+            }
+
+            if constexpr (std::signed_integral<std::iter_value_t<InputIt>>) {
+                if (std::any_of(first_dim, last_dim, [](auto dim) {
+                        return dim < 0;
+                    })) {
+                    throw std::invalid_argument("invalid dims < 0");
+                }
             }
 
             dims_.reserve(std::distance(first_dim, last_dim));
@@ -2640,8 +2700,8 @@ namespace details {
             hints_ = arrnd_hint::continuous;
         }
 
-        template <iterable_of_type<extent_type> Cont>
-        explicit constexpr arrnd_info(const Cont& dims)
+        template <iterable_of_type_integral Cont>
+        explicit constexpr arrnd_info(Cont&& dims)
             : arrnd_info(std::begin(dims), std::end(dims))
         { }
 
@@ -2651,9 +2711,9 @@ namespace details {
 
         // for maximum flexibility, a constructor that sets the class members and check their validity.
         // this constructor may add hints in addition to the hints argument.
-        template <iterator_of_type<extent_type> InputIt1, iterator_of_type<extent_type> InputIt2>
+        template <iterator_of_type_integral InputIt1, iterator_of_type_integral InputIt2>
         explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
-            InputIt2 last_stride, boundary_type indices_boundary, arrnd_hint hints)
+            InputIt2 last_stride, template_type<interval> auto indices_boundary, arrnd_hint hints)
         {
             if (std::distance(first_dim, last_dim) < 0) {
                 throw std::invalid_argument("invalid input iterators distance < 0");
@@ -2661,6 +2721,22 @@ namespace details {
 
             if (std::distance(first_dim, last_dim) != std::distance(first_stride, last_stride)) {
                 throw std::invalid_argument("invalid strides - different number from dimensions");
+            }
+
+            if constexpr (std::signed_integral<std::iter_value_t<InputIt1>>) {
+                if (std::any_of(first_dim, last_dim, [](auto dim) {
+                        return dim < 0;
+                    })) {
+                    throw std::invalid_argument("invalid dims < 0");
+                }
+            }
+
+            if constexpr (std::signed_integral<std::iter_value_t<InputIt2>>) {
+                if (std::any_of(first_stride, last_stride, [](auto stride) {
+                        return stride < 0;
+                    })) {
+                    throw std::invalid_argument("invalid strides < 0");
+                }
             }
 
             hints_ = arrnd_hint::none;
@@ -2698,39 +2774,38 @@ namespace details {
             strides_.reserve(std::distance(first_stride, last_stride));
             strides_.insert(std::cend(strides_), first_stride, last_stride);
 
-            indices_boundary_ = indices_boundary;
+            indices_boundary_ = static_cast<boundary_type>(indices_boundary);
 
             hints_ |= hints;
         }
 
-        template <iterable_of_type<extent_type> Cont1, iterable_of_type<extent_type> Cont2>
+        template <iterable_of_type_integral Cont1, iterable_of_type_integral Cont2>
         explicit constexpr arrnd_info(
-            const Cont1& dims, const Cont2& strides, boundary_type indices_boundary, arrnd_hint hints)
+            Cont1&& dims, Cont2&& strides, template_type<interval> auto indices_boundary, arrnd_hint hints)
             : arrnd_info(
                 std::begin(dims), std::end(dims), std::begin(strides), std::end(strides), indices_boundary, hints)
         { }
 
         explicit constexpr arrnd_info(std::initializer_list<extent_type> dims,
-            std::initializer_list<extent_type> strides, boundary_type indices_boundary, arrnd_hint hints)
+            std::initializer_list<extent_type> strides, template_type<interval> auto indices_boundary, arrnd_hint hints)
             : arrnd_info(dims.begin(), dims.end(), strides.begin(), strides.end(), indices_boundary, hints)
         { }
 
         // the constructor tries deducing the hints value according to its parameters
-        template <iterator_of_type<extent_type> InputIt1, iterator_of_type<extent_type> InputIt2>
+        template <iterator_of_type_integral InputIt1, iterator_of_type_integral InputIt2>
         explicit constexpr arrnd_info(InputIt1 first_dim, InputIt1 last_dim, InputIt2 first_stride,
-            InputIt2 last_stride, boundary_type indices_boundary)
+            InputIt2 last_stride, template_type<interval> auto indices_boundary)
             : arrnd_info(first_dim, last_dim, first_stride, last_stride, indices_boundary, arrnd_hint::none)
         { }
 
-        template <iterable_of_type<extent_type> Cont1, iterable_of_type<extent_type> Cont2>
-        explicit constexpr arrnd_info(
-            const Cont1& dims, const Cont2& strides, boundary_type indices_boundary)
+        template <iterable_of_type_integral Cont1, iterable_of_type_integral Cont2>
+        explicit constexpr arrnd_info(Cont1&& dims, Cont2&& strides, template_type<interval> auto indices_boundary)
             : arrnd_info(
                 std::begin(dims), std::end(dims), std::begin(strides), std::end(strides), indices_boundary)
         { }
 
         explicit constexpr arrnd_info(std::initializer_list<extent_type> dims,
-            std::initializer_list<extent_type> strides, boundary_type indices_boundary)
+            std::initializer_list<extent_type> strides, template_type<interval> auto indices_boundary)
             : arrnd_info(dims.begin(), dims.end(), strides.begin(), strides.end(), indices_boundary)
         { }
         
@@ -2766,7 +2841,7 @@ namespace details {
         arrnd_hint hints_{arrnd_hint::continuous};
     };
 
-    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::boundary_type> InputIt>
+    template <typename StorageInfo, iterator_of_type_interval InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
         const arrnd_info<StorageInfo>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
     {
@@ -2782,13 +2857,14 @@ namespace details {
             throw std::invalid_argument("invalid dim boundaries - different number from dims");
         }
 
+        // input boundries might not be of the same type
         typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
             typename arrnd_info<StorageInfo>::boundary_type>::storage_type
-            bounded_dim_boundaries(first_dim_boundary, last_dim_boundary);
+            bounded_dim_boundaries(std::distance(first_dim_boundary, last_dim_boundary));
 
-        std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.dims()),
-            std::begin(bounded_dim_boundaries), [](auto boundary, auto dim) {
-                return bound(boundary, 0, dim);
+        std::transform(first_dim_boundary, last_dim_boundary, std::begin(ai.dims()), std::begin(bounded_dim_boundaries),
+            [](auto boundary, auto dim) {
+                return bound(static_cast<typename arrnd_info<StorageInfo>::boundary_type>(boundary), 0, dim);
             });
 
         if (!std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
@@ -2861,9 +2937,9 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, indices_boundary, hints);
     }
 
-    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::boundary_type> Cont>
+    template <typename StorageInfo, iterable_of_type_interval Cont>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
-        const arrnd_info<StorageInfo>& ai, const Cont& dim_boundaries)
+        const arrnd_info<StorageInfo>& ai, Cont&& dim_boundaries)
     {
         return slice(ai, std::begin(dim_boundaries), std::end(dim_boundaries));
     }
@@ -2877,8 +2953,7 @@ namespace details {
 
     template <typename StorageInfo>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(const arrnd_info<StorageInfo>& ai,
-        typename arrnd_info<StorageInfo>::boundary_type dim_boundary,
-        typename arrnd_info<StorageInfo>::extent_type axis)
+        template_type<interval> auto dim_boundary, typename arrnd_info<StorageInfo>::extent_type axis)
     {
         if (std::size(ai.dims()) == 0) {
             throw std::invalid_argument("invalid arrnd info");
@@ -2889,10 +2964,10 @@ namespace details {
         }
 
         typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
-            typename arrnd_info<StorageInfo>::boundary_type>::storage_type
-            dim_boundaries(std::size(ai.dims()), arrnd_info<StorageInfo>::boundary_type::full());
+            typename arrnd_info<StorageInfo>::boundary_type>::storage_type dim_boundaries(std::size(ai.dims()),
+            arrnd_info<StorageInfo>::boundary_type::full());
 
-        dim_boundaries[axis] = dim_boundary;
+        dim_boundaries[axis] = static_cast<typename arrnd_info<StorageInfo>::boundary_type>(dim_boundary);
 
         return slice(ai, dim_boundaries);
     }
@@ -2967,7 +3042,7 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints());
     }
 
-    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> InputIt>
+    template <typename StorageInfo, iterator_of_type_integral InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
         const arrnd_info<StorageInfo>& ai, InputIt first_axis, InputIt last_axis)
     {
@@ -2987,7 +3062,7 @@ namespace details {
         }
 
         if (std::any_of(first_axis, last_axis, [&ai](std::size_t axis) {
-                return axis >= std::size(ai.dims());
+                return axis < 0 || axis >= std::size(ai.dims());
             })) {
             throw std::out_of_range("invalid axis value");
         }
@@ -3018,9 +3093,9 @@ namespace details {
         return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::extent_type> Cont>
+    template <typename StorageInfo, iterable_of_type_integral Cont>
     [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
-        const arrnd_info<StorageInfo>& ai, const Cont& axes)
+        const arrnd_info<StorageInfo>& ai, Cont&& axes)
     {
         return transpose(ai, std::begin(axes), std::end(axes));
     }
@@ -3182,7 +3257,7 @@ namespace details {
         return total(ai) == 1;
     }
 
-    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> InputIt>
+    template <typename StorageInfo, iterator_of_type_integral InputIt>
     constexpr typename arrnd_info<StorageInfo>::extent_type
         sub2ind(const arrnd_info<StorageInfo>& ai, InputIt first_sub, InputIt last_sub)
     {
@@ -3201,7 +3276,7 @@ namespace details {
         if (!std::transform_reduce(first_sub, last_sub,
                 std::next(std::begin(ai.dims()), std::size(ai.dims()) - std::distance(first_sub, last_sub)), true,
                 std::logical_and<>{}, [](auto sub, auto dim) {
-                    return sub < dim;
+                    return sub >= 0 && sub < dim;
                 })) {
             throw std::out_of_range("invalid subs - not suitable for dims");
         }
@@ -3214,8 +3289,8 @@ namespace details {
                 overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
     }
 
-    template <typename StorageInfo, iterable_of_type<typename arrnd_info<StorageInfo>::extent_type> Cont>
-    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(const arrnd_info<StorageInfo>& ai, const Cont& subs)
+    template <typename StorageInfo, iterable_of_type_integral Cont>
+    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(const arrnd_info<StorageInfo>& ai, Cont&& subs)
     {
         return sub2ind(ai, std::begin(subs), std::end(subs));
     }
@@ -3227,7 +3302,7 @@ namespace details {
         return sub2ind(ai, subs.begin(), subs.end());
     }
 
-    template <typename StorageInfo, iterator_of_type<typename arrnd_info<StorageInfo>::extent_type> OutputIt>
+    template <typename StorageInfo, iterator_of_type_integral OutputIt>
     constexpr void ind2sub(
         const arrnd_info<StorageInfo>& ai, typename arrnd_info<StorageInfo>::extent_type ind, OutputIt d_sub)
     {
@@ -4409,7 +4484,8 @@ public:
 
     using window_type = arrnd_sliding_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
 
-    template <iterator_of_type<window_type> InputIt>
+    template <typename InputIt>
+        requires(oc::details::template_type<oc::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
     explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_window, InputIt last_window,
         arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
         : ai_(ai)
@@ -4435,7 +4511,13 @@ public:
             throw std::invalid_argument("invalid window interval");
         }
 
-        std::copy(first_window, last_window, std::begin(windows_));
+        if constexpr (std::is_same_v<std::iter_value_t<InputIt>, typename window_type::interval_type>) {
+            std::copy(first_window, last_window, std::begin(windows_));
+        } else {
+            std::transform(first_window, last_window, std::begin(windows_), [](auto window) {
+                return window_type(static_cast<typename window_type::interval_type>(window.ival), window.type);
+            });
+        }
         if (size(ai) > std::distance(first_window, last_window)) {
             std::transform(std::next(std::begin(ai.dims()), std::distance(first_window, last_window)),
                 std::end(ai.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
@@ -4463,8 +4545,9 @@ public:
     }
 
     template <iterable Cont>
+        requires(oc::details::template_type<oc::details::iterable_value_t<Cont>, arrnd_sliding_window>)
     explicit constexpr arrnd_window_slider(
-        const info_type& ai, const Cont& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
         : arrnd_window_slider(ai, std::begin(windows), std::end(windows), start_pos)
     { }
 
