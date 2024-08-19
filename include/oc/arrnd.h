@@ -2551,9 +2551,9 @@ namespace details {
         using replaced_type = view_storage_info<T>;
     };
 
-    struct arrnd_header_tag { };
-    template <typename T>
-    concept arrnd_header_compliant = std::is_same_v<typename T::tag, arrnd_header_tag>;
+    //struct arrnd_header_tag { };
+    //template <typename T>
+    //concept arrnd_header_compliant = std::is_same_v<typename T::tag, arrnd_header_tag>;
 
     template <typename T>
     struct overflow_check_multiplies {
@@ -3607,676 +3607,676 @@ namespace details {
 
 
     //template <random_access_type Storage = simple_dynamic_vector<std::int64_t>>
-    template <typename StorageInfo = dynamic_storage_info<std::int64_t>>
-    class arrnd_header {
-    public:
-        using storage_info = StorageInfo;
+    //template <typename StorageInfo = dynamic_storage_info<std::int64_t>>
+    //class arrnd_header {
+    //public:
+    //    using storage_info = StorageInfo;
 
-        //using storage_type = Storage;
-        using storage_type = typename storage_info::storage_type;
-
-        //using size_type = typename Storage::size_type;
-        using size_type = std::make_signed_t<typename storage_type::size_type>;
-        //static_assert(std::signed_integral<size_type>);
+    //    //using storage_type = Storage;
+    //    using storage_type = typename storage_info::storage_type;
+
+    //    //using size_type = typename Storage::size_type;
+    //    using size_type = std::make_signed_t<typename storage_type::size_type>;
+    //    //static_assert(std::signed_integral<size_type>);
 
-        using interval_type = interval<size_type>;
-
-        using tag = arrnd_header_tag;
-
-        constexpr arrnd_header() = default;
-
-        template <signed_integral_type_iterator InputIt>
-        explicit constexpr arrnd_header(const InputIt& first_dim, const InputIt& last_dim)
-        {
-            if (first_dim == last_dim) {
-                return;
-            }
-
-            assert(first_dim < last_dim);
-            assert(std::all_of(first_dim, last_dim, [](auto d) {
-                return d >= 0;
-            }));
-
-            numel_ = std::reduce(first_dim, last_dim, iterator_value_type<InputIt>{1}, std::multiplies<>{});
-            if (numel_ == 0) {
-                return;
-            }
-
-            dims_ = storage_type(first_dim, last_dim);
-
-            strides_ = storage_type(std::ssize(dims_));
-            std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), size_type{1}, std::multiplies<>{});
-
-            last_index_ = numel_ - 1;
-        }
-
-        template <signed_integral_type_iterable Cont>
-        explicit constexpr arrnd_header(const Cont& dims)
-            : arrnd_header(std::begin(dims), std::end(dims))
-        { }
-
-        explicit constexpr arrnd_header(std::initializer_list<size_type> dims)
-            : arrnd_header(dims.begin(), dims.end())
-        { }
-
-        //template <std::signed_integral D, std::int64_t M>
-        //explicit constexpr arrnd_header(const D (&dims)[M])
-        //    : arrnd_header(std::begin(dims), std::end(dims))
-        //{ }
-
-        //template <signed_integral_type_iterator InputIt>
-        //[[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
-        //{
-        //    if (first_dim == last_dim) {
-        //        return *this;
-        //    }
-
-        //    assert(first_dim < last_dim);
-
-        //    if (empty()) {
-        //        return arrnd_header(first_dim, last_dim);
-        //    }
-
-        //    storage_type new_dims(std::ssize(dims_) + std::distance(first_dim, last_dim));
-
-        //    std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
-        //    std::copy(first_dim, last_dim, std::next(new_dims.begin(), std::ssize(dims_)));
-
-        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        //}
-
-        //template <signed_integral_type_iterable Cont>
-        //[[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
-        //{
-        //    return expand(std::begin(dims), std::end(dims));
-        //}
-
-        //[[nodiscard]] constexpr arrnd_header expand(std::initializer_list<size_type> dims) const
-        //{
-        //    return expand(dims.begin(), dims.end());
-        //}
-
-        //template <std::signed_integral D, std::int64_t M>
-        //[[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
-        //{
-        //    return expand(std::begin(dims), std::end(dims));
-        //}
-
-        template <interval_type_iterator InputIt>
-        [[nodiscard]] constexpr arrnd_header subheader(const InputIt& first_range, const InputIt& last_range) const
-        {
-            if (first_range == last_range) {
-                return *this;
-            }
-
-            assert(first_range < last_range);
-
-            if (empty()) {
-                return *this;
-            }
-
-            size_type nranges = std::min(std::distance(first_range, last_range), std::ssize(dims_));
-
-            auto valid_ranges = [&]() {
-                return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
-                    std::logical_and<>{}, [](const auto& r, auto d) {
-                        auto nr = bound(r, 0, d);
-                        return (nr.start() <= nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
-                    });
-            };
-            assert(valid_ranges());
-
-            arrnd_header res{};
-
-            res.dims_ = storage_type(std::ssize(dims_));
-            std::transform(first_range, std::next(first_range, nranges), dims_.cbegin(), res.dims_.begin(),
-                [](const auto& r, auto d) {
-                    auto nr = bound(r, 0, d);
-                    return absdiff(nr);//static_cast<size_type>(std::ceil(static_cast<double>(nr.stop() - nr.start()) / nr.step));
-                });
-            std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
-
-            if (std::equal(res.dims_.cbegin(), res.dims_.cend(), dims_.cbegin(), dims_.cend())) {
-                return *this;
-            }
-
-            res.numel_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), size_type{1}, std::multiplies<>{});
-            if (res.numel_ == 0) { // allow empty header for zero interval
-                arrnd_header empty_subheader{};
-                empty_subheader.is_slice_ = true;
-                res.is_reordered_ = is_reordered_;
-                res.is_continuous_ = true;
-                return empty_subheader;
-            }
-
-            res.strides_ = storage_type(std::ssize(res.dims_));
-
-            res.offset_ = offset_;
-            for (size_type i = 0; i < nranges; ++i) {
-                auto s = *std::next(strides_.cbegin(), i);
-                auto nr = bound((*std::next(first_range, i)), 0, *std::next(dims_.cbegin(), i));
-                *std::next(res.strides_.begin(), i) = s * nr.step();
-                res.offset_ += s * nr.start();
-            }
-            std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
-
-            auto dot_prod = std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(),
-                size_type{0}, std::plus<>{}, [](auto d, auto s) {
-                    return (d - 1) * s;
-                });
-
-            res.last_index_ = res.offset_ + dot_prod;
-
-            res.is_slice_ = true;
-
-            res.is_reordered_ = is_reordered_;
-            res.order_ = order_;
-
-            res.is_continuous_ = (dot_prod + 1 == res.numel_);
-
-            return res;
-        }
-
-        template <interval_type_iterable Cont>
-        [[nodiscard]] constexpr arrnd_header subheader(const Cont& ranges) const
-        {
-            return subheader(std::begin(ranges), std::end(ranges));
-        }
-
-        [[nodiscard]] constexpr arrnd_header subheader(std::initializer_list<interval_type> ranges) const
-        {
-            return subheader(ranges.begin(), ranges.end());
-        }
-
-        //template <std::signed_integral U, std::int64_t M>
-        //[[nodiscard]] constexpr arrnd_header subheader(const interval<U> (&ranges)[M]) const
-        //{
-        //    return subheader(std::begin(ranges), std::end(ranges));
-        //}
-
-        [[nodiscard]] constexpr arrnd_header subheader(interval_type range) const
-        {
-            //std::initializer_list<interval_type> ranges = {range/*.align(dims_.front())*/};
-
-            //auto res = subheader(ranges.begin(), ranges.end());
-            auto res = subheader(&range, &range + 1);
-            if (res.empty() || res.dims_.front() != 1) {
-                return res;
-            }
-
-            res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
-            res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
-            //res.last_index_ = res.offset_
-            //    + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
-            //        std::plus<>{}, [](auto d, auto s) {
-            //            return (d - 1) * s;
-            //        });
-            //res.is_slice_ = true;
-
-            return res;
-        }
-
-        [[nodiscard]] constexpr arrnd_header subheader(interval_type range, size_type axis) const
-        {
-            assert(axis < std::ssize(dims_));
-
-            typename storage_info::template replaced_type<interval_type>::storage_type ranges(axis + 1);
-
-            std::fill(ranges.begin(), ranges.end(), interval_type::full());
-            ranges[std::ssize(ranges) - 1] = range /*.align(*std::next(dims_.cbegin(), axis))*/;
-
-            return subheader(ranges.begin(), ranges.end());
-        }
-
-        //[[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
-        //{
-        //    assert(omitted_axis >= 0 && omitted_axis < std::ssize(dims_));
-
-        //    if (empty()) {
-        //        return *this;
-        //    }
-
-        //    storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
-
-        //    if (std::ssize(dims_) == 1) {
-        //        new_dims.front() = 1;
-        //        return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        //    }
-
-        //    std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
-        //    std::copy(
-        //        std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
-
-        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        //}
-
-        //[[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type removed_axis) const
-        //{
-        //    assert(removed_axis >= 0 && removed_axis < std::ssize(dims_));
-
-        //    storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
-
-        //    if (std::ssize(dims_) == 1) {
-        //        new_dims.front() = 1;
-        //        return new_dims;
-        //    }
-
-        //    std::copy(dims_.cbegin(), std::next(dims_.cbegin(), removed_axis), new_dims.begin());
-        //    std::copy(
-        //        std::next(dims_.cbegin(), removed_axis + 1), dims_.cend(), std::next(new_dims.begin(), removed_axis));
-
-        //    return new_dims;
-        //}
-
-        //[[nodiscard]] constexpr arrnd_header subheader(size_type count, size_type axis) const
-        //{
-        //    assert(axis >= 0 && axis < std::ssize(dims_));
-        //    assert(count >= -*std::next(dims_.cbegin(), axis));
-
-        //    if (empty()) {
-        //        return *this;
-        //    }
-
-        //    storage_type new_dims(dims_);
-        //    *std::next(new_dims.begin(), axis) += count;
-
-        //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
-        //}
-
-        //[[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type axis, size_type added_count) const
-        //{
-        //    assert(axis >= 0 && axis < std::ssize(dims_));
-        //    assert(added_count >= -*std::next(dims_.cbegin(), axis));
-
-        //    storage_type new_dims(dims_);
-        //    *std::next(new_dims.begin(), axis) += added_count;
-
-        //    return new_dims;
-        //}
-
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr arrnd_header reorder(const InputIt& first_order, const InputIt& last_order) const
-        {
-            assert(std::distance(first_order, last_order) == std::ssize(dims_));
-            assert(std::all_of(first_order, last_order, [&](auto order) {
-                return order >= 0 && order < std::ssize(dims_);
-            }));
-
-            if (empty() || std::ssize(dims_) == 1) {
-                return *this;
-            }
-
-            storage_type same_order(std::ssize(dims_));
-            std::iota(same_order.begin(), same_order.end(), size_type{0});
-
-            if (std::equal(same_order.cbegin(), same_order.cend(), first_order, last_order)) {
-                return *this;
-            }
-
-            arrnd_header res(*this);
-
-            res.order_ = storage_type(std::ssize(dims_));
-            std::copy(first_order, last_order, res.order_.begin());
-
-            for (size_type i = 0; i < std::ssize(dims_); ++i) {
-                *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
-                *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
-            }
-
-            res.is_reordered_ = true;
-
-            return res;
-        }
-
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr arrnd_header reorder(const Cont& order) const
-        {
-            return reorder(std::begin(order), std::end(order));
-        }
-
-        [[nodiscard]] constexpr arrnd_header reorder(std::initializer_list<size_type> order) const
-        {
-            return reorder(order.begin(), order.end());
-        }
-
-        //template <std::signed_integral U, std::int64_t M>
-        //[[nodiscard]] constexpr arrnd_header reorder(const U (&order)[M]) const
-        //{
-        //    return reorder(std::begin(order), std::end(order));
-        //}
-
-        [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
-        {
-            if (empty() || std::ssize(dims_) == 1 || main_axis == 0) {
-                return *this;
-            }
-
-            assert(main_axis >= 0 && main_axis < std::ssize(dims_));
-
-            arrnd_header res(*this);
-
-            size_type main_dim = *std::next(dims_.cbegin(), main_axis);
-            size_type main_stride = *std::next(strides_.cbegin(), main_axis);
-
-            size_type j = 1;
-
-            res.order_ = storage_type(std::ssize(dims_));
-
-            for (size_type i = 0; i < main_axis; ++i) {
-                *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
-                *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
-                *std::next(res.order_.begin(), j) = i;
-                ++j;
-            }
-
-            for (size_type i = main_axis + 1; i < std::ssize(dims_); ++i) {
-                *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
-                *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
-                *std::next(res.order_.begin(), j) = i;
-                ++j;
-            }
-
-            res.dims_.front() = main_dim;
-            res.strides_.front() = main_stride;
-            res.order_.front() = main_axis;
-
-            res.is_reordered_ = true;
-
-            return res;
-        }
-
-        [[nodiscard]] constexpr arrnd_header squeeze() const
-        {
-            if (empty() || std::ssize(dims_) == 1) {
-                return *this;
-            }
-
-            size_type ones_count = std::count(dims_.cbegin(), dims_.cend(), size_type{1});
-            if (ones_count == 0) {
-                return *this;
-            }
-
-            arrnd_header res(*this);
-
-            res.dims_ = storage_type(std::ssize(dims_) - ones_count);
-            std::copy_if(dims_.cbegin(), dims_.cend(), res.dims_.begin(), [](auto d) {
-                return d != size_type{1};
-            });
-
-            res.strides_ = storage_type(std::ssize(strides_) - ones_count);
-            size_type j = 0;
-            for (size_type i = 0; i < std::ssize(strides_); ++i) {
-                if (*std::next(dims_.cbegin(), i) != size_type{1}) {
-                    *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
-                    ++j;
-                }
-            }
-
-            //res.is_slice_ = true;
-
-            return res;
-        }
-
-        template <signed_integral_type_iterator InputIt>
-        [[nodiscard]] constexpr size_type subs2ind(const InputIt& first_sub, const InputIt& last_sub) const
-        {
-            assert(first_sub < last_sub); // at least one subscript is required
-
-            size_type nsubs = std::distance(first_sub, last_sub);
-            assert(nsubs > 0 && nsubs <= std::ssize(dims_));
-
-            auto valid_subs = [&]() {
-                return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), std::ssize(dims_) - nsubs),
-                    true, std::logical_and<>{}, [](auto s, auto d) {
-                        return (s >= 0 && s < d);
-                    });
-            };
-            assert(valid_subs());
-
-            return offset_
-                + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), std::ssize(strides_) - nsubs),
-                    size_type{0}, std::plus<>{}, std::multiplies<>{});
-        }
-
-        template <signed_integral_type_iterable Cont>
-        [[nodiscard]] constexpr size_type subs2ind(const Cont& subs) const
-        {
-            return subs2ind(std::begin(subs), std::end(subs));
-        }
-
-        [[nodiscard]] constexpr size_type subs2ind(std::initializer_list<size_type> subs) const
-        {
-            return subs2ind(subs.begin(), subs.end());
-        }
-
-        [[nodiscard]] constexpr storage_type ind2subs(size_type ind) const
-        {
-            if (empty()) {
-                return storage_type();
-            }
-
-            storage_type subs(std::ssize(dims_));
-            ind -= offset_;
-            for (size_type i = std::ssize(dims_) - 1; i >= 0; --i) {
-                if (*std::next(dims_.cbegin(), i) > 1) {
-                    *std::next(subs.begin(), i)
-                        = (ind / *std::next(strides_.cbegin(), i)) % *std::next(dims_.cbegin(), i);
-                } else {
-                    *std::next(subs.begin(), i) = 0;
-                }
-            }
-
-            return subs;
-        }
-
-        //template <signed_integral_type_iterator InputIt>
-        //[[nodiscard]] constexpr bool is_reduced_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
-        //{
-        //    size_type ndims = std::distance(first_dim, last_dim);
-
-        //    assert(ndims >= 0);
-
-        //    if (dims_.size() != ndims) {
-        //        return false;
-        //    }
-
-        //    return !std::equal(dims_.cbegin(), dims_.cend(), first_dim)
-        //        && std::transform_reduce(
-        //            dims_.cbegin(), dims_.cend(), first_dim, true, std::logical_and<>{}, [](auto d1, auto d2) {
-        //                return d1 == d2 || d1 == size_type{1};
-        //            });
-        //}
-
-        //template <signed_integral_type_iterable Cont>
-        //[[nodiscard]] constexpr bool is_reduced_dims_from(const Cont& dims) const
-        //{
-        //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
-        //}
-
-        //template <std::signed_integral U, std::int64_t M>
-        //[[nodiscard]] constexpr bool is_reduced_dims_from(const U (&dims)[M]) const
-        //{
-        //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
-        //}
-
-        //[[nodiscard]] constexpr bool is_reduced_dims_from(std::initializer_list<size_type> dims) const
-        //{
-        //    return is_reduced_dims_from(dims.begin(), dims.end());
-        //}
-
-        //template <signed_integral_type_iterator InputIt>
-        //[[nodiscard]] constexpr storage_type complement_dims_from(
-        //    const InputIt& first_dim, const InputIt& last_dim) const
-        //{
-        //    assert(dims_.size() == std::distance(first_dim, last_dim));
-
-        //    storage_type comp_dims(dims_.size());
-
-        //    std::transform(dims_.cbegin(), dims_.cend(), first_dim, comp_dims.begin(), [](auto rd, auto cd) {
-        //        return cd - rd + 1;
-        //    });
-
-        //    return comp_dims;
-        //}
-
-        //template <signed_integral_type_iterable Cont>
-        //[[nodiscard]] constexpr storage_type complement_dims_from(const Cont& dims) const
-        //{
-        //    return complement_dims_from(std::begin(dims), std::end(dims));
-        //}
-
-        //template <std::signed_integral U, std::int64_t M>
-        //[[nodiscard]] constexpr storage_type complement_dims_from(const U (&dims)[M]) const
-        //{
-        //    return complement_dims_from(std::begin(dims), std::end(dims));
-        //}
-
-        //[[nodiscard]] constexpr storage_type complement_dims_from(std::initializer_list<size_type> dims) const
-        //{
-        //    return complement_dims_from(dims.begin(), dims.end());
-        //}
-
-        constexpr arrnd_header(arrnd_header&& other) = default;
-        constexpr arrnd_header& operator=(arrnd_header&& other) = default;
-
-        constexpr arrnd_header(const arrnd_header& other) = default;
-        constexpr arrnd_header& operator=(const arrnd_header& other) = default;
-
-        virtual constexpr ~arrnd_header() = default;
-
-        [[nodiscard]] constexpr size_type numel() const noexcept
-        {
-            return numel_;
-        }
-
-        [[nodiscard]] constexpr const storage_type& dims() const noexcept
-        {
-            return dims_;
-        }
-
-        [[nodiscard]] constexpr storage_type& dims() noexcept
-        {
-            return dims_;
-        }
-
-        [[nodiscard]] constexpr const storage_type& strides() const noexcept
-        {
-            return strides_;
-        }
-
-        [[nodiscard]] constexpr storage_type& strides() noexcept
-        {
-            return strides_;
-        }
-
-        [[nodiscard]] constexpr size_type offset() const noexcept
-        {
-            return offset_;
-        }
-
-        [[nodiscard]] constexpr bool is_slice() const noexcept
-        {
-            return is_slice_;
-        }
-
-        [[nodiscard]] constexpr bool is_reordered() const noexcept
-        {
-            return is_reordered_;
-        }
-
-        [[nodiscard]] constexpr storage_type& order() noexcept
-        {
-            return order_;
-        }
-
-        [[nodiscard]] constexpr bool is_continuous() const noexcept
-        {
-            return is_continuous_;
-        }
-
-        [[nodiscard]] constexpr bool empty() const noexcept
-        {
-            return dims_.empty();
-        }
-
-        [[nodiscard]] constexpr size_type last_index() const noexcept
-        {
-            return last_index_;
-        }
-
-        [[nodiscard]] constexpr bool is_vector() const noexcept
-        {
-            return std::ssize(dims_) == 1;
-        }
-
-        [[nodiscard]] constexpr bool is_row() const noexcept
-        {
-            return std::ssize(dims_) == 2 && dims_.front() == 1;
-        }
-
-        [[nodiscard]] constexpr bool is_column() const noexcept
-        {
-            return std::ssize(dims_) == 2 && dims_.back() == 1;
-        }
-
-        [[nodiscard]] constexpr bool is_matrix() const noexcept
-        {
-            return std::ssize(dims_) == 2;
-        }
-
-        [[nodiscard]] constexpr bool is_scalar() const noexcept
-        {
-            return numel_ == 1;
-        }
-
-    private:
-        storage_type dims_{};
-        storage_type strides_{};
-        size_type numel_{0};
-        size_type offset_{0};
-        size_type last_index_{0};
-        bool is_slice_{false}; // not all array buffer included
-        bool is_reordered_{false}; // header axis are reordered
-        storage_type order_{};
-        bool is_continuous_{true}; // array buffer is not continuous in memory
-    };
-
-    template <arrnd_header_compliant ArHdrCo>
-    inline constexpr std::ostream& operator<<(std::ostream& os, const ArHdrCo& hdr)
-    {
-        if (hdr.empty()) {
-            os << "empty";
-            return os;
-        }
-
-        auto print_vec = [&os](const auto& vec) {
-            os << '[';
-            std::for_each_n(std::cbegin(vec), std::ssize(vec) - 1, [&os](const auto& e) {
-                os << e << ' ';
-            });
-            os << *std::next(std::cbegin(vec), std::ssize(vec) - 1) << ']';
-        };
-
-        os << "numel: " << hdr.numel() << '\n';
-        os << "dims: ";
-        print_vec(hdr.dims());
-        os << '\n';
-        os << "strides: ";
-        print_vec(hdr.strides());
-        os << '\n';
-        os << "offset: " << hdr.offset() << '\n';
-        os << "last_index: " << hdr.last_index() << '\n';
-        os << "flags: vector(" << hdr.is_vector() << "), matrix(" << hdr.is_matrix() << "), row(" << hdr.is_row()
-           << "), column(" << hdr.is_column() << "), scalar(" << hdr.is_scalar() << "), slice(" << hdr.is_slice()
-           << "), reordered(" << hdr.is_reordered() << "), continuous(" << hdr.is_continuous() << ')';
-
-        return os;
-    }
+    //    using interval_type = interval<size_type>;
+
+    //    using tag = arrnd_header_tag;
+
+    //    constexpr arrnd_header() = default;
+
+    //    template <signed_integral_type_iterator InputIt>
+    //    explicit constexpr arrnd_header(const InputIt& first_dim, const InputIt& last_dim)
+    //    {
+    //        if (first_dim == last_dim) {
+    //            return;
+    //        }
+
+    //        assert(first_dim < last_dim);
+    //        assert(std::all_of(first_dim, last_dim, [](auto d) {
+    //            return d >= 0;
+    //        }));
+
+    //        numel_ = std::reduce(first_dim, last_dim, iterator_value_type<InputIt>{1}, std::multiplies<>{});
+    //        if (numel_ == 0) {
+    //            return;
+    //        }
+
+    //        dims_ = storage_type(first_dim, last_dim);
+
+    //        strides_ = storage_type(std::ssize(dims_));
+    //        std::exclusive_scan(dims_.crbegin(), dims_.crend(), strides_.rbegin(), size_type{1}, std::multiplies<>{});
+
+    //        last_index_ = numel_ - 1;
+    //    }
+
+    //    template <signed_integral_type_iterable Cont>
+    //    explicit constexpr arrnd_header(const Cont& dims)
+    //        : arrnd_header(std::begin(dims), std::end(dims))
+    //    { }
+
+    //    explicit constexpr arrnd_header(std::initializer_list<size_type> dims)
+    //        : arrnd_header(dims.begin(), dims.end())
+    //    { }
+
+    //    //template <std::signed_integral D, std::int64_t M>
+    //    //explicit constexpr arrnd_header(const D (&dims)[M])
+    //    //    : arrnd_header(std::begin(dims), std::end(dims))
+    //    //{ }
+
+    //    //template <signed_integral_type_iterator InputIt>
+    //    //[[nodiscard]] constexpr arrnd_header expand(const InputIt& first_dim, const InputIt& last_dim) const
+    //    //{
+    //    //    if (first_dim == last_dim) {
+    //    //        return *this;
+    //    //    }
+
+    //    //    assert(first_dim < last_dim);
+
+    //    //    if (empty()) {
+    //    //        return arrnd_header(first_dim, last_dim);
+    //    //    }
+
+    //    //    storage_type new_dims(std::ssize(dims_) + std::distance(first_dim, last_dim));
+
+    //    //    std::copy(dims_.cbegin(), dims_.cend(), new_dims.begin());
+    //    //    std::copy(first_dim, last_dim, std::next(new_dims.begin(), std::ssize(dims_)));
+
+    //    //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+    //    //}
+
+    //    //template <signed_integral_type_iterable Cont>
+    //    //[[nodiscard]] constexpr arrnd_header expand(const Cont& dims) const
+    //    //{
+    //    //    return expand(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    //[[nodiscard]] constexpr arrnd_header expand(std::initializer_list<size_type> dims) const
+    //    //{
+    //    //    return expand(dims.begin(), dims.end());
+    //    //}
+
+    //    //template <std::signed_integral D, std::int64_t M>
+    //    //[[nodiscard]] constexpr arrnd_header expand(const D (&dims)[M]) const
+    //    //{
+    //    //    return expand(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    template <interval_type_iterator InputIt>
+    //    [[nodiscard]] constexpr arrnd_header subheader(const InputIt& first_range, const InputIt& last_range) const
+    //    {
+    //        if (first_range == last_range) {
+    //            return *this;
+    //        }
+
+    //        assert(first_range < last_range);
+
+    //        if (empty()) {
+    //            return *this;
+    //        }
+
+    //        size_type nranges = std::min(std::distance(first_range, last_range), std::ssize(dims_));
+
+    //        auto valid_ranges = [&]() {
+    //            return std::inner_product(first_range, std::next(first_range, nranges), dims_.cbegin(), true,
+    //                std::logical_and<>{}, [](const auto& r, auto d) {
+    //                    auto nr = bound(r, 0, d);
+    //                    return (nr.start() <= nr.stop() && nr.step() >= 1) && (nr.start() >= 0 && nr.stop() <= d);
+    //                });
+    //        };
+    //        assert(valid_ranges());
+
+    //        arrnd_header res{};
+
+    //        res.dims_ = storage_type(std::ssize(dims_));
+    //        std::transform(first_range, std::next(first_range, nranges), dims_.cbegin(), res.dims_.begin(),
+    //            [](const auto& r, auto d) {
+    //                auto nr = bound(r, 0, d);
+    //                return absdiff(nr);//static_cast<size_type>(std::ceil(static_cast<double>(nr.stop() - nr.start()) / nr.step));
+    //            });
+    //        std::copy(std::next(dims_.cbegin(), nranges), dims_.cend(), std::next(res.dims_.begin(), nranges));
+
+    //        if (std::equal(res.dims_.cbegin(), res.dims_.cend(), dims_.cbegin(), dims_.cend())) {
+    //            return *this;
+    //        }
+
+    //        res.numel_ = std::reduce(res.dims_.cbegin(), res.dims_.cend(), size_type{1}, std::multiplies<>{});
+    //        if (res.numel_ == 0) { // allow empty header for zero interval
+    //            arrnd_header empty_subheader{};
+    //            empty_subheader.is_slice_ = true;
+    //            res.is_reordered_ = is_reordered_;
+    //            res.is_continuous_ = true;
+    //            return empty_subheader;
+    //        }
+
+    //        res.strides_ = storage_type(std::ssize(res.dims_));
+
+    //        res.offset_ = offset_;
+    //        for (size_type i = 0; i < nranges; ++i) {
+    //            auto s = *std::next(strides_.cbegin(), i);
+    //            auto nr = bound((*std::next(first_range, i)), 0, *std::next(dims_.cbegin(), i));
+    //            *std::next(res.strides_.begin(), i) = s * nr.step();
+    //            res.offset_ += s * nr.start();
+    //        }
+    //        std::copy(std::next(strides_.cbegin(), nranges), strides_.cend(), std::next(res.strides_.begin(), nranges));
+
+    //        auto dot_prod = std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(),
+    //            size_type{0}, std::plus<>{}, [](auto d, auto s) {
+    //                return (d - 1) * s;
+    //            });
+
+    //        res.last_index_ = res.offset_ + dot_prod;
+
+    //        res.is_slice_ = true;
+
+    //        res.is_reordered_ = is_reordered_;
+    //        res.order_ = order_;
+
+    //        res.is_continuous_ = (dot_prod + 1 == res.numel_);
+
+    //        return res;
+    //    }
+
+    //    template <interval_type_iterable Cont>
+    //    [[nodiscard]] constexpr arrnd_header subheader(const Cont& ranges) const
+    //    {
+    //        return subheader(std::begin(ranges), std::end(ranges));
+    //    }
+
+    //    [[nodiscard]] constexpr arrnd_header subheader(std::initializer_list<interval_type> ranges) const
+    //    {
+    //        return subheader(ranges.begin(), ranges.end());
+    //    }
+
+    //    //template <std::signed_integral U, std::int64_t M>
+    //    //[[nodiscard]] constexpr arrnd_header subheader(const interval<U> (&ranges)[M]) const
+    //    //{
+    //    //    return subheader(std::begin(ranges), std::end(ranges));
+    //    //}
+
+    //    [[nodiscard]] constexpr arrnd_header subheader(interval_type range) const
+    //    {
+    //        //std::initializer_list<interval_type> ranges = {range/*.align(dims_.front())*/};
+
+    //        //auto res = subheader(ranges.begin(), ranges.end());
+    //        auto res = subheader(&range, &range + 1);
+    //        if (res.empty() || res.dims_.front() != 1) {
+    //            return res;
+    //        }
+
+    //        res.dims_ = storage_type(std::next(res.dims_.cbegin(), 1), res.dims_.cend());
+    //        res.strides_ = storage_type(std::next(res.strides_.cbegin(), 1), res.strides_.cend());
+    //        //res.last_index_ = res.offset_
+    //        //    + std::inner_product(res.dims_.cbegin(), res.dims_.cend(), res.strides_.cbegin(), size_type{0},
+    //        //        std::plus<>{}, [](auto d, auto s) {
+    //        //            return (d - 1) * s;
+    //        //        });
+    //        //res.is_slice_ = true;
+
+    //        return res;
+    //    }
+
+    //    [[nodiscard]] constexpr arrnd_header subheader(interval_type range, size_type axis) const
+    //    {
+    //        assert(axis < std::ssize(dims_));
+
+    //        typename storage_info::template replaced_type<interval_type>::storage_type ranges(axis + 1);
+
+    //        std::fill(ranges.begin(), ranges.end(), interval_type::full());
+    //        ranges[std::ssize(ranges) - 1] = range /*.align(*std::next(dims_.cbegin(), axis))*/;
+
+    //        return subheader(ranges.begin(), ranges.end());
+    //    }
+
+    //    //[[nodiscard]] constexpr arrnd_header subheader(size_type omitted_axis) const
+    //    //{
+    //    //    assert(omitted_axis >= 0 && omitted_axis < std::ssize(dims_));
+
+    //    //    if (empty()) {
+    //    //        return *this;
+    //    //    }
+
+    //    //    storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
+
+    //    //    if (std::ssize(dims_) == 1) {
+    //    //        new_dims.front() = 1;
+    //    //        return arrnd_header(new_dims.cbegin(), new_dims.cend());
+    //    //    }
+
+    //    //    std::copy(dims_.cbegin(), std::next(dims_.cbegin(), omitted_axis), new_dims.begin());
+    //    //    std::copy(
+    //    //        std::next(dims_.cbegin(), omitted_axis + 1), dims_.cend(), std::next(new_dims.begin(), omitted_axis));
+
+    //    //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+    //    //}
+
+    //    //[[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type removed_axis) const
+    //    //{
+    //    //    assert(removed_axis >= 0 && removed_axis < std::ssize(dims_));
+
+    //    //    storage_type new_dims(std::ssize(dims_) > 1 ? std::ssize(dims_) - 1 : 1);
+
+    //    //    if (std::ssize(dims_) == 1) {
+    //    //        new_dims.front() = 1;
+    //    //        return new_dims;
+    //    //    }
+
+    //    //    std::copy(dims_.cbegin(), std::next(dims_.cbegin(), removed_axis), new_dims.begin());
+    //    //    std::copy(
+    //    //        std::next(dims_.cbegin(), removed_axis + 1), dims_.cend(), std::next(new_dims.begin(), removed_axis));
+
+    //    //    return new_dims;
+    //    //}
+
+    //    //[[nodiscard]] constexpr arrnd_header subheader(size_type count, size_type axis) const
+    //    //{
+    //    //    assert(axis >= 0 && axis < std::ssize(dims_));
+    //    //    assert(count >= -*std::next(dims_.cbegin(), axis));
+
+    //    //    if (empty()) {
+    //    //        return *this;
+    //    //    }
+
+    //    //    storage_type new_dims(dims_);
+    //    //    *std::next(new_dims.begin(), axis) += count;
+
+    //    //    return arrnd_header(new_dims.cbegin(), new_dims.cend());
+    //    //}
+
+    //    //[[nodiscard]] constexpr storage_type dims_with_modified_axis(size_type axis, size_type added_count) const
+    //    //{
+    //    //    assert(axis >= 0 && axis < std::ssize(dims_));
+    //    //    assert(added_count >= -*std::next(dims_.cbegin(), axis));
+
+    //    //    storage_type new_dims(dims_);
+    //    //    *std::next(new_dims.begin(), axis) += added_count;
+
+    //    //    return new_dims;
+    //    //}
+
+    //    template <signed_integral_type_iterator InputIt>
+    //    [[nodiscard]] constexpr arrnd_header reorder(const InputIt& first_order, const InputIt& last_order) const
+    //    {
+    //        assert(std::distance(first_order, last_order) == std::ssize(dims_));
+    //        assert(std::all_of(first_order, last_order, [&](auto order) {
+    //            return order >= 0 && order < std::ssize(dims_);
+    //        }));
+
+    //        if (empty() || std::ssize(dims_) == 1) {
+    //            return *this;
+    //        }
+
+    //        storage_type same_order(std::ssize(dims_));
+    //        std::iota(same_order.begin(), same_order.end(), size_type{0});
+
+    //        if (std::equal(same_order.cbegin(), same_order.cend(), first_order, last_order)) {
+    //            return *this;
+    //        }
+
+    //        arrnd_header res(*this);
+
+    //        res.order_ = storage_type(std::ssize(dims_));
+    //        std::copy(first_order, last_order, res.order_.begin());
+
+    //        for (size_type i = 0; i < std::ssize(dims_); ++i) {
+    //            *std::next(res.dims_.begin(), i) = *std::next(dims_.cbegin(), *std::next(first_order, i));
+    //            *std::next(res.strides_.begin(), i) = *std::next(strides_.cbegin(), *std::next(first_order, i));
+    //        }
+
+    //        res.is_reordered_ = true;
+
+    //        return res;
+    //    }
+
+    //    template <signed_integral_type_iterable Cont>
+    //    [[nodiscard]] constexpr arrnd_header reorder(const Cont& order) const
+    //    {
+    //        return reorder(std::begin(order), std::end(order));
+    //    }
+
+    //    [[nodiscard]] constexpr arrnd_header reorder(std::initializer_list<size_type> order) const
+    //    {
+    //        return reorder(order.begin(), order.end());
+    //    }
+
+    //    //template <std::signed_integral U, std::int64_t M>
+    //    //[[nodiscard]] constexpr arrnd_header reorder(const U (&order)[M]) const
+    //    //{
+    //    //    return reorder(std::begin(order), std::end(order));
+    //    //}
+
+    //    [[nodiscard]] constexpr arrnd_header reorder(size_type main_axis) const
+    //    {
+    //        if (empty() || std::ssize(dims_) == 1 || main_axis == 0) {
+    //            return *this;
+    //        }
+
+    //        assert(main_axis >= 0 && main_axis < std::ssize(dims_));
+
+    //        arrnd_header res(*this);
+
+    //        size_type main_dim = *std::next(dims_.cbegin(), main_axis);
+    //        size_type main_stride = *std::next(strides_.cbegin(), main_axis);
+
+    //        size_type j = 1;
+
+    //        res.order_ = storage_type(std::ssize(dims_));
+
+    //        for (size_type i = 0; i < main_axis; ++i) {
+    //            *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
+    //            *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+    //            *std::next(res.order_.begin(), j) = i;
+    //            ++j;
+    //        }
+
+    //        for (size_type i = main_axis + 1; i < std::ssize(dims_); ++i) {
+    //            *std::next(res.dims_.begin(), j) = *std::next(dims_.cbegin(), i);
+    //            *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+    //            *std::next(res.order_.begin(), j) = i;
+    //            ++j;
+    //        }
+
+    //        res.dims_.front() = main_dim;
+    //        res.strides_.front() = main_stride;
+    //        res.order_.front() = main_axis;
+
+    //        res.is_reordered_ = true;
+
+    //        return res;
+    //    }
+
+    //    [[nodiscard]] constexpr arrnd_header squeeze() const
+    //    {
+    //        if (empty() || std::ssize(dims_) == 1) {
+    //            return *this;
+    //        }
+
+    //        size_type ones_count = std::count(dims_.cbegin(), dims_.cend(), size_type{1});
+    //        if (ones_count == 0) {
+    //            return *this;
+    //        }
+
+    //        arrnd_header res(*this);
+
+    //        res.dims_ = storage_type(std::ssize(dims_) - ones_count);
+    //        std::copy_if(dims_.cbegin(), dims_.cend(), res.dims_.begin(), [](auto d) {
+    //            return d != size_type{1};
+    //        });
+
+    //        res.strides_ = storage_type(std::ssize(strides_) - ones_count);
+    //        size_type j = 0;
+    //        for (size_type i = 0; i < std::ssize(strides_); ++i) {
+    //            if (*std::next(dims_.cbegin(), i) != size_type{1}) {
+    //                *std::next(res.strides_.begin(), j) = *std::next(strides_.cbegin(), i);
+    //                ++j;
+    //            }
+    //        }
+
+    //        //res.is_slice_ = true;
+
+    //        return res;
+    //    }
+
+    //    template <signed_integral_type_iterator InputIt>
+    //    [[nodiscard]] constexpr size_type subs2ind(const InputIt& first_sub, const InputIt& last_sub) const
+    //    {
+    //        assert(first_sub < last_sub); // at least one subscript is required
+
+    //        size_type nsubs = std::distance(first_sub, last_sub);
+    //        assert(nsubs > 0 && nsubs <= std::ssize(dims_));
+
+    //        auto valid_subs = [&]() {
+    //            return std::inner_product(first_sub, last_sub, std::next(dims_.cbegin(), std::ssize(dims_) - nsubs),
+    //                true, std::logical_and<>{}, [](auto s, auto d) {
+    //                    return (s >= 0 && s < d);
+    //                });
+    //        };
+    //        assert(valid_subs());
+
+    //        return offset_
+    //            + std::transform_reduce(first_sub, last_sub, std::next(strides_.cbegin(), std::ssize(strides_) - nsubs),
+    //                size_type{0}, std::plus<>{}, std::multiplies<>{});
+    //    }
+
+    //    template <signed_integral_type_iterable Cont>
+    //    [[nodiscard]] constexpr size_type subs2ind(const Cont& subs) const
+    //    {
+    //        return subs2ind(std::begin(subs), std::end(subs));
+    //    }
+
+    //    [[nodiscard]] constexpr size_type subs2ind(std::initializer_list<size_type> subs) const
+    //    {
+    //        return subs2ind(subs.begin(), subs.end());
+    //    }
+
+    //    [[nodiscard]] constexpr storage_type ind2subs(size_type ind) const
+    //    {
+    //        if (empty()) {
+    //            return storage_type();
+    //        }
+
+    //        storage_type subs(std::ssize(dims_));
+    //        ind -= offset_;
+    //        for (size_type i = std::ssize(dims_) - 1; i >= 0; --i) {
+    //            if (*std::next(dims_.cbegin(), i) > 1) {
+    //                *std::next(subs.begin(), i)
+    //                    = (ind / *std::next(strides_.cbegin(), i)) % *std::next(dims_.cbegin(), i);
+    //            } else {
+    //                *std::next(subs.begin(), i) = 0;
+    //            }
+    //        }
+
+    //        return subs;
+    //    }
+
+    //    //template <signed_integral_type_iterator InputIt>
+    //    //[[nodiscard]] constexpr bool is_reduced_dims_from(const InputIt& first_dim, const InputIt& last_dim) const
+    //    //{
+    //    //    size_type ndims = std::distance(first_dim, last_dim);
+
+    //    //    assert(ndims >= 0);
+
+    //    //    if (dims_.size() != ndims) {
+    //    //        return false;
+    //    //    }
+
+    //    //    return !std::equal(dims_.cbegin(), dims_.cend(), first_dim)
+    //    //        && std::transform_reduce(
+    //    //            dims_.cbegin(), dims_.cend(), first_dim, true, std::logical_and<>{}, [](auto d1, auto d2) {
+    //    //                return d1 == d2 || d1 == size_type{1};
+    //    //            });
+    //    //}
+
+    //    //template <signed_integral_type_iterable Cont>
+    //    //[[nodiscard]] constexpr bool is_reduced_dims_from(const Cont& dims) const
+    //    //{
+    //    //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    //template <std::signed_integral U, std::int64_t M>
+    //    //[[nodiscard]] constexpr bool is_reduced_dims_from(const U (&dims)[M]) const
+    //    //{
+    //    //    return is_reduced_dims_from(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    //[[nodiscard]] constexpr bool is_reduced_dims_from(std::initializer_list<size_type> dims) const
+    //    //{
+    //    //    return is_reduced_dims_from(dims.begin(), dims.end());
+    //    //}
+
+    //    //template <signed_integral_type_iterator InputIt>
+    //    //[[nodiscard]] constexpr storage_type complement_dims_from(
+    //    //    const InputIt& first_dim, const InputIt& last_dim) const
+    //    //{
+    //    //    assert(dims_.size() == std::distance(first_dim, last_dim));
+
+    //    //    storage_type comp_dims(dims_.size());
+
+    //    //    std::transform(dims_.cbegin(), dims_.cend(), first_dim, comp_dims.begin(), [](auto rd, auto cd) {
+    //    //        return cd - rd + 1;
+    //    //    });
+
+    //    //    return comp_dims;
+    //    //}
+
+    //    //template <signed_integral_type_iterable Cont>
+    //    //[[nodiscard]] constexpr storage_type complement_dims_from(const Cont& dims) const
+    //    //{
+    //    //    return complement_dims_from(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    //template <std::signed_integral U, std::int64_t M>
+    //    //[[nodiscard]] constexpr storage_type complement_dims_from(const U (&dims)[M]) const
+    //    //{
+    //    //    return complement_dims_from(std::begin(dims), std::end(dims));
+    //    //}
+
+    //    //[[nodiscard]] constexpr storage_type complement_dims_from(std::initializer_list<size_type> dims) const
+    //    //{
+    //    //    return complement_dims_from(dims.begin(), dims.end());
+    //    //}
+
+    //    constexpr arrnd_header(arrnd_header&& other) = default;
+    //    constexpr arrnd_header& operator=(arrnd_header&& other) = default;
+
+    //    constexpr arrnd_header(const arrnd_header& other) = default;
+    //    constexpr arrnd_header& operator=(const arrnd_header& other) = default;
+
+    //    virtual constexpr ~arrnd_header() = default;
+
+    //    [[nodiscard]] constexpr size_type numel() const noexcept
+    //    {
+    //        return numel_;
+    //    }
+
+    //    [[nodiscard]] constexpr const storage_type& dims() const noexcept
+    //    {
+    //        return dims_;
+    //    }
+
+    //    [[nodiscard]] constexpr storage_type& dims() noexcept
+    //    {
+    //        return dims_;
+    //    }
+
+    //    [[nodiscard]] constexpr const storage_type& strides() const noexcept
+    //    {
+    //        return strides_;
+    //    }
+
+    //    [[nodiscard]] constexpr storage_type& strides() noexcept
+    //    {
+    //        return strides_;
+    //    }
+
+    //    [[nodiscard]] constexpr size_type offset() const noexcept
+    //    {
+    //        return offset_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_slice() const noexcept
+    //    {
+    //        return is_slice_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_reordered() const noexcept
+    //    {
+    //        return is_reordered_;
+    //    }
+
+    //    [[nodiscard]] constexpr storage_type& order() noexcept
+    //    {
+    //        return order_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_continuous() const noexcept
+    //    {
+    //        return is_continuous_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool empty() const noexcept
+    //    {
+    //        return dims_.empty();
+    //    }
+
+    //    [[nodiscard]] constexpr size_type last_index() const noexcept
+    //    {
+    //        return last_index_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_vector() const noexcept
+    //    {
+    //        return std::ssize(dims_) == 1;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_row() const noexcept
+    //    {
+    //        return std::ssize(dims_) == 2 && dims_.front() == 1;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_column() const noexcept
+    //    {
+    //        return std::ssize(dims_) == 2 && dims_.back() == 1;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_matrix() const noexcept
+    //    {
+    //        return std::ssize(dims_) == 2;
+    //    }
+
+    //    [[nodiscard]] constexpr bool is_scalar() const noexcept
+    //    {
+    //        return numel_ == 1;
+    //    }
+
+    //private:
+    //    storage_type dims_{};
+    //    storage_type strides_{};
+    //    size_type numel_{0};
+    //    size_type offset_{0};
+    //    size_type last_index_{0};
+    //    bool is_slice_{false}; // not all array buffer included
+    //    bool is_reordered_{false}; // header axis are reordered
+    //    storage_type order_{};
+    //    bool is_continuous_{true}; // array buffer is not continuous in memory
+    //};
+
+    //template <arrnd_header_compliant ArHdrCo>
+    //inline constexpr std::ostream& operator<<(std::ostream& os, const ArHdrCo& hdr)
+    //{
+    //    if (hdr.empty()) {
+    //        os << "empty";
+    //        return os;
+    //    }
+
+    //    auto print_vec = [&os](const auto& vec) {
+    //        os << '[';
+    //        std::for_each_n(std::cbegin(vec), std::ssize(vec) - 1, [&os](const auto& e) {
+    //            os << e << ' ';
+    //        });
+    //        os << *std::next(std::cbegin(vec), std::ssize(vec) - 1) << ']';
+    //    };
+
+    //    os << "numel: " << hdr.numel() << '\n';
+    //    os << "dims: ";
+    //    print_vec(hdr.dims());
+    //    os << '\n';
+    //    os << "strides: ";
+    //    print_vec(hdr.strides());
+    //    os << '\n';
+    //    os << "offset: " << hdr.offset() << '\n';
+    //    os << "last_index: " << hdr.last_index() << '\n';
+    //    os << "flags: vector(" << hdr.is_vector() << "), matrix(" << hdr.is_matrix() << "), row(" << hdr.is_row()
+    //       << "), column(" << hdr.is_column() << "), scalar(" << hdr.is_scalar() << "), slice(" << hdr.is_slice()
+    //       << "), reordered(" << hdr.is_reordered() << "), continuous(" << hdr.is_continuous() << ')';
+
+    //    return os;
+    //}
 }
 
-using details::arrnd_header_tag;
-using details::arrnd_header_compliant;
-using details::arrnd_header;
+//using details::arrnd_header_tag;
+//using details::arrnd_header_compliant;
+//using details::arrnd_header;
 
 using details::dynamic_storage_info;
 using details::dynamic_storage_info;
@@ -4834,479 +4834,479 @@ private:
 
 }
 
-namespace oc {
-namespace details {
-
-    template <arrnd_header_compliant Header = arrnd_header<>>
-    class arrnd_indexer final {
-    public:
-        using storage_type = typename Header::storage_type;
-        using header_type = Header;
-        using size_type = typename Header::size_type;
-
-        explicit constexpr arrnd_indexer(
-            const header_type& hdr, arrnd_iterator_position pos = arrnd_iterator_position::begin)
-            : hdr_(hdr)
-        {
-            setup(pos);
-        }
-
-        template <std::integral U>
-        explicit constexpr arrnd_indexer(
-            const header_type& hdr, U axis, arrnd_iterator_position pos = arrnd_iterator_position::begin)
-            : hdr_(hdr.reorder(axis))
-        {
-            setup(pos);
-        }
-
-        template <signed_integral_type_iterator InputIt>
-        explicit constexpr arrnd_indexer(const header_type& hdr, const InputIt& first_order, const InputIt& last_order,
-            arrnd_iterator_position pos = arrnd_iterator_position::begin)
-            : hdr_(hdr.reorder(first_order, last_order))
-        {
-            setup(pos);
-        }
-
-        template <signed_integral_type_iterable Cont>
-        explicit constexpr arrnd_indexer(const header_type& hdr, const Cont& order,
-            arrnd_iterator_position pos = arrnd_iterator_position::begin)
-            : arrnd_indexer(hdr, std::begin(order), std::end(order), pos)
-        { }
-
-        explicit constexpr arrnd_indexer(const header_type& hdr, std::initializer_list<size_type> order,
-            arrnd_iterator_position pos = arrnd_iterator_position::begin)
-            : arrnd_indexer(hdr, order.begin(), order.end(), pos)
-        { }
-
-        //template <std::signed_integral U, std::int64_t M>
-        //explicit constexpr arrnd_indexer(const header_type& hdr, const U (&order)[M],
-        //    arrnd_iterator_position pos = arrnd_iterator_position::begin)
-        //    : arrnd_indexer(hdr, std::begin(order), std::end(order), pos)
-        //{ }
-
-        constexpr arrnd_indexer() = default;
-
-        constexpr arrnd_indexer(const arrnd_indexer& other) = default;
-        constexpr arrnd_indexer& operator=(const arrnd_indexer& other) = default;
-
-        constexpr arrnd_indexer(arrnd_indexer&& other) noexcept = default;
-        constexpr arrnd_indexer& operator=(arrnd_indexer&& other) noexcept = default;
-
-        constexpr ~arrnd_indexer() = default;
-
-        constexpr arrnd_indexer& operator++() noexcept
-        {
-            if (current_index_ < hdr_.offset()) {
-                current_index_ = hdr_.offset();
-                return *this;
-            }
-            if (current_index_ >= hdr_.last_index()) {
-                current_index_ = hdr_.last_index() + 1;
-                return *this;
-            }
-
-            ++rel_pos_;
-
-            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-            //    ++firsts_[i].index;
-            //    current_index_ += firsts_[i].stride;
-            //    if (firsts_[i].index < firsts_[i].dim) {
-            //        return *this;
-            //    }
-            //    current_index_ -= firsts_[i].index * firsts_[i].stride;
-            //    firsts_[i].index = 0;
-            //}
-
-            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
-                ++indices_[hdr_.dims().size() - 1 - i];
-                current_index_ += hdr_.strides()[hdr_.dims().size() - 1 - i];
-                if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
-                    return *this;
-                }
-                current_index_ -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
-                indices_[hdr_.dims().size() - 1 - i] = 0;
-            }
-
-            return *this;
-        }
-
-        constexpr arrnd_indexer operator++(int) noexcept
-        {
-            arrnd_indexer<header_type> temp{*this};
-            ++(*this);
-            return temp;
-        }
-
-        constexpr arrnd_indexer& operator+=(size_type count) noexcept
-        {
-            for (size_type i = 0; i < count; ++i) {
-                ++(*this);
-            }
-            return *this;
-        }
-
-        arrnd_indexer operator+(size_type count) const noexcept
-        {
-            arrnd_indexer<header_type> temp{*this};
-            temp += count;
-            return temp;
-        }
-
-        constexpr arrnd_indexer& operator--() noexcept
-        {
-            if (current_index_ <= hdr_.offset()) {
-                current_index_ = hdr_.offset() - 1;
-                return *this;
-            }
-            if (current_index_ == hdr_.last_index() + 1) {
-                current_index_ = hdr_.last_index();
-                return *this;
-            }
-
-            --rel_pos_;
-
-            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-            //    --firsts_[i].index;
-            //    current_index_ -= firsts_[i].stride;
-            //    if (firsts_[i].index > -1) {
-            //        return *this;
-            //    }
-            //    firsts_[i].index = firsts_[i].dim - 1;
-            //    current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
-            //}
-
-            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
-                --indices_[hdr_.dims().size() - 1 - i];
-                current_index_ -= hdr_.strides()[hdr_.dims().size() - 1 - i];
-                if (indices_[hdr_.dims().size() - 1 - i] > -1) {
-                    return *this;
-                }
-                indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[hdr_.dims().size() - 1 - i] - 1;
-                current_index_
-                    += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
-            }
-
-            return *this;
-        }
-
-        constexpr arrnd_indexer operator--(int) noexcept
-        {
-            arrnd_indexer<header_type> temp{*this};
-            --(*this);
-            return temp;
-        }
-
-        constexpr arrnd_indexer& operator-=(size_type count) noexcept
-        {
-            for (size_type i = 0; i < count; ++i) {
-                --(*this);
-            }
-            return *this;
-        }
-
-        constexpr arrnd_indexer operator-(size_type count) const noexcept
-        {
-            arrnd_indexer<header_type> temp{*this};
-            temp -= count;
-            return temp;
-        }
-
-        [[nodiscard]] explicit constexpr operator bool() const noexcept
-        {
-            return static_cast<std::make_unsigned_t<size_type>>(current_index_ - hdr_.offset()) <= last_first_diff_
-                && !hdr_.empty();
-        }
-
-        [[nodiscard]] constexpr size_type operator*() const noexcept
-        {
-            return current_index_;
-        }
-
-        [[nodiscard]] constexpr const storage_type& indices() const noexcept
-        {
-            return indices_;
-        }
-
-        [[nodiscard]] constexpr size_type operator[](size_type index) const noexcept
-        {
-            assert(index >= 0 && index < hdr_.numel());
-
-            size_type advance_count = index - rel_pos_;
-            if (advance_count > 0) {
-                return ((*this) + advance_count).current_index_;
-            }
-            if (advance_count < 0) {
-                return ((*this) - (-advance_count)).current_index_;
-            }
-            return current_index_;
-        }
-
-    private:
-        constexpr void setup(arrnd_iterator_position pos)
-        {
-            last_first_diff_ = static_cast<std::make_unsigned_t<size_type>>(hdr_.last_index() - hdr_.offset());
-
-            bool backward = (pos == arrnd_iterator_position::rbegin || pos == arrnd_iterator_position::end);
-
-            //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
-            //    firsts_[i].dim = hdr_.dims()[hdr_.dims().size() - i - 1];
-            //    firsts_[i].stride = hdr_.strides()[hdr_.dims().size() - i - 1];
-            //    firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
-            //}
-
-            //if (std::ssize(hdr_.dims()) > 3) {
-            indices_ = storage_type(hdr_.dims().size() /* - 3*/);
-            for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
-                indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
-            }
-            //}
-
-            current_index_ = backward ? hdr_.last_index() : hdr_.offset();
-
-            rel_pos_ = backward ? hdr_.numel() - 1 : 0;
-
-            if (pos == arrnd_iterator_position::end) {
-                ++(*this);
-            } else if (pos == arrnd_iterator_position::rend) {
-                --(*this);
-            }
-        }
-
-        header_type hdr_;
-
-        std::make_unsigned_t<size_type> last_first_diff_;
-
-        //struct data_package {
-        //    size_type dim;
-        //    size_type stride;
-        //    size_type index;
-        //};
-
-        //data_package firsts_[3];
-
-        storage_type indices_;
-        size_type current_index_;
-
-        size_type rel_pos_ = 0;
-    };
-
-    template <arrnd_header_compliant Header = arrnd_header<>>
-    class arrnd_axis_ranger final {
-    public:
-        using header_type = Header;
-        using size_type = typename Header::size_type;
-        using interval_type = typename Header::interval_type;
-
-        //using storage_type = typename Header::storage_type::template replaced_type<interval_type>;
-        using storage_type = typename Header::storage_info::template replaced_type<interval_type>::storage_type;
-
-        explicit constexpr arrnd_axis_ranger(const header_type& hdr, size_type fixed_axis = 0,
-            interval_type window = interval_type(0, 0, 1), bool is_window_contained = true,
-            arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : fixed_axis_(fixed_axis)
-            , left_window_size_(-window.start())
-            , right_window_size_(window.stop())
-            , window_step_(window.step())
-            , is_window_contained_(is_window_contained)
-        {
-            assert(fixed_axis_ >= 0 && fixed_axis_ < hdr.dims().size());
-            assert(window.start() <= 0 && window.stop() >= 0);
-
-            fixed_axis_dim_ = *std::next(hdr.dims().cbegin(), fixed_axis_);
-
-            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
-
-            ranges_ = storage_type(hdr.dims().size());
-            for (size_type i = 0; i < hdr.dims().size(); ++i) {
-                *std::next(ranges_.begin(), i) = interval_type(0, *std::next(hdr.dims().cbegin(), i));
-            }
-
-            last_index_ = fixed_axis_dim_ - 1;
-
-            switch (start_pos) {
-            case arrnd_iterator_position::begin:
-            case arrnd_iterator_position::rend:
-                current_index_ = is_window_contained_ ? left_window_size_ : 0;
-                break;
-            case arrnd_iterator_position::end:
-            case arrnd_iterator_position::rbegin:
-                current_index_ = is_window_contained_ ? fixed_axis_dim_ - 1 - right_window_size_ : fixed_axis_dim_ - 1;
-                break;
-            }
-
-            ranges_[fixed_axis_] = compute_current_index_interval();
-
-            if (start_pos == arrnd_iterator_position::end) {
-                ++(*this);
-            } else if (start_pos == arrnd_iterator_position::rend) {
-                --(*this);
-            }
-        }
-
-        constexpr arrnd_axis_ranger() = default;
-
-        constexpr arrnd_axis_ranger(const arrnd_axis_ranger& other) = default;
-        constexpr arrnd_axis_ranger& operator=(const arrnd_axis_ranger& other) = default;
-
-        constexpr arrnd_axis_ranger(arrnd_axis_ranger&& other) noexcept = default;
-        constexpr arrnd_axis_ranger& operator=(arrnd_axis_ranger&& other) noexcept = default;
-
-        constexpr ~arrnd_axis_ranger() = default;
-
-        constexpr arrnd_axis_ranger& operator++() noexcept
-        {
-            ++current_index_;
-            ranges_[fixed_axis_] = compute_current_index_interval();
-            return *this;
-        }
-
-        constexpr arrnd_axis_ranger operator++(int) noexcept
-        {
-            arrnd_axis_ranger<header_type> temp{*this};
-            ++(*this);
-            return temp;
-        }
-
-        constexpr arrnd_axis_ranger& operator+=(size_type count) noexcept
-        {
-            current_index_ += count;
-            ranges_[fixed_axis_] = compute_current_index_interval();
-            return *this;
-        }
-
-        constexpr arrnd_axis_ranger operator+(size_type count) const noexcept
-        {
-            arrnd_axis_ranger<header_type> temp{*this};
-            temp += count;
-            return temp;
-        }
-
-        constexpr arrnd_axis_ranger& operator--() noexcept
-        {
-            --current_index_;
-            ranges_[fixed_axis_] = compute_current_index_interval();
-            return *this;
-        }
-
-        constexpr arrnd_axis_ranger operator--(int) noexcept
-        {
-            arrnd_axis_ranger<header_type> temp{*this};
-            --(*this);
-            return temp;
-        }
-
-        constexpr arrnd_axis_ranger& operator-=(size_type count) noexcept
-        {
-            current_index_ -= count;
-            ranges_[fixed_axis_] = compute_current_index_interval();
-            return *this;
-        }
-
-        constexpr arrnd_axis_ranger operator-(size_type count) const noexcept
-        {
-            arrnd_axis_ranger<header_type> temp{*this};
-            temp -= count;
-            return temp;
-        }
-
-        [[nodiscard]] explicit constexpr operator bool() const noexcept
-        {
-            return is_window_contained_
-                ? (current_index_ - left_window_size_ >= 0 && current_index_ + right_window_size_ <= last_index_)
-                : (current_index_ >= 0 && current_index_ <= last_index_);
-        }
-
-        [[nodiscard]] constexpr const storage_type& operator*() const noexcept
-        {
-            return ranges_;
-        }
-
-        [[nodiscard]] constexpr storage_type operator[](size_type index) const noexcept
-        {
-            if (is_window_contained_) {
-                assert(index - left_window_size_ >= 0 && index + right_window_size_ <= last_index_);
-            } else {
-                assert(index >= 0 && index <= last_index_);
-            }
-
-            size_type advance_count = index - current_index_;
-            if (advance_count > 0) {
-                return ((*this) + advance_count).ranges_;
-            }
-            if (advance_count < 0) {
-                return ((*this) - (-advance_count)).ranges_;
-            }
-            return ranges_;
-        }
-
-        [[nodiscard]] constexpr bool operator==(const arrnd_axis_ranger& far) const noexcept
-        {
-            return current_index_ == far.current_index_;
-        }
-
-        [[nodiscard]] constexpr bool operator<(const arrnd_axis_ranger& far) const noexcept
-        {
-            return current_index_ < far.current_index_;
-        }
-
-        [[nodiscard]] constexpr bool operator<=(const arrnd_axis_ranger& far) const noexcept
-        {
-            return current_index_ <= far.current_index_;
-        }
-
-        [[nodiscard]] constexpr size_type fixed_axis() const noexcept
-        {
-            return fixed_axis_;
-        }
-
-        constexpr arrnd_axis_ranger& change_window(interval_type window) noexcept
-        {
-            assert(window.start() <= 0 && window.stop() >= 0);
-            assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
-
-            left_window_size_ = -window.start();
-            right_window_size_ = window.stop();
-            window_step_ = window.step();
-            ranges_[fixed_axis_] = compute_current_index_interval();
-            return *this;
-        }
-
-    private:
-        // calculate current interval window according to current index
-        [[nodiscard]] constexpr interval_type compute_current_index_interval() const noexcept
-        {
-            if (current_index_ < 0 || current_index_ > last_index_) {
-                return interval_type{};
-            }
-
-            // calculate normalized forward neigh
-            size_type norm_window_stop = (current_index_ + right_window_size_ <= last_index_)
-                ? right_window_size_
-                : last_index_ - current_index_;
-
-            // calculate normalized backward neigh
-            size_type norm_window_start
-                = (current_index_ - left_window_size_ >= 0) ? left_window_size_ : current_index_;
-
-            return interval_type{
-                current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_step_};
-        }
-
-        size_type fixed_axis_;
-        size_type fixed_axis_dim_;
-        size_type left_window_size_;
-        size_type right_window_size_;
-        size_type window_step_;
-        size_type current_index_;
-        size_type last_index_;
-        storage_type ranges_;
-        bool is_window_contained_;
-    };
-}
-
-using details::arrnd_indexer;
-using details::arrnd_axis_ranger;
-}
+//namespace oc {
+//namespace details {
+
+    //template <arrnd_header_compliant Header = arrnd_header<>>
+    //class arrnd_indexer final {
+    //public:
+    //    using storage_type = typename Header::storage_type;
+    //    using header_type = Header;
+    //    using size_type = typename Header::size_type;
+
+    //    explicit constexpr arrnd_indexer(
+    //        const header_type& hdr, arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //        : hdr_(hdr)
+    //    {
+    //        setup(pos);
+    //    }
+
+    //    template <std::integral U>
+    //    explicit constexpr arrnd_indexer(
+    //        const header_type& hdr, U axis, arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //        : hdr_(hdr.reorder(axis))
+    //    {
+    //        setup(pos);
+    //    }
+
+    //    template <signed_integral_type_iterator InputIt>
+    //    explicit constexpr arrnd_indexer(const header_type& hdr, const InputIt& first_order, const InputIt& last_order,
+    //        arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //        : hdr_(hdr.reorder(first_order, last_order))
+    //    {
+    //        setup(pos);
+    //    }
+
+    //    template <signed_integral_type_iterable Cont>
+    //    explicit constexpr arrnd_indexer(const header_type& hdr, const Cont& order,
+    //        arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //        : arrnd_indexer(hdr, std::begin(order), std::end(order), pos)
+    //    { }
+
+    //    explicit constexpr arrnd_indexer(const header_type& hdr, std::initializer_list<size_type> order,
+    //        arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //        : arrnd_indexer(hdr, order.begin(), order.end(), pos)
+    //    { }
+
+    //    //template <std::signed_integral U, std::int64_t M>
+    //    //explicit constexpr arrnd_indexer(const header_type& hdr, const U (&order)[M],
+    //    //    arrnd_iterator_position pos = arrnd_iterator_position::begin)
+    //    //    : arrnd_indexer(hdr, std::begin(order), std::end(order), pos)
+    //    //{ }
+
+    //    constexpr arrnd_indexer() = default;
+
+    //    constexpr arrnd_indexer(const arrnd_indexer& other) = default;
+    //    constexpr arrnd_indexer& operator=(const arrnd_indexer& other) = default;
+
+    //    constexpr arrnd_indexer(arrnd_indexer&& other) noexcept = default;
+    //    constexpr arrnd_indexer& operator=(arrnd_indexer&& other) noexcept = default;
+
+    //    constexpr ~arrnd_indexer() = default;
+
+    //    constexpr arrnd_indexer& operator++() noexcept
+    //    {
+    //        if (current_index_ < hdr_.offset()) {
+    //            current_index_ = hdr_.offset();
+    //            return *this;
+    //        }
+    //        if (current_index_ >= hdr_.last_index()) {
+    //            current_index_ = hdr_.last_index() + 1;
+    //            return *this;
+    //        }
+
+    //        ++rel_pos_;
+
+    //        //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+    //        //    ++firsts_[i].index;
+    //        //    current_index_ += firsts_[i].stride;
+    //        //    if (firsts_[i].index < firsts_[i].dim) {
+    //        //        return *this;
+    //        //    }
+    //        //    current_index_ -= firsts_[i].index * firsts_[i].stride;
+    //        //    firsts_[i].index = 0;
+    //        //}
+
+    //        for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
+    //            ++indices_[hdr_.dims().size() - 1 - i];
+    //            current_index_ += hdr_.strides()[hdr_.dims().size() - 1 - i];
+    //            if (indices_[hdr_.dims().size() - 1 - i] < hdr_.dims()[hdr_.dims().size() - 1 - i]) {
+    //                return *this;
+    //            }
+    //            current_index_ -= indices_[hdr_.dims().size() - 1 - i] * hdr_.strides()[hdr_.dims().size() - 1 - i];
+    //            indices_[hdr_.dims().size() - 1 - i] = 0;
+    //        }
+
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_indexer operator++(int) noexcept
+    //    {
+    //        arrnd_indexer<header_type> temp{*this};
+    //        ++(*this);
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_indexer& operator+=(size_type count) noexcept
+    //    {
+    //        for (size_type i = 0; i < count; ++i) {
+    //            ++(*this);
+    //        }
+    //        return *this;
+    //    }
+
+    //    arrnd_indexer operator+(size_type count) const noexcept
+    //    {
+    //        arrnd_indexer<header_type> temp{*this};
+    //        temp += count;
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_indexer& operator--() noexcept
+    //    {
+    //        if (current_index_ <= hdr_.offset()) {
+    //            current_index_ = hdr_.offset() - 1;
+    //            return *this;
+    //        }
+    //        if (current_index_ == hdr_.last_index() + 1) {
+    //            current_index_ = hdr_.last_index();
+    //            return *this;
+    //        }
+
+    //        --rel_pos_;
+
+    //        //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+    //        //    --firsts_[i].index;
+    //        //    current_index_ -= firsts_[i].stride;
+    //        //    if (firsts_[i].index > -1) {
+    //        //        return *this;
+    //        //    }
+    //        //    firsts_[i].index = firsts_[i].dim - 1;
+    //        //    current_index_ += (firsts_[i].index + 1) * firsts_[i].stride;
+    //        //}
+
+    //        for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
+    //            --indices_[hdr_.dims().size() - 1 - i];
+    //            current_index_ -= hdr_.strides()[hdr_.dims().size() - 1 - i];
+    //            if (indices_[hdr_.dims().size() - 1 - i] > -1) {
+    //                return *this;
+    //            }
+    //            indices_[hdr_.dims().size() - 1 - i] = hdr_.dims()[hdr_.dims().size() - 1 - i] - 1;
+    //            current_index_
+    //                += (indices_[hdr_.dims().size() - 1 - i] + 1) * hdr_.strides()[hdr_.dims().size() - 1 - i];
+    //        }
+
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_indexer operator--(int) noexcept
+    //    {
+    //        arrnd_indexer<header_type> temp{*this};
+    //        --(*this);
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_indexer& operator-=(size_type count) noexcept
+    //    {
+    //        for (size_type i = 0; i < count; ++i) {
+    //            --(*this);
+    //        }
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_indexer operator-(size_type count) const noexcept
+    //    {
+    //        arrnd_indexer<header_type> temp{*this};
+    //        temp -= count;
+    //        return temp;
+    //    }
+
+    //    [[nodiscard]] explicit constexpr operator bool() const noexcept
+    //    {
+    //        return static_cast<std::make_unsigned_t<size_type>>(current_index_ - hdr_.offset()) <= last_first_diff_
+    //            && !hdr_.empty();
+    //    }
+
+    //    [[nodiscard]] constexpr size_type operator*() const noexcept
+    //    {
+    //        return current_index_;
+    //    }
+
+    //    [[nodiscard]] constexpr const storage_type& indices() const noexcept
+    //    {
+    //        return indices_;
+    //    }
+
+    //    [[nodiscard]] constexpr size_type operator[](size_type index) const noexcept
+    //    {
+    //        assert(index >= 0 && index < hdr_.numel());
+
+    //        size_type advance_count = index - rel_pos_;
+    //        if (advance_count > 0) {
+    //            return ((*this) + advance_count).current_index_;
+    //        }
+    //        if (advance_count < 0) {
+    //            return ((*this) - (-advance_count)).current_index_;
+    //        }
+    //        return current_index_;
+    //    }
+
+    //private:
+    //    constexpr void setup(arrnd_iterator_position pos)
+    //    {
+    //        last_first_diff_ = static_cast<std::make_unsigned_t<size_type>>(hdr_.last_index() - hdr_.offset());
+
+    //        bool backward = (pos == arrnd_iterator_position::rbegin || pos == arrnd_iterator_position::end);
+
+    //        //for (size_type i = 0; i < 3 && i < hdr_.dims().size(); ++i) {
+    //        //    firsts_[i].dim = hdr_.dims()[hdr_.dims().size() - i - 1];
+    //        //    firsts_[i].stride = hdr_.strides()[hdr_.dims().size() - i - 1];
+    //        //    firsts_[i].index = backward ? firsts_[i].dim - 1 : 0;
+    //        //}
+
+    //        //if (std::ssize(hdr_.dims()) > 3) {
+    //        indices_ = storage_type(hdr_.dims().size() /* - 3*/);
+    //        for (size_type i = 0 /*3*/; i < hdr_.dims().size(); ++i) {
+    //            indices_[hdr_.dims().size() - 1 - i] = backward ? hdr_.dims()[hdr_.dims().size() - 1 - i] - 1 : 0;
+    //        }
+    //        //}
+
+    //        current_index_ = backward ? hdr_.last_index() : hdr_.offset();
+
+    //        rel_pos_ = backward ? hdr_.numel() - 1 : 0;
+
+    //        if (pos == arrnd_iterator_position::end) {
+    //            ++(*this);
+    //        } else if (pos == arrnd_iterator_position::rend) {
+    //            --(*this);
+    //        }
+    //    }
+
+    //    header_type hdr_;
+
+    //    std::make_unsigned_t<size_type> last_first_diff_;
+
+    //    //struct data_package {
+    //    //    size_type dim;
+    //    //    size_type stride;
+    //    //    size_type index;
+    //    //};
+
+    //    //data_package firsts_[3];
+
+    //    storage_type indices_;
+    //    size_type current_index_;
+
+    //    size_type rel_pos_ = 0;
+    //};
+
+    //template <arrnd_header_compliant Header = arrnd_header<>>
+    //class arrnd_axis_ranger final {
+    //public:
+    //    using header_type = Header;
+    //    using size_type = typename Header::size_type;
+    //    using interval_type = typename Header::interval_type;
+
+    //    //using storage_type = typename Header::storage_type::template replaced_type<interval_type>;
+    //    using storage_type = typename Header::storage_info::template replaced_type<interval_type>::storage_type;
+
+    //    explicit constexpr arrnd_axis_ranger(const header_type& hdr, size_type fixed_axis = 0,
+    //        interval_type window = interval_type(0, 0, 1), bool is_window_contained = true,
+    //        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+    //        : fixed_axis_(fixed_axis)
+    //        , left_window_size_(-window.start())
+    //        , right_window_size_(window.stop())
+    //        , window_step_(window.step())
+    //        , is_window_contained_(is_window_contained)
+    //    {
+    //        assert(fixed_axis_ >= 0 && fixed_axis_ < hdr.dims().size());
+    //        assert(window.start() <= 0 && window.stop() >= 0);
+
+    //        fixed_axis_dim_ = *std::next(hdr.dims().cbegin(), fixed_axis_);
+
+    //        assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
+
+    //        ranges_ = storage_type(hdr.dims().size());
+    //        for (size_type i = 0; i < hdr.dims().size(); ++i) {
+    //            *std::next(ranges_.begin(), i) = interval_type(0, *std::next(hdr.dims().cbegin(), i));
+    //        }
+
+    //        last_index_ = fixed_axis_dim_ - 1;
+
+    //        switch (start_pos) {
+    //        case arrnd_iterator_position::begin:
+    //        case arrnd_iterator_position::rend:
+    //            current_index_ = is_window_contained_ ? left_window_size_ : 0;
+    //            break;
+    //        case arrnd_iterator_position::end:
+    //        case arrnd_iterator_position::rbegin:
+    //            current_index_ = is_window_contained_ ? fixed_axis_dim_ - 1 - right_window_size_ : fixed_axis_dim_ - 1;
+    //            break;
+    //        }
+
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+
+    //        if (start_pos == arrnd_iterator_position::end) {
+    //            ++(*this);
+    //        } else if (start_pos == arrnd_iterator_position::rend) {
+    //            --(*this);
+    //        }
+    //    }
+
+    //    constexpr arrnd_axis_ranger() = default;
+
+    //    constexpr arrnd_axis_ranger(const arrnd_axis_ranger& other) = default;
+    //    constexpr arrnd_axis_ranger& operator=(const arrnd_axis_ranger& other) = default;
+
+    //    constexpr arrnd_axis_ranger(arrnd_axis_ranger&& other) noexcept = default;
+    //    constexpr arrnd_axis_ranger& operator=(arrnd_axis_ranger&& other) noexcept = default;
+
+    //    constexpr ~arrnd_axis_ranger() = default;
+
+    //    constexpr arrnd_axis_ranger& operator++() noexcept
+    //    {
+    //        ++current_index_;
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_axis_ranger operator++(int) noexcept
+    //    {
+    //        arrnd_axis_ranger<header_type> temp{*this};
+    //        ++(*this);
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_axis_ranger& operator+=(size_type count) noexcept
+    //    {
+    //        current_index_ += count;
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_axis_ranger operator+(size_type count) const noexcept
+    //    {
+    //        arrnd_axis_ranger<header_type> temp{*this};
+    //        temp += count;
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_axis_ranger& operator--() noexcept
+    //    {
+    //        --current_index_;
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_axis_ranger operator--(int) noexcept
+    //    {
+    //        arrnd_axis_ranger<header_type> temp{*this};
+    //        --(*this);
+    //        return temp;
+    //    }
+
+    //    constexpr arrnd_axis_ranger& operator-=(size_type count) noexcept
+    //    {
+    //        current_index_ -= count;
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+    //        return *this;
+    //    }
+
+    //    constexpr arrnd_axis_ranger operator-(size_type count) const noexcept
+    //    {
+    //        arrnd_axis_ranger<header_type> temp{*this};
+    //        temp -= count;
+    //        return temp;
+    //    }
+
+    //    [[nodiscard]] explicit constexpr operator bool() const noexcept
+    //    {
+    //        return is_window_contained_
+    //            ? (current_index_ - left_window_size_ >= 0 && current_index_ + right_window_size_ <= last_index_)
+    //            : (current_index_ >= 0 && current_index_ <= last_index_);
+    //    }
+
+    //    [[nodiscard]] constexpr const storage_type& operator*() const noexcept
+    //    {
+    //        return ranges_;
+    //    }
+
+    //    [[nodiscard]] constexpr storage_type operator[](size_type index) const noexcept
+    //    {
+    //        if (is_window_contained_) {
+    //            assert(index - left_window_size_ >= 0 && index + right_window_size_ <= last_index_);
+    //        } else {
+    //            assert(index >= 0 && index <= last_index_);
+    //        }
+
+    //        size_type advance_count = index - current_index_;
+    //        if (advance_count > 0) {
+    //            return ((*this) + advance_count).ranges_;
+    //        }
+    //        if (advance_count < 0) {
+    //            return ((*this) - (-advance_count)).ranges_;
+    //        }
+    //        return ranges_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool operator==(const arrnd_axis_ranger& far) const noexcept
+    //    {
+    //        return current_index_ == far.current_index_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool operator<(const arrnd_axis_ranger& far) const noexcept
+    //    {
+    //        return current_index_ < far.current_index_;
+    //    }
+
+    //    [[nodiscard]] constexpr bool operator<=(const arrnd_axis_ranger& far) const noexcept
+    //    {
+    //        return current_index_ <= far.current_index_;
+    //    }
+
+    //    [[nodiscard]] constexpr size_type fixed_axis() const noexcept
+    //    {
+    //        return fixed_axis_;
+    //    }
+
+    //    constexpr arrnd_axis_ranger& change_window(interval_type window) noexcept
+    //    {
+    //        assert(window.start() <= 0 && window.stop() >= 0);
+    //        assert(window.stop() - window.start() <= fixed_axis_dim_ && window.step() <= fixed_axis_dim_);
+
+    //        left_window_size_ = -window.start();
+    //        right_window_size_ = window.stop();
+    //        window_step_ = window.step();
+    //        ranges_[fixed_axis_] = compute_current_index_interval();
+    //        return *this;
+    //    }
+
+    //private:
+    //    // calculate current interval window according to current index
+    //    [[nodiscard]] constexpr interval_type compute_current_index_interval() const noexcept
+    //    {
+    //        if (current_index_ < 0 || current_index_ > last_index_) {
+    //            return interval_type{};
+    //        }
+
+    //        // calculate normalized forward neigh
+    //        size_type norm_window_stop = (current_index_ + right_window_size_ <= last_index_)
+    //            ? right_window_size_
+    //            : last_index_ - current_index_;
+
+    //        // calculate normalized backward neigh
+    //        size_type norm_window_start
+    //            = (current_index_ - left_window_size_ >= 0) ? left_window_size_ : current_index_;
+
+    //        return interval_type{
+    //            current_index_ - norm_window_start, current_index_ + norm_window_stop + 1, window_step_};
+    //    }
+
+    //    size_type fixed_axis_;
+    //    size_type fixed_axis_dim_;
+    //    size_type left_window_size_;
+    //    size_type right_window_size_;
+    //    size_type window_step_;
+    //    size_type current_index_;
+    //    size_type last_index_;
+    //    storage_type ranges_;
+    //    bool is_window_contained_;
+    //};
+//}
+
+//using details::arrnd_indexer;
+//using details::arrnd_axis_ranger;
+//}
 
 namespace oc {
 namespace details {
