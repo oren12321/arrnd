@@ -3080,6 +3080,11 @@ public:
         return indexer_ <= other.indexer_;
     }
 
+    [[nodiscard]] constexpr auto operator-(const arrnd_window_slider& other) const noexcept
+    {
+        return indexer_ - other.indexer_;
+    }
+
     // not so safe function, and should be used with consideration of the internal indexer.
     constexpr void modify_window(index_type axis, window_type window)
     {
@@ -3165,7 +3170,7 @@ namespace details {
     class arrnd_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = typename Arrnd::value_type;
         using pointer = typename Arrnd::value_type*;
         using reference = typename Arrnd::value_type&;
@@ -3282,7 +3287,7 @@ namespace details {
     class arrnd_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = typename Arrnd::value_type;
         using pointer = typename Arrnd::value_type*;
         using reference = typename Arrnd::value_type&;
@@ -3423,7 +3428,7 @@ namespace details {
     class arrnd_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = typename Arrnd::value_type;
         using pointer = typename Arrnd::value_type*;
         using reference = typename Arrnd::value_type&;
@@ -3540,7 +3545,7 @@ namespace details {
     class arrnd_const_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = typename Arrnd::value_type;
         using pointer = typename Arrnd::value_type*;
         using reference = typename Arrnd::value_type&;
@@ -3681,7 +3686,7 @@ namespace details {
     class arrnd_slice_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = Arrnd;
         using reference = Arrnd&;
 
@@ -3790,7 +3795,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return far_ - other.far_;
         }
 
     private:
@@ -3805,7 +3810,7 @@ namespace details {
     class arrnd_slice_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
@@ -3938,7 +3943,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return far_ - other.far_;
         }
 
     private:
@@ -3957,7 +3962,7 @@ namespace details {
     class arrnd_slice_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = Arrnd;
         using reference = Arrnd&;
 
@@ -4066,7 +4071,7 @@ namespace details {
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_slice_reverse_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start;
+            return far_ - other.far_;
         }
 
     private:
@@ -4081,7 +4086,7 @@ namespace details {
     class arrnd_slice_reverse_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = typename Arrnd::size_type;
+        using difference_type = typename Arrnd::difference_type;
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
@@ -4217,7 +4222,7 @@ namespace details {
         [[nodiscard]] constexpr difference_type operator-(
             const arrnd_slice_reverse_const_iterator& other) const noexcept
         {
-            return (*far_)[far_.fixed_axis()].start() - (*other.far_)[far_.fixed_axis()].start();
+            return far_ - other.far_;
         }
 
     private:

@@ -2200,7 +2200,7 @@ TEST(arrnd_test, iterators_and_inserters)
     EXPECT_TRUE(all_equal(axis_iter_res, arr));
 
     // std ranges
-    /*{
+    {
         arrnd<int> arr5({2, 1, 3}, {1, 2, 3, 4, 5, 6});
 
         std::vector<int> vec1;
@@ -2216,7 +2216,7 @@ TEST(arrnd_test, iterators_and_inserters)
         }
 
         EXPECT_EQ(std::vector<int>({4, 8, 12}), vec1);
-    }*/
+    }
 
     // free arrnd iterator functions compilation
     {
