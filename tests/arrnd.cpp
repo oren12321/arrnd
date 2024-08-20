@@ -408,7 +408,7 @@ TEST(simple_vector, insert)
 {
     using namespace oc;
 
-    simple_vector<int> c1(3ul, 100);
+    simple_vector<int> c1(3, 100);
     {
         std::array<int, 3> res{100, 100, 100};
         EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));
@@ -686,7 +686,7 @@ TEST(simple_array, insert)
 {
     using namespace oc;
 
-    simple_array<int, 14> c1(3ul, 100);
+    simple_array<int, 14> c1(3, 100);
     {
         std::array<int, 3> res{100, 100, 100};
         EXPECT_TRUE(std::equal(c1.cbegin(), c1.cend(), res.cbegin(), res.cend()));

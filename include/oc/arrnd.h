@@ -240,7 +240,8 @@ namespace details {
             }
         }
 
-        explicit constexpr simple_vector(size_type size, const value_type& value)
+        template <typename U>
+        explicit constexpr simple_vector(size_type size, const U& value)
             : size_(size)
             , capacity_(size)
         {
@@ -250,7 +251,7 @@ namespace details {
             }
         }
 
-        template <typename InputIt>
+        template <std::input_or_output_iterator InputIt>
         explicit constexpr simple_vector(InputIt first, InputIt last)
             : size_(std::distance(first, last))
             , capacity_(std::distance(first, last))
@@ -541,8 +542,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <typename InputIt>
-            requires std::input_iterator<InputIt>
+        template <std::input_or_output_iterator InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -572,7 +572,8 @@ namespace details {
             return new_pos;
         }
 
-        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        template <typename U>
+        constexpr iterator insert(const_iterator pos, size_type count, const U& value)
         {
             difference_type pos_dist = std::distance(cbegin(), pos);
             if (pos_dist < 0 || pos_dist > size_) {
@@ -672,7 +673,7 @@ namespace details {
             std::fill_n(ptr_, size, value);
         }
 
-        template <typename InputIt>
+        template <std::input_or_output_iterator InputIt>
         explicit constexpr simple_array(InputIt first, InputIt last)
             : simple_array(std::distance(first, last))
         {
@@ -891,8 +892,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <typename InputIt>
-            requires std::input_iterator<InputIt>
+        template <std::input_or_output_iterator InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -922,7 +922,8 @@ namespace details {
             return new_pos;
         }
 
-        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        template <typename U>
+        constexpr iterator insert(const_iterator pos, size_type count, const U& value)
         {
             difference_type pos_dist = std::distance(cbegin(), pos);
             if (pos_dist < 0 || pos_dist > size_) {
@@ -1009,7 +1010,7 @@ namespace details {
             , ptr_(sp.data())
         { }
 
-        template <typename InputIt>
+        template <std::input_or_output_iterator InputIt>
         explicit constexpr simple_view(InputIt first, InputIt last)
             : simple_view(std::span<value_type>(
                 const_cast<pointer>(reinterpret_cast<const_pointer>(&(*first))), std::distance(first, last)))
@@ -1220,8 +1221,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <typename InputIt>
-            requires std::input_iterator<InputIt>
+        template <std::input_or_output_iterator InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -1251,7 +1251,8 @@ namespace details {
             return new_pos;
         }
 
-        constexpr iterator insert(const_iterator pos, size_type count, const value_type& value)
+        template <typename U>
+        constexpr iterator insert(const_iterator pos, size_type count, const U& value)
         {
             difference_type pos_dist = std::distance(cbegin(), pos);
             if (pos_dist < 0 || pos_dist > size_) {
