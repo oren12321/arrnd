@@ -60,54 +60,41 @@ namespace details {
 
 namespace oc {
 namespace details {
-    template <template <typename...> typename T, typename... Args>
-    [[nodiscard]] static inline constexpr std::true_type is_template_type_impl(T<Args...>)
-    {
-        return std::true_type{};
-    }
-    template <template <typename...> typename T>
-    [[nodiscard]] static inline constexpr std::false_type is_template_type_impl(...)
-    {
-        return std::false_type{};
-    }
-    template <template <typename...> typename T, typename U>
-    using is_template_type = decltype(is_template_type_impl<T>(std::declval<typename std::decay_t<U>>()));
-    template <typename U, template <typename...> typename T>
-    concept template_type = is_template_type<T, U>::value;
+    template <typename T, template <typename...> typename TT>
+    inline constexpr bool is_template_type_v = std::false_type{};
+
+    template <template <typename...> typename TT, typename... Args>
+    inline constexpr bool is_template_type_v<TT<Args...>, TT> = std::true_type{};
+
+    template <typename T, template <typename...> typename TT>
+    concept template_type = is_template_type_v<std::remove_cvref_t<T>, TT>;
 
     template <typename Iter>
-    using iterator_value_type = typename std::iterator_traits<Iter>::value_type;
+    using iterator_value_t = typename std::iterator_traits<Iter>::value_type;
+
+    template <typename Iter>
+    concept iterator_type = std::input_or_output_iterator<Iter>;
+
     template <typename Iter, typename T>
-    concept iterator_of_type = std::is_same_v<T, std::iter_value_t<Iter>>;
-    template <typename Iter, template <typename...> typename T>
-    concept iterator_of_template_type = std::input_iterator<Iter> && template_type<iterator_value_type<Iter>, T>;
+    concept iterator_of_type = iterator_type<Iter> && std::is_same_v<iterator_value_t<Iter>, T>;
+
+    template <typename Iter, template <typename...> typename TT>
+    concept iterator_of_template_type = iterator_type<Iter> && template_type<iterator_value_t<Iter>, TT>;
 
     template <typename Cont>
-    concept iterable = requires(Cont&& c) {
-                           {
-                               std::begin(c)
-                           };
-                           {
-                               std::end(c)
-                           };
-                       };
+    concept iterable_type = requires(Cont&& c) {
+                                std::begin(c);
+                                std::end(c);
+                            };
+
     template <typename Cont>
-    using iterable_value_type = std::remove_reference_t<decltype(*std::begin(std::declval<Cont&>()))>;
+    using iterable_value_t = std::remove_reference_t<decltype(*std::begin(std::declval<Cont&>()))>;
+
     template <typename Cont, typename T>
-    concept iterable_of_type = iterable<Cont> && requires(Cont&& c) {
-                                                     {
-                                                         std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                         } -> std::same_as<T>;
-                                                 };
-    template <typename Cont, template <typename...> typename T>
-    concept iterable_of_template_type = iterable<Cont> && requires(Cont&& c) {
-                                                              {
-                                                                  std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                                  } -> template_type<T>;
-                                                          };
+    concept iterable_of_type = iterable_type<Cont> && std::is_same_v<iterable_value_t<Cont>, T>;
 
-    template <typename T>
-    concept random_access_type = std::random_access_iterator<typename T::iterator>;
+    template <typename Cont, template <typename...> typename TT>
+    concept iterable_of_template_type = iterable_type<Cont> && template_type<iterable_value_t<Cont>, TT>;
 
     template <typename T, std::size_t... Ns>
     constexpr std::size_t array_elements_count(std::index_sequence<Ns...>)
@@ -137,12 +124,6 @@ namespace details {
         return res;
     }
 }
-
-using details::iterator_value_type;
-using details::iterator_of_type;
-using details::iterable;
-using details::iterable_of_type;
-using details::random_access_type;
 
 using details::array_cast;
 using details::const_array_cast;
@@ -251,7 +232,7 @@ namespace details {
             }
         }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         explicit constexpr simple_vector(InputIt first, InputIt last)
             : size_(std::distance(first, last))
             , capacity_(std::distance(first, last))
@@ -542,7 +523,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -673,7 +654,7 @@ namespace details {
             std::fill_n(ptr_, size, value);
         }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         explicit constexpr simple_array(InputIt first, InputIt last)
             : simple_array(std::distance(first, last))
         {
@@ -892,7 +873,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -1010,7 +991,7 @@ namespace details {
             , ptr_(sp.data())
         { }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         explicit constexpr simple_view(InputIt first, InputIt last)
             : simple_view(std::span<value_type>(
                 const_cast<pointer>(reinterpret_cast<const_pointer>(&(*first))), std::distance(first, last)))
@@ -1221,7 +1202,7 @@ namespace details {
             return ptr_[0];
         }
 
-        template <std::input_or_output_iterator InputIt>
+        template <iterator_type InputIt>
         constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
         {
             difference_type in_dist = std::distance(first, last);
@@ -1700,8 +1681,11 @@ namespace details {
         return os;
     }
 }
+
 using details::interval;
 using details::isbound;
+using details::isleftbound;
+using details::isrightbound;
 using details::isunbound;
 using details::isbetween;
 using details::empty;
@@ -1714,49 +1698,44 @@ namespace details {
 
     template <typename Iter>
     concept signed_integral_type_iterator
-        = std::input_iterator<Iter> && std::signed_integral<iterator_value_type<Iter>>;
+        = iterator_type<Iter> && std::signed_integral<iterator_value_t<Iter>>;
     template <typename Iter>
-    concept integral_type_iterator = std::integral<iterator_value_type<Iter>>;
+    concept integral_type_iterator = std::integral<iterator_value_t<Iter>>;
     template <typename Iter>
-    concept interval_type_iterator = is_template_type<interval, iterator_value_type<Iter>>::value;
+    concept interval_type_iterator = template_type<iterator_value_t<Iter>, interval>;
 
     template <typename Cont>
-    concept signed_integral_type_iterable = iterable<Cont> && requires(Cont&& c) {
+    concept signed_integral_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
                                                                   {
                                                                       std::remove_cvref_t<decltype(*std::begin(c))>{}
                                                                       } -> std::signed_integral;
                                                               };
 
     template <typename Cont>
-    concept integral_type_iterable = iterable<Cont> && requires(Cont&& c) {
+    concept integral_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
                                                            {
                                                                std::remove_cvref_t<decltype(*std::begin(c))>{}
                                                                } -> std::integral;
                                                        };
     template <typename Cont>
-    concept interval_type_iterable = iterable<Cont> && requires(Cont&& c) {
+    concept interval_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
                                                            {
                                                                std::remove_cvref_t<decltype(*std::begin(c))>{}
                                                                } -> template_type<interval>;
                                                        };
 
     template <typename Iter>
-    using iterator_value_t = std::iter_value_t<Iter>;
+    concept iterator_of_type_integral = iterator_type<Iter> && std::integral<iterator_value_t<Iter>>;
 
     template <typename Cont>
-    using iterable_value_t = std::remove_cvref_t<decltype(*std::begin(std::declval<Cont>()))>;
+    concept iterable_of_type_integral = iterable_type<Cont> && std::integral<iterable_value_t<Cont>>;
 
     template <typename Iter>
-    concept iterator_of_type_integral = std::integral<iterator_value_t<Iter>>;
+    concept iterator_of_type_interval
+        = iterator_type<Iter> && template_type<iterator_value_t<Iter>, interval>;
 
     template <typename Cont>
-    concept iterable_of_type_integral = iterable<Cont> && std::integral<iterable_value_t<Cont>>;
-
-    template <typename Iter>
-    concept iterator_of_type_interval = template_type<iterator_value_t<Iter>, interval>;
-
-    template <typename Cont>
-    concept iterable_of_type_interval = iterable<Cont> && template_type<iterable_value_t<Cont>, interval>;
+    concept iterable_of_type_interval = iterable_type<Cont> && template_type<iterable_value_t<Cont>, interval>;
 }
 
 using details::signed_integral_type_iterator;
@@ -2618,531 +2597,539 @@ using details::iscolumn;
 using details::isscalar;
 }
 
-namespace oc::experimental {
+namespace oc {
+namespace details {
+    template <typename ArrndInfo = arrnd_info<>>
+    class arrnd_indexer final {
+    public:
+        using info_type = ArrndInfo;
 
-template <typename ArrndInfo = arrnd_info<>>
-class arrnd_indexer final {
-public:
-    using info_type = ArrndInfo;
+        using index_type = typename info_type::extent_type;
+        using size_type = typename info_type::extent_type;
+        using difference_type = typename info_type::extent_storage_type::difference_type;
 
-    using index_type = typename info_type::extent_type;
-    using size_type = typename info_type::extent_type;
-    using difference_type = typename info_type::extent_storage_type::difference_type;
+        using sub_storage_type = typename info_type::extent_storage_type;
 
-    using sub_storage_type = typename info_type::extent_storage_type;
-
-    explicit constexpr arrnd_indexer(
-        const info_type& ai, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : ai_(ai)
-        , subs_(size(ai))
-        , pos_(empty(ai) ? arrnd_iterator_position::end : start_pos)
-    {
-        if (!empty(ai)) {
-            if (start_pos == arrnd_iterator_position::begin || start_pos == arrnd_iterator_position::rend) {
-                std::fill(std::begin(subs_), std::end(subs_), index_type{0});
-                curr_abs_ind_ = ai.indices_boundary().start();
-                curr_rel_ind_ = index_type{0};
-            } else {
-                std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(subs_), [](auto dim) {
-                    return dim - index_type{1};
-                });
-                curr_abs_ind_ = ai.indices_boundary().stop() - index_type{1};
-                curr_rel_ind_ = total(ai) - index_type{1};
-            }
-            if (start_pos == arrnd_iterator_position::end) {
-                curr_rel_ind_ = total(ai);
-            } else if (start_pos == arrnd_iterator_position::rend) {
-                curr_rel_ind_ = index_type{0} - 1;
-            }
-        }
-    }
-
-    constexpr arrnd_indexer() = default;
-    constexpr arrnd_indexer(const arrnd_indexer&) = default;
-    constexpr arrnd_indexer& operator=(const arrnd_indexer&) = default;
-    constexpr arrnd_indexer(arrnd_indexer&&) noexcept = default;
-    constexpr arrnd_indexer& operator=(arrnd_indexer&&) noexcept = default;
-    constexpr ~arrnd_indexer() = default;
-
-    constexpr arrnd_indexer& operator++() noexcept
-    {
-        if (pos_ == arrnd_iterator_position::end) {
-            return *this;
-        }
-
-        if (pos_ == arrnd_iterator_position::rend) {
-            ++curr_rel_ind_;
-            pos_ = arrnd_iterator_position::begin;
-            return *this;
-        }
-
-        ++curr_rel_ind_;
-
-        for (index_type i = size(ai_); i > 0; --i) {
-            ++subs_[i - 1];
-            curr_abs_ind_ += ai_.strides()[i - 1];
-            if (subs_[i - 1] < ai_.dims()[i - 1]) {
-                return *this;
-            }
-            curr_abs_ind_ -= ai_.strides()[i - 1] * subs_[i - 1];
-            subs_[i - 1] = 0;
-        }
-
-        std::transform(std::begin(ai_.dims()), std::end(ai_.dims()), std::begin(subs_), [](auto dim) {
-            return dim - index_type{1};
-        });
-        curr_abs_ind_ = ai_.indices_boundary().stop() - index_type{1};
-        curr_rel_ind_ = total(ai_);
-        pos_ = arrnd_iterator_position::end;
-
-        return *this;
-    }
-
-    constexpr arrnd_indexer operator++(int) noexcept
-    {
-        arrnd_indexer<info_type> temp{*this};
-        ++(*this);
-        return temp;
-    }
-
-    constexpr arrnd_indexer& operator+=(size_type count) noexcept
-    {
-        for (size_type i = 0; i < count; ++i) {
-            ++(*this);
-        }
-        return *this;
-    }
-
-    arrnd_indexer operator+(size_type count) const noexcept
-    {
-        arrnd_indexer<info_type> temp{*this};
-        temp += count;
-        return temp;
-    }
-
-    constexpr arrnd_indexer& operator--() noexcept
-    {
-        if (pos_ == arrnd_iterator_position::rend) {
-            return *this;
-        }
-
-        if (pos_ == arrnd_iterator_position::end) {
-            --curr_rel_ind_;
-            pos_ = arrnd_iterator_position::rbegin;
-            return *this;
-        }
-
-        --curr_rel_ind_;
-
-        for (index_type i = size(ai_); i > 0; --i) {
-            if (subs_[i - 1] >= 1) {
-                --subs_[i - 1];
-                curr_abs_ind_ -= ai_.strides()[i - 1];
-                return *this;
-            }
-            subs_[i - 1] = ai_.dims()[i - 1] - index_type{1};
-            curr_abs_ind_ += ai_.strides()[i - 1] * subs_[i - 1];
-        }
-
-        std::fill(std::begin(subs_), std::end(subs_), index_type{0});
-        curr_abs_ind_ = ai_.indices_boundary().start();
-        curr_rel_ind_ = index_type{0} - 1;
-        pos_ = arrnd_iterator_position::rend;
-
-        return *this;
-    }
-
-    constexpr arrnd_indexer operator--(int) noexcept
-    {
-        arrnd_indexer<info_type> temp{*this};
-        --(*this);
-        return temp;
-    }
-
-    constexpr arrnd_indexer& operator-=(size_type count) noexcept
-    {
-        for (size_type i = 0; i < count; ++i) {
-            --(*this);
-        }
-        return *this;
-    }
-
-    constexpr arrnd_indexer operator-(size_type count) const noexcept
-    {
-        arrnd_indexer<info_type> temp{*this};
-        temp -= count;
-        return temp;
-    }
-
-    [[nodiscard]] explicit constexpr operator bool() const noexcept
-    {
-        return !(pos_ == arrnd_iterator_position::end || pos_ == arrnd_iterator_position::rend);
-    }
-
-    [[nodiscard]] constexpr index_type operator*() const noexcept
-    {
-        return curr_abs_ind_;
-    }
-
-    [[nodiscard]] constexpr const sub_storage_type& subs() const noexcept
-    {
-        return subs_;
-    }
-
-    [[nodiscard]] constexpr arrnd_indexer operator[](index_type index) const noexcept
-    {
-        assert(index >= 0 && index < total(ai_));
-
-        if (index > curr_rel_ind_) {
-            return *this + (index - curr_rel_ind_);
-        }
-
-        if (index < curr_rel_ind_) {
-            return *this - (curr_rel_ind_ - index);
-        }
-
-        return *this;
-    }
-
-    [[nodiscard]] constexpr bool operator==(const arrnd_indexer& other) const noexcept
-    {
-        return curr_rel_ind_ + 1 == other.curr_rel_ind_ + 1;
-    }
-
-    [[nodiscard]] constexpr bool operator<(const arrnd_indexer& other) const noexcept
-    {
-        return curr_rel_ind_ + 1 < other.curr_rel_ind_ + 1;
-    }
-
-    [[nodiscard]] constexpr bool operator<=(const arrnd_indexer& other) const noexcept
-    {
-        return curr_rel_ind_ + 1 <= other.curr_rel_ind_ + 1;
-    }
-
-    [[nodiscard]] constexpr difference_type operator-(const arrnd_indexer& other) const noexcept
-    {
-        return static_cast<difference_type>(curr_rel_ind_ + 1) - static_cast<difference_type>(other.curr_rel_ind_ + 1);
-    }
-
-private:
-    info_type ai_;
-
-    sub_storage_type subs_;
-
-    index_type curr_abs_ind_{0};
-    index_type curr_rel_ind_{0};
-
-    arrnd_iterator_position pos_{arrnd_iterator_position::end};
-};
-
-enum class arrnd_sliding_window_type {
-    complete,
-    partial,
-};
-
-template <typename Interval>
-    requires(std::signed_integral<typename Interval::size_type>)
-struct arrnd_sliding_window {
-    using interval_type = Interval;
-
-    explicit constexpr arrnd_sliding_window(
-        interval_type nival, arrnd_sliding_window_type ntype = arrnd_sliding_window_type::complete)
-        : ival(nival)
-        , type(ntype)
-    { }
-
-    constexpr arrnd_sliding_window() = default;
-    constexpr arrnd_sliding_window(const arrnd_sliding_window&) = default;
-    constexpr arrnd_sliding_window& operator=(const arrnd_sliding_window&) = default;
-    constexpr arrnd_sliding_window(arrnd_sliding_window&&) noexcept = default;
-    constexpr arrnd_sliding_window& operator=(arrnd_sliding_window&&) noexcept = default;
-    constexpr ~arrnd_sliding_window() = default;
-
-    interval_type ival;
-    arrnd_sliding_window_type type{arrnd_sliding_window_type::complete};
-};
-
-template <typename ArrndInfo = arrnd_info<>>
-class arrnd_window_slider final {
-public:
-    using info_type = ArrndInfo;
-
-    using index_type = typename info_type::extent_type;
-    using size_type = typename info_type::extent_type;
-
-    using boundary_storage_type =
-        typename info_type::storage_info_type::template replaced_type<typename info_type::boundary_type>::storage_type;
-
-    using window_type = arrnd_sliding_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
-
-    template <typename InputIt>
-        requires(oc::details::template_type<oc::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
-    explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_window, InputIt last_window,
-        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : ai_(ai)
-        , windows_(size(ai))
-        , curr_boundaries_(size(ai))
-    {
-        if (size(ai) < std::distance(first_window, last_window)) {
-            throw std::invalid_argument("invalid window size - bigger than number of dims");
-        }
-
-        if (std::any_of(first_window, last_window, [](auto window) {
-                return isunbound(window.ival) && (isleftbound(window.ival) || isrightbound(window.ival));
-            })) {
-            throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
-        }
-
-        if (!std::transform_reduce(std::begin(ai.dims()),
-                std::next(std::begin(ai.dims()), std::distance(first_window, last_window)), first_window, true,
-                std::logical_and<>{}, [](auto dim, auto window) {
-                    auto ival = window.ival;
-                    auto type = window.type;
-                    return (type == arrnd_sliding_window_type::complete
-                               && (isunbound(ival) || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= dim)))
-                        || type == arrnd_sliding_window_type::partial;
-                })) {
-            throw std::invalid_argument("invalid window interval");
-        }
-
-        if constexpr (std::is_same_v<std::iter_value_t<InputIt>, typename window_type::interval_type>) {
-            std::copy(first_window, last_window, std::begin(windows_));
-        } else {
-            std::transform(first_window, last_window, std::begin(windows_), [](auto window) {
-                return window_type(static_cast<typename window_type::interval_type>(window.ival), window.type);
-            });
-        }
-        if (size(ai) > std::distance(first_window, last_window)) {
-            std::transform(std::next(std::begin(ai.dims()), std::distance(first_window, last_window)),
-                std::end(ai.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
-                [](auto dim) {
-                    return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
-                        arrnd_sliding_window_type::complete);
-                });
-        }
-
-        typename info_type::extent_storage_type indexer_dims(size(ai));
-        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows_), std::begin(indexer_dims),
-            [](auto dim, auto window) {
-                auto ival = window.ival;
-                if (isunbound(window.ival)) {
-                    return index_type{1};
+        explicit constexpr arrnd_indexer(
+            const info_type& ai, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : ai_(ai)
+            , subs_(size(ai))
+            , pos_(empty(ai) ? arrnd_iterator_position::end : start_pos)
+        {
+            if (!empty(ai)) {
+                if (start_pos == arrnd_iterator_position::begin || start_pos == arrnd_iterator_position::rend) {
+                    std::fill(std::begin(subs_), std::end(subs_), index_type{0});
+                    curr_abs_ind_ = ai.indices_boundary().start();
+                    curr_rel_ind_ = index_type{0};
+                } else {
+                    std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(subs_), [](auto dim) {
+                        return dim - index_type{1};
+                    });
+                    curr_abs_ind_ = ai.indices_boundary().stop() - index_type{1};
+                    curr_rel_ind_ = total(ai) - index_type{1};
                 }
-                return window.type == arrnd_sliding_window_type::complete ? dim - absdiff(ival) + 1 : dim;
+                if (start_pos == arrnd_iterator_position::end) {
+                    curr_rel_ind_ = total(ai);
+                } else if (start_pos == arrnd_iterator_position::rend) {
+                    curr_rel_ind_ = index_type{0} - 1;
+                }
+            }
+        }
+
+        constexpr arrnd_indexer() = default;
+        constexpr arrnd_indexer(const arrnd_indexer&) = default;
+        constexpr arrnd_indexer& operator=(const arrnd_indexer&) = default;
+        constexpr arrnd_indexer(arrnd_indexer&&) noexcept = default;
+        constexpr arrnd_indexer& operator=(arrnd_indexer&&) noexcept = default;
+        constexpr ~arrnd_indexer() = default;
+
+        constexpr arrnd_indexer& operator++() noexcept
+        {
+            if (pos_ == arrnd_iterator_position::end) {
+                return *this;
+            }
+
+            if (pos_ == arrnd_iterator_position::rend) {
+                ++curr_rel_ind_;
+                pos_ = arrnd_iterator_position::begin;
+                return *this;
+            }
+
+            ++curr_rel_ind_;
+
+            for (index_type i = size(ai_); i > 0; --i) {
+                ++subs_[i - 1];
+                curr_abs_ind_ += ai_.strides()[i - 1];
+                if (subs_[i - 1] < ai_.dims()[i - 1]) {
+                    return *this;
+                }
+                curr_abs_ind_ -= ai_.strides()[i - 1] * subs_[i - 1];
+                subs_[i - 1] = 0;
+            }
+
+            std::transform(std::begin(ai_.dims()), std::end(ai_.dims()), std::begin(subs_), [](auto dim) {
+                return dim - index_type{1};
+            });
+            curr_abs_ind_ = ai_.indices_boundary().stop() - index_type{1};
+            curr_rel_ind_ = total(ai_);
+            pos_ = arrnd_iterator_position::end;
+
+            return *this;
+        }
+
+        constexpr arrnd_indexer operator++(int) noexcept
+        {
+            arrnd_indexer<info_type> temp{*this};
+            ++(*this);
+            return temp;
+        }
+
+        constexpr arrnd_indexer& operator+=(size_type count) noexcept
+        {
+            for (size_type i = 0; i < count; ++i) {
+                ++(*this);
+            }
+            return *this;
+        }
+
+        arrnd_indexer operator+(size_type count) const noexcept
+        {
+            arrnd_indexer<info_type> temp{*this};
+            temp += count;
+            return temp;
+        }
+
+        constexpr arrnd_indexer& operator--() noexcept
+        {
+            if (pos_ == arrnd_iterator_position::rend) {
+                return *this;
+            }
+
+            if (pos_ == arrnd_iterator_position::end) {
+                --curr_rel_ind_;
+                pos_ = arrnd_iterator_position::rbegin;
+                return *this;
+            }
+
+            --curr_rel_ind_;
+
+            for (index_type i = size(ai_); i > 0; --i) {
+                if (subs_[i - 1] >= 1) {
+                    --subs_[i - 1];
+                    curr_abs_ind_ -= ai_.strides()[i - 1];
+                    return *this;
+                }
+                subs_[i - 1] = ai_.dims()[i - 1] - index_type{1};
+                curr_abs_ind_ += ai_.strides()[i - 1] * subs_[i - 1];
+            }
+
+            std::fill(std::begin(subs_), std::end(subs_), index_type{0});
+            curr_abs_ind_ = ai_.indices_boundary().start();
+            curr_rel_ind_ = index_type{0} - 1;
+            pos_ = arrnd_iterator_position::rend;
+
+            return *this;
+        }
+
+        constexpr arrnd_indexer operator--(int) noexcept
+        {
+            arrnd_indexer<info_type> temp{*this};
+            --(*this);
+            return temp;
+        }
+
+        constexpr arrnd_indexer& operator-=(size_type count) noexcept
+        {
+            for (size_type i = 0; i < count; ++i) {
+                --(*this);
+            }
+            return *this;
+        }
+
+        constexpr arrnd_indexer operator-(size_type count) const noexcept
+        {
+            arrnd_indexer<info_type> temp{*this};
+            temp -= count;
+            return temp;
+        }
+
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
+        {
+            return !(pos_ == arrnd_iterator_position::end || pos_ == arrnd_iterator_position::rend);
+        }
+
+        [[nodiscard]] constexpr index_type operator*() const noexcept
+        {
+            return curr_abs_ind_;
+        }
+
+        [[nodiscard]] constexpr const sub_storage_type& subs() const noexcept
+        {
+            return subs_;
+        }
+
+        [[nodiscard]] constexpr arrnd_indexer operator[](index_type index) const noexcept
+        {
+            assert(index >= 0 && index < total(ai_));
+
+            if (index > curr_rel_ind_) {
+                return *this + (index - curr_rel_ind_);
+            }
+
+            if (index < curr_rel_ind_) {
+                return *this - (curr_rel_ind_ - index);
+            }
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr bool operator==(const arrnd_indexer& other) const noexcept
+        {
+            return curr_rel_ind_ + 1 == other.curr_rel_ind_ + 1;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const arrnd_indexer& other) const noexcept
+        {
+            return curr_rel_ind_ + 1 < other.curr_rel_ind_ + 1;
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const arrnd_indexer& other) const noexcept
+        {
+            return curr_rel_ind_ + 1 <= other.curr_rel_ind_ + 1;
+        }
+
+        [[nodiscard]] constexpr difference_type operator-(const arrnd_indexer& other) const noexcept
+        {
+            return static_cast<difference_type>(curr_rel_ind_ + 1)
+                - static_cast<difference_type>(other.curr_rel_ind_ + 1);
+        }
+
+    private:
+        info_type ai_;
+
+        sub_storage_type subs_;
+
+        index_type curr_abs_ind_{0};
+        index_type curr_rel_ind_{0};
+
+        arrnd_iterator_position pos_{arrnd_iterator_position::end};
+    };
+
+    enum class arrnd_sliding_window_type {
+        complete,
+        partial,
+    };
+
+    template <typename Interval>
+        requires(std::signed_integral<typename Interval::size_type>)
+    struct arrnd_sliding_window {
+        using interval_type = Interval;
+
+        explicit constexpr arrnd_sliding_window(
+            interval_type nival, arrnd_sliding_window_type ntype = arrnd_sliding_window_type::complete)
+            : ival(nival)
+            , type(ntype)
+        { }
+
+        constexpr arrnd_sliding_window() = default;
+        constexpr arrnd_sliding_window(const arrnd_sliding_window&) = default;
+        constexpr arrnd_sliding_window& operator=(const arrnd_sliding_window&) = default;
+        constexpr arrnd_sliding_window(arrnd_sliding_window&&) noexcept = default;
+        constexpr arrnd_sliding_window& operator=(arrnd_sliding_window&&) noexcept = default;
+        constexpr ~arrnd_sliding_window() = default;
+
+        interval_type ival;
+        arrnd_sliding_window_type type{arrnd_sliding_window_type::complete};
+    };
+
+    template <typename ArrndInfo = arrnd_info<>>
+    class arrnd_window_slider final {
+    public:
+        using info_type = ArrndInfo;
+
+        using index_type = typename info_type::extent_type;
+        using size_type = typename info_type::extent_type;
+
+        using boundary_storage_type = typename info_type::storage_info_type::template replaced_type<
+            typename info_type::boundary_type>::storage_type;
+
+        using window_type = arrnd_sliding_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
+
+        template <typename InputIt>
+            requires(oc::details::template_type<oc::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
+        explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_window, InputIt last_window,
+            arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : ai_(ai)
+            , windows_(size(ai))
+            , curr_boundaries_(size(ai))
+        {
+            if (size(ai) < std::distance(first_window, last_window)) {
+                throw std::invalid_argument("invalid window size - bigger than number of dims");
+            }
+
+            if (std::any_of(first_window, last_window, [](auto window) {
+                    return isunbound(window.ival) && (isleftbound(window.ival) || isrightbound(window.ival));
+                })) {
+                throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
+            }
+
+            if (!std::transform_reduce(std::begin(ai.dims()),
+                    std::next(std::begin(ai.dims()), std::distance(first_window, last_window)), first_window, true,
+                    std::logical_and<>{}, [](auto dim, auto window) {
+                        auto ival = window.ival;
+                        auto type = window.type;
+                        return (type == arrnd_sliding_window_type::complete
+                                   && (isunbound(ival)
+                                       || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= dim)))
+                            || type == arrnd_sliding_window_type::partial;
+                    })) {
+                throw std::invalid_argument("invalid window interval");
+            }
+
+            if constexpr (std::is_same_v<std::iter_value_t<InputIt>, typename window_type::interval_type>) {
+                std::copy(first_window, last_window, std::begin(windows_));
+            } else {
+                std::transform(first_window, last_window, std::begin(windows_), [](auto window) {
+                    return window_type(static_cast<typename window_type::interval_type>(window.ival), window.type);
+                });
+            }
+            if (size(ai) > std::distance(first_window, last_window)) {
+                std::transform(std::next(std::begin(ai.dims()), std::distance(first_window, last_window)),
+                    std::end(ai.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
+                    [](auto dim) {
+                        return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
+                            arrnd_sliding_window_type::complete);
+                    });
+            }
+
+            typename info_type::extent_storage_type indexer_dims(size(ai));
+            std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows_), std::begin(indexer_dims),
+                [](auto dim, auto window) {
+                    auto ival = window.ival;
+                    if (isunbound(window.ival)) {
+                        return index_type{1};
+                    }
+                    return window.type == arrnd_sliding_window_type::complete ? dim - absdiff(ival) + 1 : dim;
+                });
+
+            indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
+
+            for (size_type i = 0; i < size(ai); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai.dims()[i]);
+            }
+        }
+
+        template <oc::details::iterable_type Cont>
+            requires(oc::details::template_type<oc::details::iterable_value_t<Cont>, arrnd_sliding_window>)
+        explicit constexpr arrnd_window_slider(
+            const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : arrnd_window_slider(ai, std::begin(windows), std::end(windows), start_pos)
+        { }
+
+        explicit constexpr arrnd_window_slider(const info_type& ai, std::initializer_list<window_type> windows,
+            arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : arrnd_window_slider(ai, windows.begin(), windows.end(), start_pos)
+        { }
+
+        explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis,
+            const window_type& window = window_type(typename window_type::interval_type(0, 1)),
+            arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+        {
+            if (axis >= size(ai)) {
+                throw std::out_of_range("invalid axis");
+            }
+
+            typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows(size(ai));
+
+            std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
+                return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
+                    arrnd_sliding_window_type::complete);
             });
 
-        indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
+            windows[axis] = window;
 
-        for (size_type i = 0; i < size(ai); ++i) {
-            curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai.dims()[i]);
-        }
-    }
-
-    template <iterable Cont>
-        requires(oc::details::template_type<oc::details::iterable_value_t<Cont>, arrnd_sliding_window>)
-    explicit constexpr arrnd_window_slider(
-        const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : arrnd_window_slider(ai, std::begin(windows), std::end(windows), start_pos)
-    { }
-
-    explicit constexpr arrnd_window_slider(const info_type& ai, std::initializer_list<window_type> windows,
-        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-        : arrnd_window_slider(ai, windows.begin(), windows.end(), start_pos)
-    { }
-
-    explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis,
-        const window_type& window = window_type(typename window_type::interval_type(0, 1)),
-        arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-    {
-        if (axis >= size(ai)) {
-            throw std::out_of_range("invalid axis");
+            *this = arrnd_window_slider(ai, windows, start_pos);
         }
 
-        typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows(size(ai));
+        constexpr arrnd_window_slider() = default;
+        constexpr arrnd_window_slider(const arrnd_window_slider&) = default;
+        constexpr arrnd_window_slider& operator=(const arrnd_window_slider&) = default;
+        constexpr arrnd_window_slider(arrnd_window_slider&&) noexcept = default;
+        constexpr arrnd_window_slider& operator=(arrnd_window_slider&&) noexcept = default;
+        constexpr ~arrnd_window_slider() = default;
 
-        std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
-            return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
-                arrnd_sliding_window_type::complete);
-        });
+        constexpr arrnd_window_slider& operator++() noexcept
+        {
+            ++indexer_;
 
-        windows[axis] = window;
+            for (size_type i = 0; i < size(ai_); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            }
 
-        *this = arrnd_window_slider(ai, windows, start_pos);
-    }
-
-    constexpr arrnd_window_slider() = default;
-    constexpr arrnd_window_slider(const arrnd_window_slider&) = default;
-    constexpr arrnd_window_slider& operator=(const arrnd_window_slider&) = default;
-    constexpr arrnd_window_slider(arrnd_window_slider&&) noexcept = default;
-    constexpr arrnd_window_slider& operator=(arrnd_window_slider&&) noexcept = default;
-    constexpr ~arrnd_window_slider() = default;
-
-    constexpr arrnd_window_slider& operator++() noexcept
-    {
-        ++indexer_;
-
-        for (size_type i = 0; i < size(ai_); ++i) {
-            curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            return *this;
         }
 
-        return *this;
-    }
-
-    constexpr arrnd_window_slider operator++(int) noexcept
-    {
-        arrnd_window_slider<info_type> temp{*this};
-        ++(*this);
-        return temp;
-    }
-
-    constexpr arrnd_window_slider& operator+=(size_type count) noexcept
-    {
-        for (size_type i = 0; i < count; ++i) {
+        constexpr arrnd_window_slider operator++(int) noexcept
+        {
+            arrnd_window_slider<info_type> temp{*this};
             ++(*this);
-        }
-        return *this;
-    }
-
-    arrnd_window_slider operator+(size_type count) const noexcept
-    {
-        arrnd_window_slider<info_type> temp{*this};
-        temp += count;
-        return temp;
-    }
-
-    constexpr arrnd_window_slider& operator--() noexcept
-    {
-        --indexer_;
-
-        for (size_type i = 0; i < size(ai_); ++i) {
-            curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            return temp;
         }
 
-        return *this;
-    }
+        constexpr arrnd_window_slider& operator+=(size_type count) noexcept
+        {
+            for (size_type i = 0; i < count; ++i) {
+                ++(*this);
+            }
+            return *this;
+        }
 
-    constexpr arrnd_window_slider operator--(int) noexcept
-    {
-        arrnd_window_slider<info_type> temp{*this};
-        --(*this);
-        return temp;
-    }
+        arrnd_window_slider operator+(size_type count) const noexcept
+        {
+            arrnd_window_slider<info_type> temp{*this};
+            temp += count;
+            return temp;
+        }
 
-    constexpr arrnd_window_slider& operator-=(size_type count) noexcept
-    {
-        for (size_type i = 0; i < count; ++i) {
+        constexpr arrnd_window_slider& operator--() noexcept
+        {
+            --indexer_;
+
+            for (size_type i = 0; i < size(ai_); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            }
+
+            return *this;
+        }
+
+        constexpr arrnd_window_slider operator--(int) noexcept
+        {
+            arrnd_window_slider<info_type> temp{*this};
             --(*this);
-        }
-        return *this;
-    }
-
-    constexpr arrnd_window_slider operator-(size_type count) const noexcept
-    {
-        arrnd_window_slider<info_type> temp{*this};
-        temp -= count;
-        return temp;
-    }
-
-    [[nodiscard]] explicit constexpr operator bool() const noexcept
-    {
-        return static_cast<bool>(indexer_);
-    }
-
-    [[nodiscard]] constexpr const boundary_storage_type& operator*() const noexcept
-    {
-        return curr_boundaries_;
-    }
-
-    [[nodiscard]] constexpr arrnd_window_slider operator[](index_type index) const noexcept
-    {
-        auto subs = indexer_[index].subs();
-
-        arrnd_window_slider<info_type> temp{*this};
-
-        for (size_type i = 0; i < size(ai_); ++i) {
-            temp.curr_boundaries_[i] = window2boundary(windows_[i], subs[i], ai_.dims()[i]);
+            return temp;
         }
 
-        return temp;
-    }
-
-    [[nodiscard]] constexpr bool operator==(const arrnd_window_slider& other) const noexcept
-    {
-        return indexer_ == other.indexer_;
-    }
-
-    [[nodiscard]] constexpr bool operator<(const arrnd_window_slider& other) const noexcept
-    {
-        return indexer_ < other.indexer_;
-    }
-
-    [[nodiscard]] constexpr bool operator<=(const arrnd_window_slider& other) const noexcept
-    {
-        return indexer_ <= other.indexer_;
-    }
-
-    [[nodiscard]] constexpr auto operator-(const arrnd_window_slider& other) const noexcept
-    {
-        return indexer_ - other.indexer_;
-    }
-
-    // not so safe function, and should be used with consideration of the internal indexer.
-    constexpr void modify_window(index_type axis, window_type window)
-    {
-        if (axis >= size(ai_)) {
-            throw std::out_of_range("invalid axis");
+        constexpr arrnd_window_slider& operator-=(size_type count) noexcept
+        {
+            for (size_type i = 0; i < count; ++i) {
+                --(*this);
+            }
+            return *this;
         }
 
-        const auto& ival = window.ival;
-
-        if (isunbound(ival) && (isleftbound(ival) || isrightbound(ival))) {
-            throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
+        constexpr arrnd_window_slider operator-(size_type count) const noexcept
+        {
+            arrnd_window_slider<info_type> temp{*this};
+            temp -= count;
+            return temp;
         }
 
-        if (!(isunbound(ival) || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= ai_.dims()[axis]))) {
-            throw std::invalid_argument("invalid window interval");
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
+        {
+            return static_cast<bool>(indexer_);
         }
 
-        windows_[axis] = window;
-
-        curr_boundaries_[axis] = window2boundary(windows_[axis], indexer_.subs()[axis], ai_.dims()[axis]);
-    }
-
-private:
-    [[nodiscard]] typename info_type::boundary_type window2boundary(
-        window_type window, index_type sub, size_type dim) const
-    {
-        const auto& ival = window.ival;
-        auto type = window.type;
-
-        if (isunbound(ival)) {
-            // unsupported half bound intervals checked in class constructor.
-            return typename info_type::boundary_type(
-                0, static_cast<index_type>(dim), static_cast<index_type>(ival.step()));
+        [[nodiscard]] constexpr const boundary_storage_type& operator*() const noexcept
+        {
+            return curr_boundaries_;
         }
 
-        if (type == arrnd_sliding_window_type::complete) {
-            return typename info_type::boundary_type(
-                sub, sub + static_cast<index_type>(absdiff(ival)), static_cast<index_type>(ival.step()));
+        [[nodiscard]] constexpr arrnd_window_slider operator[](index_type index) const noexcept
+        {
+            auto subs = indexer_[index].subs();
+
+            arrnd_window_slider<info_type> temp{*this};
+
+            for (size_type i = 0; i < size(ai_); ++i) {
+                temp.curr_boundaries_[i] = window2boundary(windows_[i], subs[i], ai_.dims()[i]);
+            }
+
+            return temp;
         }
 
-        auto before = static_cast<index_type>(std::abs(ival.start()));
-        auto nstart = (sub < before ? 0 : sub - before);
+        [[nodiscard]] constexpr bool operator==(const arrnd_window_slider& other) const noexcept
+        {
+            return indexer_ == other.indexer_;
+        }
 
-        auto after = static_cast<index_type>(ival.stop());
-        auto nstop = (sub + after > dim ? dim : sub + after);
+        [[nodiscard]] constexpr bool operator<(const arrnd_window_slider& other) const noexcept
+        {
+            return indexer_ < other.indexer_;
+        }
 
-        return typename info_type::boundary_type(nstart, nstop, static_cast<index_type>(ival.step()));
-    }
+        [[nodiscard]] constexpr bool operator<=(const arrnd_window_slider& other) const noexcept
+        {
+            return indexer_ <= other.indexer_;
+        }
 
-    info_type ai_;
+        [[nodiscard]] constexpr auto operator-(const arrnd_window_slider& other) const noexcept
+        {
+            return indexer_ - other.indexer_;
+        }
 
-    typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows_;
-    arrnd_indexer<info_type> indexer_;
+        // not so safe function, and should be used with consideration of the internal indexer.
+        constexpr void modify_window(index_type axis, window_type window)
+        {
+            if (axis >= size(ai_)) {
+                throw std::out_of_range("invalid axis");
+            }
 
-    boundary_storage_type curr_boundaries_;
-};
+            const auto& ival = window.ival;
 
+            if (isunbound(ival) && (isleftbound(ival) || isrightbound(ival))) {
+                throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
+            }
+
+            if (!(isunbound(ival) || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= ai_.dims()[axis]))) {
+                throw std::invalid_argument("invalid window interval");
+            }
+
+            windows_[axis] = window;
+
+            curr_boundaries_[axis] = window2boundary(windows_[axis], indexer_.subs()[axis], ai_.dims()[axis]);
+        }
+
+    private:
+        [[nodiscard]] typename info_type::boundary_type window2boundary(
+            window_type window, index_type sub, size_type dim) const
+        {
+            const auto& ival = window.ival;
+            auto type = window.type;
+
+            if (isunbound(ival)) {
+                // unsupported half bound intervals checked in class constructor.
+                return typename info_type::boundary_type(
+                    0, static_cast<index_type>(dim), static_cast<index_type>(ival.step()));
+            }
+
+            if (type == arrnd_sliding_window_type::complete) {
+                return typename info_type::boundary_type(
+                    sub, sub + static_cast<index_type>(absdiff(ival)), static_cast<index_type>(ival.step()));
+            }
+
+            auto before = static_cast<index_type>(std::abs(ival.start()));
+            auto nstart = (sub < before ? 0 : sub - before);
+
+            auto after = static_cast<index_type>(ival.stop());
+            auto nstop = (sub + after > dim ? dim : sub + after);
+
+            return typename info_type::boundary_type(nstart, nstop, static_cast<index_type>(ival.step()));
+        }
+
+        info_type ai_;
+
+        typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows_;
+        arrnd_indexer<info_type> indexer_;
+
+        boundary_storage_type curr_boundaries_;
+    };
+
+}
+
+using details::arrnd_indexer;
+using details::arrnd_sliding_window_type;
+using details::arrnd_sliding_window;
+using details::arrnd_window_slider;
 }
 
 namespace oc {
@@ -4233,7 +4220,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, iterator_type InputDataIt>
     [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
         const InputDataIt& first_data, const InputDataIt& last_data)
     {
@@ -4245,13 +4232,13 @@ namespace details {
             last_data);
         return res;
     }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont, std::input_iterator InputDataIt>
+    template <arrnd_compliant ArCo, integral_type_iterable Cont, iterator_type InputDataIt>
     [[nodiscard]] inline constexpr auto view(
         const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
     {
         return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
     }
-    template <arrnd_compliant ArCo, std::input_iterator InputDataIt>
+    template <arrnd_compliant ArCo, iterator_type InputDataIt>
     [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
         const InputDataIt& first_data, const InputDataIt& last_data)
     {
@@ -4274,20 +4261,20 @@ namespace details {
     {
         return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
     }
-    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, iterable DataCont>
+    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, iterable_type DataCont>
         requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(
         const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
     {
         return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
     }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont, iterable DataCont>
+    template <arrnd_compliant ArCo, integral_type_iterable Cont, iterable_type DataCont>
         requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
     {
         return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
     }
-    template <arrnd_compliant ArCo, iterable DataCont>
+    template <arrnd_compliant ArCo, iterable_type DataCont>
         requires(!template_type<DataCont, std::initializer_list>)
     [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
     {
@@ -4678,7 +4665,7 @@ namespace details {
     template <typename T, template <typename...> typename U>
     [[nodiscard]] inline constexpr bool is_arrnd_of_template_type()
     {
-        return is_template_type<U, T>::value;
+        return is_template_type_v<T, U>;
     }
     template <arrnd_compliant T, template <typename...> typename U>
     [[nodiscard]] inline constexpr bool is_arrnd_of_template_type()
@@ -4866,7 +4853,7 @@ namespace details {
         std::tuple<Args...> args_ = std::tuple<>{};
     };
 
-    template <std::input_iterator InputIt>
+    template <iterator_type InputIt>
     class zipped_iter {
     public:
         struct unknown { };
@@ -5605,8 +5592,8 @@ namespace details {
         template <typename U>
         using shared_ref_allocator_type = SharedRefAllocator<U>;
         using header_type = arrnd_info<DimsStorageInfo>;
-        using indexer_type = oc::experimental::arrnd_indexer<header_type>;
-        using ranger_type = oc::experimental::arrnd_window_slider<header_type>;
+        using indexer_type = arrnd_indexer<header_type>;
+        using ranger_type = arrnd_window_slider<header_type>;
 
         using interval_type = typename header_type::boundary_type;
 
@@ -5743,7 +5730,7 @@ namespace details {
 
         virtual constexpr ~arrnd() = default;
 
-        template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt>
+        template <integral_type_iterator InputDimsIt, iterator_type InputDataIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
@@ -5756,11 +5743,11 @@ namespace details {
                 assert(last_data - first_data == total(hdr_));
             }
         }
-        template <integral_type_iterable Cont, std::input_iterator InputDataIt>
+        template <integral_type_iterable Cont, iterator_type InputDataIt>
         explicit constexpr arrnd(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
-        template <std::input_iterator InputDataIt>
+        template <iterator_type InputDataIt>
         explicit constexpr arrnd(
             std::initializer_list<size_type> dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(dims.begin(), dims.end(), first_data, last_data)
@@ -5780,17 +5767,17 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), data.begin(), data.end())
         { }
 
-        template <integral_type_iterator InputDimsIt, iterable DataCont>
+        template <integral_type_iterator InputDimsIt, iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
-        template <integral_type_iterable Cont, iterable DataCont>
+        template <integral_type_iterable Cont, iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const Cont& dims, const DataCont& data)
             : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
         { }
-        template <iterable DataCont>
+        template <iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(std::initializer_list<size_type> dims, const DataCont& data)
             : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
@@ -7654,7 +7641,7 @@ namespace details {
 
             ranger_type rgr(hdr_, fixed_axis,
                 window_type(
-                    window_interval_type(0, curr_ival_width), oc::experimental::arrnd_sliding_window_type::partial));
+                    window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -7669,7 +7656,7 @@ namespace details {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
                     rgr.modify_window(fixed_axis,
                         window_type(window_interval_type(0, curr_ival_width),
-                            oc::experimental::arrnd_sliding_window_type::partial));
+                            arrnd_sliding_window_type::partial));
                 }
 
                 ++count;
@@ -7747,8 +7734,8 @@ namespace details {
 
             ranger_type rgr(hdr_, axis,
                 window_type(window,
-                    bounded ? oc::experimental::arrnd_sliding_window_type::complete
-                            : oc::experimental::arrnd_sliding_window_type::partial));
+                    bounded ? arrnd_sliding_window_type::complete
+                            : arrnd_sliding_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -7783,8 +7770,8 @@ namespace details {
 
             ranger_type rgr(hdr_, axis,
                 window_type(window,
-                    bounded ? oc::experimental::arrnd_sliding_window_type::complete
-                            : oc::experimental::arrnd_sliding_window_type::partial));
+                    bounded ? arrnd_sliding_window_type::complete
+                            : arrnd_sliding_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -9597,7 +9584,7 @@ namespace details {
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
@@ -9606,7 +9593,7 @@ namespace details {
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
@@ -9615,7 +9602,7 @@ namespace details {
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
@@ -9624,7 +9611,7 @@ namespace details {
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
@@ -9633,7 +9620,7 @@ namespace details {
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
@@ -9642,7 +9629,7 @@ namespace details {
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
                     ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, oc::experimental::arrnd_sliding_window_type::partial),
+                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
 
@@ -9977,25 +9964,25 @@ namespace details {
 
     // arrnd type deduction by constructors
 
-    template <integral_type_iterator InputDimsIt, std::input_iterator InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
+    template <integral_type_iterator InputDimsIt, iterator_type InputDataIt,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <integral_type_iterable Cont, std::input_iterator InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <integral_type_iterable Cont, iterator_type InputDataIt,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <std::input_iterator InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_type<InputDataIt>>,
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <iterator_type InputDataIt,
+        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const InputDataIt&,
         const InputDataIt& a)
-        -> arrnd<iterator_value_type<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <integral_type_iterator InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
@@ -10012,23 +9999,23 @@ namespace details {
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <integral_type_iterator InputDimsIt, iterable DataCont,
-        typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
+    template <integral_type_iterator InputDimsIt, iterable_type DataCont,
+        typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const DataCont&)
-        -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <integral_type_iterable Cont, iterable DataCont,
-        typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
+        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <integral_type_iterable Cont, iterable_type DataCont,
+        typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const DataCont&)
-        -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterable DataCont, typename DataStorageInfo = dynamic_storage_info<iterable_value_type<DataCont>>,
+        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    template <iterable_type DataCont, typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const DataCont&)
-        -> arrnd<iterable_value_type<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,

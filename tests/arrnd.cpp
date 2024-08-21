@@ -1282,8 +1282,8 @@ TEST(interval_test, presets)
 
 TEST(general_iterable_types_check, typed_iterator)
 {
-    static_assert(std::is_same_v<int, oc::iterator_value_type<std::vector<int>::iterator>>);
-    static_assert(std::is_same_v<int, oc::iterator_value_type<oc::arrnd<int>::iterator>>);
+    static_assert(std::is_same_v<int, oc::details::iterator_value_t<std::vector<int>::iterator>>);
+    static_assert(std::is_same_v<int, oc::details::iterator_value_t<oc::arrnd<int>::iterator>>);
     static_assert(oc::details::integral_type_iterator<std::vector<int>::iterator>);
     static_assert(oc::details::integral_type_iterator<oc::arrnd<int>::iterator>);
     static_assert(!oc::signed_integral_type_iterator<std::vector<double>::iterator>);
@@ -1294,8 +1294,8 @@ TEST(general_iterable_types_check, typed_iterator)
 
 TEST(general_iterable_types_check, typed_iterable)
 {
-    static_assert(oc::iterable<std::vector<int>>);
-    static_assert(oc::iterable<oc::arrnd<int>>);
+    static_assert(oc::details::iterable_type<std::vector<int>>);
+    static_assert(oc::details::iterable_type<oc::arrnd<int>>);
 
     static_assert(oc::signed_integral_type_iterable<std::vector<int>>);
     static_assert(oc::signed_integral_type_iterable<oc::arrnd<int>>);
@@ -1306,10 +1306,10 @@ TEST(general_iterable_types_check, typed_iterable)
     static_assert(!oc::interval_type_iterable<std::vector<double>>);
 }
 
-TEST(general_iterable_types_check, random_access_type)
-{
-    static_assert(oc::random_access_type<std::vector<int>>);
-}
+//TEST(general_iterable_types_check, random_access_type)
+//{
+//    static_assert(oc::random_access_type<std::vector<int>>);
+//}
 
 TEST(arrnd_header_test, can_return_array_info)
 {
@@ -1446,7 +1446,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
 
 TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     oc::arrnd_info hdr(dims);
@@ -1500,7 +1500,7 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 
 TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     oc::arrnd_info hdr(dims);
@@ -1554,7 +1554,7 @@ TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
 
 TEST(experimental_arrnd_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     oc::arrnd_info hdr(dims);
@@ -1609,7 +1609,7 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations_with_steps_b
 
 TEST(experimental_arrnd_indexer, forward_backward_iterations_by_axis_order)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     const std::size_t order[]{2, 0, 1};
@@ -1670,7 +1670,7 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_axis_order)
 
 TEST(experimental_arrnd_indexer, forward_backward_iterations_by_specific_major_axis)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     oc::arrnd_info hdr(dims);
@@ -1722,7 +1722,7 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_specific_major_a
 
 TEST(experimental_arrnd_indexer, random_access)
 {
-    using namespace oc::experimental;
+    using namespace oc;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     oc::arrnd_info hdr(dims);
@@ -1748,14 +1748,14 @@ TEST(experimental_arrnd_indexer, random_access)
 //    //std::vector</*oc::interval<std::size_t>*/std::size_t> window{/*oc::interval<std::size_t>::full(),*/
 //    //    2, 3};
 //
-//    oc::experimental::arrnd_sliding_window window(oc::interval<>::between(-1, 3));
+//    oc::arrnd_sliding_window window(oc::interval<>::between(-1, 3));
 //
 //    std::vector windows{
-//        oc::experimental::arrnd_sliding_window(oc::interval<>::between(-1, 3), oc::experimental::arrnd_sliding_window_type::partial)};
+//        oc::arrnd_sliding_window(oc::interval<>::between(-1, 3), oc::arrnd_sliding_window_type::partial)};
 //
 //    int i = 0;
-//    for (oc::experimental::arrnd_window_slider ws(
-//             /*slc*/ ai, /*windows*/ 0, oc::experimental::arrnd_sliding_window(oc::interval<>(-1, 3)));
+//    for (oc::arrnd_window_slider ws(
+//             /*slc*/ ai, /*windows*/ 0, oc::arrnd_sliding_window(oc::interval<>(-1, 3)));
 //         ws; ++ws) {
 //        std::cout << "{ ";
 //        for (const auto& b : *ws) {
@@ -2093,7 +2093,7 @@ TEST(arrnd_test, indexer_deprecated)
     using namespace oc;
 
     arrnd<int> arr({3, 1, 2});
-    oc::experimental::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
+    oc::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
 
     std::vector<int> indices;
     for (; indexer; ++indexer) {
