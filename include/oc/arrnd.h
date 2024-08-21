@@ -26,6 +26,83 @@
 #include <span>
 #include <bitset>
 
+// expension of std::complex type overloaded operators
+namespace std {
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const std::complex<T>& rhs)
+{
+    return std::abs(lhs) < std::abs(rhs);
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const T& rhs)
+{
+    return std::abs(lhs) < rhs;
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<(const T& lhs, const std::complex<T>& rhs)
+{
+    return lhs < std::abs(rhs);
+}
+
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const std::complex<T>& rhs)
+{
+    return std::abs(lhs) <= std::abs(rhs);
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const T& rhs)
+{
+    return std::abs(lhs) <= rhs;
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator<=(const T& lhs, const std::complex<T>& rhs)
+{
+    return lhs <= std::abs(rhs);
+}
+
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const std::complex<T>& rhs)
+{
+    return std::abs(lhs) > std::abs(rhs);
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const T& rhs)
+{
+    return std::abs(lhs) > rhs;
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>(const T& lhs, const std::complex<T>& rhs)
+{
+    return lhs > std::abs(rhs);
+}
+
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const std::complex<T>& rhs)
+{
+    return std::abs(lhs) >= std::abs(rhs);
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const T& rhs)
+{
+    return std::abs(lhs) >= rhs;
+}
+template <typename T>
+[[nodiscard]] inline constexpr bool operator>=(const T& lhs, const std::complex<T>& rhs)
+{
+    return lhs >= std::abs(rhs);
+}
+}
+
+// swap function for zip class iterator usage in std algorithms
+// because its operator* not returning reference
+namespace std {
+template <typename Tuple>
+void swap(Tuple&& lhs, Tuple&& rhs)
+{
+    lhs.swap(rhs);
+}
+}
+
 namespace oc {
 namespace details {
     // reference: http://stackoverflow.com/a/20170989/1593077
@@ -1301,79 +1378,6 @@ namespace details {
 using details::simple_vector;
 using details::simple_array;
 using details::simple_view;
-}
-
-namespace oc {
-namespace details {
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const std::complex<T>& rhs)
-    {
-        return std::abs(lhs) < std::abs(rhs);
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<(const std::complex<T>& lhs, const T& rhs)
-    {
-        return std::abs(lhs) < rhs;
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<(const T& lhs, const std::complex<T>& rhs)
-    {
-        return lhs < std::abs(rhs);
-    }
-
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const std::complex<T>& rhs)
-    {
-        return std::abs(lhs) <= std::abs(rhs);
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<=(const std::complex<T>& lhs, const T& rhs)
-    {
-        return std::abs(lhs) <= rhs;
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator<=(const T& lhs, const std::complex<T>& rhs)
-    {
-        return lhs <= std::abs(rhs);
-    }
-
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const std::complex<T>& rhs)
-    {
-        return std::abs(lhs) > std::abs(rhs);
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>(const std::complex<T>& lhs, const T& rhs)
-    {
-        return std::abs(lhs) > rhs;
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>(const T& lhs, const std::complex<T>& rhs)
-    {
-        return lhs > std::abs(rhs);
-    }
-
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const std::complex<T>& rhs)
-    {
-        return std::abs(lhs) >= std::abs(rhs);
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>=(const std::complex<T>& lhs, const T& rhs)
-    {
-        return std::abs(lhs) >= rhs;
-    }
-    template <typename T>
-    [[nodiscard]] inline constexpr bool operator>=(const T& lhs, const std::complex<T>& rhs)
-    {
-        return lhs >= std::abs(rhs);
-    }
-}
-
-using details::operator<;
-using details::operator<=;
-using details::operator>;
-using details::operator>=;
 }
 
 namespace oc {
@@ -11986,16 +11990,6 @@ using details::view;
 using details::zeros;
 using details::eye;
 
-}
-
-// swap function for zip class iterator usage in std algorithms
-// because its operator* not returning reference
-namespace std {
-template <typename Tuple>
-void swap(Tuple&& lhs, Tuple&& rhs)
-{
-    lhs.swap(rhs);
-}
 }
 
 #endif // OC_ARRAY_H
