@@ -5436,41 +5436,11 @@ namespace details {
             last_data);
         return res;
     }
-    template <arrnd_compliant ArCo, iterable_of_type_integral Cont, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(
-        const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
-        const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, iterator_of_type_integral InputDimsIt, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
-    {
-        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, iterable_of_type_integral Cont, typename U>
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
-    }
     template <arrnd_compliant ArCo, typename U>
     [[nodiscard]] inline constexpr auto view(
         std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
     {
         return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, iterator_of_type_integral InputDimsIt, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
-    {
-        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
     }
     template <arrnd_compliant ArCo, iterable_of_type_integral Cont, iterable_type DataCont>
         requires(!template_type<DataCont, std::initializer_list>)
@@ -5478,16 +5448,11 @@ namespace details {
     {
         return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
     }
-    template <arrnd_compliant ArCo, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
-    }
     template <arrnd_compliant ArCo, typename T>
     [[nodiscard]] inline constexpr auto view(const T& value)
     {
-        return view<ArCo>({1}, &value, &value + 1);
+        std::initializer_list<typename ArCo::size_type> dims{1};
+        return view<ArCo>(dims.begin(), dims.end(), &value, &value + 1);
     }
 
     template <arrnd_compliant ArCo, iterator_of_type_integral DimsIt>
@@ -5724,44 +5689,16 @@ namespace details {
                 assert(last_data - first_data == total(hdr_));
             }
         }
-        template <iterable_of_type_integral Cont, iterator_type InputDataIt>
-        explicit constexpr arrnd(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
-            : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
-        { }
-        template <iterator_type InputDataIt>
-        explicit constexpr arrnd(
-            std::initializer_list<size_type> dims, const InputDataIt& first_data, const InputDataIt& last_data)
-            : arrnd(dims.begin(), dims.end(), first_data, last_data)
-        { }
 
-        template <iterator_of_type_integral InputDimsIt, typename U>
-        explicit constexpr arrnd(
-            const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
-            : arrnd(first_dim, last_dim, data.begin(), data.end())
-        { }
-        template <iterable_of_type_integral Cont, typename U>
-        explicit constexpr arrnd(const Cont& dims, std::initializer_list<U> data)
-            : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
-        { }
         template <typename U>
         explicit constexpr arrnd(std::initializer_list<size_type> dims, std::initializer_list<U> data)
             : arrnd(dims.begin(), dims.end(), data.begin(), data.end())
         { }
 
-        template <iterator_of_type_integral InputDimsIt, iterable_type DataCont>
-            requires(!template_type<DataCont, std::initializer_list>)
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
-            : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
-        { }
         template <iterable_of_type_integral Cont, iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const Cont& dims, const DataCont& data)
             : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
-        { }
-        template <iterable_type DataCont>
-            requires(!template_type<DataCont, std::initializer_list>)
-        explicit constexpr arrnd(std::initializer_list<size_type> dims, const DataCont& data)
-            : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
         { }
 
         template <iterator_of_type_integral InputDimsIt>
@@ -5842,18 +5779,6 @@ namespace details {
         explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func)
             : arrnd(dims.begin(), dims.end(), std::forward<Func>(func))
         { }
-
-        template <typename... Args>
-        [[nodiscard]] constexpr indexer_type indexer(Args&&... args) const
-        {
-            return indexer_type(hdr_, std::forward<Args>(args)...);
-        }
-
-        template <typename... Args>
-        [[nodiscard]] constexpr ranger_type ranger(Args&&... args) const
-        {
-            return ranger_type(hdr_, std::forward<Args>(args)...);
-        }
 
         [[nodiscard]] constexpr const header_type& header() const noexcept
         {
@@ -6014,12 +5939,14 @@ namespace details {
         [[nodiscard]] constexpr const_reference operator()(size_type relative_index) const noexcept
         {
             assert(relative_index >= 0 && relative_index <= total(hdr_));
-            return issliced(hdr_) ? buffsp_->data()[*(indexer() + relative_index)] : buffsp_->data()[relative_index];
+            return issliced(hdr_) ? buffsp_->data()[*(indexer_type(hdr_) + relative_index)]
+                                  : buffsp_->data()[relative_index];
         }
         [[nodiscard]] constexpr reference operator()(size_type relative_index) noexcept
         {
             assert(relative_index >= 0 && relative_index <= total(hdr_));
-            return issliced(hdr_) ? buffsp_->data()[*(indexer() + relative_index)] : buffsp_->data()[relative_index];
+            return issliced(hdr_) ? buffsp_->data()[*(indexer_type(hdr_) + relative_index)]
+                                  : buffsp_->data()[relative_index];
         }
 
         template <iterator_of_type_integral InputIt>
@@ -6043,7 +5970,8 @@ namespace details {
         }
         [[nodiscard]] constexpr auto operator()(std::initializer_list<size_type> indices) const
         {
-            return (*this)(replaced_type<size_type>({std::size(indices)}, indices.begin(), indices.end()));
+            std::initializer_list<size_type> dims{std::size(indices)};
+            return (*this)(replaced_type<size_type>(dims.begin(), dims.end(), indices.begin(), indices.end()));
         }
 
         [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
@@ -7854,7 +7782,7 @@ namespace details {
                 typename this_type::template replaced_type<this_type>(
                     hdr_.dims().cbegin(), std::next(hdr_.dims().cbegin(), std::ssize(hdr_.dims()) - page_ndims));
 
-            for (auto gen = pages.indexer(); gen; ++gen) {
+            for (auto gen = decltype(pages)::indexer_type(pages.header()); gen; ++gen) {
                 auto page = *this;
 
                 const auto& subs = gen.subs();
@@ -8119,45 +8047,13 @@ namespace details {
 
             return slices;
         }
-        template <iterator_of_type_integral AxesIt, iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
-        {
-            return split(first_axis, last_axis, std::begin(inds), std::end(inds));
-        }
-        template <iterator_of_type_integral AxesIt>
-        [[nodiscard]] constexpr auto split(
-            AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
-        {
-            return split(first_axis, last_axis, inds.begin(), inds.end());
-        }
 
-        template <iterable_of_type_integral AxesCont, iterator_of_type_integral IndsIt>
-        [[nodiscard]] constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
-        {
-            return split(std::begin(axes), std::end(axes), first_ind, last_ind);
-        }
         template <iterable_of_type_integral AxesCont, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, const Cont& inds) const
         {
             return split(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template <iterable_of_type_integral AxesCont>
-        [[nodiscard]] constexpr auto split(const AxesCont& axes, std::initializer_list<size_type> inds) const
-        {
-            return split(std::begin(axes), std::end(axes), inds.begin(), inds.end());
-        }
 
-        template <iterator_of_type_integral IndsIt>
-        [[nodiscard]] constexpr auto split(
-            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
-        {
-            return split(axes.begin(), axes.end(), first_ind, last_ind);
-        }
-        template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, const Cont& inds) const
-        {
-            return split(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
-        }
         [[nodiscard]] constexpr auto split(
             std::initializer_list<size_type> axes, std::initializer_list<size_type> inds) const
         {
@@ -8289,45 +8185,13 @@ namespace details {
 
             return slices;
         }
-        template <iterator_of_type_integral AxesIt, iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
-        {
-            return exclude(first_axis, last_axis, std::begin(inds), std::end(inds));
-        }
-        template <iterator_of_type_integral AxesIt>
-        [[nodiscard]] constexpr auto exclude(
-            AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
-        {
-            return exclude(first_axis, last_axis, inds.begin(), inds.end());
-        }
 
-        template <iterable_of_type_integral AxesCont, iterator_of_type_integral IndsIt>
-        [[nodiscard]] constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
-        {
-            return exclude(std::begin(axes), std::end(axes), first_ind, last_ind);
-        }
         template <iterable_of_type_integral AxesCont, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, const Cont& inds) const
         {
             return exclude(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template <iterable_of_type_integral AxesCont>
-        [[nodiscard]] constexpr auto exclude(const AxesCont& axes, std::initializer_list<size_type> inds) const
-        {
-            return exclude(std::begin(axes), std::end(axes), inds.begin(), inds.end());
-        }
 
-        template <iterator_of_type_integral IndsIt>
-        [[nodiscard]] constexpr auto exclude(
-            std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
-        {
-            return exclude(axes.begin(), axes.end(), first_ind, last_ind);
-        }
-        template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> axes, const Cont& inds) const
-        {
-            return exclude(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
-        }
         [[nodiscard]] constexpr auto exclude(
             std::initializer_list<size_type> axes, std::initializer_list<size_type> inds) const
         {
@@ -8451,8 +8315,8 @@ namespace details {
 
             assert(std::distance(first_order, last_order) == total(hdr_));
 
-            replaced_type<size_type> order(
-                {static_cast<size_type>(std::distance(first_order, last_order))}, first_order, last_order);
+            std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_order, last_order))};
+            replaced_type<size_type> order(res_dims.begin(), res_dims.end(), first_order, last_order);
 
             auto reordered = clone();
 
@@ -8485,8 +8349,8 @@ namespace details {
             assert(axis >= 0 && axis < hdr_.dims().size());
             assert(std::distance(first_order, last_order) == *std::next(hdr_.dims().cbegin(), axis));
 
-            replaced_type<size_type> order(
-                {static_cast<size_type>(std::distance(first_order, last_order))}, first_order, last_order);
+            std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_order, last_order))};
+            replaced_type<size_type> order(res_dims.begin(), res_dims.end(), first_order, last_order);
 
             auto expanded = expand(axis);
 
@@ -8560,8 +8424,8 @@ namespace details {
                 }
             };
 
-            impl(returned_type({static_cast<size_type>(std::distance(first_sub, last_sub))}, first_sub, last_sub), 0,
-                false);
+            std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_sub, last_sub))};
+            impl(returned_type(res_dims.begin(), res_dims.end(), first_sub, last_sub), 0, false);
 
             if (total(res.header()) > actual_num_adj) {
                 return res.resize({actual_num_adj});
@@ -9941,50 +9805,18 @@ namespace details {
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterable_of_type_integral Cont, iterator_type InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(const Cont&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterator_type InputDataIt, typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const InputDataIt&,
-        const InputDataIt& a)
-        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <iterator_of_type_integral InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(const InputDimsIt&, const InputDimsIt&, std::initializer_list<U>)
-        -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterable_of_type_integral Cont, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(const Cont&, std::initializer_list<U>) -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <iterator_of_type_integral InputDimsIt, iterable_type DataCont,
-        typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(const InputDimsIt&, const InputDimsIt&, const DataCont&)
-        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <iterable_of_type_integral Cont, iterable_type DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const DataCont&)
-        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterable_type DataCont, typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const DataCont&)
         -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
@@ -10484,9 +10316,10 @@ namespace details {
     template <arrnd_compliant ArCo>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, std::initializer_list<typename ArCo::size_type> indices)
     {
+        std::initializer_list<typename ArCo::size_type> dims{std::size(indices)};
         return filter<ArCo::depth>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
-                {std::size(indices)}, indices.begin(), indices.end()));
+                dims.begin(), dims.end(), indices.begin(), indices.end()));
     }
 
     template <arrnd_compliant ArCo>

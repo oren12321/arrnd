@@ -1065,7 +1065,7 @@ TEST(arrnd_test, arrnd_view_from_external_type)
 
     // create arrnd view from continuous container (e.g. vector, span, etc.)
 
-    std::vector<int> vec{1, 2, 3, 4, 5, 6};
+    std::initializer_list<int> vec{1, 2, 3, 4, 5, 6};
 
     auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
 
@@ -1073,7 +1073,7 @@ TEST(arrnd_test, arrnd_view_from_external_type)
         return value * 2;
     });
 
-    EXPECT_EQ(vec, (std::vector<int>{2, 4, 6, 8, 10, 12}));
+    EXPECT_EQ(std::vector<int>(vec), (std::vector<int>{2, 4, 6, 8, 10, 12}));
 }
 
 TEST(close_test, two_numbers_can_be_compared_with_specified_percision)

@@ -705,30 +705,30 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 
     const int data[] = {0, 0, 0};
     //EXPECT_NO_THROW((Integer_array{{1, 1}, data})); assertion failure
-    EXPECT_NO_THROW((Integer_array{{1, 3}, data}));
-    EXPECT_NO_THROW((Integer_array{{3, 1}, data}));
+    EXPECT_NO_THROW((Integer_array{std::vector<int>{1, 3}, data}));
+    EXPECT_NO_THROW((Integer_array{std::vector<int>{3, 1}, data}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0, 0, 0}}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0, 0, 0}}));
 
     const double ddata[] = {0.0, 0.0, 0.0};
     //EXPECT_NO_THROW((Integer_array{{1, 1}, ddata})); assertion failure
-    EXPECT_NO_THROW((Integer_array{{1, 3}, ddata}));
-    EXPECT_NO_THROW((Integer_array{{3, 1}, ddata}));
+    EXPECT_NO_THROW((Integer_array{std::vector<int>{1, 3}, ddata}));
+    EXPECT_NO_THROW((Integer_array{std::vector<int>{3, 1}, ddata}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0.0, 0.0, 0.0}}));
     EXPECT_NO_THROW((Integer_array{{3, 1, 1}, {0.0, 0.0, 0.0}}));
 
-    EXPECT_TRUE(Integer_array({0, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({1, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({0, 1}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 1}, data).empty());
 
-    EXPECT_TRUE(Integer_array({1, 0, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({1, 1, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({1, 0, 1}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{1, 0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{1, 1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{1, 0, 1}, data).empty());
 
-    EXPECT_TRUE(Integer_array({0, 0, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({0, 1, 0}, data).empty());
-    EXPECT_TRUE(Integer_array({0, 0, 1}, data).empty());
-    EXPECT_TRUE(Integer_array({0, 1, 1}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 0, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 1, 0}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 0, 1}, data).empty());
+    EXPECT_TRUE(Integer_array(std::vector<int>{0, 1, 1}, data).empty());
 }
 
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
@@ -779,27 +779,27 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - container
     // data - iterators
-    {
-        std::vector<int> dims{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd arr(dims, data.cbegin(), data.cend());
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd arr(dims, data.cbegin(), data.cend());
+    //}
 
     // dims - initializer_list
     // data - iterators
-    {
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
-        arrnd arr2({3, 1, 2}, data.cbegin(), data.cend());
-    }
+    //{
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
+    //    arrnd arr2({3, 1, 2}, data.cbegin(), data.cend());
+    //}
 
     // dims - array
     // data - iterators
-    {
-        int dims[]{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd arr(dims, data.cbegin(), data.cend());
-    }
+    //{
+    //    int dims[]{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd arr(dims, data.cbegin(), data.cend());
+    //}
 
     // same 4 previous constructors with different specified arrnd type
 
@@ -813,27 +813,27 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - container
     // data - iterators
-    {
-        std::vector<int> dims{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr(dims, data.cbegin(), data.cend());
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr(dims, data.cbegin(), data.cend());
+    //}
 
     // dims - initializer_list
     // data - iterators
-    {
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
-        arrnd<double> arr2({3, 1, 2}, data.cbegin(), data.cend());
-    }
+    //{
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr1(std::initializer_list<int>{}, data.cbegin(), data.cend());
+    //    arrnd<double> arr2({3, 1, 2}, data.cbegin(), data.cend());
+    //}
 
     // dims - array
     // data - iterators
-    {
-        int dims[]{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr(dims, data.cbegin(), data.cend());
-    }
+    //{
+    //    int dims[]{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr(dims, data.cbegin(), data.cend());
+    //}
 
     // ------------------------------
 
@@ -841,61 +841,61 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - iterators
     // data - initailizer_list
-    {
-        std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    arrnd arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
+    //}
 
     // dims - container
     // data - initailizer_list
-    {
-        std::vector<int> dims{3, 1, 2};
-        arrnd arr(dims, {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    arrnd arr(dims, {1, 2, 3, 4, 5, 6});
+    //}
 
     // dims - initializer_list
     // data - initailizer_list
     {
-        arrnd arr1(std::initializer_list<int>{}, {1, 2, 3, 4, 5, 6});
+        arrnd arr1(std::initializer_list<std::size_t>{}, {1, 2, 3, 4, 5, 6});
         arrnd arr2({3, 1, 2}, {1, 2, 3, 4, 5, 6});
     }
 
     // dims - array
     // data - initailizer_list
-    {
-        int dims[]{3, 1, 2};
-        arrnd arr(dims, {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    int dims[]{3, 1, 2};
+    //    arrnd arr(dims, {1, 2, 3, 4, 5, 6});
+    //}
 
     // same 4 previous constructors with different specified arrnd type
 
     // dims - iterators
     // data - initailizer_list
-    {
-        std::vector<int> dims{3, 1, 2};
-        arrnd<double> arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    arrnd<double> arr(dims.cbegin(), dims.cend(), {1, 2, 3, 4, 5, 6});
+    //}
 
     // dims - container
     // data - initailizer_list
-    {
-        std::vector<int> dims{3, 1, 2};
-        arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
+    //}
 
     // dims - initializer_list
     // data - initailizer_list
     {
-        arrnd<double> arr1(std::initializer_list<int>{}, {1, 2, 3, 4, 5, 6});
+        arrnd<double> arr1(std::initializer_list<std::size_t>{}, {1, 2, 3, 4, 5, 6});
         arrnd<double> arr2({3, 1, 2}, {1, 2, 3, 4, 5, 6});
     }
 
     // dims - array
     // data - initailizer_list
-    {
-        int dims[]{3, 1, 2};
-        arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
-    }
+    //{
+    //    int dims[]{3, 1, 2};
+    //    arrnd<double> arr(dims, {1, 2, 3, 4, 5, 6});
+    //}
 
     // ------------------------------
 
@@ -903,11 +903,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - iterators
     // data - container
-    {
-        std::vector<int> dims{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd arr(dims.cbegin(), dims.cend(), data);
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd arr(dims.cbegin(), dims.cend(), data);
+    //}
 
     // dims - container
     // data - container
@@ -919,11 +919,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - initializer_list
     // data - container
-    {
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd arr1(std::initializer_list<int>{}, data);
-        arrnd arr2({3, 1, 2}, data);
-    }
+    //{
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd arr1(std::initializer_list<int>{}, data);
+    //    arrnd arr2({3, 1, 2}, data);
+    //}
 
     // dims - array
     // data - container
@@ -937,11 +937,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - iterators
     // data - container
-    {
-        std::vector<int> dims{3, 1, 2};
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr(dims.cbegin(), dims.cend(), data);
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr(dims.cbegin(), dims.cend(), data);
+    //}
 
     // dims - container
     // data - container
@@ -953,11 +953,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - initializer_list
     // data - container
-    {
-        std::vector<int> data{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr1(std::initializer_list<int>{}, data);
-        arrnd<double> arr2({3, 1, 2}, data);
-    }
+    //{
+    //    std::vector<int> data{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr1(std::initializer_list<int>{}, data);
+    //    arrnd<double> arr2({3, 1, 2}, data);
+    //}
 
     // dims - array
     // data - container
@@ -973,27 +973,27 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - iterators
     // data - array
-    {
-        std::vector<int> dims{3, 1, 2};
-        int data[]{1, 2, 3, 4, 5, 6};
-        arrnd arr(dims.cbegin(), dims.cend(), data);
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    int data[]{1, 2, 3, 4, 5, 6};
+    //    arrnd arr(dims.cbegin(), dims.cend(), data);
+    //}
 
     // dims - container
     // data - array
-    {
-        std::vector<int> dims{3, 1, 2};
-        int data[]{1, 2, 3, 4, 5, 6};
-        arrnd arr(dims, data);
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    int data[]{1, 2, 3, 4, 5, 6};
+    //    arrnd arr(dims, data);
+    //}
 
     // dims - initializer_list
     // data - array
-    {
-        int data[]{1, 2, 3, 4, 5, 6};
-        arrnd arr1(std::initializer_list<int>{}, data);
-        arrnd arr2({3, 1, 2}, data);
-    }
+    //{
+    //    int data[]{1, 2, 3, 4, 5, 6};
+    //    arrnd arr1(std::initializer_list<int>{}, data);
+    //    arrnd arr2({3, 1, 2}, data);
+    //}
 
     // dims - array
     // data - array
@@ -1007,11 +1007,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - iterators
     // data - array
-    {
-        std::vector<int> dims{3, 1, 2};
-        int data[]{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr(dims.cbegin(), dims.cend(), data);
-    }
+    //{
+    //    std::vector<int> dims{3, 1, 2};
+    //    int data[]{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr(dims.cbegin(), dims.cend(), data);
+    //}
 
     // dims - container
     // data - array
@@ -1023,11 +1023,11 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
     // dims - initializer_list
     // data - array
-    {
-        int data[]{1, 2, 3, 4, 5, 6};
-        arrnd<double> arr1(std::initializer_list<int>{}, data);
-        arrnd<double> arr2({3, 1, 2}, data);
-    }
+    //{
+    //    int data[]{1, 2, 3, 4, 5, 6};
+    //    arrnd<double> arr1(std::initializer_list<int>{}, data);
+    //    arrnd<double> arr2({3, 1, 2}, data);
+    //}
 
     // dims - array
     // data - array
@@ -1410,7 +1410,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
 
     const int data[] = {1, 2, 3, 4, 5, 6};
 
-    Integer_array arr1d{{6}, data};
+    Integer_array arr1d{std::vector<int>{6}, data};
     const std::size_t* dims1d{arr1d.header().dims().data()};
     for (std::size_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ((arr1d[{i}]), data[i]);
@@ -1422,7 +1422,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
         EXPECT_EQ((arr1d[{i}]), 0);
     }
 
-    Integer_array arr2d{{3, 2}, data};
+    Integer_array arr2d{std::vector<int>{3, 2}, data};
     const std::size_t* dims2d{arr2d.header().dims().data()};
     for (std::size_t i = 0; i < dims2d[0]; ++i) {
         for (std::size_t j = 0; j < dims2d[1]; ++j) {
@@ -1438,7 +1438,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
         }
     }
 
-    Integer_array arr3d{{3, 1, 2}, data};
+    Integer_array arr3d{std::vector<int>{3, 1, 2}, data};
     const std::size_t* dims3d{arr3d.header().dims().data()};
     for (std::size_t k = 0; k < dims3d[0]; ++k) {
         for (std::size_t i = 0; i < dims3d[1]; ++i) {
@@ -1460,7 +1460,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
 
     // partial subscripts
     {
-        Integer_array parr{{3, 1, 2}, data};
+        Integer_array parr{std::vector<int>{3, 1, 2}, data};
 
         EXPECT_EQ((parr[{0, 0, 0}]), (parr[{0}]));
         EXPECT_EQ((parr[{0, 0, 1}]), (parr[{1}]));
@@ -1482,7 +1482,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
         }
 
         const double data2[]{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
-        Integer_array arr2({6}, data2);
+        Integer_array arr2(std::vector<int>{6}, data2);
         for (std::size_t i = 0; i < 6; ++i) {
             EXPECT_EQ(rdata[i], (arr2[{i}]));
         }
@@ -1778,9 +1778,9 @@ TEST(arrnd_test, reduce_elements)
         return previous + value;
     })));
 
-    oc::arrnd iarr1d{{6}, idata};
+    oc::arrnd iarr1d{std::vector<int>{6}, idata};
     const double data1d[]{21.0};
-    oc::arrnd rarr1d{{1}, data1d};
+    oc::arrnd rarr1d{std::vector<int>{1}, data1d};
     EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(iarr1d, 0, [](int value, double previous) {
         return previous + value;
     })));
@@ -1854,12 +1854,12 @@ TEST(arrnd_test, reduce_elements)
 TEST(arrnd_test, all)
 {
     const bool data[] = {1, 0, 1, 1};
-    oc::arrnd<int> arr{{2, 2}, data};
+    oc::arrnd<int> arr{std::vector<int>{2, 2}, data};
 
     EXPECT_EQ(false, oc::all(arr));
 
     const bool rdata[] = {true, false};
-    oc::arrnd<bool> rarr{{2}, rdata};
+    oc::arrnd<bool> rarr{std::vector<int>{2}, rdata};
 
     EXPECT_TRUE(oc::all_equal(rarr, oc::all(arr, 0)));
 }
@@ -1867,12 +1867,12 @@ TEST(arrnd_test, all)
 TEST(arrnd_test, any)
 {
     const bool data[] = {1, 0, 0, 0};
-    oc::arrnd<int> arr{{2, 2}, data};
+    oc::arrnd<int> arr{std::vector<int>{2, 2}, data};
 
     EXPECT_EQ(true, oc::any(arr));
 
     const bool rdata[] = {true, false};
-    oc::arrnd<bool> rarr{{2}, rdata};
+    oc::arrnd<bool> rarr{std::vector<int>{2}, rdata};
 
     EXPECT_TRUE(oc::all_equal(rarr, oc::any(arr, 0)));
 }
