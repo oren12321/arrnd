@@ -172,7 +172,7 @@ TEST(simple_allocator, is_copyable_and_movable)
 
 TEST(simple_vector, methods)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -289,7 +289,7 @@ TEST(simple_vector, methods)
 
 TEST(simple_vector, int_methods)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
@@ -406,7 +406,7 @@ TEST(simple_vector, int_methods)
 
 TEST(simple_vector, insert)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     simple_vector<int> c1(3, 100);
     {
@@ -454,7 +454,7 @@ TEST(simple_vector, insert)
 
 TEST(simple_vector, erase)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     simple_vector<int> c(data, data + std::size(data));
@@ -486,7 +486,7 @@ TEST(simple_vector, erase)
 
 TEST(simple_array, methods)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -585,7 +585,7 @@ TEST(simple_array, methods)
 
 TEST(simple_array, int_methods)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
@@ -684,7 +684,7 @@ TEST(simple_array, int_methods)
 
 TEST(simple_array, insert)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     simple_array<int, 14> c1(3, 100);
     {
@@ -732,7 +732,7 @@ TEST(simple_array, insert)
 
 TEST(simple_array, erase)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     simple_array<int, 10> c(data, data + std::size(data));
@@ -765,7 +765,7 @@ TEST(simple_array, erase)
 
 TEST(simple_view, methods)
 {
-    using namespace oc;
+    using namespace oc::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -1284,12 +1284,11 @@ TEST(general_iterable_types_check, typed_iterator)
 {
     static_assert(std::is_same_v<int, oc::details::iterator_value_t<std::vector<int>::iterator>>);
     static_assert(std::is_same_v<int, oc::details::iterator_value_t<oc::arrnd<int>::iterator>>);
-    static_assert(oc::details::integral_type_iterator<std::vector<int>::iterator>);
-    static_assert(oc::details::integral_type_iterator<oc::arrnd<int>::iterator>);
-    static_assert(!oc::signed_integral_type_iterator<std::vector<double>::iterator>);
-    static_assert(oc::interval_type_iterator<std::vector<oc::interval<int>>::iterator>);
-    static_assert(oc::interval_type_iterator<oc::arrnd<oc::interval<int>>::iterator>);
-    static_assert(!oc::interval_type_iterator<std::vector<double>::iterator>);
+    static_assert(oc::details::iterator_of_type_integral<std::vector<int>::iterator>);
+    static_assert(oc::details::iterator_of_type_integral<oc::arrnd<int>::iterator>);
+    static_assert(oc::details::iterator_of_type_interval<std::vector<oc::interval<int>>::iterator>);
+    static_assert(oc::details::iterator_of_type_interval<oc::arrnd<oc::interval<int>>::iterator>);
+    static_assert(!oc::details::iterator_of_type_interval<std::vector<double>::iterator>);
 }
 
 TEST(general_iterable_types_check, typed_iterable)
@@ -1297,13 +1296,13 @@ TEST(general_iterable_types_check, typed_iterable)
     static_assert(oc::details::iterable_type<std::vector<int>>);
     static_assert(oc::details::iterable_type<oc::arrnd<int>>);
 
-    static_assert(oc::signed_integral_type_iterable<std::vector<int>>);
-    static_assert(oc::signed_integral_type_iterable<oc::arrnd<int>>);
-    static_assert(!oc::signed_integral_type_iterable<std::vector<double>>);
+    static_assert(oc::details::iterable_of_type_integral<std::vector<int>>);
+    static_assert(oc::details::iterable_of_type_integral<oc::arrnd<int>>);
+    static_assert(!oc::details::iterable_of_type_integral<std::vector<double>>);
 
-    static_assert(oc::interval_type_iterable<std::vector<oc::interval<int>>>);
-    static_assert(oc::interval_type_iterable<oc::arrnd<oc::interval<int>>>);
-    static_assert(!oc::interval_type_iterable<std::vector<double>>);
+    static_assert(oc::details::iterable_of_type_interval<std::vector<oc::interval<int>>>);
+    static_assert(oc::details::iterable_of_type_interval<oc::arrnd<oc::interval<int>>>);
+    static_assert(!oc::details::iterable_of_type_interval<std::vector<double>>);
 }
 
 //TEST(general_iterable_types_check, random_access_type)
@@ -2266,7 +2265,7 @@ TEST(arrnd_test, zip)
         arrnd<int> arr1({3, 2}, {1, 2, 3, 4, 5, 6});
         arrnd<int> arr2({6, 1}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_cont(arr1, 1, arrnd_returned_element_iterator_tag{}), zipped_cont(arr2));
+        auto z = zip(zipped_container(arr1, 1, arrnd_returned_element_iterator_tag{}), zipped_container(arr2));
 
         std::for_each(z.rbegin(), z.rend(), [&pairs](const auto& t) {
             auto [a, b] = t;
@@ -2283,7 +2282,7 @@ TEST(arrnd_test, zip)
         std::vector<int> inds{0, 1, 2, 3, 4, 5};
         arrnd<int> vals({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_cont(inds), zipped_cont(vals));
+        auto z = zip(zipped_container(inds), zipped_container(vals));
 
         auto [_, sum] = std::reduce(z.begin(), z.end(), std::make_tuple(0, 0), [](std::tuple<int, int> acc, auto t) {
             auto [ind, val] = t;
@@ -2299,7 +2298,7 @@ TEST(arrnd_test, zip)
         std::vector<std::string> vec{"a", "b", "c", "d", "e", "f"};
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_cont(indices), zipped_cont(vec), zipped_cont(arr));
+        auto z = zip(zipped_container(indices), zipped_container(vec), zipped_container(arr));
 
         std::sort(z.begin(), z.end(), [](const auto& a, const auto& b) {
             return std::get<0>(a) < std::get<0>(b);
@@ -2340,14 +2339,14 @@ TEST(arrnd_test, zip)
         std::vector<int> valst;
 
         valst.clear();
-        auto z1 = zip(zipped_cont(vals1), zipped_iter(vals2.begin(), vals2.end()));
+        auto z1 = zip(zipped_container(vals1), zipped_iterator(vals2.begin(), vals2.end()));
         std::transform(z1.begin(), z1.end(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
         EXPECT_EQ(valst, res);
 
         valst.clear();
-        auto z2 = zip(zipped_cont(vals1), zipped_iter(vals2.rbegin(), vals2.rend()));
+        auto z2 = zip(zipped_container(vals1), zipped_iterator(vals2.rbegin(), vals2.rend()));
         std::transform(z2.rbegin(), z2.rend(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
@@ -2360,23 +2359,23 @@ TEST(arrnd_test, zip)
     //
     //auto expanded = arr.expand(0);
 
-    //for (auto [i, v] : zip(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //}
-    //zip pack(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}});
+    //zip pack(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}});
     //auto t1 = begin(pack);
     ////swap(*t1, *t1);
     //std::sort(pack.begin(), pack.end(), [](auto a, auto b) {
     //    return std::get<0>(a) < std::get<0>(b);
     //});
 
-    //for (auto [i, v] : zip(zipped_cont{indices}, zipped_cont{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //    /*i = 10;
     //    v[{0,0}] = 100;*/
     //}
 
-    //zip z(zipped_cont{indices}, zipped_cont{arr, 0, arrnd_returned_slice_iterator_tag{}});
+    //zip z(zipped_container{indices}, zipped_container{arr, 0, arrnd_returned_slice_iterator_tag{}});
 
     //std::for_each(z.rbegin(), z.rend(), [](const auto& t) {
     //    auto [i, v] = t;

@@ -206,6 +206,480 @@ using details::array_cast;
 using details::const_array_cast;
 }
 
+// custom implementation of containers/iterators zipping
+namespace oc {
+namespace details {
+    template <typename... _Tp>
+    bool variadic_or(_Tp&&... args)
+    {
+        return (... || args);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool any_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_or(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename... _Tp>
+    bool variadic_and(_Tp&&... args)
+    {
+        return (... && args);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool all_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename Tuple, std::size_t... I>
+    bool all_lesseq(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
+    {
+        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) <= std::get<I>(std::forward<Tuple>(t2))...);
+    }
+
+    template <typename Cont, typename... Args>
+    class zipped_container {
+    public:
+        using cont_type = Cont;
+        using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
+        using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
+
+        constexpr zipped_container(Cont& cont, Args&&... args)
+            : cont_(cont)
+            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
+        { }
+
+        constexpr zipped_container(const zipped_container&) = default;
+        constexpr zipped_container(zipped_container&&) = default;
+
+        constexpr zipped_container& operator=(const zipped_container&) = default;
+        constexpr zipped_container& operator=(zipped_container&&) = default;
+
+        constexpr virtual ~zipped_container() = default;
+
+        constexpr auto& cont() noexcept
+        {
+            return cont_;
+        }
+        constexpr const auto& cont() const noexcept
+        {
+            return cont_;
+        }
+
+        constexpr auto& args() noexcept
+        {
+            return args_;
+        }
+        constexpr const auto& args() const
+        {
+            return args_;
+        }
+
+    private:
+        Cont& cont_;
+        std::tuple<Args...> args_ = std::tuple<>{};
+    };
+
+    template <iterator_type InputIt>
+    class zipped_iterator {
+    public:
+        struct unknown { };
+        using cont_type = unknown;
+        using iter_type = InputIt;
+        using riter_type = InputIt;
+
+        constexpr zipped_iterator(const InputIt& first, const InputIt& last)
+            : first_(first)
+            , last_(last)
+        { }
+
+        constexpr zipped_iterator(const zipped_iterator&) = default;
+        constexpr zipped_iterator(zipped_iterator&&) = default;
+
+        constexpr zipped_iterator& operator=(const zipped_iterator&) = default;
+        constexpr zipped_iterator& operator=(zipped_iterator&&) = default;
+
+        constexpr virtual ~zipped_iterator() = default;
+
+        constexpr auto& first() noexcept
+        {
+            return first_;
+        }
+        constexpr const auto& first() const noexcept
+        {
+            return first_;
+        }
+
+        constexpr auto& last() noexcept
+        {
+            return last_;
+        }
+        constexpr const auto& last() const
+        {
+            return last_;
+        }
+
+        constexpr auto& args() noexcept
+        {
+            return args_;
+        }
+        constexpr const auto& args() const
+        {
+            return args_;
+        }
+
+    private:
+        InputIt first_;
+        InputIt last_;
+        std::tuple<> args_ = std::tuple<>{};
+    };
+
+    template <typename... ItPack>
+    class zip {
+    public:
+        struct iterator {
+            using iterator_category = std::random_access_iterator_tag;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::iter_type>...>;
+            using difference_type = std::int64_t;
+
+            [[nodiscard]] constexpr reference operator*() const
+            {
+                return std::apply(
+                    []<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                    },
+                    data_);
+            }
+
+            constexpr iterator& operator++()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            constexpr iterator operator++(int)
+            {
+                iterator temp{*this};
+                ++(*this);
+                return temp;
+            }
+
+            constexpr iterator& operator+=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr iterator operator+(std::int64_t count) const
+            {
+                iterator temp{*this};
+                temp += count;
+                return temp;
+            }
+
+            constexpr iterator& operator--()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            constexpr iterator operator--(int)
+            {
+                iterator temp{*this};
+                --(*this);
+                return temp;
+            }
+
+            constexpr iterator& operator-=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr iterator operator-(std::int64_t count) const
+            {
+                iterator temp{*this};
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr auto operator!=(const iterator& iter) const
+            {
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr auto operator==(const iterator& iter) const
+            {
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
+            {
+                return std::apply(
+                    [index]<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                    },
+                    data_);
+            }
+
+            [[nodiscard]] constexpr bool operator<(const iterator& iter) const noexcept
+            {
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
+            {
+                auto impl
+                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
+                          return std::max({
+                              static_cast<difference_type>(
+                                  (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2))))...,
+                          });
+                      };
+
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return diffs;
+            }
+
+            std::tuple<typename ItPack::iter_type...> data_;
+        };
+
+        struct reverse_iterator {
+            using iterator_category = std::random_access_iterator_tag;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::riter_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::riter_type>...>;
+            using difference_type = std::int64_t;
+
+            [[nodiscard]] constexpr reference operator*() const
+            {
+                return std::apply(
+                    []<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                    },
+                    data_);
+            }
+
+            constexpr reverse_iterator& operator++()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            constexpr reverse_iterator operator++(int)
+            {
+                reverse_iterator temp{*this};
+                ++(*this);
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator+=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr reverse_iterator operator+(std::int64_t count) const
+            {
+                reverse_iterator temp{*this};
+                temp += count;
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator--()
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            constexpr reverse_iterator operator--(int)
+            {
+                reverse_iterator temp{*this};
+                --(*this);
+                return temp;
+            }
+
+            constexpr reverse_iterator& operator-=(std::int64_t count)
+            {
+                std::apply(
+                    [&]<typename... Ts>(Ts&&... e) {
+                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
+                    },
+                    data_);
+                return *this;
+            }
+
+            [[nodiscard]] constexpr reverse_iterator operator-(std::int64_t count) const
+            {
+                reverse_iterator temp{*this};
+                temp -= count;
+                return temp;
+            }
+
+            [[nodiscard]] constexpr auto operator!=(const reverse_iterator& iter) const
+            {
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr auto operator==(const reverse_iterator& iter) const
+            {
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
+            {
+                return std::apply(
+                    [index]<typename... Ts>(Ts&&... e) {
+                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                    },
+                    data_);
+            }
+
+            [[nodiscard]] constexpr bool operator<(const reverse_iterator& iter) const noexcept
+            {
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+            }
+
+            [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
+            {
+                auto impl
+                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
+                          return std::max({
+                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...,
+                          });
+                      };
+
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return diffs;
+            }
+
+            std::tuple<typename ItPack::riter_type...> data_;
+        };
+
+        zip(ItPack... packs)
+            : packs_(std::forward_as_tuple(packs...))
+        { }
+
+        auto begin()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container>) {
+                    using std::begin;
+                    return begin(ip.cont(), std::get<I>(ip.args())...);
+                } else {
+                    return ip.first();
+                }
+            };
+
+            return iterator(std::apply(
+                [&]<typename... Ts>(Ts&&... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_));
+        }
+
+        auto end()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container>) {
+                    using std::end;
+                    return end(ip.cont(), std::get<I>(ip.args())...);
+                } else {
+                    return ip.last();
+                }
+            };
+
+            return iterator{std::apply(
+                [&]<typename... Ts>(Ts&&... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_)};
+        }
+
+        auto rbegin()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container>) {
+                    using std::rbegin;
+                    return rbegin(ip.cont(), std::get<I>(ip.args())...);
+                } else {
+                    return ip.first();
+                }
+            };
+
+            return reverse_iterator(std::apply(
+                [&]<typename... Ts>(Ts&&... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_));
+        }
+
+        auto rend()
+        {
+            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container>) {
+                    using std::rend;
+                    return rend(ip.cont(), std::get<I>(ip.args())...);
+                } else {
+                    return ip.last();
+                }
+            };
+
+            return reverse_iterator{std::apply(
+                [&]<typename... Ts>(Ts&&... e) {
+                    return std::make_tuple(impl(std::forward<Ts>(e),
+                        std::make_index_sequence<
+                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                },
+                packs_)};
+        }
+
+    private:
+        std::tuple<ItPack...> packs_;
+    };
+}
+
+using details::zipped_container;
+using details::zipped_iterator;
+using details::zip;
+}
+
 namespace oc {
 namespace details {
     template <typename T>
@@ -254,15 +728,9 @@ using details::simple_allocator;
 
 namespace oc {
 namespace details {
-    struct simple_cont_tag { };
+    struct simple_container_tag { };
     template <typename T>
-    concept simple_cont_compliant = std::is_same_v<typename std::remove_cvref_t<T>::tag, simple_cont_tag>;
-
-    template <simple_cont_compliant ScCo1, simple_cont_compliant ScCo2>
-    [[nodiscard]] inline constexpr bool operator==(const ScCo1& lhs, const ScCo2& rhs)
-    {
-        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
+    concept simple_container_type = std::is_same_v<typename std::remove_cvref_t<T>::tag, simple_container_tag>;
 
     template <typename T, typename Allocator = simple_allocator<T>>
     class simple_vector final {
@@ -282,7 +750,7 @@ namespace details {
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
-        using tag = simple_cont_tag;
+        using tag = simple_container_tag;
 
         simple_vector() = default;
 
@@ -712,7 +1180,7 @@ namespace details {
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
-        using tag = simple_cont_tag;
+        using tag = simple_container_tag;
 
         simple_array() = default;
 
@@ -1058,7 +1526,7 @@ namespace details {
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
-        using tag = simple_cont_tag;
+        using tag = simple_container_tag;
 
         simple_view() = default;
 
@@ -1373,11 +1841,41 @@ namespace details {
         pointer ptr_ = nullptr;
     };
 
+    template <simple_container_type Cont1, simple_container_type Cont2>
+    [[nodiscard]] inline constexpr bool operator==(const Cont1& lhs, const Cont2& rhs)
+    {
+        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+    }
+}
 }
 
-using details::simple_vector;
-using details::simple_array;
-using details::simple_view;
+namespace oc {
+namespace details {
+    template <typename T, template <typename> typename Allocator = simple_allocator>
+    struct dynamic_storage_info {
+        using storage_type = simple_vector<T, Allocator<T>>;
+        template <typename U>
+        using replaced_type = dynamic_storage_info<U, Allocator>;
+    };
+
+    template <typename T, std::int64_t N>
+    struct static_storage_info {
+        using storage_type = simple_array<T, N>;
+        template <typename U>
+        using replaced_type = static_storage_info<U, N>;
+    };
+
+    template <typename T>
+    struct view_storage_info {
+        using storage_type = simple_view<T>;
+        template <typename U>
+        using replaced_type = view_storage_info<T>;
+    };
+}
+
+using details::dynamic_storage_info;
+using details::static_storage_info;
+using details::view_storage_info;
 }
 
 namespace oc {
@@ -1429,12 +1927,6 @@ namespace details {
         return (T{0} < value) - (value < T{0});
     }
 }
-
-using details::default_atol;
-using details::default_rtol;
-
-using details::close;
-using details::sign;
 }
 
 namespace oc {
@@ -1442,7 +1934,7 @@ namespace details {
     // represents right-open interval
     template <typename T = std::int64_t>
         requires(std::is_fundamental_v<T>)
-    class interval {
+    class interval final {
     public:
         using size_type = T;
 
@@ -1697,37 +2189,9 @@ using details::absdiff;
 using details::bound;
 }
 
+// custom internal general usage concepts and traits
 namespace oc {
 namespace details {
-
-    template <typename Iter>
-    concept signed_integral_type_iterator
-        = iterator_type<Iter> && std::signed_integral<iterator_value_t<Iter>>;
-    template <typename Iter>
-    concept integral_type_iterator = std::integral<iterator_value_t<Iter>>;
-    template <typename Iter>
-    concept interval_type_iterator = template_type<iterator_value_t<Iter>, interval>;
-
-    template <typename Cont>
-    concept signed_integral_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
-                                                                  {
-                                                                      std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                                      } -> std::signed_integral;
-                                                              };
-
-    template <typename Cont>
-    concept integral_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
-                                                           {
-                                                               std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                               } -> std::integral;
-                                                       };
-    template <typename Cont>
-    concept interval_type_iterable = iterable_type<Cont> && requires(Cont&& c) {
-                                                           {
-                                                               std::remove_cvref_t<decltype(*std::begin(c))>{}
-                                                               } -> template_type<interval>;
-                                                       };
-
     template <typename Iter>
     concept iterator_of_type_integral = iterator_type<Iter> && std::integral<iterator_value_t<Iter>>;
 
@@ -1735,44 +2199,10 @@ namespace details {
     concept iterable_of_type_integral = iterable_type<Cont> && std::integral<iterable_value_t<Cont>>;
 
     template <typename Iter>
-    concept iterator_of_type_interval
-        = iterator_type<Iter> && template_type<iterator_value_t<Iter>, interval>;
+    concept iterator_of_type_interval = iterator_type<Iter> && template_type<iterator_value_t<Iter>, interval>;
 
     template <typename Cont>
     concept iterable_of_type_interval = iterable_type<Cont> && template_type<iterable_value_t<Cont>, interval>;
-}
-
-using details::signed_integral_type_iterator;
-using details::interval_type_iterator;
-using details::signed_integral_type_iterable;
-using details::interval_type_iterable;
-}
-
-namespace oc {
-namespace details {
-    template <typename T, template <typename> typename Allocator = simple_allocator>
-    struct dynamic_storage_info {
-        using storage_type = simple_vector<T, Allocator<T>>;
-        static constexpr std::int64_t size = std::dynamic_extent;
-        template <typename U>
-        using replaced_type = dynamic_storage_info<U, Allocator>;
-    };
-
-    template <typename T, std::int64_t N>
-    struct static_storage_info {
-        using storage_type = simple_array<T, N>;
-        static constexpr std::int64_t size = N;
-        template <typename U>
-        using replaced_type = static_storage_info<U, N>;
-    };
-
-    template <typename T>
-    struct view_storage_info {
-        using storage_type = simple_view<T>;
-        static constexpr std::int64_t size = std::dynamic_extent;
-        template <typename U>
-        using replaced_type = view_storage_info<T>;
-    };
 
     template <typename T>
     struct overflow_check_multiplies {
@@ -1795,7 +2225,11 @@ namespace details {
             return lhs + rhs;
         }
     };
+}
+}
 
+namespace oc {
+namespace details {
     enum class arrnd_iterator_position { none, begin, end, rbegin, rend };
 
     enum class arrnd_hint : std::size_t {
@@ -2570,12 +3004,7 @@ namespace details {
 
 }
 
-using details::dynamic_storage_info;
-using details::dynamic_storage_info;
-using details::static_storage_info;
-
 using details::arrnd_iterator_position;
-
 using details::arrnd_hint;
 using details::to_underlying;
 using details::arrnd_squeeze_type;
@@ -3136,29 +3565,16 @@ using details::arrnd_sliding_window;
 using details::arrnd_window_slider;
 }
 
+// arrnd iterator types
 namespace oc {
 namespace details {
-    struct arrnd_tag { };
-    template <typename T>
-    concept arrnd_compliant = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
-
-    template <typename T, typename U>
-    concept same_depth = T::depth ==
-    U::depth;
-
-    template <typename T, typename... Args>
-    concept invocable_no_arrnd = !
-    arrnd_compliant<T>&& std::is_invocable_v<T, Args...>;
-
     struct arrnd_returned_element_iterator_tag { };
     struct arrnd_returned_slice_iterator_tag { };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_iterator;
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3275,7 +3691,6 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3412,11 +3827,9 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_reverse_iterator;
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3533,7 +3946,6 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_const_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3670,11 +4082,9 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_const_iterator;
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3798,7 +4208,6 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -3946,11 +4355,9 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_const_iterator;
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -4074,7 +4481,6 @@ namespace details {
     };
 
     template <typename Arrnd>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     class arrnd_slice_reverse_const_iterator final {
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -4224,73 +4630,7 @@ namespace details {
         mutable value_type slice_;
     };
 
-    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
-        const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        using res_type = typename ArCo::view_type;
-        res_type res;
-        res.header() = typename res_type::header_type(first_dim, last_dim);
-        res.storage() = std::allocate_shared<typename res_type::storage_type>(
-            typename res_type::template shared_ref_allocator_type<typename res_type::storage_type>(), first_data,
-            last_data);
-        return res;
-    }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(
-        const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
-        const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
-    }
-    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
-    {
-        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont, typename U>
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
-    }
-    template <arrnd_compliant ArCo, integral_type_iterator InputDimsIt, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(
-        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
-    {
-        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
-    }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
-    {
-        return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
-    }
-    template <arrnd_compliant ArCo, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
-    {
-        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
-    }
-    template <arrnd_compliant ArCo, typename T>
-    [[nodiscard]] inline constexpr auto view(const T& value)
-    {
-        return view<ArCo>({1}, &value, &value + 1);
-    }
-
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_back_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4344,13 +4684,13 @@ namespace details {
         Arrnd* cont_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_back_insert_iterator<Arrnd> arrnd_back_inserter(Arrnd& cont) noexcept
     {
         return arrnd_back_insert_iterator<Arrnd>(cont);
     }
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_front_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4404,13 +4744,13 @@ namespace details {
         Arrnd* cont_ = nullptr;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_front_insert_iterator<Arrnd> arrnd_front_inserter(Arrnd& cont)
     {
         return arrnd_front_insert_iterator<Arrnd>(cont);
     }
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4471,14 +4811,14 @@ namespace details {
         size_type ind_;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_insert_iterator<Arrnd> arrnd_inserter(
         Arrnd& cont, typename Arrnd::size_type ind = 0)
     {
         return arrnd_insert_iterator<Arrnd>(cont, ind);
     }
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_slice_back_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4523,14 +4863,14 @@ namespace details {
         size_type axis_;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_slice_back_insert_iterator<Arrnd> arrnd_slice_back_inserter(
         Arrnd& cont, typename Arrnd::size_type axis = 0) noexcept
     {
         return arrnd_slice_back_insert_iterator<Arrnd>(cont, axis);
     }
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_slice_front_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4575,14 +4915,14 @@ namespace details {
         size_type axis_;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_slice_front_insert_iterator<Arrnd> arrnd_slice_front_inserter(
         Arrnd& cont, typename Arrnd::size_type axis = 0)
     {
         return arrnd_slice_front_insert_iterator<Arrnd>(cont, axis);
     }
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     class arrnd_slice_insert_iterator {
     public:
         using iterator_category = std::output_iterator_tag;
@@ -4631,12 +4971,48 @@ namespace details {
         size_type axis_;
     };
 
-    template <arrnd_compliant Arrnd>
+    template <typename Arrnd>
     [[nodiscard]] inline constexpr arrnd_slice_insert_iterator<Arrnd> arrnd_slice_inserter(
         Arrnd& cont, typename Arrnd::size_type ind = 0, typename Arrnd::size_type axis = 0)
     {
         return arrnd_slice_insert_iterator<Arrnd>(cont, ind, axis);
     }
+}
+
+using details::arrnd_returned_element_iterator_tag;
+using details::arrnd_returned_slice_iterator_tag;
+
+using details::arrnd_iterator;
+using details::arrnd_const_iterator;
+using details::arrnd_reverse_iterator;
+using details::arrnd_const_reverse_iterator;
+
+using details::arrnd_slice_iterator;
+using details::arrnd_slice_const_iterator;
+using details::arrnd_slice_reverse_iterator;
+using details::arrnd_slice_reverse_const_iterator;
+
+using details::arrnd_back_inserter;
+using details::arrnd_front_inserter;
+using details::arrnd_inserter;
+
+using details::arrnd_slice_back_inserter;
+using details::arrnd_slice_front_inserter;
+using details::arrnd_slice_inserter;
+}
+
+namespace oc {
+namespace details {
+    struct arrnd_tag { };
+    template <typename T>
+    concept arrnd_compliant = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
+
+    template <typename T, typename U>
+    concept same_depth = (T::depth == U::depth);
+
+    template <typename T, typename... Args>
+    concept invocable_no_arrnd = !
+    arrnd_compliant<T>&& std::is_invocable_v<T, Args...>;
 
     template <arrnd_compliant T>
     [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
@@ -4783,471 +5159,6 @@ namespace details {
     using inner_replaced_type_t = inner_replaced_type<T, R, Level>::type;
 
     enum class arrnd_shape_preset { vector, row, column };
-
-    template <typename... _Tp>
-    bool variadic_or(_Tp&&... args)
-    {
-        return (... || args);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool any_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_or(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename... _Tp>
-    bool variadic_and(_Tp&&... args)
-    {
-        return (... && args);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool all_equals(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) == std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename Tuple, std::size_t... I>
-    bool all_lesseq(Tuple&& t1, Tuple&& t2, std::index_sequence<I...>)
-    {
-        return variadic_and(std::get<I>(std::forward<Tuple>(t1)) <= std::get<I>(std::forward<Tuple>(t2))...);
-    }
-
-    template <typename Cont, typename... Args>
-    class zipped_cont {
-    public:
-        using cont_type = Cont;
-        using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
-        using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
-
-        constexpr zipped_cont(Cont& cont, Args&&... args)
-            : cont_(cont)
-            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
-        { }
-
-        constexpr zipped_cont(const zipped_cont&) = default;
-        constexpr zipped_cont(zipped_cont&&) = default;
-
-        constexpr zipped_cont& operator=(const zipped_cont&) = default;
-        constexpr zipped_cont& operator=(zipped_cont&&) = default;
-
-        constexpr virtual ~zipped_cont() = default;
-
-        constexpr auto& cont() noexcept
-        {
-            return cont_;
-        }
-        constexpr const auto& cont() const noexcept
-        {
-            return cont_;
-        }
-
-        constexpr auto& args() noexcept
-        {
-            return args_;
-        }
-        constexpr const auto& args() const
-        {
-            return args_;
-        }
-
-    private:
-        Cont& cont_;
-        std::tuple<Args...> args_ = std::tuple<>{};
-    };
-
-    template <iterator_type InputIt>
-    class zipped_iter {
-    public:
-        struct unknown { };
-        using cont_type = unknown;
-        using iter_type = InputIt;
-        using riter_type = InputIt;
-
-        constexpr zipped_iter(const InputIt& first, const InputIt& last)
-            : first_(first)
-            , last_(last)
-        { }
-
-        constexpr zipped_iter(const zipped_iter&) = default;
-        constexpr zipped_iter(zipped_iter&&) = default;
-
-        constexpr zipped_iter& operator=(const zipped_iter&) = default;
-        constexpr zipped_iter& operator=(zipped_iter&&) = default;
-
-        constexpr virtual ~zipped_iter() = default;
-
-        constexpr auto& first() noexcept
-        {
-            return first_;
-        }
-        constexpr const auto& first() const noexcept
-        {
-            return first_;
-        }
-
-        constexpr auto& last() noexcept
-        {
-            return last_;
-        }
-        constexpr const auto& last() const
-        {
-            return last_;
-        }
-
-        constexpr auto& args() noexcept
-        {
-            return args_;
-        }
-        constexpr const auto& args() const
-        {
-            return args_;
-        }
-
-    private:
-        InputIt first_;
-        InputIt last_;
-        std::tuple<> args_ = std::tuple<>{};
-    };
-
-    template <typename... ItPack>
-    class zip {
-    public:
-        struct iterator {
-            using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::iter_type>...>;
-            using difference_type = std::int64_t;
-
-            [[nodiscard]] constexpr reference operator*() const
-            {
-                return std::apply(
-                    []<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
-                    },
-                    data_);
-            }
-
-            constexpr iterator& operator++()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            constexpr iterator operator++(int)
-            {
-                iterator temp{*this};
-                ++(*this);
-                return temp;
-            }
-
-            constexpr iterator& operator+=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr iterator operator+(std::int64_t count) const
-            {
-                iterator temp{*this};
-                temp += count;
-                return temp;
-            }
-
-            constexpr iterator& operator--()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            constexpr iterator operator--(int)
-            {
-                iterator temp{*this};
-                --(*this);
-                return temp;
-            }
-
-            constexpr iterator& operator-=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr iterator operator-(std::int64_t count) const
-            {
-                iterator temp{*this};
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] constexpr auto operator!=(const iterator& iter) const
-            {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr auto operator==(const iterator& iter) const
-            {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
-            {
-                return std::apply(
-                    [index]<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
-                    },
-                    data_);
-            }
-
-            [[nodiscard]] constexpr bool operator<(const iterator& iter) const noexcept
-            {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
-            {
-                auto impl
-                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
-                          return std::max({
-                              static_cast<difference_type>(
-                                  (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2))))...,
-                          });
-                      };
-
-                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return diffs;
-            }
-
-            std::tuple<typename ItPack::iter_type...> data_;
-        };
-
-        struct reverse_iterator {
-            using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::riter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::riter_type>...>;
-            using difference_type = std::int64_t;
-
-            [[nodiscard]] constexpr reference operator*() const
-            {
-                return std::apply(
-                    []<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
-                    },
-                    data_);
-            }
-
-            constexpr reverse_iterator& operator++()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple(++std::forward<Ts>(e)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            constexpr reverse_iterator operator++(int)
-            {
-                reverse_iterator temp{*this};
-                ++(*this);
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator+=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple((std::forward<Ts>(e) += count)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr reverse_iterator operator+(std::int64_t count) const
-            {
-                reverse_iterator temp{*this};
-                temp += count;
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator--()
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple(--std::forward<Ts>(e)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            constexpr reverse_iterator operator--(int)
-            {
-                reverse_iterator temp{*this};
-                --(*this);
-                return temp;
-            }
-
-            constexpr reverse_iterator& operator-=(std::int64_t count)
-            {
-                std::apply(
-                    [&]<typename... Ts>(Ts&&... e) {
-                        data_ = std::make_tuple((std::forward<Ts>(e) -= count)...);
-                    },
-                    data_);
-                return *this;
-            }
-
-            [[nodiscard]] constexpr reverse_iterator operator-(std::int64_t count) const
-            {
-                reverse_iterator temp{*this};
-                temp -= count;
-                return temp;
-            }
-
-            [[nodiscard]] constexpr auto operator!=(const reverse_iterator& iter) const
-            {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr auto operator==(const reverse_iterator& iter) const
-            {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr reference operator[](std::int64_t index) const
-            {
-                return std::apply(
-                    [index]<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
-                    },
-                    data_);
-            }
-
-            [[nodiscard]] constexpr bool operator<(const reverse_iterator& iter) const noexcept
-            {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-            }
-
-            [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
-            {
-                auto impl
-                    = []<typename T1, typename T2, std::size_t... I>(T1&& t1, T2&& t2, std::index_sequence<I...>) {
-                          return std::max({
-                              (std::get<I>(std::forward<T1>(t1)) - std::get<I>(std::forward<T2>(t2)))...,
-                          });
-                      };
-
-                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
-                return diffs;
-            }
-
-            std::tuple<typename ItPack::riter_type...> data_;
-        };
-
-        zip(ItPack... packs)
-            : packs_(std::forward_as_tuple(packs...))
-        { }
-
-        auto begin()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_cont>) {
-                    using std::begin;
-                    return begin(ip.cont(), std::get<I>(ip.args())...);
-                } else {
-                    return ip.first();
-                }
-            };
-
-            return iterator(std::apply(
-                [&]<typename... Ts>(Ts&&... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_));
-        }
-
-        auto end()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_cont>) {
-                    using std::end;
-                    return end(ip.cont(), std::get<I>(ip.args())...);
-                } else {
-                    return ip.last();
-                }
-            };
-
-            return iterator{std::apply(
-                [&]<typename... Ts>(Ts&&... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_)};
-        }
-
-        auto rbegin()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_cont>) {
-                    using std::rbegin;
-                    return rbegin(ip.cont(), std::get<I>(ip.args())...);
-                } else {
-                    return ip.first();
-                }
-            };
-
-            return reverse_iterator(std::apply(
-                [&]<typename... Ts>(Ts&&... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_));
-        }
-
-        auto rend()
-        {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_cont>) {
-                    using std::rend;
-                    return rend(ip.cont(), std::get<I>(ip.args())...);
-                } else {
-                    return ip.last();
-                }
-            };
-
-            return reverse_iterator{std::apply(
-                [&]<typename... Ts>(Ts&&... e) {
-                    return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
-                },
-                packs_)};
-        }
-
-    private:
-        std::tuple<ItPack...> packs_;
-    };
 
     template <arrnd_compliant Arrnd, typename Constraint>
     class arrnd_filter_proxy {
@@ -5513,12 +5424,78 @@ namespace details {
         Constraint constraint_;
     };
 
-    template <arrnd_compliant ArCo, integral_type_iterator DimsIt>
+    template <arrnd_compliant ArCo, iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
+    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
+        const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        using res_type = typename ArCo::view_type;
+        res_type res;
+        res.header() = typename res_type::header_type(first_dim, last_dim);
+        res.storage() = std::allocate_shared<typename res_type::storage_type>(
+            typename res_type::template shared_ref_allocator_type<typename res_type::storage_type>(), first_data,
+            last_data);
+        return res;
+    }
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont, iterator_type InputDataIt>
+    [[nodiscard]] inline constexpr auto view(
+        const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, iterator_type InputDataIt>
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims,
+        const InputDataIt& first_data, const InputDataIt& last_data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), first_data, last_data);
+    }
+    template <arrnd_compliant ArCo, iterator_of_type_integral InputDimsIt, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
+    {
+        return view<ArCo>(first_dim, last_dim, data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont, typename U>
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, typename U>
+    [[nodiscard]] inline constexpr auto view(
+        std::initializer_list<typename ArCo::size_type> dims, std::initializer_list<U> data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), data.begin(), data.end());
+    }
+    template <arrnd_compliant ArCo, iterator_of_type_integral InputDimsIt, iterable_type DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
+    [[nodiscard]] inline constexpr auto view(
+        const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
+    {
+        return view<ArCo>(first_dim, last_dim, std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont, iterable_type DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
+    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
+    {
+        return view<ArCo>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, iterable_type DataCont>
+        requires(!template_type<DataCont, std::initializer_list>)
+    [[nodiscard]] inline constexpr auto view(std::initializer_list<typename ArCo::size_type> dims, const DataCont& data)
+    {
+        return view<ArCo>(dims.begin(), dims.end(), std::begin(data), std::end(data));
+    }
+    template <arrnd_compliant ArCo, typename T>
+    [[nodiscard]] inline constexpr auto view(const T& value)
+    {
+        return view<ArCo>({1}, &value, &value + 1);
+    }
+
+    template <arrnd_compliant ArCo, iterator_of_type_integral DimsIt>
     [[nodiscard]] inline constexpr auto zeros(DimsIt first_dim, DimsIt last_dim)
     {
         return ArCo(first_dim, last_dim, 0);
     }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont>
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont>
     [[nodiscard]] inline constexpr auto zeros(const Cont& dims)
     {
         return zeros<ArCo>(std::begin(dims), std::end(dims));
@@ -5529,7 +5506,7 @@ namespace details {
         return zeros<ArCo>(dims.begin(), dims.end());
     }
 
-    template <arrnd_compliant ArCo, integral_type_iterator DimsIt>
+    template <arrnd_compliant ArCo, iterator_of_type_integral DimsIt>
     [[nodiscard]] inline constexpr auto eye(DimsIt first_dim, DimsIt last_dim)
     {
         auto ndims = std::distance(first_dim, last_dim);
@@ -5563,7 +5540,7 @@ namespace details {
             return eye_impl(page.header().dims().front(), page.header().dims().back());
         });
     }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont>
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont>
     [[nodiscard]] inline constexpr auto eye(const Cont& dims)
     {
         return eye<ArCo>(std::begin(dims), std::end(dims));
@@ -5734,7 +5711,7 @@ namespace details {
 
         virtual constexpr ~arrnd() = default;
 
-        template <integral_type_iterator InputDimsIt, iterator_type InputDataIt>
+        template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
@@ -5747,7 +5724,7 @@ namespace details {
                 assert(last_data - first_data == total(hdr_));
             }
         }
-        template <integral_type_iterable Cont, iterator_type InputDataIt>
+        template <iterable_of_type_integral Cont, iterator_type InputDataIt>
         explicit constexpr arrnd(const Cont& dims, const InputDataIt& first_data, const InputDataIt& last_data)
             : arrnd(std::begin(dims), std::end(dims), first_data, last_data)
         { }
@@ -5757,12 +5734,12 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), first_data, last_data)
         { }
 
-        template <integral_type_iterator InputDimsIt, typename U>
+        template <iterator_of_type_integral InputDimsIt, typename U>
         explicit constexpr arrnd(
             const InputDimsIt& first_dim, const InputDimsIt& last_dim, std::initializer_list<U> data)
             : arrnd(first_dim, last_dim, data.begin(), data.end())
         { }
-        template <integral_type_iterable Cont, typename U>
+        template <iterable_of_type_integral Cont, typename U>
         explicit constexpr arrnd(const Cont& dims, std::initializer_list<U> data)
             : arrnd(std::begin(dims), std::end(dims), data.begin(), data.end())
         { }
@@ -5771,12 +5748,12 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), data.begin(), data.end())
         { }
 
-        template <integral_type_iterator InputDimsIt, iterable_type DataCont>
+        template <iterator_of_type_integral InputDimsIt, iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const DataCont& data)
             : arrnd(first_dim, last_dim, std::begin(data), std::end(data))
         { }
-        template <integral_type_iterable Cont, iterable_type DataCont>
+        template <iterable_of_type_integral Cont, iterable_type DataCont>
             requires(!template_type<DataCont, std::initializer_list>)
         explicit constexpr arrnd(const Cont& dims, const DataCont& data)
             : arrnd(std::begin(dims), std::end(dims), std::begin(data), std::end(data))
@@ -5787,14 +5764,14 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), std::begin(data), std::end(data))
         { }
 
-        template <integral_type_iterator InputDimsIt>
+        template <iterator_of_type_integral InputDimsIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim)
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::empty(hdr_)
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
         { }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         explicit constexpr arrnd(const Cont& dims)
             : arrnd(std::begin(dims), std::end(dims))
         { }
@@ -5802,7 +5779,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end())
         { }
 
-        template <integral_type_iterator InputDimsIt>
+        template <iterator_of_type_integral InputDimsIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const_reference value)
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::empty(hdr_)
@@ -5813,7 +5790,7 @@ namespace details {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
             }
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         explicit constexpr arrnd(const Cont& dims, const_reference value)
             : arrnd(std::begin(dims), std::end(dims), value)
         { }
@@ -5821,7 +5798,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), value)
         { }
 
-        template <integral_type_iterator InputDimsIt, typename U>
+        template <iterator_of_type_integral InputDimsIt, typename U>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const U& value)
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::empty(hdr_)
@@ -5832,7 +5809,7 @@ namespace details {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
             }
         }
-        template <integral_type_iterable Cont, typename U>
+        template <iterable_of_type_integral Cont, typename U>
         explicit constexpr arrnd(const Cont& dims, const U& value)
             : arrnd(std::begin(dims), std::end(dims), value)
         { }
@@ -5841,7 +5818,7 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), value)
         { }
 
-        template <integral_type_iterator InputDimsIt, typename Func>
+        template <iterator_of_type_integral InputDimsIt, typename Func>
             requires(invocable_no_arrnd<Func>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func)
             : hdr_(first_dim, last_dim)
@@ -5855,7 +5832,7 @@ namespace details {
                 });
             }
         }
-        template <integral_type_iterable Cont, typename Func>
+        template <iterable_of_type_integral Cont, typename Func>
             requires(invocable_no_arrnd<Func>)
         explicit constexpr arrnd(const Cont& dims, Func&& func)
             : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func))
@@ -5932,12 +5909,12 @@ namespace details {
             return buffsp_->data()[index];
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr const_reference operator[](std::pair<InputIt, InputIt> subs) const noexcept
         {
             return buffsp_->data()[sub2ind(hdr_, subs.first, subs.second)];
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr const_reference operator[](const Cont& subs) const noexcept
         {
             return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
@@ -5947,12 +5924,12 @@ namespace details {
             return (*this)[std::make_pair(subs.begin(), subs.end())];
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr reference operator[](std::pair<InputIt, InputIt> subs) noexcept
         {
             return buffsp_->data()[sub2ind(hdr_, subs.first, subs.second)];
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr reference operator[](const Cont& subs) noexcept
         {
             return (*this)[std::make_pair(std::begin(subs), std::end(subs))];
@@ -5962,7 +5939,7 @@ namespace details {
             return (*this)[std::make_pair(subs.begin(), subs.end())];
         }
 
-        template <interval_type_iterator InputIt>
+        template <iterator_of_type_interval InputIt>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&
         {
             this_type slice{};
@@ -5972,7 +5949,7 @@ namespace details {
             slice.creator_ = this;
             return slice;
         }
-        template <interval_type_iterator InputIt>
+        template <iterator_of_type_interval InputIt>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&&
         {
             this_type slice{};
@@ -5980,12 +5957,12 @@ namespace details {
             slice.buffsp_ = buffsp_;
             return slice;
         }
-        template <interval_type_iterable Cont>
+        template <iterable_of_type_interval Cont>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&
         {
             return (*this)[std::make_pair(std::cbegin(ranges), std::cend(ranges))];
         }
-        template <interval_type_iterable Cont>
+        template <iterable_of_type_interval Cont>
         [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&&
         {
             return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
@@ -6045,13 +6022,13 @@ namespace details {
             return issliced(hdr_) ? buffsp_->data()[*(indexer() + relative_index)] : buffsp_->data()[relative_index];
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto operator()(std::pair<InputIt, InputIt> indices) const
         {
             return std::move(*this)(replaced_type<size_type>(
                 {std::distance(indices.first, indices.second)}, indices.first, indices.second));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
             requires(!arrnd_compliant<Cont>)
         [[nodiscard]] constexpr auto operator()(const Cont& indices) const
         {
@@ -6111,7 +6088,7 @@ namespace details {
             return *this;
         }
 
-        template <arrnd_compliant ArCo, integral_type_iterator InputIt>
+        template <arrnd_compliant ArCo, iterator_of_type_integral InputIt>
         constexpr const this_type& copy_to(ArCo&& dst, std::pair<InputIt, InputIt> indices) const
         {
             if (empty() || dst.empty() || std::distance(indices.first, indices.second) <= 0) {
@@ -6131,7 +6108,7 @@ namespace details {
 
             return *this;
         }
-        template <arrnd_compliant ArCo, integral_type_iterable Cont>
+        template <arrnd_compliant ArCo, iterable_of_type_integral Cont>
             requires(!arrnd_compliant<Cont>)
         constexpr const this_type& copy_to(ArCo&& dst, const Cont& indices) const
         {
@@ -6200,13 +6177,13 @@ namespace details {
             return *this;
         }
 
-        template <arrnd_compliant ArCo, interval_type_iterator InputIt>
+        template <arrnd_compliant ArCo, iterator_of_type_interval InputIt>
         constexpr const this_type& copy_to(ArCo&& dst, const InputIt& first_range, const InputIt& last_range) const
         {
             copy_to(dst[std::make_pair(first_range, last_range)]);
             return *this;
         }
-        template <arrnd_compliant ArCo, interval_type_iterable Cont>
+        template <arrnd_compliant ArCo, iterable_of_type_interval Cont>
         constexpr const this_type& copy_to(ArCo&& dst, const Cont& ranges) const
         {
             return copy_to(std::forward<ArCo>(dst), std::begin(ranges), std::end(ranges));
@@ -6252,7 +6229,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -6273,7 +6250,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
         {
             return reshape(std::begin(new_dims), std::end(new_dims));
@@ -6302,7 +6279,7 @@ namespace details {
             }
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
@@ -6351,7 +6328,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
         {
             return resize(std::begin(new_dims), std::end(new_dims));
@@ -6462,14 +6439,14 @@ namespace details {
             return repeat(std::begin(count_axis_tuples), std::end(count_axis_tuples));
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_rep, InputIt last_rep) const
         {
             assert(std::distance(first_rep, last_rep) <= hdr_.dims().size());
 
             auto nreps = std::distance(first_rep, last_rep);
 
-            auto z = zip(zipped_iter(first_rep, last_rep));
+            auto z = zip(zipped_iterator(first_rep, last_rep));
 
             auto res = *this;
             auto mid = res;
@@ -6488,7 +6465,7 @@ namespace details {
         {
             return repeat(reps.begin(), reps.end());
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
         {
             return repeat(std::begin(reps), std::end(reps));
@@ -7235,12 +7212,12 @@ namespace details {
             return filter<this_type::depth, ArCo>(selector);
         }
 
-        template <std::int64_t Level, integral_type_iterator InputIt>
+        template <std::int64_t Level, iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
         {
             return filter<Level>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
         }
-        template <std::int64_t Level, integral_type_iterable Cont>
+        template <std::int64_t Level, iterable_of_type_integral Cont>
             requires(!arrnd_compliant<Cont>)
         [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
@@ -7253,13 +7230,13 @@ namespace details {
             return filter<Level>(replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
         {
             return filter<this_type::depth>(
                 replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
             requires(!arrnd_compliant<Cont>)
         [[nodiscard]] constexpr auto filter(const Cont& indices) const
         {
@@ -7549,7 +7526,7 @@ namespace details {
             });
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
@@ -7576,7 +7553,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr this_type transpose(const Cont& order) const
         {
             return transpose(std::begin(order), std::end(order));
@@ -7644,8 +7621,7 @@ namespace details {
             size_type count = 0;
 
             ranger_type rgr(hdr_, fixed_axis,
-                window_type(
-                    window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
+                window_type(window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -7659,8 +7635,7 @@ namespace details {
                 if (curr_div > 0) {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
                     rgr.modify_window(fixed_axis,
-                        window_type(window_interval_type(0, curr_ival_width),
-                            arrnd_sliding_window_type::partial));
+                        window_type(window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
                 }
 
                 ++count;
@@ -7737,9 +7712,8 @@ namespace details {
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
             ranger_type rgr(hdr_, axis,
-                window_type(window,
-                    bounded ? arrnd_sliding_window_type::complete
-                            : arrnd_sliding_window_type::partial));
+                window_type(
+                    window, bounded ? arrnd_sliding_window_type::complete : arrnd_sliding_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -7773,9 +7747,8 @@ namespace details {
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
             ranger_type rgr(hdr_, axis,
-                window_type(window,
-                    bounded ? arrnd_sliding_window_type::complete
-                            : arrnd_sliding_window_type::partial));
+                window_type(
+                    window, bounded ? arrnd_sliding_window_type::complete : arrnd_sliding_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -7949,7 +7922,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterator AxesIt>
+        template <iterator_of_type_integral AxesIt>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
             using split_type = replaced_type<this_type>;
@@ -8029,7 +8002,7 @@ namespace details {
 
             return slices;
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto split(const Cont& axes, size_type division) const
         {
             return split(std::begin(axes), std::end(axes), division);
@@ -8039,7 +8012,7 @@ namespace details {
             return split(axes.begin(), axes.end(), division);
         }
 
-        template <integral_type_iterator AxesIt, integral_type_iterator IndsIt>
+        template <iterator_of_type_integral AxesIt, iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
             using split_type = replaced_type<this_type>;
@@ -8146,41 +8119,41 @@ namespace details {
 
             return slices;
         }
-        template <integral_type_iterator AxesIt, integral_type_iterable Cont>
+        template <iterator_of_type_integral AxesIt, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
         {
             return split(first_axis, last_axis, std::begin(inds), std::end(inds));
         }
-        template <integral_type_iterator AxesIt>
+        template <iterator_of_type_integral AxesIt>
         [[nodiscard]] constexpr auto split(
             AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
         {
             return split(first_axis, last_axis, inds.begin(), inds.end());
         }
 
-        template <integral_type_iterable AxesCont, integral_type_iterator IndsIt>
+        template <iterable_of_type_integral AxesCont, iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
-        template <integral_type_iterable AxesCont, integral_type_iterable Cont>
+        template <iterable_of_type_integral AxesCont, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, const Cont& inds) const
         {
             return split(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template <integral_type_iterable AxesCont>
+        template <iterable_of_type_integral AxesCont>
         [[nodiscard]] constexpr auto split(const AxesCont& axes, std::initializer_list<size_type> inds) const
         {
             return split(std::begin(axes), std::end(axes), inds.begin(), inds.end());
         }
 
-        template <integral_type_iterator IndsIt>
+        template <iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto split(
             std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return split(axes.begin(), axes.end(), first_ind, last_ind);
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto split(std::initializer_list<size_type> axes, const Cont& inds) const
         {
             return split(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
@@ -8191,7 +8164,7 @@ namespace details {
             return split(axes.begin(), axes.end(), inds.begin(), inds.end());
         }
 
-        template <integral_type_iterator AxesIt, integral_type_iterator IndsIt>
+        template <iterator_of_type_integral AxesIt, iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto exclude(
             AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
@@ -8316,41 +8289,41 @@ namespace details {
 
             return slices;
         }
-        template <integral_type_iterator AxesIt, integral_type_iterable Cont>
+        template <iterator_of_type_integral AxesIt, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto exclude(AxesIt first_axis, AxesIt last_axis, const Cont& inds) const
         {
             return exclude(first_axis, last_axis, std::begin(inds), std::end(inds));
         }
-        template <integral_type_iterator AxesIt>
+        template <iterator_of_type_integral AxesIt>
         [[nodiscard]] constexpr auto exclude(
             AxesIt first_axis, AxesIt last_axis, std::initializer_list<size_type> inds) const
         {
             return exclude(first_axis, last_axis, inds.begin(), inds.end());
         }
 
-        template <integral_type_iterable AxesCont, integral_type_iterator IndsIt>
+        template <iterable_of_type_integral AxesCont, iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude(std::begin(axes), std::end(axes), first_ind, last_ind);
         }
-        template <integral_type_iterable AxesCont, integral_type_iterable Cont>
+        template <iterable_of_type_integral AxesCont, iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, const Cont& inds) const
         {
             return exclude(std::begin(axes), std::end(axes), std::begin(inds), std::end(inds));
         }
-        template <integral_type_iterable AxesCont>
+        template <iterable_of_type_integral AxesCont>
         [[nodiscard]] constexpr auto exclude(const AxesCont& axes, std::initializer_list<size_type> inds) const
         {
             return exclude(std::begin(axes), std::end(axes), inds.begin(), inds.end());
         }
 
-        template <integral_type_iterator IndsIt>
+        template <iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto exclude(
             std::initializer_list<size_type> axes, IndsIt first_ind, IndsIt last_ind) const
         {
             return exclude(axes.begin(), axes.end(), first_ind, last_ind);
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto exclude(std::initializer_list<size_type> axes, const Cont& inds) const
         {
             return exclude(axes.begin(), axes.end(), std::begin(inds), std::end(inds));
@@ -8469,7 +8442,7 @@ namespace details {
             return expanded.is_sorted(std::forward<Comp>(comp));
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
         {
             if (empty()) {
@@ -8483,7 +8456,7 @@ namespace details {
 
             auto reordered = clone();
 
-            auto z = zip(zipped_cont(order), zipped_cont(reordered));
+            auto z = zip(zipped_container(order), zipped_container(reordered));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
@@ -8491,7 +8464,7 @@ namespace details {
             return reordered;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto reorder(const Cont& order) const
         {
             return reorder(std::begin(order), std::end(order));
@@ -8501,7 +8474,7 @@ namespace details {
             return reorder(order.begin(), order.end());
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr this_type reorder(
             size_type axis, const InputIt& first_order, const InputIt& last_order) const
         {
@@ -8517,7 +8490,7 @@ namespace details {
 
             auto expanded = expand(axis);
 
-            auto z = zip(zipped_cont(order), zipped_cont(expanded));
+            auto z = zip(zipped_container(order), zipped_container(expanded));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
@@ -8529,7 +8502,7 @@ namespace details {
             return reordered;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
         {
             return reorder(axis, std::begin(order), std::end(order));
@@ -8539,7 +8512,7 @@ namespace details {
             return reorder(axis, order.begin(), order.end());
         }
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto find_adjacents(
             const InputIt& first_sub, const InputIt& last_sub, difference_type offset = 1) const
         {
@@ -8596,7 +8569,7 @@ namespace details {
             return res;
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto find_adjacents(const Cont& subs, difference_type offset = 1) const
         {
             return find_adjacents(std::begin(subs), std::end(subs), offset);
@@ -9071,7 +9044,7 @@ namespace details {
             = default_rtol<compliant_tol_type<ArCo, this_type::depth>>()) const
         {
             return transform<this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
-                return oc::close(a, b, atol, rtol);
+                return details::close(a, b, atol, rtol);
             });
         }
 
@@ -9082,7 +9055,7 @@ namespace details {
             const tol_type<U, this_type::depth>& rtol = default_rtol<tol_type<U, this_type::depth>>()) const
         {
             return transform<this_type::depth>([&atol, &rtol, &value](const auto& a) {
-                return oc::close(a, value, atol, rtol);
+                return details::close(a, value, atol, rtol);
             });
         }
 
@@ -9108,7 +9081,7 @@ namespace details {
             = default_rtol<compliant_tol_type<ArCo, this_type::depth>>()) const
         {
             return all_match<this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
-                return oc::close(a, b, atol, rtol);
+                return details::close(a, b, atol, rtol);
             });
         }
 
@@ -9119,7 +9092,7 @@ namespace details {
             const tol_type<U, this_type::depth>& rtol = default_rtol<tol_type<U, this_type::depth>>()) const
         {
             return all<this_type::depth>([&u, &atol, &rtol](const auto& a) {
-                return oc::close(a, u, atol, rtol);
+                return details::close(a, u, atol, rtol);
             });
         }
 
@@ -9145,7 +9118,7 @@ namespace details {
             = default_rtol<compliant_tol_type<ArCo, this_type::depth>>()) const
         {
             return any_match<this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
-                return oc::close(a, b, atol, rtol);
+                return details::close(a, b, atol, rtol);
             });
         }
 
@@ -9156,7 +9129,7 @@ namespace details {
             const tol_type<U, this_type::depth>& rtol = default_rtol<tol_type<U, this_type::depth>>()) const
         {
             return any<this_type::depth>([&u, &atol, &rtol](const auto& a) {
-                return oc::close(a, u, atol, rtol);
+                return details::close(a, u, atol, rtol);
             });
         }
 
@@ -9336,26 +9309,26 @@ namespace details {
 
         // by order iterator functions
 
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order)
         {
             return empty() ? iterator()
                            : iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? iterator()
                            : iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
                 ? const_iterator()
                 : const_iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
         {
             return empty()
@@ -9363,7 +9336,7 @@ namespace details {
                 : iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9371,7 +9344,7 @@ namespace details {
                 : iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9379,7 +9352,7 @@ namespace details {
                 : const_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order)
         {
             return empty()
@@ -9387,7 +9360,7 @@ namespace details {
                 : reverse_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9395,7 +9368,7 @@ namespace details {
                 : reverse_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9403,7 +9376,7 @@ namespace details {
                 : const_reverse_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
         {
             return empty()
@@ -9411,7 +9384,7 @@ namespace details {
                 : reverse_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9419,7 +9392,7 @@ namespace details {
                 : reverse_iterator(buffsp_->data(),
                     indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
         }
-        template <integral_type_iterator InputIt>
+        template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto crend(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
@@ -9477,62 +9450,62 @@ namespace details {
             return crend(order.begin(), order.end());
         }
 
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto begin(const Cont& order)
         {
             return begin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto begin(const Cont& order) const
         {
             return begin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto cbegin(const Cont& order) const
         {
             return cbegin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto end(const Cont& order)
         {
             return end(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto end(const Cont& order) const
         {
             return end(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto cend(const Cont& order) const
         {
             return cend(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto rbegin(const Cont& order)
         {
             return rbegin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto rbegin(const Cont& order) const
         {
             return rbegin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto crbegin(const Cont& order) const
         {
             return crbegin(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto rend(const Cont& order)
         {
             return rend(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto rend(const Cont& order) const
         {
             return rend(std::begin(order), std::end(order));
         }
-        template <integral_type_iterable Cont>
+        template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr auto crend(const Cont& order) const
         {
             return crend(std::begin(order), std::end(order));
@@ -9587,8 +9560,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
@@ -9596,8 +9568,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
@@ -9605,8 +9576,7 @@ namespace details {
             return empty()
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
@@ -9614,8 +9584,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
@@ -9623,8 +9592,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
@@ -9632,8 +9600,7 @@ namespace details {
             return empty()
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0,
-                        window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
                         arrnd_iterator_position::rend));
         }
 
@@ -9952,7 +9919,7 @@ namespace details {
         [[nodiscard]] constexpr auto sign() const
         {
             return transform([](const auto& a) {
-                return oc::sign(a);
+                return details::sign(a);
             });
         }
 
@@ -9968,32 +9935,31 @@ namespace details {
 
     // arrnd type deduction by constructors
 
-    template <integral_type_iterator InputDimsIt, iterator_type InputDataIt,
+    template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt,
         typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <integral_type_iterable Cont, iterator_type InputDataIt,
+    template <iterable_of_type_integral Cont, iterator_type InputDataIt,
         typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <iterator_type InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
+    template <iterator_type InputDataIt, typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, const InputDataIt&,
         const InputDataIt& a)
         -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <integral_type_iterator InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
+    template <iterator_of_type_integral InputDimsIt, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <integral_type_iterable Cont, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
+    template <iterable_of_type_integral Cont, typename U, typename DataStorageInfo = dynamic_storage_info<U>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, std::initializer_list<U>) -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
@@ -10003,13 +9969,13 @@ namespace details {
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <integral_type_iterator InputDimsIt, iterable_type DataCont,
+    template <iterator_of_type_integral InputDimsIt, iterable_type DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const DataCont&)
         -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <integral_type_iterable Cont, iterable_type DataCont,
+    template <iterable_of_type_integral Cont, iterable_type DataCont,
         typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
@@ -10023,13 +9989,13 @@ namespace details {
 
     template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator, integral_type_iterator InputDimsIt>
+        template <typename> typename SharedRefAllocator = simple_allocator, iterator_of_type_integral InputDimsIt>
         requires(invocable_no_arrnd<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
     template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
         typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator, integral_type_iterable Cont>
+        template <typename> typename SharedRefAllocator = simple_allocator, iterable_of_type_integral Cont>
         requires(invocable_no_arrnd<Func>)
     arrnd(const Cont&, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
@@ -10477,14 +10443,14 @@ namespace details {
         return find<ArCo1::depth>(arr, mask);
     }
 
-    template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterator InputIt>
+    template <std::int64_t Level, arrnd_compliant ArCo, iterator_of_type_integral InputIt>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
     {
         return filter<Level>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
                 {std::distance(first_ind, last_ind)}, first_ind, last_ind));
     }
-    template <std::int64_t Level, arrnd_compliant ArCo, integral_type_iterable Cont>
+    template <std::int64_t Level, arrnd_compliant ArCo, iterable_of_type_integral Cont>
         requires(!arrnd_compliant<Cont>)
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
     {
@@ -10500,14 +10466,14 @@ namespace details {
                 {std::ssize(indices)}, indices.begin(), indices.end()));
     }
 
-    template <arrnd_compliant ArCo, integral_type_iterator InputIt>
+    template <arrnd_compliant ArCo, iterator_of_type_integral InputIt>
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, InputIt first_ind, InputIt last_ind)
     {
         return filter<ArCo::depth>(arr,
             typename ArCo::template replaced_type<typename ArCo::size_type>(
                 {std::distance(first_ind, last_ind)}, first_ind, last_ind));
     }
-    template <arrnd_compliant ArCo, integral_type_iterable Cont>
+    template <arrnd_compliant ArCo, iterable_of_type_integral Cont>
         requires(!arrnd_compliant<Cont>)
     [[nodiscard]] inline constexpr auto filter(const ArCo& arr, const Cont& indices)
     {
@@ -11889,34 +11855,9 @@ using details::arrnd_json;
 using details::arrnd_inner;
 using details::arrnd_inner_t;
 
-using details::arrnd_returned_element_iterator_tag;
-using details::arrnd_returned_slice_iterator_tag;
-
-using details::arrnd_iterator;
-using details::arrnd_const_iterator;
-using details::arrnd_reverse_iterator;
-using details::arrnd_const_reverse_iterator;
-
-using details::arrnd_slice_iterator;
-using details::arrnd_slice_const_iterator;
-using details::arrnd_slice_reverse_iterator;
-using details::arrnd_slice_reverse_const_iterator;
-
-using details::arrnd_back_inserter;
-using details::arrnd_front_inserter;
-using details::arrnd_inserter;
-
-using details::arrnd_slice_back_inserter;
-using details::arrnd_slice_front_inserter;
-using details::arrnd_slice_inserter;
-
 using details::arrnd_shape_preset;
 using details::arrnd_filter_proxy;
 using details::arrnd;
-
-using details::zipped_cont;
-using details::zipped_iter;
-using details::zip;
 
 using details::begin;
 using details::cbegin;
