@@ -1357,22 +1357,22 @@ TEST(arrnd_test, can_have_complie_time_calculated_depth)
 
 TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_type_at_compile_time)
 {
-    static_assert(oc::arrnd_compliant_of_type<oc::arrnd<int>, int>);
-    static_assert(!oc::arrnd_compliant_of_type<oc::arrnd<int>, double>);
+    static_assert(oc::arrnd_of_type<oc::arrnd<int>, int>);
+    static_assert(!oc::arrnd_of_type<oc::arrnd<int>, double>);
 }
 
 TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_template_type_at_compile_time)
 {
     oc::arrnd<std::complex<int>>{}; // required due to MSVC compiler issue
 
-    static_assert(oc::arrnd_compliant_of_template_type<oc::arrnd<std::complex<int>>, std::complex>);
-    static_assert(!oc::arrnd_compliant_of_template_type<oc::arrnd<std::complex<int>>, std::vector>);
+    static_assert(oc::arrnd_of_template_type<oc::arrnd<std::complex<int>>, std::complex>);
+    static_assert(!oc::arrnd_of_template_type<oc::arrnd<std::complex<int>>, std::vector>);
 }
 
 TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compile_time)
 {
-    static_assert(oc::arrnd_compliant_with_trait<oc::arrnd<int>, std::is_integral>);
-    static_assert(!oc::arrnd_compliant_with_trait<oc::arrnd<int>, std::is_floating_point>);
+    static_assert(oc::arrnd_with_trait<oc::arrnd<int>, std::is_integral>);
+    static_assert(!oc::arrnd_with_trait<oc::arrnd<int>, std::is_floating_point>);
 }
 
 TEST(arrnd_test, check_nested_arrnd_shape_preset)
