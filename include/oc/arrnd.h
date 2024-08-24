@@ -9778,6 +9778,23 @@ namespace details {
             });
         }
 
+        [[nodiscard]] constexpr auto polar() const
+        {
+            return transform([](const auto& r) {
+                using std::polar;
+                return polar(r);
+            });
+        }
+
+        template <arrnd_type Arrnd>
+        [[nodiscard]] constexpr auto polar(const Arrnd& thetas) const
+        {
+            return transform(thetas, [](const auto& r, const auto& theta) {
+                using std::polar;
+                return polar(r, theta);
+            });
+        }
+
         [[nodiscard]] constexpr auto sign() const
         {
             return transform([](const auto& a) {
@@ -11111,19 +11128,13 @@ namespace details {
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto polar(const Arrnd& rs)
     {
-        return transform(rs, [](const auto& r) {
-            using std::polar;
-            return polar(r);
-        });
+        return rs.polar();
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
     [[nodiscard]] inline constexpr auto polar(const Arrnd1& rs, const Arrnd2& thetas)
     {
-        return transform(rs, thetas, [](const auto& r, const auto& theta) {
-            using std::polar;
-            return polar(r, theta);
-        });
+        return rs.polar(thetas);
     }
 
     template <arrnd_type Arrnd>
