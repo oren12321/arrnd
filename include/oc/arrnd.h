@@ -2922,35 +2922,35 @@ namespace details {
         arrnd_iterator_position pos_{arrnd_iterator_position::end};
     };
 
-    enum class arrnd_sliding_window_type {
+    enum class arrnd_window_type {
         complete,
         partial,
     };
 
     template <typename Interval>
         requires(std::signed_integral<typename Interval::size_type>)
-    struct arrnd_sliding_window {
+    struct arrnd_window {
         using interval_type = Interval;
 
-        explicit constexpr arrnd_sliding_window(
-            interval_type nival, arrnd_sliding_window_type ntype = arrnd_sliding_window_type::complete)
+        explicit constexpr arrnd_window(
+            interval_type nival, arrnd_window_type ntype = arrnd_window_type::complete)
             : ival(nival)
             , type(ntype)
         { }
 
-        constexpr arrnd_sliding_window() = default;
-        constexpr arrnd_sliding_window(const arrnd_sliding_window&) = default;
-        constexpr arrnd_sliding_window& operator=(const arrnd_sliding_window&) = default;
-        constexpr arrnd_sliding_window(arrnd_sliding_window&&) noexcept = default;
-        constexpr arrnd_sliding_window& operator=(arrnd_sliding_window&&) noexcept = default;
-        constexpr ~arrnd_sliding_window() = default;
+        constexpr arrnd_window() = default;
+        constexpr arrnd_window(const arrnd_window&) = default;
+        constexpr arrnd_window& operator=(const arrnd_window&) = default;
+        constexpr arrnd_window(arrnd_window&&) noexcept = default;
+        constexpr arrnd_window& operator=(arrnd_window&&) noexcept = default;
+        constexpr ~arrnd_window() = default;
 
         interval_type ival;
-        arrnd_sliding_window_type type{arrnd_sliding_window_type::complete};
+        arrnd_window_type type{arrnd_window_type::complete};
     };
 
     template <typename ArrndInfo = arrnd_info<>>
-    class arrnd_window_slider {
+    class arrnd_windows_slider {
     public:
         using info_type = ArrndInfo;
 
@@ -2960,11 +2960,11 @@ namespace details {
         using boundary_storage_type = typename info_type::storage_info_type::template replaced_type<
             typename info_type::boundary_type>::storage_type;
 
-        using window_type = arrnd_sliding_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
+        using window_type = arrnd_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
 
         template <typename InputIt>
-            requires(oc::arrnd::details::template_type<oc::arrnd::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
-        explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_window, InputIt last_window,
+            requires(template_type<iterator_value_t<InputIt>, arrnd_window>)
+        explicit constexpr arrnd_windows_slider(const info_type& ai, InputIt first_window, InputIt last_window,
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
             : ai_(ai)
             , windows_(size(ai))
@@ -2985,10 +2985,10 @@ namespace details {
                     std::logical_and<>{}, [](auto dim, auto window) {
                         auto ival = window.ival;
                         auto type = window.type;
-                        return (type == arrnd_sliding_window_type::complete
+                        return (type == arrnd_window_type::complete
                                    && (isunbound(ival)
                                        || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= dim)))
-                            || type == arrnd_sliding_window_type::partial;
+                            || type == arrnd_window_type::partial;
                     })) {
                 throw std::invalid_argument("invalid window interval");
             }
@@ -3005,7 +3005,7 @@ namespace details {
                     std::end(ai.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
                     [](auto dim) {
                         return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
-                            arrnd_sliding_window_type::complete);
+                            arrnd_window_type::complete);
                     });
             }
 
@@ -3016,7 +3016,7 @@ namespace details {
                     if (isunbound(window.ival)) {
                         return index_type{1};
                     }
-                    return window.type == arrnd_sliding_window_type::complete ? dim - absdiff(ival) + 1 : dim;
+                    return window.type == arrnd_window_type::complete ? dim - absdiff(ival) + 1 : dim;
                 });
 
             indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
@@ -3026,19 +3026,19 @@ namespace details {
             }
         }
 
-        template <oc::arrnd::details::iterable_type Cont>
-            requires(oc::arrnd::details::template_type<oc::arrnd::details::iterable_value_t<Cont>, arrnd_sliding_window>)
-        explicit constexpr arrnd_window_slider(
+        template <iterable_type Cont>
+            requires(template_type<iterable_value_t<Cont>, arrnd_window>)
+        explicit constexpr arrnd_windows_slider(
             const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : arrnd_window_slider(ai, std::begin(windows), std::end(windows), start_pos)
+            : arrnd_windows_slider(ai, std::begin(windows), std::end(windows), start_pos)
         { }
 
-        explicit constexpr arrnd_window_slider(const info_type& ai, std::initializer_list<window_type> windows,
+        explicit constexpr arrnd_windows_slider(const info_type& ai, std::initializer_list<window_type> windows,
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : arrnd_window_slider(ai, windows.begin(), windows.end(), start_pos)
+            : arrnd_windows_slider(ai, windows.begin(), windows.end(), start_pos)
         { }
 
-        explicit constexpr arrnd_window_slider(const info_type& ai, index_type axis,
+        explicit constexpr arrnd_windows_slider(const info_type& ai, index_type axis,
             const window_type& window = window_type(typename window_type::interval_type(0, 1)),
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
         {
@@ -3050,22 +3050,22 @@ namespace details {
 
             std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
                 return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
-                    arrnd_sliding_window_type::complete);
+                    arrnd_window_type::complete);
             });
 
             windows[axis] = window;
 
-            *this = arrnd_window_slider(ai, windows, start_pos);
+            *this = arrnd_windows_slider(ai, windows, start_pos);
         }
 
-        constexpr arrnd_window_slider() = default;
-        constexpr arrnd_window_slider(const arrnd_window_slider&) = default;
-        constexpr arrnd_window_slider& operator=(const arrnd_window_slider&) = default;
-        constexpr arrnd_window_slider(arrnd_window_slider&&) noexcept = default;
-        constexpr arrnd_window_slider& operator=(arrnd_window_slider&&) noexcept = default;
-        constexpr ~arrnd_window_slider() = default;
+        constexpr arrnd_windows_slider() = default;
+        constexpr arrnd_windows_slider(const arrnd_windows_slider&) = default;
+        constexpr arrnd_windows_slider& operator=(const arrnd_windows_slider&) = default;
+        constexpr arrnd_windows_slider(arrnd_windows_slider&&) noexcept = default;
+        constexpr arrnd_windows_slider& operator=(arrnd_windows_slider&&) noexcept = default;
+        constexpr ~arrnd_windows_slider() = default;
 
-        constexpr arrnd_window_slider& operator++() noexcept
+        constexpr arrnd_windows_slider& operator++() noexcept
         {
             ++indexer_;
 
@@ -3076,14 +3076,14 @@ namespace details {
             return *this;
         }
 
-        constexpr arrnd_window_slider operator++(int) noexcept
+        constexpr arrnd_windows_slider operator++(int) noexcept
         {
-            arrnd_window_slider<info_type> temp{*this};
+            arrnd_windows_slider<info_type> temp{*this};
             ++(*this);
             return temp;
         }
 
-        constexpr arrnd_window_slider& operator+=(size_type count) noexcept
+        constexpr arrnd_windows_slider& operator+=(size_type count) noexcept
         {
             for (size_type i = 0; i < count; ++i) {
                 ++(*this);
@@ -3091,14 +3091,14 @@ namespace details {
             return *this;
         }
 
-        arrnd_window_slider operator+(size_type count) const noexcept
+        arrnd_windows_slider operator+(size_type count) const noexcept
         {
-            arrnd_window_slider<info_type> temp{*this};
+            arrnd_windows_slider<info_type> temp{*this};
             temp += count;
             return temp;
         }
 
-        constexpr arrnd_window_slider& operator--() noexcept
+        constexpr arrnd_windows_slider& operator--() noexcept
         {
             --indexer_;
 
@@ -3109,14 +3109,14 @@ namespace details {
             return *this;
         }
 
-        constexpr arrnd_window_slider operator--(int) noexcept
+        constexpr arrnd_windows_slider operator--(int) noexcept
         {
-            arrnd_window_slider<info_type> temp{*this};
+            arrnd_windows_slider<info_type> temp{*this};
             --(*this);
             return temp;
         }
 
-        constexpr arrnd_window_slider& operator-=(size_type count) noexcept
+        constexpr arrnd_windows_slider& operator-=(size_type count) noexcept
         {
             for (size_type i = 0; i < count; ++i) {
                 --(*this);
@@ -3124,9 +3124,9 @@ namespace details {
             return *this;
         }
 
-        constexpr arrnd_window_slider operator-(size_type count) const noexcept
+        constexpr arrnd_windows_slider operator-(size_type count) const noexcept
         {
-            arrnd_window_slider<info_type> temp{*this};
+            arrnd_windows_slider<info_type> temp{*this};
             temp -= count;
             return temp;
         }
@@ -3141,11 +3141,11 @@ namespace details {
             return curr_boundaries_;
         }
 
-        [[nodiscard]] constexpr arrnd_window_slider operator[](index_type index) const noexcept
+        [[nodiscard]] constexpr arrnd_windows_slider operator[](index_type index) const noexcept
         {
             auto subs = indexer_[index].subs();
 
-            arrnd_window_slider<info_type> temp{*this};
+            arrnd_windows_slider<info_type> temp{*this};
 
             for (size_type i = 0; i < size(ai_); ++i) {
                 temp.curr_boundaries_[i] = window2boundary(windows_[i], subs[i], ai_.dims()[i]);
@@ -3154,22 +3154,22 @@ namespace details {
             return temp;
         }
 
-        [[nodiscard]] constexpr bool operator==(const arrnd_window_slider& other) const noexcept
+        [[nodiscard]] constexpr bool operator==(const arrnd_windows_slider& other) const noexcept
         {
             return indexer_ == other.indexer_;
         }
 
-        [[nodiscard]] constexpr bool operator<(const arrnd_window_slider& other) const noexcept
+        [[nodiscard]] constexpr bool operator<(const arrnd_windows_slider& other) const noexcept
         {
             return indexer_ < other.indexer_;
         }
 
-        [[nodiscard]] constexpr bool operator<=(const arrnd_window_slider& other) const noexcept
+        [[nodiscard]] constexpr bool operator<=(const arrnd_windows_slider& other) const noexcept
         {
             return indexer_ <= other.indexer_;
         }
 
-        [[nodiscard]] constexpr auto operator-(const arrnd_window_slider& other) const noexcept
+        [[nodiscard]] constexpr auto operator-(const arrnd_windows_slider& other) const noexcept
         {
             return indexer_ - other.indexer_;
         }
@@ -3209,7 +3209,7 @@ namespace details {
                     0, static_cast<index_type>(dim), static_cast<index_type>(ival.step()));
             }
 
-            if (type == arrnd_sliding_window_type::complete) {
+            if (type == arrnd_window_type::complete) {
                 return typename info_type::boundary_type(
                     sub, sub + static_cast<index_type>(absdiff(ival)), static_cast<index_type>(ival.step()));
             }
@@ -3234,9 +3234,9 @@ namespace details {
 }
 
 using details::arrnd_indexer;
-using details::arrnd_sliding_window_type;
-using details::arrnd_sliding_window;
-using details::arrnd_window_slider;
+using details::arrnd_window_type;
+using details::arrnd_window;
+using details::arrnd_windows_slider;
 }
 
 // arrnd iterator types
@@ -5182,7 +5182,7 @@ namespace details {
         using shared_ref_allocator_type = SharedRefAllocator<U>;
         using header_type = arrnd_info<DimsStorageInfo>;
         using indexer_type = arrnd_indexer<header_type>;
-        using ranger_type = arrnd_window_slider<header_type>;
+        using ranger_type = arrnd_windows_slider<header_type>;
 
         using interval_type = typename header_type::boundary_type;
 
@@ -7196,7 +7196,7 @@ namespace details {
             size_type count = 0;
 
             ranger_type rgr(hdr_, fixed_axis,
-                window_type(window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
+                window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -7210,7 +7210,7 @@ namespace details {
                 if (curr_div > 0) {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
                     rgr.modify_window(fixed_axis,
-                        window_type(window_interval_type(0, curr_ival_width), arrnd_sliding_window_type::partial));
+                        window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
                 }
 
                 ++count;
@@ -7288,7 +7288,7 @@ namespace details {
 
             ranger_type rgr(hdr_, axis,
                 window_type(
-                    window, bounded ? arrnd_sliding_window_type::complete : arrnd_sliding_window_type::partial));
+                    window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -7323,7 +7323,7 @@ namespace details {
 
             ranger_type rgr(hdr_, axis,
                 window_type(
-                    window, bounded ? arrnd_sliding_window_type::complete : arrnd_sliding_window_type::partial));
+                    window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -9074,7 +9074,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
@@ -9082,7 +9082,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
@@ -9090,7 +9090,7 @@ namespace details {
             return empty()
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
@@ -9098,7 +9098,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
@@ -9106,7 +9106,7 @@ namespace details {
             return empty()
                 ? reverse_slice_iterator()
                 : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
@@ -9114,7 +9114,7 @@ namespace details {
             return empty()
                 ? const_reverse_slice_iterator()
                 : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_sliding_window_type::partial),
+                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
                         arrnd_iterator_position::rend));
         }
 

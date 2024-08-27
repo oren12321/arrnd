@@ -1753,7 +1753,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //        oc::arrnd_sliding_window(oc::arrnd::interval<>::between(-1, 3), oc::arrnd_sliding_window_type::partial)};
 //
 //    int i = 0;
-//    for (oc::arrnd_window_slider ws(
+//    for (oc::arrnd_windows_slider ws(
 //             /*slc*/ ai, /*windows*/ 0, oc::arrnd_sliding_window(oc::arrnd::interval<>(-1, 3)));
 //         ws; ++ws) {
 //        std::cout << "{ ";
@@ -1899,7 +1899,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //    EXPECT_EQ(expected_inds_list[5], gen[3]);
 //}
 
-// TODO: add arrnd_window_slider type tests (event though is being tested via arrnd type functionality) 
+// TODO: add arrnd_windows_slider type tests (event though is being tested via arrnd type functionality) 
 
 //TEST(arrnd_axis_ranger, simple_forward_backward_iterations)
 //{
