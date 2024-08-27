@@ -2798,7 +2798,7 @@ TEST(arrnd_test, concat)
     {
         std::initializer_list<int> vec{6, 7, 8, 9, 10};
 
-        auto arr = concat(arrnd<int>({3}, {1, 2, 3}), arrnd<int>({2}, {4, 5}), view<arrnd<int>>({5}, vec),
+        auto arr = concat(arrnd<int>({3}, {1, 2, 3}), arrnd<int>({2}, {4, 5}), arrnd<int>({5}, vec),
             arrnd<int>({5}, {11, 12, 13, 14, 15}));
 
         EXPECT_TRUE(all_equal(arr, arrnd<int>({15}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15})));

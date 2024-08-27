@@ -728,10 +728,6 @@ using details::simple_allocator;
 
 namespace oc::arrnd {
 namespace details {
-    struct simple_container_tag { };
-    template <typename T>
-    concept simple_container_type = std::is_same_v<typename std::remove_cvref_t<T>::tag, simple_container_tag>;
-
     template <typename T, typename Allocator = simple_allocator<T>>
     class simple_vector {
         static_assert(std::is_same_v<T, typename Allocator::value_type>);
@@ -749,8 +745,6 @@ namespace details {
         using const_iterator = const T*;
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-
-        using tag = simple_container_tag;
 
         simple_vector() = default;
 
@@ -791,6 +785,15 @@ namespace details {
                 std::uninitialized_copy_n(first, dist, ptr_);
             }
         }
+
+        template <iterable_type Cont>
+        explicit constexpr simple_vector(const Cont& values)
+            : simple_vector(std::begin(values), std::end(values))
+        { }
+
+        explicit constexpr simple_vector(std::initializer_list<value_type> values)
+            : simple_vector(values.begin(), values.end())
+        { }
 
         constexpr void clear()
         {
@@ -1180,8 +1183,6 @@ namespace details {
         using reverse_iterator = std::reverse_iterator<pointer>;
         using const_reverse_iterator = std::reverse_iterator<const_pointer>;
 
-        using tag = simple_container_tag;
-
         simple_array() = default;
 
         explicit constexpr simple_array(size_type size)
@@ -1211,6 +1212,15 @@ namespace details {
                 std::copy_n(first, dist, ptr_);
             }
         }
+
+        template <iterable_type Cont>
+        explicit constexpr simple_array(const Cont& values)
+            : simple_array(std::begin(values), std::end(values))
+        { }
+
+        explicit constexpr simple_array(std::initializer_list<value_type> values)
+            : simple_array(values.begin(), values.end())
+        { }
 
         constexpr void clear()
         {
@@ -1510,372 +1520,36 @@ namespace details {
         value_type ptr_[Capacity];
         size_type size_ = 0;
     };
-
-    template <typename T>
-    class simple_view {
-    public:
-        using value_type = T;
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
-        using reference = T&;
-        using const_reference = const T&;
-        using pointer = T*;
-        using const_pointer = const T*;
-        using iterator = T*;
-        using const_iterator = const T*;
-        using reverse_iterator = std::reverse_iterator<pointer>;
-        using const_reverse_iterator = std::reverse_iterator<const_pointer>;
-
-        using tag = simple_container_tag;
-
-        simple_view() = default;
-
-        explicit constexpr simple_view(std::span<value_type> sp, size_type capacity = 0)
-            : size_(sp.size())
-            , capacity_(capacity > 0 ? capacity : sp.size())
-            , ptr_(sp.data())
-        { }
-
-        template <iterator_type InputIt>
-        explicit constexpr simple_view(InputIt first, InputIt last)
-            : simple_view(std::span<value_type>(
-                const_cast<pointer>(reinterpret_cast<const_pointer>(&(*first))), std::distance(first, last)))
-        { }
-
-        constexpr void clear()
-        {
-            if (!empty()) {
-                if constexpr (!std::is_fundamental_v<value_type>) {
-                    std::destroy_n(ptr_, size_);
-                }
-            }
-            size_ = 0;
-        }
-
-        constexpr simple_view(const simple_view& other)
-            : size_(other.size_)
-            , capacity_(other.capacity_)
-            , ptr_(other.ptr_)
-        { }
-
-        constexpr simple_view& operator=(const simple_view& other)
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            ptr_ = other.ptr_;
-
-            return *this;
-        }
-
-        constexpr simple_view(simple_view&& other) noexcept
-            : size_(other.size_)
-            , capacity_(other.capacity_)
-            , ptr_(other.ptr_)
-        {
-            other.ptr_ = nullptr;
-            other.size_ = 0;
-            other.capacity_ = 0;
-        }
-
-        constexpr simple_view& operator=(simple_view&& other) noexcept
-        {
-            if (this == &other) {
-                return *this;
-            }
-
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            ptr_ = other.ptr_;
-
-            other.ptr_ = nullptr;
-            other.size_ = 0;
-            other.capacity_ = 0;
-
-            return *this;
-        }
-
-        ~simple_view() = default;
-
-        [[nodiscard]] constexpr bool empty() const noexcept
-        {
-            return size_ == 0;
-        }
-
-        [[nodiscard]] constexpr size_type size() const noexcept
-        {
-            return size_;
-        }
-
-        [[nodiscard]] constexpr size_type capacity() const noexcept
-        {
-            return capacity_;
-        }
-
-        [[nodiscard]] constexpr pointer data() const noexcept
-        {
-            return ptr_;
-        }
-
-        [[nodiscard]] constexpr reference operator[](size_type index) noexcept
-        {
-            assert(index < size_);
-            return ptr_[index];
-        }
-
-        [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
-        {
-            assert(index < size_);
-            return ptr_[index];
-        }
-
-        constexpr void resize(size_type count)
-        {
-            if (count == 0) {
-                clear();
-            } else if (count < size_) {
-                if constexpr (!std::is_fundamental_v<value_type>) {
-                    std::destroy_n(ptr_ + count, size_ - count);
-                }
-                size_ = count;
-            } else if (count > size_) {
-                if (count <= capacity_) {
-                    if constexpr (!std::is_fundamental_v<value_type>) {
-                        std::uninitialized_default_construct_n(ptr_ + size_, count - size_);
-                    }
-                    size_ = count;
-                } else {
-                    throw std::invalid_argument("resize count argument bigger than fixed capacity");
-                }
-            }
-        }
-
-        constexpr void reserve(size_type new_cap)
-        {
-            if (new_cap > capacity_) {
-                throw std::invalid_argument("reserve new_cap bigger than fixed capacity");
-            }
-        }
-
-        constexpr void append(size_type count)
-        {
-            if (size_ + count <= capacity_ && size_ + count > size_) {
-                if constexpr (!std::is_fundamental_v<value_type>) {
-                    std::uninitialized_default_construct_n(ptr_ + size_, count);
-                }
-                size_ += count;
-            } else if (size_ + count > capacity_) {
-                throw std::invalid_argument("unable to append more than fixed capacity");
-            }
-        }
-
-        constexpr void shrink_to_fit()
-        {
-            capacity_ = size_;
-        }
-
-        [[nodiscard]] constexpr pointer begin() noexcept
-        {
-            return ptr_;
-        }
-
-        [[nodiscard]] constexpr pointer end() noexcept
-        {
-            return ptr_ + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer begin() const noexcept
-        {
-            return ptr_;
-        }
-
-        [[nodiscard]] constexpr const_pointer end() const noexcept
-        {
-            return ptr_ + size_;
-        }
-
-        [[nodiscard]] constexpr const_pointer cbegin() const noexcept
-        {
-            return ptr_;
-        }
-
-        [[nodiscard]] constexpr const_pointer cend() const noexcept
-        {
-            return ptr_ + size_;
-        }
-
-        [[nodiscard]] constexpr std::reverse_iterator<pointer> rbegin() noexcept
-        {
-            return std::make_reverse_iterator(end());
-        }
-
-        [[nodiscard]] constexpr std::reverse_iterator<pointer> rend() noexcept
-        {
-            return std::make_reverse_iterator(begin());
-        }
-
-        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crbegin() const noexcept
-        {
-            return std::make_reverse_iterator(cend());
-        }
-
-        [[nodiscard]] constexpr std::reverse_iterator<const_pointer> crend() const noexcept
-        {
-            return std::make_reverse_iterator(cbegin());
-        }
-
-        [[nodiscard]] constexpr const_reference back() const noexcept
-        {
-            return ptr_[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr reference back() noexcept
-        {
-            return ptr_[size_ - 1];
-        }
-
-        [[nodiscard]] constexpr const_reference front() const noexcept
-        {
-            return ptr_[0];
-        }
-
-        [[nodiscard]] constexpr reference front() noexcept
-        {
-            return ptr_[0];
-        }
-
-        template <iterator_type InputIt>
-        constexpr iterator insert(const_iterator pos, InputIt first, InputIt last)
-        {
-            difference_type in_dist = std::distance(first, last);
-            if (in_dist < 0) {
-                throw std::invalid_argument("negative distance between iterators");
-            }
-
-            difference_type pos_dist = std::distance(cbegin(), pos);
-            if (pos_dist < 0 || pos_dist > size_) {
-                throw std::invalid_argument("unbound input pos");
-            }
-
-            if (in_dist == 0) {
-                return ptr_ + pos_dist;
-            }
-
-            append(in_dist);
-
-            auto new_pos = begin() + pos_dist;
-
-            auto rpos_start = rbegin() + in_dist;
-            auto rpos_stop = rend() - pos_dist;
-            std::move(rpos_start, rpos_stop, rpos_start - in_dist);
-
-            std::copy(first, last, new_pos);
-
-            return new_pos;
-        }
-
-        template <typename U>
-        constexpr iterator insert(const_iterator pos, size_type count, const U& value)
-        {
-            difference_type pos_dist = std::distance(cbegin(), pos);
-            if (pos_dist < 0 || pos_dist > size_) {
-                throw std::invalid_argument("unbound input pos");
-            }
-
-            if (count == 0) {
-                return ptr_ + pos_dist;
-            }
-
-            append(count);
-
-            auto new_pos = begin() + pos_dist;
-
-            auto rpos_start = rbegin() + count;
-            auto rpos_stop = rend() - pos_dist;
-            std::move(rpos_start, rpos_stop, rpos_start - count);
-
-            std::fill_n(new_pos, count, value);
-
-            return new_pos;
-        }
-
-        constexpr iterator erase(const_iterator first, const_iterator last)
-        {
-            difference_type dist = std::distance(first, last);
-            if (dist < 0) {
-                throw std::invalid_argument("negative distance between iterators");
-            }
-
-            difference_type first_dist = std::distance(cbegin(), first);
-            if (first_dist < 0 || first_dist > size_) {
-                throw std::invalid_argument("unbound input first");
-            }
-
-            difference_type last_dist = std::distance(cbegin(), last);
-            if (last_dist < 0 || last_dist > size_) {
-                throw std::invalid_argument("unbound input last");
-            }
-
-            if (dist == 0) {
-                return ptr_ + last_dist - 1;
-            }
-
-            std::move(last, cend(), ptr_ + first_dist);
-
-            resize(size_ - dist);
-
-            return ptr_ + last_dist - 1;
-        }
-
-        constexpr iterator erase(const_iterator pos)
-        {
-            return erase(pos, pos + 1);
-        }
-
-    private:
-        size_type size_ = 0;
-        size_type capacity_ = 0;
-        pointer ptr_ = nullptr;
-    };
-
-    template <simple_container_type Cont1, simple_container_type Cont2>
-    [[nodiscard]] inline constexpr bool operator==(const Cont1& lhs, const Cont2& rhs)
-    {
-        return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-    }
 }
+
+using details::simple_allocator;
+using details::simple_vector;
+using details::simple_array;
 }
 
 namespace oc::arrnd {
 namespace details {
     template <typename T, template <typename> typename Allocator = simple_allocator>
-    struct dynamic_storage_info {
+    struct simple_vector_traits {
         using storage_type = simple_vector<T, Allocator<T>>;
         template <typename U>
-        using replaced_type = dynamic_storage_info<U, Allocator>;
+        using replaced_type = simple_vector_traits<U, Allocator>;
+        template <typename U>
+        using allocator_type = Allocator<U>;
     };
 
     template <typename T, std::int64_t N>
-    struct static_storage_info {
+    struct simple_array_traits {
         using storage_type = simple_array<T, N>;
         template <typename U>
-        using replaced_type = static_storage_info<U, N>;
-    };
-
-    template <typename T>
-    struct view_storage_info {
-        using storage_type = simple_view<T>;
+        using replaced_type = simple_array_traits<U, N>;
         template <typename U>
-        using replaced_type = view_storage_info<T>;
+        using allocator_type = simple_allocator<U>;
     };
 }
 
-using details::dynamic_storage_info;
-using details::static_storage_info;
-using details::view_storage_info;
+using details::simple_vector_traits;
+using details::simple_array_traits;
 }
 
 namespace oc::arrnd {
@@ -2279,7 +1953,7 @@ namespace details {
         full,
     };
 
-    template <typename StorageInfo = dynamic_storage_info<std::size_t>>
+    template <typename StorageInfo = simple_vector_traits<std::size_t>>
         requires(std::is_same_v<std::size_t, typename StorageInfo::storage_type::value_type>)
     class arrnd_info {
     public:
@@ -4655,13 +4329,13 @@ namespace details {
 
         arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->push_back(view<Arrnd>(value));
+            *cont_ = cont_->push_back(Arrnd({1}, value));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->push_back(std::move(view<Arrnd>(value)));
+            *cont_ = cont_->push_back(std::move(Arrnd({1}, value)));
             return *this;
         }
 
@@ -4715,13 +4389,13 @@ namespace details {
 
         arrnd_front_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->push_front(view<Arrnd>(value));
+            *cont_ = cont_->push_front(Arrnd({1}, value));
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->push_front(std::move(view<Arrnd>(value)));
+            *cont_ = cont_->push_front(std::move(Arrnd({1}, value)));
             return *this;
         }
 
@@ -4779,14 +4453,14 @@ namespace details {
 
         arrnd_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert(view<Arrnd>(value), ind_);
+            *cont_ = cont_->insert(Arrnd({1}, value), ind_);
             ind_ += 1;
             return *this;
         }
 
         arrnd_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert(std::move(view<Arrnd>(value)), ind_);
+            *cont_ = cont_->insert(std::move(Arrnd({1}, value)), ind_);
             ind_ += 1;
             return *this;
         }
@@ -5386,7 +5060,8 @@ namespace details {
 
             if constexpr (arrnd_type<Constraint>) {
                 if constexpr (std::is_same_v<typename Constraint::value_type, bool>) {
-                    assert(constraint_.header().dims() == arr_ref_.header().dims()
+                    assert(std::equal(std::begin(constraint_.header().dims()), std::end(constraint_.header().dims()),
+                               std::begin(arr_ref_.header().dims()), std::end(arr_ref_.header().dims()))
                         && "boolean constraint considered as mask");
 
                     typename Arrnd::indexer_type gen(arr_ref_.header());
@@ -5422,37 +5097,6 @@ namespace details {
         Arrnd arr_ref_;
         Constraint constraint_;
     };
-
-    template <arrnd_type Arrnd, iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
-    [[nodiscard]] inline constexpr auto view(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
-        const InputDataIt& first_data, const InputDataIt& last_data)
-    {
-        using res_type = typename Arrnd::view_type;
-        res_type res;
-        res.header() = typename res_type::header_type(first_dim, last_dim);
-        res.storage() = std::allocate_shared<typename res_type::storage_type>(
-            typename res_type::template shared_ref_allocator_type<typename res_type::storage_type>(), first_data,
-            last_data);
-        return res;
-    }
-    template <arrnd_type Arrnd, typename U>
-    [[nodiscard]] inline constexpr auto view(
-        std::initializer_list<typename Arrnd::size_type> dims, std::initializer_list<U> data)
-    {
-        return view<Arrnd>(dims.begin(), dims.end(), data.begin(), data.end());
-    }
-    template <arrnd_type Arrnd, iterable_of_type_integral Cont, iterable_type DataCont>
-        requires(!template_type<DataCont, std::initializer_list>)
-    [[nodiscard]] inline constexpr auto view(const Cont& dims, const DataCont& data)
-    {
-        return view<Arrnd>(std::begin(dims), std::end(dims), std::begin(data), std::end(data));
-    }
-    template <arrnd_type Arrnd, typename T>
-    [[nodiscard]] inline constexpr auto view(const T& value)
-    {
-        std::initializer_list<typename Arrnd::size_type> dims{1};
-        return view<Arrnd>(dims.begin(), dims.end(), &value, &value + 1);
-    }
 
     template <arrnd_type Arrnd, iterator_of_type_integral DimsIt>
     [[nodiscard]] inline constexpr auto zeros(DimsIt first_dim, DimsIt last_dim)
@@ -5515,8 +5159,8 @@ namespace details {
         return eye<Arrnd>(dims.begin(), dims.end());
     }
 
-    template <typename T, typename DataStorageInfo = dynamic_storage_info<T>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+    template <typename T, typename DataStorageInfo = simple_vector_traits<T>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     class arrnd {
     public:
@@ -5549,8 +5193,6 @@ namespace details {
         template <typename U>
         using replaced_type
             = arrnd<U, typename DataStorageInfo::template replaced_type<U>, DimsStorageInfo, SharedRefAllocator>;
-
-        using view_type = arrnd<T, view_storage_info<T>, DimsStorageInfo, SharedRefAllocator>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -6051,7 +5693,9 @@ namespace details {
                     return *this;
                 }
 
-                assert(dst.header().dims() == selector.header().dims() && "boolean constraint considered as mask");
+                assert(std::equal(std::begin(dst.header().dims()), std::end(dst.header().dims()),
+                           std::begin(selector.header().dims()), std::end(selector.header().dims()))
+                    && "boolean constraint considered as mask");
 
                 indexer_type gen(hdr_);
                 typename std::remove_cvref_t<Arrnd1>::indexer_type dst_gen(dst.header());
@@ -6130,7 +5774,8 @@ namespace details {
             }
 
             if (total(hdr_) == total(dst.header())) {
-                if (hdr_.dims() != dst.header().dims()) {
+                if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(dst.header().dims()),
+                        std::end(dst.header().dims()))) {
                     dst.header() = header_type{hdr_.dims().cbegin(), hdr_.dims().cend()};
                 }
                 return copy_to(dst);
@@ -6163,7 +5808,8 @@ namespace details {
             typename this_type::header_type new_header(first_new_dim, last_new_dim);
             assert(total(hdr_) == total(new_header));
 
-            if (hdr_.dims() == new_header.dims()) {
+            if (std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(new_header.dims()),
+                    std::end(new_header.dims()))) {
                 return *this;
             }
 
@@ -7071,7 +6717,8 @@ namespace details {
             }
 
             if constexpr (std::is_same_v<bool, typename Arrnd::value_type>) {
-                assert(hdr_.dims() == selector.header().dims());
+                assert(std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(selector.header().dims()),
+                    std::end(selector.header().dims())));
 
                 this_type res({total(hdr_)});
 
@@ -7250,7 +6897,8 @@ namespace details {
                 return found_type();
             }
 
-            assert(hdr_.dims() == mask.header().dims());
+            assert(std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(mask.header().dims()),
+                std::end(mask.header().dims())));
 
             found_type res({total(hdr_)});
 
@@ -8504,7 +8152,8 @@ namespace details {
                 return false;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
+            if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(arr.header().dims()),
+                    std::end(arr.header().dims()))) {
                 return false;
             }
 
@@ -8533,7 +8182,8 @@ namespace details {
                 return false;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
+            if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(arr.header().dims()),
+                    std::end(arr.header().dims()))) {
                 return false;
             }
 
@@ -8674,7 +8324,8 @@ namespace details {
                 return false;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
+            if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(arr.header().dims()),
+                    std::end(arr.header().dims()))) {
                 return false;
             }
 
@@ -8703,7 +8354,8 @@ namespace details {
                 return false;
             }
 
-            if (hdr_.dims() != arr.header().dims()) {
+            if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(arr.header().dims()),
+                    std::end(arr.header().dims()))) {
                 return false;
             }
 
@@ -9815,39 +9467,39 @@ namespace details {
     // arrnd type deduction by constructors
 
     template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt,
-        typename DataStorageInfo = dynamic_storage_info<iterator_value_t<InputDataIt>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+        typename DataStorageInfo = simple_vector_traits<iterator_value_t<InputDataIt>>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
         -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <typename U, typename DataStorageInfo = dynamic_storage_info<U>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+    template <typename U, typename DataStorageInfo = simple_vector_traits<U>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
         -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
     template <iterable_of_type_integral Cont, iterable_type DataCont,
-        typename DataStorageInfo = dynamic_storage_info<iterable_value_t<DataCont>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+        typename DataStorageInfo = simple_vector_traits<iterable_value_t<DataCont>>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
     arrnd(const Cont&, const DataCont&)
         -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
 
-    template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator, iterator_of_type_integral InputDimsIt>
         requires(invocable_no_arrnd<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator, iterable_of_type_integral Cont>
         requires(invocable_no_arrnd<Func>)
     arrnd(const Cont&, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
-    template <typename Func, typename DataStorageInfo = dynamic_storage_info<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = dynamic_storage_info<std::size_t>,
+    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
         template <typename> typename SharedRefAllocator = simple_allocator>
         requires(invocable_no_arrnd<Func>)
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&&)
@@ -11769,8 +11421,6 @@ using details::conj;
 using details::proj;
 using details::polar;
 using details::sign;
-
-using details::view;
 
 using details::zeros;
 using details::eye;

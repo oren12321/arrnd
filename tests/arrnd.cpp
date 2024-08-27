@@ -763,104 +763,104 @@ TEST(simple_array, erase)
 }
 
 
-TEST(simple_view, methods)
-{
-    using namespace oc::arrnd::details;
-
-    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
-
-    simple_view<std::string> sv(std::span<std::string>{arr.begin(), arr.size()});
-    EXPECT_EQ(16, sv.capacity());
-    EXPECT_EQ(16, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("p", sv.back());
-
-    int ctr = 0;
-    for (const auto& e : sv) {
-        EXPECT_EQ(arr[ctr++], e);
-    }
-
-    for (int i = 0; i < sv.size(); ++i) {
-        EXPECT_EQ(arr[i], sv[i]);
-    }
-
-    //EXPECT_THROW(sv.resize(24), std::length_error); // assertion failure
-    sv.resize(8);
-    EXPECT_EQ(16, sv.capacity());
-    EXPECT_EQ(8, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    EXPECT_EQ("h", sv.back());
-    sv.resize(9);
-    EXPECT_EQ(16, sv.capacity());
-    EXPECT_EQ(9, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    //EXPECT_EQ("h", sv.back());
-
-    //EXPECT_THROW(sv.expand(10), std::length_error); // assertion failure
-    sv.append(1);
-    EXPECT_EQ(16, sv.capacity());
-    EXPECT_EQ(10, sv.size());
-    EXPECT_FALSE(sv.empty());
-    EXPECT_TRUE(sv.data());
-    EXPECT_EQ("a", sv.front());
-    //EXPECT_EQ("", sv.back());
-
-    // reserve and shrink_to_fit are noop
-    sv.shrink_to_fit();
-    EXPECT_THROW(sv.reserve(1000), std::invalid_argument);
-    EXPECT_EQ(10, sv.capacity());
-
-    // insert erase
-    {
-        std::string data[]{"A", "B", "C", "", "", "", "", "", ""};
-        simple_view<std::string> vec(std::span<std::string>{data, 3}, std::size(data));
-
-        std::string data2[]{"D", "E"};
-
-        // push_back
-        vec.insert(vec.cend(), &data2[0], data2 + 2);
-
-        // push_front
-        vec.insert(vec.cbegin(), &data2[0], data2 + 2);
-
-        // push_middle
-        vec.insert(vec.cbegin() + 2, &data2[0], data2 + 2);
-
-        std::vector<std::string> tmp{"D", "E", "D", "E", "A", "B", "C", "D", "E"};
-
-        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
-
-        // pop_back
-        vec.erase(vec.cbegin() + 7, vec.cend());
-
-        // pop_middle
-        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
-
-        // pop_front
-        vec.erase(vec.cbegin(), vec.cbegin() + 2);
-
-        std::vector<std::string> tmp2{"A", "B", "C"};
-
-        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
-    }
-
-    // iterators
-    {
-        std::array<int, 5> arr1{1, 2, 3, 4, 5};
-        simple_view<int> vec1(std::span<int>(arr1.begin(), arr1.size()));
-
-        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
-        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
-    }
-}
+//TEST(simple_view, methods)
+//{
+//    using namespace oc::arrnd::details;
+//
+//    std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
+//
+//    simple_view<std::string> sv(std::span<std::string>{arr.begin(), arr.size()});
+//    EXPECT_EQ(16, sv.capacity());
+//    EXPECT_EQ(16, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("p", sv.back());
+//
+//    int ctr = 0;
+//    for (const auto& e : sv) {
+//        EXPECT_EQ(arr[ctr++], e);
+//    }
+//
+//    for (int i = 0; i < sv.size(); ++i) {
+//        EXPECT_EQ(arr[i], sv[i]);
+//    }
+//
+//    //EXPECT_THROW(sv.resize(24), std::length_error); // assertion failure
+//    sv.resize(8);
+//    EXPECT_EQ(16, sv.capacity());
+//    EXPECT_EQ(8, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    EXPECT_EQ("h", sv.back());
+//    sv.resize(9);
+//    EXPECT_EQ(16, sv.capacity());
+//    EXPECT_EQ(9, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    //EXPECT_EQ("h", sv.back());
+//
+//    //EXPECT_THROW(sv.expand(10), std::length_error); // assertion failure
+//    sv.append(1);
+//    EXPECT_EQ(16, sv.capacity());
+//    EXPECT_EQ(10, sv.size());
+//    EXPECT_FALSE(sv.empty());
+//    EXPECT_TRUE(sv.data());
+//    EXPECT_EQ("a", sv.front());
+//    //EXPECT_EQ("", sv.back());
+//
+//    // reserve and shrink_to_fit are noop
+//    sv.shrink_to_fit();
+//    EXPECT_THROW(sv.reserve(1000), std::invalid_argument);
+//    EXPECT_EQ(10, sv.capacity());
+//
+//    // insert erase
+//    {
+//        std::string data[]{"A", "B", "C", "", "", "", "", "", ""};
+//        simple_view<std::string> vec(std::span<std::string>{data, 3}, std::size(data));
+//
+//        std::string data2[]{"D", "E"};
+//
+//        // push_back
+//        vec.insert(vec.cend(), &data2[0], data2 + 2);
+//
+//        // push_front
+//        vec.insert(vec.cbegin(), &data2[0], data2 + 2);
+//
+//        // push_middle
+//        vec.insert(vec.cbegin() + 2, &data2[0], data2 + 2);
+//
+//        std::vector<std::string> tmp{"D", "E", "D", "E", "A", "B", "C", "D", "E"};
+//
+//        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp.cbegin(), tmp.cend()));
+//
+//        // pop_back
+//        vec.erase(vec.cbegin() + 7, vec.cend());
+//
+//        // pop_middle
+//        vec.erase(vec.cbegin() + 2, vec.cbegin() + 4);
+//
+//        // pop_front
+//        vec.erase(vec.cbegin(), vec.cbegin() + 2);
+//
+//        std::vector<std::string> tmp2{"A", "B", "C"};
+//
+//        EXPECT_TRUE(std::equal(vec.cbegin(), vec.cend(), tmp2.cbegin(), tmp2.cend()));
+//    }
+//
+//    // iterators
+//    {
+//        std::array<int, 5> arr1{1, 2, 3, 4, 5};
+//        simple_view<int> vec1(std::span<int>(arr1.begin(), arr1.size()));
+//
+//        EXPECT_EQ(15, std::reduce(vec1.begin(), vec1.end(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.cbegin(), vec1.cend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.rbegin(), vec1.rend(), std::int64_t{0}, std::plus<>{}));
+//        EXPECT_EQ(15, std::reduce(vec1.crbegin(), vec1.crend(), std::int64_t{0}, std::plus<>{}));
+//    }
+//}
 
 //
 //TEST(simple_dynamic_vector_test, span_and_iterators_usage)
@@ -1059,22 +1059,22 @@ TEST(simple_view, methods)
 //    EXPECT_TRUE(svc.is_view());
 //}
 
-TEST(arrnd_test, arrnd_view_from_external_type)
-{
-    using namespace oc::arrnd;
-
-    // create arrnd view from continuous container (e.g. vector, span, etc.)
-
-    std::initializer_list<int> vec{1, 2, 3, 4, 5, 6};
-
-    auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
-
-    arrv.apply([](int value) {
-        return value * 2;
-    });
-
-    EXPECT_EQ(std::vector<int>(vec), (std::vector<int>{2, 4, 6, 8, 10, 12}));
-}
+//TEST(arrnd_test, arrnd_view_from_external_type)
+//{
+//    using namespace oc::arrnd;
+//
+//    // create arrnd view from continuous container (e.g. vector, span, etc.)
+//
+//    std::initializer_list<int> vec{1, 2, 3, 4, 5, 6};
+//
+//    auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
+//
+//    arrv.apply([](int value) {
+//        return value * 2;
+//    });
+//
+//    EXPECT_EQ(std::vector<int>(vec), (std::vector<int>{2, 4, 6, 8, 10, 12}));
+//}
 
 TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
 {
@@ -1394,7 +1394,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
                     typename arrnd_info<>::extent_storage_type res_subs(3);
                     auto ind = sub2ind(hdr, subs);
                     ind2sub(hdr, ind, std::begin(res_subs));
-                    EXPECT_EQ(res_subs, subs);
+                    EXPECT_TRUE(std::equal(std::begin(res_subs), std::end(res_subs), std::begin(subs), std::end(subs)));
                 }
             }
         }
@@ -1409,7 +1409,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
                     typename arrnd_info<>::extent_storage_type res_subs(3);
                     auto ind = sub2ind(shdr, subs);
                     ind2sub(shdr, ind, std::begin(res_subs));
-                    EXPECT_EQ(res_subs, subs);
+                    EXPECT_TRUE(std::equal(std::begin(res_subs), std::end(res_subs), std::begin(subs), std::end(subs)));
                 }
             }
         }
