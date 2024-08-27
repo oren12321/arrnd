@@ -2932,8 +2932,7 @@ namespace details {
     struct arrnd_window {
         using interval_type = Interval;
 
-        explicit constexpr arrnd_window(
-            interval_type nival, arrnd_window_type ntype = arrnd_window_type::complete)
+        explicit constexpr arrnd_window(interval_type nival, arrnd_window_type ntype = arrnd_window_type::complete)
             : ival(nival)
             , type(ntype)
         { }
@@ -3049,8 +3048,8 @@ namespace details {
             typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows(size(ai));
 
             std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
-                return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
-                    arrnd_window_type::complete);
+                return window_type(
+                    typename window_type::interval_type(0, static_cast<size_type>(dim)), arrnd_window_type::complete);
             });
 
             windows[axis] = window;
@@ -5160,8 +5159,7 @@ namespace details {
     }
 
     template <typename T, typename DataStorageInfo = simple_vector_traits<T>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
     class arrnd {
     public:
         using value_type = T;
@@ -5179,7 +5177,7 @@ namespace details {
 
         using storage_type = typename DataStorageInfo::storage_type;
         template <typename U>
-        using shared_ref_allocator_type = SharedRefAllocator<U>;
+        using shared_ref_allocator_type = typename data_storage_info::template allocator_type<U>;
         using header_type = arrnd_info<DimsStorageInfo>;
         using indexer_type = arrnd_indexer<header_type>;
         using ranger_type = arrnd_windows_slider<header_type>;
@@ -5189,10 +5187,9 @@ namespace details {
         using window_type = typename ranger_type::window_type;
         using window_interval_type = typename window_type::interval_type;
 
-        using this_type = arrnd<T, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        using this_type = arrnd<T, DataStorageInfo, DimsStorageInfo>;
         template <typename U>
-        using replaced_type
-            = arrnd<U, typename DataStorageInfo::template replaced_type<U>, DimsStorageInfo, SharedRefAllocator>;
+        using replaced_type = arrnd<U, typename DataStorageInfo::template replaced_type<U>, DimsStorageInfo>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -5322,8 +5319,8 @@ namespace details {
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_) ? nullptr
-                                      : std::allocate_shared<storage_type>(
-                                          shared_ref_allocator_type<storage_type>(), first_data, last_data))
+                                             : std::allocate_shared<storage_type>(
+                                                 shared_ref_allocator_type<storage_type>(), first_data, last_data))
         {
             // in case that data buffer allocated, check the number of data elements is valid
             if (buffsp_) {
@@ -7195,8 +7192,8 @@ namespace details {
 
             size_type count = 0;
 
-            ranger_type rgr(hdr_, fixed_axis,
-                window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
+            ranger_type rgr(
+                hdr_, fixed_axis, window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -7209,8 +7206,8 @@ namespace details {
 
                 if (curr_div > 0) {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
-                    rgr.modify_window(fixed_axis,
-                        window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
+                    rgr.modify_window(
+                        fixed_axis, window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
                 }
 
                 ++count;
@@ -7286,9 +7283,8 @@ namespace details {
 
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
-            ranger_type rgr(hdr_, axis,
-                window_type(
-                    window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
+            ranger_type rgr(
+                hdr_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -7321,9 +7317,8 @@ namespace details {
 
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
-            ranger_type rgr(hdr_, axis,
-                window_type(
-                    window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
+            ranger_type rgr(
+                hdr_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
 
@@ -8826,14 +8821,16 @@ namespace details {
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order)
         {
-            return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
+            return empty()
+                ? iterator()
+                : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order) const
         {
-            return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
+            return empty()
+                ? iterator()
+                : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
@@ -9071,51 +9068,45 @@ namespace details {
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rbegin));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
-                        arrnd_iterator_position::rend));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                                   arrnd_iterator_position::rend));
         }
 
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag)
@@ -9468,42 +9459,34 @@ namespace details {
 
     template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt,
         typename DataStorageInfo = simple_vector_traits<iterator_value_t<InputDataIt>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo>;
 
     template <typename U, typename DataStorageInfo = simple_vector_traits<U>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
-        -> arrnd<U, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<U, DataStorageInfo, DimsStorageInfo>;
 
     template <iterable_of_type_integral Cont, iterable_type DataCont,
         typename DataStorageInfo = simple_vector_traits<iterable_value_t<DataCont>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
-    arrnd(const Cont&, const DataCont&)
-        -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
+    arrnd(const Cont&, const DataCont&) -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo>;
 
     template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator, iterator_of_type_integral InputDimsIt>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>, iterator_of_type_integral InputDimsIt>
         requires(invocable_no_arrnd<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
     template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator, iterable_of_type_integral Cont>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>, iterable_of_type_integral Cont>
         requires(invocable_no_arrnd<Func>)
-    arrnd(const Cont&, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+    arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
     template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>,
-        template <typename> typename SharedRefAllocator = simple_allocator>
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
         requires(invocable_no_arrnd<Func>)
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo, SharedRefAllocator>;
+        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
 
     // free arrnd iterator functions
 
