@@ -17,7 +17,7 @@
 
 TEST(arrnd_test, dot)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd<int> arr1({3, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18});
@@ -67,7 +67,7 @@ TEST(arrnd_test, dot)
 
 TEST(arrnd_test, det)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
     // 240, -16
     arrnd<arrnd<int>> arr({2},
         {arrnd<int>({2, 4, 4},
@@ -84,7 +84,7 @@ TEST(arrnd_test, det)
 
 TEST(arrnd_test, inv)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<arrnd<double>> arr({3},
         {arrnd<double>({2, 2, 2}, {1, 2, 5, 6, 9, 10, 13, 14}), arrnd<double>({2, 2}, {1, 0, 0, 1}),
@@ -103,7 +103,7 @@ TEST(arrnd_test, inv)
 
 //TEST(arrnd_test, solve)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<arrnd<double>> arr({2},
 //        {arrnd<double>({2, 2}, {1, 2, 3, 5}),
@@ -118,7 +118,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_cholesky)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<double> arr({3, 3}, {4, 12, -16, 12, 37, -43, -16, -43, 98});
 //    arrnd<double> l({3, 3}, {2, 0, 0, 6, 1, 0, -8, 5, 3});
@@ -128,7 +128,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_lu)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<double> arr({3, 3}, {2, -1, -2, -4, 6, 3, -4, -2, 8});
 //
@@ -143,7 +143,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_qr)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    {
 //        arrnd<double> arr({4, 3}, {-1, -1, 1, 1, 3, 3, -1, -1, 5, 1, 3, 7});
@@ -192,7 +192,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_hess)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 //
@@ -215,7 +215,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_schur)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    {
 //        arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
@@ -253,7 +253,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_eig)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 //
@@ -279,7 +279,7 @@ TEST(arrnd_test, inv)
 //
 //TEST(arrnd_test, DISABLED_svd)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<double> arr({4, 4}, {2., 3., 4., 5., 4., 2., 5., 6., 5., 7., 2., 7., 6., 8., 10., 2.});
 //
@@ -294,7 +294,7 @@ TEST(arrnd_test, inv)
 
 TEST(arrnd_test, zeros)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     EXPECT_TRUE(all_equal(zeros<arrnd<int>>({3, 1, 2}), arrnd<int>({3, 1, 2}, 0)));
     EXPECT_TRUE(all_equal(zeros<arrnd<int>>({3, 1, 2}), arrnd<int>({3, 1, 2}).zeros()));
@@ -302,7 +302,7 @@ TEST(arrnd_test, zeros)
 
 TEST(arrnd_test, eye)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     EXPECT_TRUE(all_equal(eye<arrnd<int>>({3, 3}), arrnd<int>({3, 3}, {1, 0, 0, 0, 1, 0, 0, 0, 1})));
 
@@ -315,7 +315,7 @@ TEST(arrnd_test, eye)
 
 //TEST(arrnd_test, diag)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    {
 //        arrnd<arrnd<int>> arr({3},
@@ -390,7 +390,7 @@ TEST(arrnd_test, eye)
 //
 //TEST(arrnd_test, tril_and_triu)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<arrnd<int>> arr({3},
 //        {arrnd<int>({3, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}),
@@ -492,7 +492,7 @@ TEST(arrnd_test, eye)
 //
 //TEST(arrnd_test, is_banded)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    {
 //        arrnd<int> arr1({5, 5}, {2, 3, 0, 0, 0, 1, -2, -3, 0, 0, 0, -1, 2, 3, 0, 0, 0, 1, -2, -3, 0, 0, 0, -1, 2});
@@ -514,7 +514,7 @@ TEST(arrnd_test, eye)
 
 TEST(arrnd_test, arrnd_filter_proxy)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // indices
     {
@@ -624,7 +624,7 @@ TEST(arrnd_test, arrnd_filter_proxy)
 
 TEST(arrnd_test, squeeze)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd<int> arr;
@@ -682,7 +682,7 @@ TEST(arrnd_test, squeeze)
 
 TEST(arrnd_test, can_access_relative_array_indices)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
@@ -701,7 +701,7 @@ TEST(arrnd_test, can_access_relative_array_indices)
 
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 {
-    using Integer_array = oc::arrnd<int>;
+    using Integer_array = oc::arrnd::arrnd<int>;
 
     const int data[] = {0, 0, 0};
     //EXPECT_NO_THROW((Integer_array{{1, 1}, data})); assertion failure
@@ -733,7 +733,7 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_data)
 
 TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
 {
-    using Integer_array = oc::arrnd<int>;
+    using Integer_array = oc::arrnd::arrnd<int>;
 
     const int value{0};
     EXPECT_NO_THROW((Integer_array{{1, 1}, value}));
@@ -765,7 +765,7 @@ TEST(arrnd_test, can_be_initialized_with_valid_size_and_value)
 
 TEST(arrnd_test, parameterized_constructors_compilation)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // type deduction for data iterators
 
@@ -1248,7 +1248,7 @@ TEST(arrnd_test, parameterized_constructors_compilation)
 
 TEST(arrnd_test, subscript_operators_compilation)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
@@ -1285,21 +1285,21 @@ TEST(arrnd_test, subscript_operators_compilation)
 TEST(arrnd_test, can_be_explicitly_be_casted_to_value_type_if_scalar)
 {
     {
-        oc::arrnd<double> arr({1}, 0.5);
-        EXPECT_TRUE(oc::isscalar(arr.header()));
+        oc::arrnd::arrnd<double> arr({1}, 0.5);
+        EXPECT_TRUE(oc::arrnd::isscalar(arr.header()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
-        oc::arrnd<double> arr({1, 1, 1}, 0.5);
-        EXPECT_TRUE(oc::isscalar(arr.header()));
+        oc::arrnd::arrnd<double> arr({1, 1, 1}, 0.5);
+        EXPECT_TRUE(oc::arrnd::isscalar(arr.header()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
-        oc::arrnd<double> arr({3, 1, 2}, {0.1, 0.2, 0.3, 0.4, 0.5, 0.6});
-        auto slc = arr[{oc::interval<>::at(2), oc::interval<>::at(0), oc::interval<>::at(1)}];
-        EXPECT_TRUE(oc::isscalar(slc.header()));
+        oc::arrnd::arrnd<double> arr({3, 1, 2}, {0.1, 0.2, 0.3, 0.4, 0.5, 0.6});
+        auto slc = arr[{oc::arrnd::interval<>::at(2), oc::arrnd::interval<>::at(0), oc::arrnd::interval<>::at(1)}];
+        EXPECT_TRUE(oc::arrnd::isscalar(slc.header()));
         EXPECT_EQ(0.6, static_cast<double>(slc));
     }
 }
@@ -1314,7 +1314,7 @@ TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
         return dist(gen) * 10/*factor*/;
     };
 
-    oc::arrnd<int> arr({3, 1, 2}, urand_0to9/*, 10*/);
+    oc::arrnd::arrnd<int> arr({3, 1, 2}, urand_0to9/*, 10*/);
 
     EXPECT_TRUE(std::all_of(arr.cbegin(), arr.cend(), [](int a) {
         return a >= 0 && a <= 90;
@@ -1323,7 +1323,7 @@ TEST(arrnd_test, can_be_initialized_by_valid_size_and_function)
 
 TEST(arrnd_test, can_return_its_data)
 {
-    using Integer_array = oc::arrnd<int>;
+    using Integer_array = oc::arrnd::arrnd<int>;
 
     Integer_array earr{};
 
@@ -1332,69 +1332,69 @@ TEST(arrnd_test, can_return_its_data)
     Integer_array arr{{3, 1, 2}, 0};
 
     const auto& storage = *arr.storage();
-    for (std::int64_t i = 0; i < oc::total(arr.header()); ++i) {
+    for (std::int64_t i = 0; i < oc::arrnd::total(arr.header()); ++i) {
         EXPECT_EQ(0, storage[i]);
     }
 }
 
 TEST(arrnd_test, can_have_complie_time_calculated_depth)
 {
-    static_assert(0 == oc::arrnd<int>::depth);
-    EXPECT_EQ(0, oc::arrnd<int>({1, 1}).depth);
-    static_assert(oc::arrnd<int>::is_flat);
-    EXPECT_TRUE(oc::arrnd<int>({1, 1}).is_flat);
+    static_assert(0 == oc::arrnd::arrnd<int>::depth);
+    EXPECT_EQ(0, oc::arrnd::arrnd<int>({1, 1}).depth);
+    static_assert(oc::arrnd::arrnd<int>::is_flat);
+    EXPECT_TRUE(oc::arrnd::arrnd<int>({1, 1}).is_flat);
 
-    static_assert(1 == oc::arrnd<oc::arrnd<int>>::depth);
-    EXPECT_EQ(1, oc::arrnd<oc::arrnd<int>>({1, 1}).depth);
-    static_assert(!oc::arrnd<oc::arrnd<int>>::is_flat);
-    EXPECT_FALSE(oc::arrnd<oc::arrnd<int>>({1, 1}).is_flat);
+    static_assert(1 == oc::arrnd::arrnd<oc::arrnd::arrnd<int>>::depth);
+    EXPECT_EQ(1, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 1}).depth);
+    static_assert(!oc::arrnd::arrnd<oc::arrnd::arrnd<int>>::is_flat);
+    EXPECT_FALSE(oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 1}).is_flat);
 
-    static_assert(2 == oc::arrnd<oc::arrnd<oc::arrnd<int>>>::depth);
-    EXPECT_EQ(2, oc::arrnd<oc::arrnd<oc::arrnd<int>>>({1, 1}).depth);
-    static_assert(!oc::arrnd<oc::arrnd<oc::arrnd<int>>>::is_flat);
-    EXPECT_FALSE(oc::arrnd<oc::arrnd<oc::arrnd<int>>>({1, 1}).is_flat);
+    static_assert(2 == oc::arrnd::arrnd<oc::arrnd::arrnd<oc::arrnd::arrnd<int>>>::depth);
+    EXPECT_EQ(2, oc::arrnd::arrnd<oc::arrnd::arrnd<oc::arrnd::arrnd<int>>>({1, 1}).depth);
+    static_assert(!oc::arrnd::arrnd<oc::arrnd::arrnd<oc::arrnd::arrnd<int>>>::is_flat);
+    EXPECT_FALSE(oc::arrnd::arrnd<oc::arrnd::arrnd<oc::arrnd::arrnd<int>>>({1, 1}).is_flat);
 }
 
 TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_type_at_compile_time)
 {
-    static_assert(oc::arrnd_of_type<oc::arrnd<int>, int>);
-    static_assert(!oc::arrnd_of_type<oc::arrnd<int>, double>);
+    static_assert(oc::arrnd::arrnd_of_type<oc::arrnd::arrnd<int>, int>);
+    static_assert(!oc::arrnd::arrnd_of_type<oc::arrnd::arrnd<int>, double>);
 }
 
 TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_template_type_at_compile_time)
 {
-    oc::arrnd<std::complex<int>>{}; // required due to MSVC compiler issue
+    oc::arrnd::arrnd<std::complex<int>>{}; // required due to MSVC compiler issue
 
-    static_assert(oc::arrnd_of_template_type<oc::arrnd<std::complex<int>>, std::complex>);
-    static_assert(!oc::arrnd_of_template_type<oc::arrnd<std::complex<int>>, std::vector>);
+    static_assert(oc::arrnd::arrnd_of_template_type<oc::arrnd::arrnd<std::complex<int>>, std::complex>);
+    static_assert(!oc::arrnd::arrnd_of_template_type<oc::arrnd::arrnd<std::complex<int>>, std::vector>);
 }
 
 TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compile_time)
 {
-    static_assert(oc::arrnd_with_trait<oc::arrnd<int>, std::is_integral>);
-    static_assert(!oc::arrnd_with_trait<oc::arrnd<int>, std::is_floating_point>);
+    static_assert(oc::arrnd::arrnd_with_trait<oc::arrnd::arrnd<int>, std::is_integral>);
+    static_assert(!oc::arrnd::arrnd_with_trait<oc::arrnd::arrnd<int>, std::is_floating_point>);
 }
 
 TEST(arrnd_test, check_nested_arrnd_shape_preset)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     using nested_type = arrnd<arrnd<arrnd<arrnd<std::complex<int>>>>>;
 
     nested_type{}; // required due to MSVC compiler issue
 
-    static_assert(std::is_same_v<nested_type, oc::arrnd_inner_t<nested_type, 0>>);
-    static_assert(std::is_same_v<nested_type::value_type, oc::arrnd_inner_t<nested_type, 1>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type, oc::arrnd_inner_t<nested_type, 2>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd_inner_t<nested_type, 3>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd_inner_t<nested_type>>);
+    static_assert(std::is_same_v<nested_type, oc::arrnd::arrnd_inner_t<nested_type, 0>>);
+    static_assert(std::is_same_v<nested_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 1>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 2>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 3>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type>>);
     static_assert(std::is_same_v<nested_type::value_type::value_type::value_type::value_type, std::complex<int>>);
-    static_assert(std::is_same_v<oc::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
+    static_assert(std::is_same_v<oc::arrnd::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
 }
 
 TEST(arrnd_test, can_replace_arrnd_shape_preset_at_specific_depth)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     using nested_type = arrnd<arrnd<arrnd<arrnd<int>>>>;
 
@@ -1406,7 +1406,7 @@ TEST(arrnd_test, can_replace_arrnd_shape_preset_at_specific_depth)
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)
 {
-    using Integer_array = oc::arrnd<int>;
+    using Integer_array = oc::arrnd::arrnd<int>;
 
     const int data[] = {1, 2, 3, 4, 5, 6};
 
@@ -1491,7 +1491,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
 
 TEST(arrnd_test, have_read_write_access_to_slice)
 {
-    using Integer_array = oc::arrnd<int>;
+    using Integer_array = oc::arrnd::arrnd<int>;
 
     const int data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9,
 
@@ -1525,31 +1525,31 @@ TEST(arrnd_test, element_wise_transformation)
     std::int64_t dims[]{3, 1, 2};
 
     const int idata[]{1, 2, 3, 4, 5, 6};
-    oc::arrnd iarr{dims, idata};
+    oc::arrnd::arrnd iarr{dims, idata};
 
     const double odata[]{0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
-    oc::arrnd oarr{dims, odata};
+    oc::arrnd::arrnd oarr{dims, odata};
 
-    EXPECT_TRUE(oc::all_equal(oarr, oc::transform(iarr, [](int n) {
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr, oc::arrnd::transform(iarr, [](int n) {
         return n * 0.5;
     })));
 
     // nested array
     {
-        oc::arrnd<oc::arrnd<int>> narr(
-            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+        oc::arrnd::arrnd<oc::arrnd::arrnd<int>> narr(
+            {1, 2}, {oc::arrnd::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
 
-        auto rnarr = oc::transform<0>(narr, [](const auto& arr) {
+        auto rnarr = oc::arrnd::transform<0>(narr, [](const auto& arr) {
             return 0.5 * std::reduce(arr.cbegin(), arr.cend(), 0, std::plus<>{});
         });
 
-        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
-        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {7.5, 20.})));
+        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd::arrnd<double>>);
+        EXPECT_TRUE(oc::arrnd::all_equal(rnarr, oc::arrnd::arrnd<double>({1, 2}, {7.5, 20.})));
     }
 
     // scalar
     {
-        using namespace oc;
+        using namespace oc::arrnd;
 
         arrnd<int> iarr(
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
@@ -1571,7 +1571,7 @@ TEST(arrnd_test, element_wise_transformation)
 
     // reduced dims
     {
-        using namespace oc;
+        using namespace oc::arrnd;
 
         arrnd<int> iarr(
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
@@ -1594,7 +1594,7 @@ TEST(arrnd_test, element_wise_transformation)
 
 TEST(arrnd_test, apply_transformation_on_array_elements)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
@@ -1695,22 +1695,22 @@ TEST(arrnd_test, element_wise_transform_operation)
     std::int64_t dims[]{3, 1, 2};
 
     const int idata1[]{1, 2, 3, 4, 5, 6};
-    oc::arrnd iarr1{dims, idata1};
+    oc::arrnd::arrnd iarr1{dims, idata1};
 
     const double idata2[]{0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
-    oc::arrnd iarr2{dims, idata2};
+    oc::arrnd::arrnd iarr2{dims, idata2};
 
-    oc::arrnd oarr1{dims, 0.5};
+    oc::arrnd::arrnd oarr1{dims, 0.5};
 
-    EXPECT_TRUE(oc::all_equal(oarr1, oc::transform(iarr1, iarr2, [](int a, double b) {
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr1, oc::arrnd::transform(iarr1, iarr2, [](int a, double b) {
         return b / a;
     })));
 
     const int odata2[] = {0, 1, 2, 3, 4, 5};
-    oc::arrnd oarr2{dims, odata2};
+    oc::arrnd::arrnd oarr2{dims, odata2};
 
-    EXPECT_TRUE(oc::all_equal(oarr2,
-        oc::transform(
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr2,
+        oc::arrnd::transform(
             iarr1,
             [](int a/*, int b*/) {
                 return a - 1/*b*/;
@@ -1718,10 +1718,10 @@ TEST(arrnd_test, element_wise_transform_operation)
             1*/)));
 
     const int odata3[] = {0, -1, -2, -3, -4, -5};
-    oc::arrnd oarr3{dims, odata3};
+    oc::arrnd::arrnd oarr3{dims, odata3};
 
-    EXPECT_TRUE(oc::all_equal(oarr3,
-        oc::transform(
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr3,
+        oc::arrnd::transform(
             iarr1,
             [](int a/*, int b*/) {
                 return -a + 1/*b*/;
@@ -1730,19 +1730,19 @@ TEST(arrnd_test, element_wise_transform_operation)
 
     // nested array
     {
-        oc::arrnd<oc::arrnd<int>> narr(
-            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+        oc::arrnd::arrnd<oc::arrnd::arrnd<int>> narr(
+            {1, 2}, {oc::arrnd::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
 
-        oc::arrnd<oc::arrnd<int>> inarr(
-            {1, 2}, {oc::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
+        oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr(
+            {1, 2}, {oc::arrnd::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
 
-        auto rnarr = oc::transform<0>(narr, inarr, [](const auto& lhs, const auto& rhs) {
+        auto rnarr = oc::arrnd::transform<0>(narr, inarr, [](const auto& lhs, const auto& rhs) {
             return 0.5 * std::reduce(lhs.cbegin(), lhs.cend(), 0, std::plus<>{})
                 + std::reduce(rhs.cbegin(), rhs.cend(), 0, std::plus<>{});
         });
 
-        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd<double>>);
-        EXPECT_TRUE(oc::all_equal(rnarr, oc::arrnd<double>({1, 2}, {22.5, 60.})));
+        static_assert(std::is_same_v<decltype(rnarr), oc::arrnd::arrnd<double>>);
+        EXPECT_TRUE(oc::arrnd::all_equal(rnarr, oc::arrnd::arrnd<double>({1, 2}, {22.5, 60.})));
     }
 }
 
@@ -1751,37 +1751,37 @@ TEST(arrnd_test, reduce_elements)
     std::int64_t dims[]{3, 1, 2};
 
     const int idata[]{1, 2, 3, 4, 5, 6};
-    oc::arrnd<int> iarr{dims, idata};
+    oc::arrnd::arrnd<int> iarr{dims, idata};
 
-    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), oc::reduce(iarr, [](double a, int b) {
+    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), oc::arrnd::reduce(iarr, [](double a, int b) {
         return a / b;
     }));
 
     std::int64_t dims2[]{3, 1};
     const double rdata2[]{3.0, 7.0, 11.0};
-    oc::arrnd<double> rarr2{dims2, rdata2};
-    EXPECT_TRUE(oc::all_equal(rarr2, oc::reduce(iarr, 2, [](int value, double previous) {
+    oc::arrnd::arrnd<double> rarr2{dims2, rdata2};
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr2, oc::arrnd::reduce(iarr, 2, [](int value, double previous) {
         return previous + value;
     })));
 
     std::int64_t dims1[]{3, 2};
     const double rdata1[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
-    oc::arrnd<double> rarr1{dims1, rdata1};
-    EXPECT_TRUE(oc::all_equal(rarr1, oc::reduce(iarr, 1, [](int value, double previous) {
+    oc::arrnd::arrnd<double> rarr1{dims1, rdata1};
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr1, oc::arrnd::reduce(iarr, 1, [](int value, double previous) {
         return previous + value;
     })));
 
     std::int64_t dims0[]{1, 2};
     const double rdata0[]{9.0, 12.0};
-    oc::arrnd<double> rarr0{dims0, rdata0};
-    EXPECT_TRUE(oc::all_equal(rarr0, oc::reduce(iarr, 0, [](int value, double previous) {
+    oc::arrnd::arrnd<double> rarr0{dims0, rdata0};
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr0, oc::arrnd::reduce(iarr, 0, [](int value, double previous) {
         return previous + value;
     })));
 
-    oc::arrnd iarr1d{std::vector<int>{6}, idata};
+    oc::arrnd::arrnd iarr1d{std::vector<int>{6}, idata};
     const double data1d[]{21.0};
-    oc::arrnd rarr1d{std::vector<int>{1}, data1d};
-    EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(iarr1d, 0, [](int value, double previous) {
+    oc::arrnd::arrnd rarr1d{std::vector<int>{1}, data1d};
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, oc::arrnd::reduce(iarr1d, 0, [](int value, double previous) {
         return previous + value;
     })));
 
@@ -1789,19 +1789,19 @@ TEST(arrnd_test, reduce_elements)
 
     // reduction with initial value(s)
     {
-        oc::arrnd arr{{2, 3}, {1, 2, 5, 6, 10, 11}};
+        oc::arrnd::arrnd arr{{2, 3}, {1, 2, 5, 6, 10, 11}};
 
-        std::string chain = oc::fold(arr, std::string{}, [](const std::string& s, int n) {
+        std::string chain = oc::arrnd::fold(arr, std::string{}, [](const std::string& s, int n) {
             return s + "-" + std::to_string(n);
         });
         EXPECT_EQ("-1-2-5-6-10-11", chain);
 
-        oc::arrnd<std::string> byaxis = oc::fold(arr[{{0, 2}, {2, 3}}], 1,
-            oc::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
+        oc::arrnd::arrnd<std::string> byaxis = oc::arrnd::fold(arr[{{0, 2}, {2, 3}}], 1,
+            oc::arrnd::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
             [](const std::string& s, int n) {
                 return s + "-" + std::to_string(n);
             });
-        EXPECT_TRUE(oc::all_equal(oc::arrnd{{2}, {std::string{"1-5"}, std::string{"6-11"}}}, byaxis));
+        EXPECT_TRUE(oc::arrnd::all_equal(oc::arrnd::arrnd{{2}, {std::string{"1-5"}, std::string{"6-11"}}}, byaxis));
     }
 
     // complex array reduction
@@ -1810,76 +1810,76 @@ TEST(arrnd_test, reduce_elements)
             return previous + value;
         };
 
-        EXPECT_TRUE(oc::all_equal(rarr1d, oc::reduce(oc::reduce(oc::reduce(iarr, 2, sum), 1, sum), 0, sum)));
+        EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, oc::arrnd::reduce(oc::arrnd::reduce(oc::arrnd::reduce(iarr, 2, sum), 1, sum), 0, sum)));
     }
 
     // nested array
     {
-        oc::arrnd<oc::arrnd<int>> inarr1(
-            {1, 2}, {oc::arrnd<int>({4}, {1, 2, 3, 4}), oc::arrnd<int>({4}, {5, 6, 7, 8})});
+        oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr1(
+            {1, 2}, {oc::arrnd::arrnd<int>({4}, {1, 2, 3, 4}), oc::arrnd::arrnd<int>({4}, {5, 6, 7, 8})});
 
-        auto r1 = oc::reduce(inarr1, std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r1, oc::arrnd<int>({1, 2}, {10, 26})));
+        auto r1 = oc::arrnd::reduce(inarr1, std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r1, oc::arrnd::arrnd<int>({1, 2}, {10, 26})));
 
-        auto r2 = oc::reduce<0>(inarr1, std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r2, oc::arrnd<int>({4}, {6, 8, 10, 12})));
+        auto r2 = oc::arrnd::reduce<0>(inarr1, std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r2, oc::arrnd::arrnd<int>({4}, {6, 8, 10, 12})));
 
-        oc::arrnd<oc::arrnd<int>> inarr2(
-            {1, 2}, {oc::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
+        oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr2(
+            {1, 2}, {oc::arrnd::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
 
-        auto r3 = oc::reduce(inarr2, 0, std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r3,
-            oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({1, 2}, {9, 12}), oc::arrnd<int>({1, 2}, {27, 30})})));
+        auto r3 = oc::arrnd::reduce(inarr2, 0, std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r3,
+            oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 2}, {oc::arrnd::arrnd<int>({1, 2}, {9, 12}), oc::arrnd::arrnd<int>({1, 2}, {27, 30})})));
 
-        auto r4 = oc::reduce<0>(inarr2, 1, std::plus<>{});
+        auto r4 = oc::arrnd::reduce<0>(inarr2, 1, std::plus<>{});
         EXPECT_TRUE(
-            oc::all_equal(r4, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {8, 10, 12, 14, 16, 18})})));
+            oc::arrnd::all_equal(r4, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, {8, 10, 12, 14, 16, 18})})));
 
-        auto r5 = oc::fold(inarr1, 2, std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r5, oc::arrnd<int>({1, 2}, {12, 28})));
+        auto r5 = oc::arrnd::fold(inarr1, 2, std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r5, oc::arrnd::arrnd<int>({1, 2}, {12, 28})));
 
-        auto r6 = oc::fold<0>(inarr1, oc::arrnd<int>({4}, 2), std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r6, oc::arrnd<int>({4}, {8, 10, 12, 14})));
+        auto r6 = oc::arrnd::fold<0>(inarr1, oc::arrnd::arrnd<int>({4}, 2), std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r6, oc::arrnd::arrnd<int>({4}, {8, 10, 12, 14})));
 
-        auto r7 = oc::fold(inarr2, 0, oc::arrnd<int>({2}, 2), std::plus<>{});
-        EXPECT_TRUE(oc::all_equal(r7,
-            oc::arrnd<oc::arrnd<int>>({1, 2}, {oc::arrnd<int>({1, 2}, {11, 14}), oc::arrnd<int>({1, 2}, {29, 32})})));
+        auto r7 = oc::arrnd::fold(inarr2, 0, oc::arrnd::arrnd<int>({2}, 2), std::plus<>{});
+        EXPECT_TRUE(oc::arrnd::all_equal(r7,
+            oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 2}, {oc::arrnd::arrnd<int>({1, 2}, {11, 14}), oc::arrnd::arrnd<int>({1, 2}, {29, 32})})));
 
-        auto r8 = oc::fold<0>(inarr2, 1, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, 2)}), std::plus<>{});
+        auto r8 = oc::arrnd::fold<0>(inarr2, 1, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, 2)}), std::plus<>{});
         EXPECT_TRUE(
-            oc::all_equal(r8, oc::arrnd<oc::arrnd<int>>({1}, {oc::arrnd<int>({3, 1, 2}, {10, 12, 14, 16, 18, 20})})));
+            oc::arrnd::all_equal(r8, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, {10, 12, 14, 16, 18, 20})})));
     }
 }
 
 TEST(arrnd_test, all)
 {
     const bool data[] = {1, 0, 1, 1};
-    oc::arrnd<int> arr{std::vector<int>{2, 2}, data};
+    oc::arrnd::arrnd<int> arr{std::vector<int>{2, 2}, data};
 
-    EXPECT_EQ(false, oc::all(arr));
+    EXPECT_EQ(false, oc::arrnd::all(arr));
 
     const bool rdata[] = {true, false};
-    oc::arrnd<bool> rarr{std::vector<int>{2}, rdata};
+    oc::arrnd::arrnd<bool> rarr{std::vector<int>{2}, rdata};
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::all(arr, 0)));
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr, oc::arrnd::all(arr, 0)));
 }
 
 TEST(arrnd_test, any)
 {
     const bool data[] = {1, 0, 0, 0};
-    oc::arrnd<int> arr{std::vector<int>{2, 2}, data};
+    oc::arrnd::arrnd<int> arr{std::vector<int>{2, 2}, data};
 
-    EXPECT_EQ(true, oc::any(arr));
+    EXPECT_EQ(true, oc::arrnd::any(arr));
 
     const bool rdata[] = {true, false};
-    oc::arrnd<bool> rarr{std::vector<int>{2}, rdata};
+    oc::arrnd::arrnd<bool> rarr{std::vector<int>{2}, rdata};
 
-    EXPECT_TRUE(oc::all_equal(rarr, oc::any(arr, 0)));
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr, oc::arrnd::any(arr, 0)));
 }
 
 TEST(arrnd_test, sum)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({2, 2}, {1, 2, 3, 4});
 
@@ -1890,7 +1890,7 @@ TEST(arrnd_test, sum)
 
 TEST(arrnd_test, prod)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({2, 2}, {1, 2, 3, 4});
 
@@ -1901,7 +1901,7 @@ TEST(arrnd_test, prod)
 
 TEST(arrnd_test, min_max)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({2, 2}, {1, 4, 3, 2});
 

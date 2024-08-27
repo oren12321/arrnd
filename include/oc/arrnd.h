@@ -103,7 +103,7 @@ void swap(Tuple&& lhs, Tuple&& rhs)
 }
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     // reference: http://stackoverflow.com/a/20170989/1593077
     template <typename T, bool AddCvref = false>
@@ -135,7 +135,7 @@ namespace details {
 }
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename T, template <typename...> typename TT>
     inline constexpr bool is_template_type_v = std::false_type{};
@@ -207,7 +207,7 @@ using details::const_array_cast;
 }
 
 // custom implementation of containers/iterators zipping
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename... _Tp>
     bool variadic_or(_Tp&&... args)
@@ -680,7 +680,7 @@ using details::zipped_iterator;
 using details::zip;
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename T>
     struct simple_allocator {
@@ -726,14 +726,14 @@ namespace details {
 using details::simple_allocator;
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     struct simple_container_tag { };
     template <typename T>
     concept simple_container_type = std::is_same_v<typename std::remove_cvref_t<T>::tag, simple_container_tag>;
 
     template <typename T, typename Allocator = simple_allocator<T>>
-    class simple_vector final {
+    class simple_vector {
         static_assert(std::is_same_v<T, typename Allocator::value_type>);
 
     public:
@@ -1164,7 +1164,7 @@ namespace details {
     };
 
     template <typename T, std::size_t Capacity>
-    class simple_array final {
+    class simple_array {
         static_assert(Capacity > 0);
 
     public:
@@ -1512,7 +1512,7 @@ namespace details {
     };
 
     template <typename T>
-    class simple_view final {
+    class simple_view {
     public:
         using value_type = T;
         using size_type = std::size_t;
@@ -1849,7 +1849,7 @@ namespace details {
 }
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename T, template <typename> typename Allocator = simple_allocator>
     struct dynamic_storage_info {
@@ -1878,7 +1878,7 @@ using details::static_storage_info;
 using details::view_storage_info;
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <std::integral T>
     [[nodiscard]] inline constexpr T default_atol() noexcept
@@ -1929,12 +1929,12 @@ namespace details {
 }
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     // represents right-open interval
     template <typename T = std::int64_t>
         requires(std::is_fundamental_v<T>)
-    class interval final {
+    class interval {
     public:
         using size_type = T;
 
@@ -2190,7 +2190,7 @@ using details::bound;
 }
 
 // custom internal general usage concepts and traits
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename Iter>
     concept iterator_of_type_integral = iterator_type<Iter> && std::integral<iterator_value_t<Iter>>;
@@ -2228,7 +2228,7 @@ namespace details {
 }
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     enum class arrnd_iterator_position { none, begin, end, rbegin, rend };
 
@@ -3030,10 +3030,10 @@ using details::iscolumn;
 using details::isscalar;
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     template <typename ArrndInfo = arrnd_info<>>
-    class arrnd_indexer final {
+    class arrnd_indexer {
     public:
         using info_type = ArrndInfo;
 
@@ -3276,7 +3276,7 @@ namespace details {
     };
 
     template <typename ArrndInfo = arrnd_info<>>
-    class arrnd_window_slider final {
+    class arrnd_window_slider {
     public:
         using info_type = ArrndInfo;
 
@@ -3289,7 +3289,7 @@ namespace details {
         using window_type = arrnd_sliding_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
 
         template <typename InputIt>
-            requires(oc::details::template_type<oc::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
+            requires(oc::arrnd::details::template_type<oc::arrnd::details::iterator_value_t<InputIt>, arrnd_sliding_window>)
         explicit constexpr arrnd_window_slider(const info_type& ai, InputIt first_window, InputIt last_window,
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
             : ai_(ai)
@@ -3352,8 +3352,8 @@ namespace details {
             }
         }
 
-        template <oc::details::iterable_type Cont>
-            requires(oc::details::template_type<oc::details::iterable_value_t<Cont>, arrnd_sliding_window>)
+        template <oc::arrnd::details::iterable_type Cont>
+            requires(oc::arrnd::details::template_type<oc::arrnd::details::iterable_value_t<Cont>, arrnd_sliding_window>)
         explicit constexpr arrnd_window_slider(
             const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
             : arrnd_window_slider(ai, std::begin(windows), std::end(windows), start_pos)
@@ -3566,7 +3566,7 @@ using details::arrnd_window_slider;
 }
 
 // arrnd iterator types
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     struct arrnd_returned_element_iterator_tag { };
     struct arrnd_returned_slice_iterator_tag { };
@@ -3575,7 +3575,7 @@ namespace details {
     class arrnd_const_iterator;
 
     template <typename Arrnd>
-    class arrnd_iterator final {
+    class arrnd_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -3691,7 +3691,7 @@ namespace details {
     };
 
     template <typename Arrnd>
-    class arrnd_const_iterator final {
+    class arrnd_const_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -3830,7 +3830,7 @@ namespace details {
     class arrnd_const_reverse_iterator;
 
     template <typename Arrnd>
-    class arrnd_reverse_iterator final {
+    class arrnd_reverse_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -3946,7 +3946,7 @@ namespace details {
     };
 
     template <typename Arrnd>
-    class arrnd_const_reverse_iterator final {
+    class arrnd_const_reverse_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -4085,7 +4085,7 @@ namespace details {
     class arrnd_slice_const_iterator;
 
     template <typename Arrnd>
-    class arrnd_slice_iterator final {
+    class arrnd_slice_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -4208,7 +4208,7 @@ namespace details {
     };
 
     template <typename Arrnd>
-    class arrnd_slice_const_iterator final {
+    class arrnd_slice_const_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -4358,7 +4358,7 @@ namespace details {
     class arrnd_slice_reverse_const_iterator;
 
     template <typename Arrnd>
-    class arrnd_slice_reverse_iterator final {
+    class arrnd_slice_reverse_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -4481,7 +4481,7 @@ namespace details {
     };
 
     template <typename Arrnd>
-    class arrnd_slice_reverse_const_iterator final {
+    class arrnd_slice_reverse_const_iterator {
     public:
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = typename Arrnd::difference_type;
@@ -5001,7 +5001,7 @@ using details::arrnd_slice_front_inserter;
 using details::arrnd_slice_inserter;
 }
 
-namespace oc {
+namespace oc::arrnd {
 namespace details {
     struct arrnd_tag { };
     template <typename T>
@@ -5679,7 +5679,7 @@ namespace details {
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
-            , buffsp_(oc::empty(hdr_) ? nullptr
+            , buffsp_(oc::arrnd::empty(hdr_) ? nullptr
                                       : std::allocate_shared<storage_type>(
                                           shared_ref_allocator_type<storage_type>(), first_data, last_data))
         {
@@ -5703,7 +5703,7 @@ namespace details {
         template <iterator_of_type_integral InputDimsIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim)
             : hdr_(first_dim, last_dim)
-            , buffsp_(oc::empty(hdr_)
+            , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
         { }
@@ -5718,7 +5718,7 @@ namespace details {
         template <iterator_of_type_integral InputDimsIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const_reference value)
             : hdr_(first_dim, last_dim)
-            , buffsp_(oc::empty(hdr_)
+            , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
         {
@@ -5737,7 +5737,7 @@ namespace details {
         template <iterator_of_type_integral InputDimsIt, typename U>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const U& value)
             : hdr_(first_dim, last_dim)
-            , buffsp_(oc::empty(hdr_)
+            , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
         {
@@ -5758,7 +5758,7 @@ namespace details {
             requires(invocable_no_arrnd<Func>)
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func)
             : hdr_(first_dim, last_dim)
-            , buffsp_(oc::empty(hdr_)
+            , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
                       : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
         {
@@ -5867,7 +5867,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&
         {
             this_type slice{};
-            slice.hdr_ = oc::slice(hdr_, ranges.first, ranges.second);
+            slice.hdr_ = oc::arrnd::slice(hdr_, ranges.first, ranges.second);
             slice.buffsp_ = buffsp_;
             slice.is_creator_valid_ = original_valid_creator_;
             slice.creator_ = this;
@@ -5877,7 +5877,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&&
         {
             this_type slice{};
-            slice.hdr_ = oc::slice(hdr_, ranges.first, ranges.second);
+            slice.hdr_ = oc::arrnd::slice(hdr_, ranges.first, ranges.second);
             slice.buffsp_ = buffsp_;
             return slice;
         }
@@ -5903,7 +5903,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator[](interval_type range) const&
         {
             this_type slice{};
-            slice.hdr_ = oc::squeeze(oc::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
+            slice.hdr_ = oc::arrnd::squeeze(oc::arrnd::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
             slice.buffsp_ = buffsp_;
             slice.is_creator_valid_ = original_valid_creator_;
             slice.creator_ = this;
@@ -5912,7 +5912,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator[](interval_type range) const&&
         {
             this_type slice{};
-            slice.hdr_ = oc::squeeze(oc::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
+            slice.hdr_ = oc::arrnd::squeeze(oc::arrnd::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
             slice.buffsp_ = buffsp_;
             return slice;
         }
@@ -5920,7 +5920,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator()(interval_type range, size_type axis) const&
         {
             this_type slice{};
-            slice.hdr_ = oc::slice(hdr_, range, axis);
+            slice.hdr_ = oc::arrnd::slice(hdr_, range, axis);
             slice.buffsp_ = buffsp_;
             slice.is_creator_valid_ = original_valid_creator_;
             slice.creator_ = this;
@@ -5929,7 +5929,7 @@ namespace details {
         [[nodiscard]] constexpr shared_ref<this_type> operator()(interval_type range, size_type axis) const&&
         {
             this_type slice{};
-            slice.hdr_ = oc::slice(hdr_, range, axis);
+            slice.hdr_ = oc::arrnd::slice(hdr_, range, axis);
             slice.buffsp_ = buffsp_;
             return slice;
         }
@@ -5991,7 +5991,7 @@ namespace details {
 
         [[nodiscard]] constexpr bool empty() const noexcept
         {
-            return oc::empty(hdr_) && (issliced(hdr_) || !buffsp_);
+            return oc::arrnd::empty(hdr_) && (issliced(hdr_) || !buffsp_);
         }
 
         template <arrnd_type Arrnd>
@@ -7460,15 +7460,15 @@ namespace details {
                 return this_type();
             }
 
-            header_type new_header = oc::transpose(header_type(hdr_.dims()), first_order, last_order);
-            if (oc::empty(new_header)) {
+            header_type new_header = oc::arrnd::transpose(header_type(hdr_.dims()), first_order, last_order);
+            if (oc::arrnd::empty(new_header)) {
                 return this_type();
             }
 
             this_type res({total(hdr_)});
             res.hdr_ = std::move(new_header);
 
-            indexer_type gen(oc::transpose(hdr_, first_order, last_order));
+            indexer_type gen(oc::arrnd::transpose(hdr_, first_order, last_order));
             indexer_type res_gen(res.hdr_);
 
             while (gen && res_gen) {
@@ -8221,7 +8221,7 @@ namespace details {
         [[nodiscard]] constexpr this_type squeeze() const
         {
             this_type squeezed{};
-            squeezed.hdr_ = oc::squeeze(hdr_, arrnd_squeeze_type::full);
+            squeezed.hdr_ = oc::arrnd::squeeze(hdr_, arrnd_squeeze_type::full);
             squeezed.buffsp_ = buffsp_;
             squeezed.is_creator_valid_ = original_valid_creator_;
             squeezed.creator_ = this;
@@ -8230,12 +8230,12 @@ namespace details {
 
         [[nodiscard]] constexpr this_type zeros() const
         {
-            return oc::details::zeros<this_type>(hdr_.dims());
+            return oc::arrnd::details::zeros<this_type>(hdr_.dims());
         }
 
         [[nodiscard]] constexpr this_type eye() const
         {
-            return oc::details::eye<this_type>(hdr_.dims());
+            return oc::arrnd::details::eye<this_type>(hdr_.dims());
         }
 
         template <typename Comp>
@@ -9175,20 +9175,20 @@ namespace details {
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order)
         {
             return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
+                           : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty() ? iterator()
-                           : iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
+                           : iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
         {
             return empty()
                 ? const_iterator()
-                : const_iterator(buffsp_->data(), indexer_type(oc::transpose(hdr_, first_order, last_order)));
+                : const_iterator(buffsp_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
@@ -9196,7 +9196,7 @@ namespace details {
             return empty()
                 ? iterator()
                 : iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order) const
@@ -9204,7 +9204,7 @@ namespace details {
             return empty()
                 ? iterator()
                 : iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cend(const InputIt& first_order, const InputIt& last_order) const
@@ -9212,7 +9212,7 @@ namespace details {
             return empty()
                 ? const_iterator()
                 : const_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order)
@@ -9220,7 +9220,7 @@ namespace details {
             return empty()
                 ? reverse_iterator()
                 : reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order) const
@@ -9228,7 +9228,7 @@ namespace details {
             return empty()
                 ? reverse_iterator()
                 : reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
@@ -9236,7 +9236,7 @@ namespace details {
             return empty()
                 ? const_reverse_iterator()
                 : const_reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
@@ -9244,7 +9244,7 @@ namespace details {
             return empty()
                 ? reverse_iterator()
                 : reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order) const
@@ -9252,7 +9252,7 @@ namespace details {
             return empty()
                 ? reverse_iterator()
                 : reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto crend(const InputIt& first_order, const InputIt& last_order) const
@@ -9260,7 +9260,7 @@ namespace details {
             return empty()
                 ? const_reverse_iterator()
                 : const_reverse_iterator(buffsp_->data(),
-                    indexer_type(oc::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
+                    indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order), arrnd_iterator_position::rend));
         }
 
         [[nodiscard]] constexpr auto begin(std::initializer_list<size_type> order)

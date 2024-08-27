@@ -19,13 +19,13 @@
 //#include <thread>
 //#include <execution>
 //
-//void seq_loop(oc::arrnd<double> arr)
+//void seq_loop(oc::arrnd::arrnd<double> arr)
 //{
 //    std::for_each(arr.begin(), arr.end(), [](auto& val) {
 //        val = std::rand();
 //    });
 //}
-//void par_loop(oc::arrnd<double> arr) {
+//void par_loop(oc::arrnd::arrnd<double> arr) {
 //    auto fill = [](auto arr) {
 //        std::for_each(arr.begin(), arr.end(), [](auto& val) {
 //            val = std::rand();
@@ -38,7 +38,7 @@
 //    std::vector<std::thread> ts(slices_count);
 //
 //    for (int i = 0; i < slices_count; ++i) {
-//        auto slice = arr[{oc::interval<>::between(i * step_size, (i + 1) * step_size)}];
+//        auto slice = arr[{oc::arrnd::interval<>::between(i * step_size, (i + 1) * step_size)}];
 //        ts[i] = std::thread(fill, slice);
 //    }
 //
@@ -51,7 +51,7 @@
 //{
 //    using namespace std;
 //    using namespace std::chrono;
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    int cycles = 25;
 //    std::vector<int> dims{960 * 2 * 1080 * 4};
@@ -79,7 +79,7 @@
 
 //TEST(dummy, ranger)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd_header<> hdr({6, 10, 4});
 //
@@ -94,7 +94,7 @@
 
 //TEST(arrnd_test, find_diagonal)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<int> arr({4, 5}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
 //
@@ -106,7 +106,7 @@
 
 //TEST(arrnd_test, spread_diagonal)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<int> arr({5}, {1, 2, 3, 4, 5});
 //
@@ -119,7 +119,7 @@
 
 TEST(simple_allocator, can_allocate_and_deallocate_memory)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     simple_allocator<int> alloc;
 
@@ -136,7 +136,7 @@ TEST(simple_allocator, can_allocate_and_deallocate_memory)
 
 TEST(simple_allocator, throws_exception_if_allocation_fails)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     simple_allocator<int> alloc;
 
@@ -145,7 +145,7 @@ TEST(simple_allocator, throws_exception_if_allocation_fails)
 
 TEST(simple_allocator, is_different_from_another_in_case_of_different_size_type)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     simple_allocator<int> alloc1;
     simple_allocator<char> alloc2;
@@ -156,7 +156,7 @@ TEST(simple_allocator, is_different_from_another_in_case_of_different_size_type)
 
 TEST(simple_allocator, is_copyable_and_movable)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     simple_allocator<int> alloc1;
     EXPECT_EQ(simple_allocator<int>(alloc1), alloc1);
@@ -172,7 +172,7 @@ TEST(simple_allocator, is_copyable_and_movable)
 
 TEST(simple_vector, methods)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -289,7 +289,7 @@ TEST(simple_vector, methods)
 
 TEST(simple_vector, int_methods)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
@@ -406,7 +406,7 @@ TEST(simple_vector, int_methods)
 
 TEST(simple_vector, insert)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     simple_vector<int> c1(3, 100);
     {
@@ -454,7 +454,7 @@ TEST(simple_vector, insert)
 
 TEST(simple_vector, erase)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     simple_vector<int> c(data, data + std::size(data));
@@ -486,7 +486,7 @@ TEST(simple_vector, erase)
 
 TEST(simple_array, methods)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -585,7 +585,7 @@ TEST(simple_array, methods)
 
 TEST(simple_array, int_methods)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     std::array<int, 16> arr{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
@@ -684,7 +684,7 @@ TEST(simple_array, int_methods)
 
 TEST(simple_array, insert)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     simple_array<int, 14> c1(3, 100);
     {
@@ -732,7 +732,7 @@ TEST(simple_array, insert)
 
 TEST(simple_array, erase)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     int data[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     simple_array<int, 10> c(data, data + std::size(data));
@@ -765,7 +765,7 @@ TEST(simple_array, erase)
 
 TEST(simple_view, methods)
 {
-    using namespace oc::details;
+    using namespace oc::arrnd::details;
 
     std::array<std::string, 16> arr{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p"};
 
@@ -1061,7 +1061,7 @@ TEST(simple_view, methods)
 
 TEST(arrnd_test, arrnd_view_from_external_type)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // create arrnd view from continuous container (e.g. vector, span, etc.)
 
@@ -1078,7 +1078,7 @@ TEST(arrnd_test, arrnd_view_from_external_type)
 
 TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     EXPECT_TRUE(close(1, 1));
     EXPECT_TRUE(close(1, 2, 2));
@@ -1124,7 +1124,7 @@ TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
 //
 //TEST(modulo_test, modulo_opration_can_be_perform_on_positive_zero_or_negative_number)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    EXPECT_EQ(0, modulo(0, 5));
 //    EXPECT_EQ(1, modulo(1, 5));
@@ -1135,22 +1135,22 @@ TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
 
 TEST(interval_test, initialization)
 {
-    oc::interval i1{};
+    oc::arrnd::interval i1{};
     EXPECT_EQ(0, i1.start());
     EXPECT_EQ(1, i1.stop());
     EXPECT_EQ(1, i1.step());
 
-    //oc::interval i2{1}; // deprecated
+    //oc::arrnd::interval i2{1}; // deprecated
     //EXPECT_EQ(1, i2.start()());
     //EXPECT_EQ(2, i2.stop());
     //EXPECT_EQ(1, i2.step());
 
-    oc::interval i3{1, 2};
+    oc::arrnd::interval i3{1, 2};
     EXPECT_EQ(1, i3.start());
     EXPECT_EQ(2, i3.stop());
     EXPECT_EQ(1, i3.step());
 
-    oc::interval i4{1, 2, 3};
+    oc::arrnd::interval i4{1, 2, 3};
     EXPECT_EQ(1, i4.start());
     EXPECT_EQ(2, i4.stop());
     EXPECT_EQ(3, i4.step());
@@ -1158,7 +1158,7 @@ TEST(interval_test, initialization)
 
 //TEST(interval_test, reverse)
 //{
-//    oc::interval i{oc::reverse(oc::interval{1, 2, 3})};
+//    oc::arrnd::interval i{oc::reverse(oc::arrnd::interval{1, 2, 3})};
 //    EXPECT_EQ(2, i.start());
 //    EXPECT_EQ(1, i.stop());
 //    EXPECT_EQ(-3, i.step());
@@ -1166,7 +1166,7 @@ TEST(interval_test, initialization)
 //
 //TEST(interval_test, modulo)
 //{
-//    oc::interval i{oc::modulo(oc::interval{-26, 26, -1}, 5)};
+//    oc::arrnd::interval i{oc::modulo(oc::arrnd::interval{-26, 26, -1}, 5)};
 //    EXPECT_EQ(4, i.start());
 //    EXPECT_EQ(1, i.stop());
 //    EXPECT_EQ(-1, i.step());
@@ -1174,12 +1174,12 @@ TEST(interval_test, initialization)
 //
 //TEST(interval_test, forward)
 //{
-//    oc::interval i1{oc::forward(oc::interval{1, 2, 3})};
+//    oc::arrnd::interval i1{oc::forward(oc::arrnd::interval{1, 2, 3})};
 //    EXPECT_EQ(1, i1.start());
 //    EXPECT_EQ(2, i1.stop());
 //    EXPECT_EQ(3, i1.step());
 //
-//    oc::interval i2{oc::forward(oc::interval{2, 1, -3})};
+//    oc::arrnd::interval i2{oc::forward(oc::arrnd::interval{2, 1, -3})};
 //    EXPECT_EQ(1, i2.start());
 //    EXPECT_EQ(2, i2.stop());
 //    EXPECT_EQ(3, i2.step());
@@ -1187,61 +1187,61 @@ TEST(interval_test, initialization)
 
 TEST(interval_test, presets)
 {
-    oc::interval<std::int64_t> i1 = oc::interval<std::int64_t>::at(5);
+    oc::arrnd::interval<std::int64_t> i1 = oc::arrnd::interval<std::int64_t>::at(5);
     EXPECT_EQ(5, i1.start());
     EXPECT_EQ(6, i1.stop());
     EXPECT_EQ(1, i1.step());
-    EXPECT_FALSE(oc::isunbound(i1));
-    EXPECT_FALSE(oc::empty(i1));
-    EXPECT_TRUE(oc::isbetween(i1, 5, 6));
-    //EXPECT_EQ(oc::interval<std::int64_t>(5, 6, 1, oc::interval_hint::none), i1);
+    EXPECT_FALSE(oc::arrnd::isunbound(i1));
+    EXPECT_FALSE(oc::arrnd::empty(i1));
+    EXPECT_TRUE(oc::arrnd::isbetween(i1, 5, 6));
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(5, 6, 1, oc::arrnd::interval_hint::none), i1);
 
-    //oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(5); // deprecated
+    //oc::arrnd::interval<std::int64_t> i2 = oc::arrnd::interval<std::int64_t>::full(5); // deprecated
     //EXPECT_EQ(0, i2.start());
     //EXPECT_EQ(5, i2.stop());
     //EXPECT_EQ(1, i2.step());
-    oc::interval<std::int64_t> i2 = oc::interval<std::int64_t>::full(2);
+    oc::arrnd::interval<std::int64_t> i2 = oc::arrnd::interval<std::int64_t>::full(2);
     EXPECT_EQ(2, i2.step());
-    EXPECT_TRUE(oc::isunbound(i2));
-    EXPECT_FALSE(oc::empty(i2));
-    EXPECT_FALSE(oc::isbetween(i2, 5, 6));
-    //EXPECT_EQ(oc::interval_hint::full, i2.hint());
-    //EXPECT_EQ(oc::interval<std::int64_t>(std::rand(), std::rand(), 2, oc::interval_hint::full), i2);
-    //EXPECT_EQ(oc::interval<std::int64_t>(0, 6, 2, oc::interval_hint::none), i2.align(6));
-    EXPECT_EQ((oc::interval<std::int64_t>{0, 6, 2}), oc::bound(i2, 0, 6));
+    EXPECT_TRUE(oc::arrnd::isunbound(i2));
+    EXPECT_FALSE(oc::arrnd::empty(i2));
+    EXPECT_FALSE(oc::arrnd::isbetween(i2, 5, 6));
+    //EXPECT_EQ(oc::arrnd::interval_hint::full, i2.hint());
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(std::rand(), std::rand(), 2, oc::arrnd::interval_hint::full), i2);
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(0, 6, 2, oc::arrnd::interval_hint::none), i2.align(6));
+    EXPECT_EQ((oc::arrnd::interval<std::int64_t>{0, 6, 2}), oc::arrnd::bound(i2, 0, 6));
 
-    //oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(5, 5); // deprecated
+    //oc::arrnd::interval<std::int64_t> i3 = oc::arrnd::interval<std::int64_t>::from(5, 5); // deprecated
     //EXPECT_EQ(5, i3.start());
     //EXPECT_EQ(10, i3.stop());
     //EXPECT_EQ(1, i3.step());
-    oc::interval<std::int64_t> i3 = oc::interval<std::int64_t>::from(6, 2);
+    oc::arrnd::interval<std::int64_t> i3 = oc::arrnd::interval<std::int64_t>::from(6, 2);
     EXPECT_EQ(6, i3.start());
     EXPECT_EQ(2, i3.step());
-    EXPECT_TRUE(oc::isunbound(i3));
-    EXPECT_FALSE(oc::empty(i3));
-    EXPECT_FALSE(oc::isbetween(i3, 5, 6));
-    //EXPECT_EQ(oc::interval_hint::from, i3.hint());
-    //EXPECT_EQ(oc::interval<std::int64_t>(6, std::rand(), 2, oc::interval_hint::from), i3);
-    //EXPECT_EQ(oc::interval<std::int64_t>(6, 10, 2, oc::interval_hint::none), i3.align(10));
-    EXPECT_EQ((oc::interval<std::int64_t>{6, 10, 2}), oc::bound(i3, std::rand(), 10));
+    EXPECT_TRUE(oc::arrnd::isunbound(i3));
+    EXPECT_FALSE(oc::arrnd::empty(i3));
+    EXPECT_FALSE(oc::arrnd::isbetween(i3, 5, 6));
+    //EXPECT_EQ(oc::arrnd::interval_hint::from, i3.hint());
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(6, std::rand(), 2, oc::arrnd::interval_hint::from), i3);
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(6, 10, 2, oc::arrnd::interval_hint::none), i3.align(10));
+    EXPECT_EQ((oc::arrnd::interval<std::int64_t>{6, 10, 2}), oc::arrnd::bound(i3, std::rand(), 10));
 
-    oc::interval<std::int64_t> i4 = oc::interval<std::int64_t>::to(5, 3);
+    oc::arrnd::interval<std::int64_t> i4 = oc::arrnd::interval<std::int64_t>::to(5, 3);
     EXPECT_EQ(5, i4.stop());
     EXPECT_EQ(3, i4.step());
-    EXPECT_TRUE(oc::isunbound(i4));
-    EXPECT_FALSE(oc::empty(i4));
-    EXPECT_FALSE(oc::isbetween(i4, 5, 6));
-    //EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::to), i4);
-    //EXPECT_EQ(oc::interval<std::int64_t>(0, 5, 3, oc::interval_hint::none), i4.align(10));
-    EXPECT_EQ((oc::interval<std::int64_t>{0, 5, 3}), oc::bound(i4, 0, std::rand()));
+    EXPECT_TRUE(oc::arrnd::isunbound(i4));
+    EXPECT_FALSE(oc::arrnd::empty(i4));
+    EXPECT_FALSE(oc::arrnd::isbetween(i4, 5, 6));
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(0, 5, 3, oc::arrnd::interval_hint::to), i4);
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(0, 5, 3, oc::arrnd::interval_hint::none), i4.align(10));
+    EXPECT_EQ((oc::arrnd::interval<std::int64_t>{0, 5, 3}), oc::arrnd::bound(i4, 0, std::rand()));
 
-    oc::interval<std::int64_t> i5 = oc::interval<std::int64_t>::between(1, 5, 5);
-    //EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5);
-    //EXPECT_EQ(oc::interval<std::int64_t>(1, 5, 5, oc::interval_hint::none), i5.align(std::rand()));
-    EXPECT_EQ((oc::interval<std::int64_t>{1, 5, 5}), oc::bound(i5, std::rand(), std::rand()));
+    oc::arrnd::interval<std::int64_t> i5 = oc::arrnd::interval<std::int64_t>::between(1, 5, 5);
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(1, 5, 5, oc::arrnd::interval_hint::none), i5);
+    //EXPECT_EQ(oc::arrnd::interval<std::int64_t>(1, 5, 5, oc::arrnd::interval_hint::none), i5.align(std::rand()));
+    EXPECT_EQ((oc::arrnd::interval<std::int64_t>{1, 5, 5}), oc::arrnd::bound(i5, std::rand(), std::rand()));
 
     {
-        /*using namespace oc::details;
+        /*using namespace oc::arrnd::details;
 
         std::vector<std::size_t> dims{14, 26, 16};
         std::vector<interval<std::size_t>> boundaries{
@@ -1256,7 +1256,7 @@ TEST(interval_test, presets)
 
         auto slc2 = slice(slc1, interval<std::size_t>::between(1, 2, 2), 2);*/
 
-        //using namespace oc;
+        //using namespace oc::arrnd;
 
         //arrnd_info ai({1, 4});
 
@@ -1268,7 +1268,7 @@ TEST(interval_test, presets)
 
 //TEST(dummy, dummy)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    arrnd<int> arr({2, 3}, {1, 2, 3, 4, 5, 6});
 //    std::cout << arr << "\n\n";
@@ -1282,27 +1282,27 @@ TEST(interval_test, presets)
 
 TEST(general_iterable_types_check, typed_iterator)
 {
-    static_assert(std::is_same_v<int, oc::details::iterator_value_t<std::vector<int>::iterator>>);
-    static_assert(std::is_same_v<int, oc::details::iterator_value_t<oc::arrnd<int>::iterator>>);
-    static_assert(oc::details::iterator_of_type_integral<std::vector<int>::iterator>);
-    static_assert(oc::details::iterator_of_type_integral<oc::arrnd<int>::iterator>);
-    static_assert(oc::details::iterator_of_type_interval<std::vector<oc::interval<int>>::iterator>);
-    static_assert(oc::details::iterator_of_type_interval<oc::arrnd<oc::interval<int>>::iterator>);
-    static_assert(!oc::details::iterator_of_type_interval<std::vector<double>::iterator>);
+    static_assert(std::is_same_v<int, oc::arrnd::details::iterator_value_t<std::vector<int>::iterator>>);
+    static_assert(std::is_same_v<int, oc::arrnd::details::iterator_value_t<oc::arrnd::arrnd<int>::iterator>>);
+    static_assert(oc::arrnd::details::iterator_of_type_integral<std::vector<int>::iterator>);
+    static_assert(oc::arrnd::details::iterator_of_type_integral<oc::arrnd::arrnd<int>::iterator>);
+    static_assert(oc::arrnd::details::iterator_of_type_interval<std::vector<oc::arrnd::interval<int>>::iterator>);
+    static_assert(oc::arrnd::details::iterator_of_type_interval<oc::arrnd::arrnd<oc::arrnd::interval<int>>::iterator>);
+    static_assert(!oc::arrnd::details::iterator_of_type_interval<std::vector<double>::iterator>);
 }
 
 TEST(general_iterable_types_check, typed_iterable)
 {
-    static_assert(oc::details::iterable_type<std::vector<int>>);
-    static_assert(oc::details::iterable_type<oc::arrnd<int>>);
+    static_assert(oc::arrnd::details::iterable_type<std::vector<int>>);
+    static_assert(oc::arrnd::details::iterable_type<oc::arrnd::arrnd<int>>);
 
-    static_assert(oc::details::iterable_of_type_integral<std::vector<int>>);
-    static_assert(oc::details::iterable_of_type_integral<oc::arrnd<int>>);
-    static_assert(!oc::details::iterable_of_type_integral<std::vector<double>>);
+    static_assert(oc::arrnd::details::iterable_of_type_integral<std::vector<int>>);
+    static_assert(oc::arrnd::details::iterable_of_type_integral<oc::arrnd::arrnd<int>>);
+    static_assert(!oc::arrnd::details::iterable_of_type_integral<std::vector<double>>);
 
-    static_assert(oc::details::iterable_of_type_interval<std::vector<oc::interval<int>>>);
-    static_assert(oc::details::iterable_of_type_interval<oc::arrnd<oc::interval<int>>>);
-    static_assert(!oc::details::iterable_of_type_interval<std::vector<double>>);
+    static_assert(oc::arrnd::details::iterable_of_type_interval<std::vector<oc::arrnd::interval<int>>>);
+    static_assert(oc::arrnd::details::iterable_of_type_interval<oc::arrnd::arrnd<oc::arrnd::interval<int>>>);
+    static_assert(!oc::arrnd::details::iterable_of_type_interval<std::vector<double>>);
 }
 
 //TEST(general_iterable_types_check, random_access_type)
@@ -1313,22 +1313,22 @@ TEST(general_iterable_types_check, typed_iterable)
 TEST(arrnd_header_test, can_return_array_info)
 {
     {
-        oc::arrnd_info ehdr;
+        oc::arrnd::arrnd_info ehdr;
 
         EXPECT_EQ(0, ehdr.dims().size());
-        EXPECT_EQ(0, oc::total(ehdr));
+        EXPECT_EQ(0, oc::arrnd::total(ehdr));
         EXPECT_TRUE(ehdr.dims().empty());
         EXPECT_TRUE(ehdr.strides().empty());
         EXPECT_EQ(0, ehdr.indices_boundary().start());
-        EXPECT_FALSE(oc::issliced(ehdr));
-        EXPECT_TRUE(!oc::isvector(ehdr) && !oc::ismatrix(ehdr) && !oc::isrow(ehdr) && !oc::iscolumn(ehdr)
-            && !oc::isscalar(ehdr));
+        EXPECT_FALSE(oc::arrnd::issliced(ehdr));
+        EXPECT_TRUE(!oc::arrnd::isvector(ehdr) && !oc::arrnd::ismatrix(ehdr) && !oc::arrnd::isrow(ehdr) && !oc::arrnd::iscolumn(ehdr)
+            && !oc::arrnd::isscalar(ehdr));
         //EXPECT_FALSE(ehdr.is_reordered());
 
-        oc::arrnd_info hdr({3, 1, 2});
+        oc::arrnd::arrnd_info hdr({3, 1, 2});
 
         EXPECT_EQ(3, hdr.dims().size());
-        EXPECT_EQ(6, oc::total(hdr));
+        EXPECT_EQ(6, oc::arrnd::total(hdr));
         EXPECT_EQ(3, hdr.dims().data()[0]);
         EXPECT_EQ(1, hdr.dims().data()[1]);
         EXPECT_EQ(2, hdr.dims().data()[2]);
@@ -1336,12 +1336,12 @@ TEST(arrnd_header_test, can_return_array_info)
         EXPECT_EQ(2, hdr.strides().data()[1]);
         EXPECT_EQ(1, hdr.strides().data()[2]);
         EXPECT_EQ(0, hdr.indices_boundary().start());
-        EXPECT_FALSE(oc::issliced(hdr));
-        EXPECT_TRUE(!oc::isvector(ehdr) && !oc::ismatrix(ehdr) && !oc::isrow(ehdr) && !oc::iscolumn(ehdr)
-            && !oc::isscalar(ehdr));
+        EXPECT_FALSE(oc::arrnd::issliced(hdr));
+        EXPECT_TRUE(!oc::arrnd::isvector(ehdr) && !oc::arrnd::ismatrix(ehdr) && !oc::arrnd::isrow(ehdr) && !oc::arrnd::iscolumn(ehdr)
+            && !oc::arrnd::isscalar(ehdr));
         //EXPECT_FALSE(hdr.is_reordered());
 
-        auto rhdr = oc::move(hdr, 1, 0);
+        auto rhdr = oc::arrnd::move(hdr, 1, 0);
         //EXPECT_TRUE(rhdr.is_reordered());
         EXPECT_EQ(1, rhdr.dims().data()[0]);
         EXPECT_EQ(3, rhdr.dims().data()[1]);
@@ -1350,30 +1350,30 @@ TEST(arrnd_header_test, can_return_array_info)
         EXPECT_EQ(2, rhdr.strides().data()[1]);
         EXPECT_EQ(1, rhdr.strides().data()[2]);
 
-        oc::arrnd_info hdr1({2});
-        EXPECT_TRUE(oc::isvector(hdr1) && !oc::ismatrix(hdr1) && !oc::isrow(hdr1) && !oc::iscolumn(hdr1)
-            && !oc::isscalar(hdr1));
-        oc::arrnd_info hdr2({1, 2});
+        oc::arrnd::arrnd_info hdr1({2});
+        EXPECT_TRUE(oc::arrnd::isvector(hdr1) && !oc::arrnd::ismatrix(hdr1) && !oc::arrnd::isrow(hdr1) && !oc::arrnd::iscolumn(hdr1)
+            && !oc::arrnd::isscalar(hdr1));
+        oc::arrnd::arrnd_info hdr2({1, 2});
         EXPECT_TRUE(
-            !oc::isvector(hdr2) && oc::ismatrix(hdr2) && oc::isrow(hdr2) && !oc::iscolumn(hdr2) && !oc::isscalar(hdr2));
-        oc::arrnd_info hdr3({2, 1});
+            !oc::arrnd::isvector(hdr2) && oc::arrnd::ismatrix(hdr2) && oc::arrnd::isrow(hdr2) && !oc::arrnd::iscolumn(hdr2) && !oc::arrnd::isscalar(hdr2));
+        oc::arrnd::arrnd_info hdr3({2, 1});
         EXPECT_TRUE(
-            !oc::isvector(hdr3) && oc::ismatrix(hdr3) && !oc::isrow(hdr3) && oc::iscolumn(hdr3) && !oc::isscalar(hdr3));
-        oc::arrnd_info hdr4({2, 2});
-        EXPECT_TRUE(!oc::isvector(hdr4) && oc::ismatrix(hdr4) && !oc::isrow(hdr4) && !oc::iscolumn(hdr4)
-            && !oc::isscalar(hdr4));
-        oc::arrnd_info hdr5({1, 1, 1, 1});
-        EXPECT_TRUE(!oc::isvector(hdr5) && !oc::ismatrix(hdr5) && !oc::isrow(hdr5) && !oc::iscolumn(hdr5)
-            && oc::isscalar(hdr5));
+            !oc::arrnd::isvector(hdr3) && oc::arrnd::ismatrix(hdr3) && !oc::arrnd::isrow(hdr3) && oc::arrnd::iscolumn(hdr3) && !oc::arrnd::isscalar(hdr3));
+        oc::arrnd::arrnd_info hdr4({2, 2});
+        EXPECT_TRUE(!oc::arrnd::isvector(hdr4) && oc::arrnd::ismatrix(hdr4) && !oc::arrnd::isrow(hdr4) && !oc::arrnd::iscolumn(hdr4)
+            && !oc::arrnd::isscalar(hdr4));
+        oc::arrnd::arrnd_info hdr5({1, 1, 1, 1});
+        EXPECT_TRUE(!oc::arrnd::isvector(hdr5) && !oc::arrnd::ismatrix(hdr5) && !oc::arrnd::isrow(hdr5) && !oc::arrnd::iscolumn(hdr5)
+            && oc::arrnd::isscalar(hdr5));
     }
 
     // arrnd_header continuity reordering and slicing
     {
-        using namespace oc;
+        using namespace oc::arrnd;
 
         arrnd_info hdr({2, 4, 3});
 
-        EXPECT_TRUE(!oc::issliced(hdr) && !oc::istransposed(hdr) && oc::iscontinuous(hdr));
+        EXPECT_TRUE(!oc::arrnd::issliced(hdr) && !oc::arrnd::istransposed(hdr) && oc::arrnd::iscontinuous(hdr));
 
         //auto hdr1 = hdr.reorder()
     }
@@ -1381,7 +1381,7 @@ TEST(arrnd_header_test, can_return_array_info)
 
 TEST(arrnd_header_test, subscripts_and_indices_conversions)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd_info<> hdr({6, 2, 4});
@@ -1418,7 +1418,7 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
 
 //TEST(arrnd_indexer, simple_forward_backward_iterations)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //
@@ -1445,10 +1445,10 @@ TEST(arrnd_header_test, subscripts_and_indices_conversions)
 
 TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 1, 2, 3, 4, 5};
     const std::int64_t expected_generated_subs{6};
@@ -1472,7 +1472,7 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 
 //TEST(arrnd_indexer, simple_backward_forward_iterations)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1481,7 +1481,7 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 //    const std::int64_t expected_generated_subs{6};
 //
 //    std::int64_t generated_subs_counter{0};
-//    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+//    arrnd_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 //
 //    while (gen) {
 //        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1499,16 +1499,16 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations)
 
 TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[6]{5, 4, 3, 2, 1, 0};
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1526,7 +1526,7 @@ TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
 
 //TEST(arrnd_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1553,10 +1553,10 @@ TEST(experimental_arrnd_indexer, simple_backward_forward_iterations)
 
 TEST(experimental_arrnd_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 2, 4};
     const std::int64_t expected_generated_subs{3};
@@ -1580,7 +1580,7 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations_with_steps_b
 
 //TEST(arrnd_indexer, forward_backward_iterations_by_axis_order)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    const std::int64_t order[]{2, 0, 1};
@@ -1608,17 +1608,17 @@ TEST(experimental_arrnd_indexer, simple_forward_backward_iterations_with_steps_b
 
 TEST(experimental_arrnd_indexer, forward_backward_iterations_by_axis_order)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
     const std::size_t order[]{2, 0, 1};
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 2, 4, 1, 3, 5};
     const std::int64_t expected_generated_subs{6};
 
     std::int64_t generated_subs_counter{0};
-    arrnd_indexer gen(oc::transpose(hdr, order));
+    arrnd_indexer gen(oc::arrnd::transpose(hdr, order));
 
     while (gen) {
         EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1636,7 +1636,7 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_axis_order)
 
 //TEST(arrnd_indexer, forward_backward_iterations_by_specific_major_axis)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1669,10 +1669,10 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_axis_order)
 
 TEST(experimental_arrnd_indexer, forward_backward_iterations_by_specific_major_axis)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[][6]{{0, 1, 2, 3, 4, 5},
 
@@ -1702,14 +1702,14 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_specific_major_a
 
 //TEST(arrnd_indexer, random_access)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
 //
 //    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 //
-//    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+//    arrnd_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 //
 //    EXPECT_EQ(expected_inds_list[0], gen[0]);
 //    EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -1721,14 +1721,14 @@ TEST(experimental_arrnd_indexer, forward_backward_iterations_by_specific_major_a
 
 TEST(experimental_arrnd_indexer, random_access)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     const std::size_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
-    oc::arrnd_info hdr(dims);
+    oc::arrnd::arrnd_info hdr(dims);
 
     const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 
-    arrnd_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+    arrnd_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 
     EXPECT_EQ(expected_inds_list[0], *(gen[0]));
     EXPECT_EQ(expected_inds_list[1], *(gen[5]));
@@ -1740,21 +1740,21 @@ TEST(experimental_arrnd_indexer, random_access)
 
 //TEST(experimental_window_slider, dummy)
 //{
-//    oc::arrnd_info ai({/*2*/ 6, 4});
+//    oc::arrnd::arrnd_info ai({/*2*/ 6, 4});
 //
-//    //oc::arrnd_info slc = oc::slice(ai, {oc::interval<std::size_t>::from(1, 2), oc::interval<std::size_t>::from(2, 3)});
+//    //oc::arrnd::arrnd_info slc = oc::slice(ai, {oc::arrnd::interval<std::size_t>::from(1, 2), oc::arrnd::interval<std::size_t>::from(2, 3)});
 //    //std::cout << slc << "\n\n";
-//    //std::vector</*oc::interval<std::size_t>*/std::size_t> window{/*oc::interval<std::size_t>::full(),*/
+//    //std::vector</*oc::arrnd::interval<std::size_t>*/std::size_t> window{/*oc::arrnd::interval<std::size_t>::full(),*/
 //    //    2, 3};
 //
-//    oc::arrnd_sliding_window window(oc::interval<>::between(-1, 3));
+//    oc::arrnd_sliding_window window(oc::arrnd::interval<>::between(-1, 3));
 //
 //    std::vector windows{
-//        oc::arrnd_sliding_window(oc::interval<>::between(-1, 3), oc::arrnd_sliding_window_type::partial)};
+//        oc::arrnd_sliding_window(oc::arrnd::interval<>::between(-1, 3), oc::arrnd_sliding_window_type::partial)};
 //
 //    int i = 0;
 //    for (oc::arrnd_window_slider ws(
-//             /*slc*/ ai, /*windows*/ 0, oc::arrnd_sliding_window(oc::interval<>(-1, 3)));
+//             /*slc*/ ai, /*windows*/ 0, oc::arrnd_sliding_window(oc::arrnd::interval<>(-1, 3)));
 //         ws; ++ws) {
 //        std::cout << "{ ";
 //        for (const auto& b : *ws) {
@@ -1767,7 +1767,7 @@ TEST(experimental_arrnd_indexer, random_access)
 
 //TEST(arrnd_fast_indexer, simple_forward_backward_iterations)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{2, 3, 4, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims, dims + 4);
@@ -1795,7 +1795,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_fast_indexer, simple_backward_forward_iterations)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims, dims + 3);
@@ -1804,7 +1804,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //    const std::int64_t expected_generated_subs{6};
 //
 //    std::int64_t generated_subs_counter{0};
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 //
 //    while (gen) {
 //        EXPECT_EQ(expected_inds_list[generated_subs_counter], *gen);
@@ -1822,7 +1822,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_fast_indexer, simple_forward_backward_iterations_with_steps_bigger_than_one)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims, dims + 3);
@@ -1849,7 +1849,7 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_fast_indexer, forward_backward_iterations_by_specific_major_axis)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims, dims + 3);
@@ -1882,14 +1882,14 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_fast_indexer, random_access)
 //{
-//    using namespace oc;
+//    using namespace oc::arrnd;
 //
 //    const std::int64_t dims[]{3, 1, 2}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims, dims + 3);
 //
 //    const std::int64_t expected_inds_list[6]{0, 5, 4, 1, 2, 3};
 //
-//    arrnd_fast_indexer gen(hdr, oc::arrnd_iterator_position::rbegin);
+//    arrnd_fast_indexer gen(hdr, oc::arrnd::arrnd_iterator_position::rbegin);
 //
 //    EXPECT_EQ(expected_inds_list[0], gen[0]);
 //    EXPECT_EQ(expected_inds_list[1], gen[5]);
@@ -1903,8 +1903,8 @@ TEST(experimental_arrnd_indexer, random_access)
 
 //TEST(arrnd_axis_ranger, simple_forward_backward_iterations)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1931,8 +1931,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_contained_window)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1959,8 +1959,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_interval_width_bigger_than_one_in_none_contained_window)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -1988,8 +1988,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, simple_backward_forward_iterations)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -2016,8 +2016,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, simple_backward_forward_iterations_with_interval_width_bigger_than_one)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 6}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -2044,8 +2044,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, simple_forward_backward_iterations_with_steps_bigger_than_one)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -2072,8 +2072,8 @@ TEST(experimental_arrnd_indexer, random_access)
 //
 //TEST(arrnd_axis_ranger, random_access)
 //{
-//    using namespace oc;
-//    using namespace oc::details;
+//    using namespace oc::arrnd;
+//    using namespace oc::arrnd::details;
 //
 //    const std::int64_t dims[]{2, 1, 3}; // strides = {2, 2, 1}
 //    arrnd_header hdr(dims);
@@ -2089,10 +2089,10 @@ TEST(experimental_arrnd_indexer, random_access)
 
 TEST(arrnd_test, indexer_deprecated)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> arr({3, 1, 2});
-    oc::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
+    oc::arrnd::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
 
     std::vector<int> indices;
     for (; indexer; ++indexer) {
@@ -2105,7 +2105,7 @@ TEST(arrnd_test, indexer_deprecated)
 
 TEST(arrnd_test, ranger_deprecated)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     //auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
     arrnd<int> arr({3, 1, 2});
@@ -2117,7 +2117,7 @@ TEST(arrnd_test, ranger_deprecated)
 
 TEST(arrnd_test, iterators_and_inserters)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<int> earr;
     EXPECT_EQ(earr.begin(), earr.end());
@@ -2243,7 +2243,7 @@ TEST(arrnd_test, iterators_and_inserters)
 
 TEST(arrnd_test, complex_type_array_ordering_compilation)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     arrnd<std::complex<double>> arrc1{};
     arrnd<std::complex<double>> arrc2{};
@@ -2256,7 +2256,7 @@ TEST(arrnd_test, complex_type_array_ordering_compilation)
 
 TEST(arrnd_test, zip)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // collect vector of tuples from two arrays in reverse iteration
     {
@@ -2385,30 +2385,30 @@ TEST(arrnd_test, zip)
 
 TEST(arrnd_test, basic_sorting_using_std_sort_and_iterators)
 {
-    oc::arrnd<int> arr({3, 1, 4}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
+    oc::arrnd::arrnd<int> arr({3, 1, 4}, {5, 7, 10, 2, 8, 6, 1, 9, 0, 3, 11, 4});
 
-    oc::arrnd<int> r1({3, 1, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});
+    oc::arrnd::arrnd<int> r1({3, 1, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});
 
     auto c1 = arr.clone();
     std::sort(c1.begin(), c1.end());
-    EXPECT_TRUE(oc::all_equal(c1, r1));
+    EXPECT_TRUE(oc::arrnd::all_equal(c1, r1));
 
     auto c2 = arr.clone();
     std::sort(c2.cbegin(), c2.cend());
-    EXPECT_TRUE(oc::all_equal(c2, r1));
+    EXPECT_TRUE(oc::arrnd::all_equal(c2, r1));
 
     auto c3 = arr.clone();
     std::sort(c3.rbegin(), c3.rend(), std::greater<>{});
-    EXPECT_TRUE(oc::all_equal(c3, r1));
+    EXPECT_TRUE(oc::arrnd::all_equal(c3, r1));
 
     auto c4 = arr.clone();
     std::sort(c4.crbegin(), c4.crend(), std::greater<>{});
-    EXPECT_TRUE(oc::all_equal(c4, r1));
+    EXPECT_TRUE(oc::arrnd::all_equal(c4, r1));
 }
 
 TEST(arrnd_test, sort)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         auto dummy_less = [](const auto&, const auto&) {
@@ -2536,7 +2536,7 @@ TEST(arrnd_test, sort)
 
 TEST(arrnd_test, expand)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     EXPECT_TRUE(all_equal(arrnd<int>().expand(0), arrnd<arrnd<int>>()));
 
@@ -2631,9 +2631,9 @@ TEST(arrnd_test, expand)
 
 TEST(arrnd_test, access_slice_and_track_dimensions)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
-    oc::arrnd<int> arr({3, 4, 3},
+    oc::arrnd::arrnd<int> arr({3, 4, 3},
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
             31, 32, 33, 34, 35, 36});
 
@@ -2646,7 +2646,7 @@ TEST(arrnd_test, access_slice_and_track_dimensions)
 
 TEST(arrnd_header_test, reordering_slicing_and_array_memory_buffer_continuity)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     //arrnd<int> arr({3, 4, 3},
     //    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -2681,7 +2681,7 @@ TEST(arrnd_header_test, reordering_slicing_and_array_memory_buffer_continuity)
 
 TEST(arrnd_test, exclude_and_merge)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // empty
     {
@@ -2759,7 +2759,7 @@ TEST(arrnd_test, exclude_and_merge)
 
 TEST(arrnd_test, split)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // empty
     {
@@ -2803,7 +2803,7 @@ TEST(arrnd_test, split)
 
     // 3d
     {
-        oc::arrnd<int> arr({3, 4, 3},
+        oc::arrnd::arrnd<int> arr({3, 4, 3},
             {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36});
 
@@ -2841,7 +2841,7 @@ TEST(arrnd_test, split)
 
 TEST(arrnd_test, pages)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         //EXPECT_TRUE(all_equal(pages(arrnd<int>{}, 100), arrnd<arrnd<int>>{})); // assertion failure
@@ -2928,7 +2928,7 @@ TEST(arrnd_test, pages)
 
 TEST(arrnd_test, slide)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd<arrnd<int>> arr(
@@ -2969,7 +2969,7 @@ TEST(arrnd_test, slide)
 
 TEST(arrnd_test, accumulate)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd<arrnd<int>> arr(
@@ -3012,7 +3012,7 @@ TEST(arrnd_test, accumulate)
 
 TEST(arrnd_test, collapse)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // form known array creator
     {
@@ -3074,7 +3074,7 @@ TEST(arrnd_test, collapse)
 
 TEST(arrnd_test, browse)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     // empty array
     {
@@ -3214,7 +3214,7 @@ TEST(arrnd_test, browse)
 
 TEST(arrnd_type, nested_type)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     static_assert(std::is_same_v<arrnd<int>::nested_t<0>, arrnd<int>>);
     static_assert(std::is_same_v<arrnd<int>::nested_t<1>, arrnd<arrnd<int>>>);
@@ -3225,7 +3225,7 @@ TEST(arrnd_type, nested_type)
 
 TEST(arrnd_type, find_adjacents)
 {
-    using namespace oc;
+    using namespace oc::arrnd;
 
     {
         arrnd<int> arr(
