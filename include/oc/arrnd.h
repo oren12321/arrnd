@@ -1535,7 +1535,7 @@ namespace details {
         template <typename U>
         using replaced_type = simple_vector_traits<U, Allocator>;
         template <typename U>
-        using allocator_type = Allocator<U>;
+        using allocator_template_type = Allocator<U>;
     };
 
     template <typename T, std::int64_t N>
@@ -1544,7 +1544,7 @@ namespace details {
         template <typename U>
         using replaced_type = simple_array_traits<U, N>;
         template <typename U>
-        using allocator_type = simple_allocator<U>;
+        using allocator_template_type = simple_allocator<U>;
     };
 }
 
@@ -1953,13 +1953,13 @@ namespace details {
         full,
     };
 
-    template <typename StorageInfo = simple_vector_traits<std::size_t>>
-        requires(std::is_same_v<std::size_t, typename StorageInfo::storage_type::value_type>)
+    template <typename StorageTraits = simple_vector_traits<std::size_t>>
+        requires(std::is_same_v<std::size_t, typename StorageTraits::storage_type::value_type>)
     class arrnd_info {
     public:
-        using storage_info_type = StorageInfo;
+        using storage_traits_type = StorageTraits;
 
-        using extent_storage_type = typename storage_info_type::storage_type;
+        using extent_storage_type = typename storage_traits_type::storage_type;
         using extent_type = typename extent_storage_type::value_type;
 
         using boundary_type = interval<extent_type>;
@@ -2146,16 +2146,16 @@ namespace details {
         arrnd_hint hints_{arrnd_hint::continuous};
     };
 
-    template <typename StorageInfo, iterator_of_type_interval InputIt>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
-        const arrnd_info<StorageInfo>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
+    template <typename StorageTraits, iterator_of_type_interval InputIt>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(
+        const arrnd_info<StorageTraits>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
     {
         if (std::distance(first_dim_boundary, last_dim_boundary) < 0) {
             throw std::invalid_argument("invalid input iterators distance < 0");
         }
 
         if (std::size(ai.dims()) == 0 && std::distance(first_dim_boundary, last_dim_boundary) == 0) {
-            return arrnd_info<StorageInfo>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+            return arrnd_info<StorageTraits>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
         }
 
         if (std::size(ai.dims()) < std::distance(first_dim_boundary, last_dim_boundary)) {
@@ -2163,13 +2163,13 @@ namespace details {
         }
 
         // input boundries might not be of the same type
-        typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
-            typename arrnd_info<StorageInfo>::boundary_type>::storage_type
+        typename arrnd_info<StorageTraits>::storage_traits_type::template replaced_type<
+            typename arrnd_info<StorageTraits>::boundary_type>::storage_type
             bounded_dim_boundaries(std::distance(first_dim_boundary, last_dim_boundary));
 
         std::transform(first_dim_boundary, last_dim_boundary, std::begin(ai.dims()), std::begin(bounded_dim_boundaries),
             [](auto boundary, auto dim) {
-                return bound(static_cast<typename arrnd_info<StorageInfo>::boundary_type>(boundary), 0, dim);
+                return bound(static_cast<typename arrnd_info<StorageTraits>::boundary_type>(boundary), 0, dim);
             });
 
         if (!std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
@@ -2179,7 +2179,7 @@ namespace details {
             throw std::out_of_range("invalid dim boundaries - not suitable for dims");
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims = ai.dims();
+        typename arrnd_info<StorageTraits>::extent_storage_type dims = ai.dims();
         std::transform(
             std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(dims), [](auto boundary) {
                 return absdiff(boundary);
@@ -2188,49 +2188,49 @@ namespace details {
         if (std::any_of(std::begin(dims), std::end(dims), [](auto dim) {
                 return dim == 0;
             })) {
-            return arrnd_info<StorageInfo>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+            return arrnd_info<StorageTraits>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
         }
 
         if (std::equal(std::begin(dims), std::end(dims), std::begin(ai.dims()), std::end(ai.dims()))) {
             return ai;
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(std::begin(ai.strides()), std::end(ai.strides()));
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(std::begin(ai.strides()), std::end(ai.strides()));
 
         std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.strides()),
             std::begin(strides), [](auto boundary, auto stride) {
                 if (boundary.step()
-                    > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+                    > std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max() / stride) {
                     throw std::overflow_error("invalid multiplication");
                 }
                 return boundary.step() * stride;
             });
 
-        typename arrnd_info<StorageInfo>::extent_type offset = ai.indices_boundary().start()
+        typename arrnd_info<StorageTraits>::extent_type offset = ai.indices_boundary().start()
             + std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
-                std::begin(ai.strides()), typename arrnd_info<StorageInfo>::extent_type{0},
-                overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{}, [](auto boundary, auto stride) {
+                std::begin(ai.strides()), typename arrnd_info<StorageTraits>::extent_type{0},
+                overflow_check_plus<typename arrnd_info<StorageTraits>::extent_type>{}, [](auto boundary, auto stride) {
                     if (boundary.start()
-                        > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+                        > std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max() / stride) {
                         throw std::overflow_error("invalid multiplication");
                     }
                     return boundary.start() * stride;
                 });
 
-        typename arrnd_info<StorageInfo>::extent_type max_index = std::transform_reduce(std::begin(dims),
-            std::end(dims), std::begin(strides), typename arrnd_info<StorageInfo>::extent_type{0},
-            overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{}, [](auto dim, auto stride) {
-                if (dim - 1 > std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max() / stride) {
+        typename arrnd_info<StorageTraits>::extent_type max_index = std::transform_reduce(std::begin(dims),
+            std::end(dims), std::begin(strides), typename arrnd_info<StorageTraits>::extent_type{0},
+            overflow_check_plus<typename arrnd_info<StorageTraits>::extent_type>{}, [](auto dim, auto stride) {
+                if (dim - 1 > std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max() / stride) {
                     throw std::overflow_error("invalid multiplication");
                 }
                 return (dim - 1) * stride;
             });
 
-        typename arrnd_info<StorageInfo>::boundary_type indices_boundary(offset, offset + max_index + 1);
+        typename arrnd_info<StorageTraits>::boundary_type indices_boundary(offset, offset + max_index + 1);
 
-        typename arrnd_info<StorageInfo>::extent_type num_elem
-            = std::reduce(std::begin(dims), std::end(dims), typename arrnd_info<StorageInfo>::extent_type{1},
-                overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+        typename arrnd_info<StorageTraits>::extent_type num_elem
+            = std::reduce(std::begin(dims), std::end(dims), typename arrnd_info<StorageTraits>::extent_type{1},
+                overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
 
         arrnd_hint hints = ai.hints() | arrnd_hint::sliced;
         if (max_index + 1 == num_elem) {
@@ -2239,26 +2239,26 @@ namespace details {
             hints &= ~arrnd_hint::continuous;
         }
 
-        return arrnd_info<StorageInfo>(dims, strides, indices_boundary, hints);
+        return arrnd_info<StorageTraits>(dims, strides, indices_boundary, hints);
     }
 
-    template <typename StorageInfo, iterable_of_type_interval Cont>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(
-        const arrnd_info<StorageInfo>& ai, Cont&& dim_boundaries)
+    template <typename StorageTraits, iterable_of_type_interval Cont>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(
+        const arrnd_info<StorageTraits>& ai, Cont&& dim_boundaries)
     {
         return slice(ai, std::begin(dim_boundaries), std::end(dim_boundaries));
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(const arrnd_info<StorageInfo>& ai,
-        std::initializer_list<typename arrnd_info<StorageInfo>::boundary_type> dim_boundaries)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& ai,
+        std::initializer_list<typename arrnd_info<StorageTraits>::boundary_type> dim_boundaries)
     {
         return slice(ai, dim_boundaries.begin(), dim_boundaries.end());
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> slice(const arrnd_info<StorageInfo>& ai,
-        template_type<interval> auto dim_boundary, typename arrnd_info<StorageInfo>::extent_type axis)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& ai,
+        template_type<interval> auto dim_boundary, typename arrnd_info<StorageTraits>::extent_type axis)
     {
         if (std::size(ai.dims()) == 0) {
             throw std::invalid_argument("invalid arrnd info");
@@ -2268,28 +2268,28 @@ namespace details {
             throw std::out_of_range("invalid axis");
         }
 
-        typename arrnd_info<StorageInfo>::storage_info_type::template replaced_type<
-            typename arrnd_info<StorageInfo>::boundary_type>::storage_type dim_boundaries(std::size(ai.dims()),
-            arrnd_info<StorageInfo>::boundary_type::full());
+        typename arrnd_info<StorageTraits>::storage_traits_type::template replaced_type<
+            typename arrnd_info<StorageTraits>::boundary_type>::storage_type dim_boundaries(std::size(ai.dims()),
+            arrnd_info<StorageTraits>::boundary_type::full());
 
-        dim_boundaries[axis] = static_cast<typename arrnd_info<StorageInfo>::boundary_type>(dim_boundary);
+        dim_boundaries[axis] = static_cast<typename arrnd_info<StorageTraits>::boundary_type>(dim_boundary);
 
         return slice(ai, dim_boundaries);
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> squeeze(const arrnd_info<StorageInfo>& ai,
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> squeeze(const arrnd_info<StorageTraits>& ai,
         arrnd_squeeze_type squeeze_type,
-        typename arrnd_info<StorageInfo>::extent_type max_count
-        = std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max())
+        typename arrnd_info<StorageTraits>::extent_type max_count
+        = std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max())
     {
         if (squeeze_type == arrnd_squeeze_type::full
-            && max_count != std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max()) {
+            && max_count != std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max()) {
             throw std::invalid_argument("invalid squeeze type - no max count support for full squeeze type");
         }
 
         if (size(ai) == 0) {
-            if (max_count != std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max()
+            if (max_count != std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max()
                 && max_count != 0) {
                 throw std::invalid_argument("invalid squeeze - empty squeeze support for max count > 0");
             }
@@ -2297,7 +2297,7 @@ namespace details {
         }
 
         if (size(ai) == 1) {
-            if (max_count != std::numeric_limits<typename arrnd_info<StorageInfo>::extent_type>::max()
+            if (max_count != std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max()
                 && max_count > 1) {
                 throw std::invalid_argument("invalid squeeze - no 1d squeeze support for max count > 1");
             }
@@ -2305,17 +2305,17 @@ namespace details {
                 return ai;
             }
 
-            return arrnd_info<StorageInfo>(typename arrnd_info<StorageInfo>::extent_storage_type(
-                                               1, typename arrnd_info<StorageInfo>::extent_type{1}),
-                typename arrnd_info<StorageInfo>::extent_storage_type(1, ai.strides()[0]), ai.indices_boundary(),
+            return arrnd_info<StorageTraits>(typename arrnd_info<StorageTraits>::extent_storage_type(
+                                               1, typename arrnd_info<StorageTraits>::extent_type{1}),
+                typename arrnd_info<StorageTraits>::extent_storage_type(1, ai.strides()[0]), ai.indices_boundary(),
                 ai.hints());
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
 
         if (squeeze_type == arrnd_squeeze_type::left || squeeze_type == arrnd_squeeze_type::trim) {
-            typename arrnd_info<StorageInfo>::extent_type left_ones_count = 0;
+            typename arrnd_info<StorageTraits>::extent_type left_ones_count = 0;
             auto dims_it = std::begin(dims);
             while (*dims_it == 1 && left_ones_count < max_count) {
                 ++dims_it;
@@ -2331,7 +2331,7 @@ namespace details {
         }
 
         if (squeeze_type == arrnd_squeeze_type::right || squeeze_type == arrnd_squeeze_type::trim) {
-            typename arrnd_info<StorageInfo>::extent_type right_ones_count = 0;
+            typename arrnd_info<StorageTraits>::extent_type right_ones_count = 0;
             auto dims_it = std::rbegin(dims);
             while (*dims_it == 1 && right_ones_count < max_count) {
                 ++dims_it;
@@ -2350,8 +2350,8 @@ namespace details {
             if (std::any_of(std::begin(dims), std::end(dims), [](auto dim) {
                     return dim == 1;
                 })) {
-                typename arrnd_info<StorageInfo>::extent_type not_one_index = 0;
-                for (typename arrnd_info<StorageInfo>::extent_type i = 0; i < std::size(dims); ++i) {
+                typename arrnd_info<StorageTraits>::extent_type not_one_index = 0;
+                for (typename arrnd_info<StorageTraits>::extent_type i = 0; i < std::size(dims); ++i) {
                     if (dims[i] != 1) {
                         dims[not_one_index] = dims[i];
                         strides[not_one_index] = strides[i];
@@ -2367,12 +2367,12 @@ namespace details {
             }
         }
 
-        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints());
+        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints());
     }
 
-    template <typename StorageInfo, iterator_of_type_integral InputIt>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
-        const arrnd_info<StorageInfo>& ai, InputIt first_axis, InputIt last_axis)
+    template <typename StorageTraits, iterator_of_type_integral InputIt>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(
+        const arrnd_info<StorageTraits>& ai, InputIt first_axis, InputIt last_axis)
     {
         if (std::distance(first_axis, last_axis) != std::size(ai.dims())) {
             throw std::invalid_argument("invalid input iterators distance != number of dims");
@@ -2396,7 +2396,7 @@ namespace details {
         }
 
         auto is_unique_axes = [](InputIt first, InputIt last) {
-            typename arrnd_info<StorageInfo>::extent_storage_type sorted_axes(first, last);
+            typename arrnd_info<StorageTraits>::extent_storage_type sorted_axes(first, last);
             std::sort(std::begin(sorted_axes), std::end(sorted_axes));
             return std::adjacent_find(std::begin(sorted_axes), std::end(sorted_axes)) == std::end(sorted_axes);
         };
@@ -2409,35 +2409,35 @@ namespace details {
             return ai;
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims(std::size(ai.dims()));
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(std::size(ai.strides()));
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(std::size(ai.dims()));
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(std::size(ai.strides()));
 
-        typename arrnd_info<StorageInfo>::extent_type i = 0;
+        typename arrnd_info<StorageTraits>::extent_type i = 0;
         for (auto axes_it = first_axis; axes_it != last_axis; ++axes_it, ++i) {
             dims[i] = ai.dims()[*axes_it];
             strides[i] = ai.strides()[*axes_it];
         }
 
-        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo, iterable_of_type_integral Cont>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(const arrnd_info<StorageInfo>& ai, Cont&& axes)
+    template <typename StorageTraits, iterable_of_type_integral Cont>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(const arrnd_info<StorageTraits>& ai, Cont&& axes)
     {
         return transpose(ai, std::begin(axes), std::end(axes));
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> transpose(
-        const arrnd_info<StorageInfo>& ai, std::initializer_list<typename arrnd_info<StorageInfo>::extent_type> axes)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(
+        const arrnd_info<StorageTraits>& ai, std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> axes)
     {
         return transpose(ai, axes.begin(), axes.end());
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> swap(const arrnd_info<StorageInfo>& ai,
-        typename arrnd_info<StorageInfo>::extent_type first_axis = 0,
-        typename arrnd_info<StorageInfo>::extent_type second_axis = 1)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> swap(const arrnd_info<StorageTraits>& ai,
+        typename arrnd_info<StorageTraits>::extent_type first_axis = 0,
+        typename arrnd_info<StorageTraits>::extent_type second_axis = 1)
     {
 
         if (first_axis >= std::size(ai.dims()) || second_axis >= std::size(ai.dims())) {
@@ -2448,19 +2448,19 @@ namespace details {
             return ai;
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
 
         std::swap(dims[first_axis], dims[second_axis]);
         std::swap(strides[first_axis], strides[second_axis]);
 
-        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> move(const arrnd_info<StorageInfo>& ai,
-        typename arrnd_info<StorageInfo>::extent_type src_axis = 0,
-        typename arrnd_info<StorageInfo>::extent_type dst_axis = 1)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> move(const arrnd_info<StorageTraits>& ai,
+        typename arrnd_info<StorageTraits>::extent_type src_axis = 0,
+        typename arrnd_info<StorageTraits>::extent_type dst_axis = 1)
     {
 
         if (src_axis >= std::size(ai.dims()) || dst_axis >= std::size(ai.dims())) {
@@ -2471,8 +2471,8 @@ namespace details {
             return ai;
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
 
         auto src_dim = dims[src_axis];
         dims.erase(std::next(std::begin(dims), src_axis));
@@ -2482,21 +2482,21 @@ namespace details {
         strides.erase(std::next(std::begin(strides), src_axis));
         strides.insert(std::next(std::begin(strides), dst_axis), 1, src_stride);
 
-        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr arrnd_info<StorageInfo> roll(const arrnd_info<StorageInfo>& ai, int offset = 1)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> roll(const arrnd_info<StorageTraits>& ai, int offset = 1)
     {
         if (empty(ai) || std::size(ai.dims()) == 1 || offset == 0) {
             return ai;
         }
 
-        typename arrnd_info<StorageInfo>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageInfo>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
 
-        typename arrnd_info<StorageInfo>::extent_type wrapped_offset
-            = static_cast<typename arrnd_info<StorageInfo>::extent_type>(std::abs(offset)) % std::size(ai.dims());
+        typename arrnd_info<StorageTraits>::extent_type wrapped_offset
+            = static_cast<typename arrnd_info<StorageTraits>::extent_type>(std::abs(offset)) % std::size(ai.dims());
 
         if (offset > 0) {
             std::rotate(std::rbegin(dims), std::next(std::rbegin(dims), wrapped_offset), std::rend(dims));
@@ -2506,84 +2506,84 @@ namespace details {
             std::rotate(std::begin(strides), std::next(std::begin(strides), wrapped_offset), std::end(strides));
         }
 
-        return arrnd_info<StorageInfo>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr typename arrnd_info<StorageInfo>::extent_type total(
-        const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type total(
+        const arrnd_info<StorageTraits>& ai)
     {
         if (empty(ai)) {
             return 0;
         }
 
-        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()), typename arrnd_info<StorageInfo>::extent_type{1},
-            overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()), typename arrnd_info<StorageTraits>::extent_type{1},
+            overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr typename arrnd_info<StorageInfo>::extent_type size(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type size(const arrnd_info<StorageTraits>& ai)
     {
         return std::size(ai.dims());
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool empty(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool empty(const arrnd_info<StorageTraits>& ai)
     {
         return size(ai) == 0;
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool iscontinuous(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool iscontinuous(const arrnd_info<StorageTraits>& ai)
     {
         return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::continuous));
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool issliced(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool issliced(const arrnd_info<StorageTraits>& ai)
     {
         return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::sliced));
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool istransposed(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool istransposed(const arrnd_info<StorageTraits>& ai)
     {
         return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::transposed));
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool isvector(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool isvector(const arrnd_info<StorageTraits>& ai)
     {
         return size(ai) == 1;
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool ismatrix(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool ismatrix(const arrnd_info<StorageTraits>& ai)
     {
         return size(ai) == 2;
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool isrow(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool isrow(const arrnd_info<StorageTraits>& ai)
     {
         return ismatrix(ai) && ai.dims().front() == 1;
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool iscolumn(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool iscolumn(const arrnd_info<StorageTraits>& ai)
     {
         return ismatrix(ai) && ai.dims().back() == 1;
     }
 
-    template <typename StorageInfo>
-    [[nodiscard]] inline constexpr bool isscalar(const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    [[nodiscard]] inline constexpr bool isscalar(const arrnd_info<StorageTraits>& ai)
     {
         return total(ai) == 1;
     }
 
-    template <typename StorageInfo, iterator_of_type_integral InputIt>
-    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(
-        const arrnd_info<StorageInfo>& ai, InputIt first_sub, InputIt last_sub)
+    template <typename StorageTraits, iterator_of_type_integral InputIt>
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+        const arrnd_info<StorageTraits>& ai, InputIt first_sub, InputIt last_sub)
     {
         if (std::distance(first_sub, last_sub) <= 0) {
             throw std::invalid_argument("invalid input iterators distance <= 0");
@@ -2608,27 +2608,27 @@ namespace details {
         return ai.indices_boundary().start()
             + std::transform_reduce(first_sub, last_sub,
                 std::next(std::begin(ai.strides()), std::size(ai.strides()) - std::distance(first_sub, last_sub)),
-                typename arrnd_info<StorageInfo>::extent_type{0},
-                overflow_check_plus<typename arrnd_info<StorageInfo>::extent_type>{},
-                overflow_check_multiplies<typename arrnd_info<StorageInfo>::extent_type>{});
+                typename arrnd_info<StorageTraits>::extent_type{0},
+                overflow_check_plus<typename arrnd_info<StorageTraits>::extent_type>{},
+                overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
     }
 
-    template <typename StorageInfo, iterable_of_type_integral Cont>
-    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(const arrnd_info<StorageInfo>& ai, Cont&& subs)
+    template <typename StorageTraits, iterable_of_type_integral Cont>
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& ai, Cont&& subs)
     {
         return sub2ind(ai, std::begin(subs), std::end(subs));
     }
 
-    template <typename StorageInfo>
-    constexpr typename arrnd_info<StorageInfo>::extent_type sub2ind(
-        const arrnd_info<StorageInfo>& ai, std::initializer_list<typename arrnd_info<StorageInfo>::extent_type> subs)
+    template <typename StorageTraits>
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+        const arrnd_info<StorageTraits>& ai, std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> subs)
     {
         return sub2ind(ai, subs.begin(), subs.end());
     }
 
-    template <typename StorageInfo, iterator_of_type_integral OutputIt>
+    template <typename StorageTraits, iterator_of_type_integral OutputIt>
     constexpr void ind2sub(
-        const arrnd_info<StorageInfo>& ai, typename arrnd_info<StorageInfo>::extent_type ind, OutputIt d_sub)
+        const arrnd_info<StorageTraits>& ai, typename arrnd_info<StorageTraits>::extent_type ind, OutputIt d_sub)
     {
         if (empty(ai)) {
             throw std::invalid_argument("undefined operation for empty arrnd info");
@@ -2638,14 +2638,14 @@ namespace details {
             throw std::out_of_range("invalid ind - not inside indices boundary");
         }
 
-        for (typename arrnd_info<StorageInfo>::extent_type i = 0; i < std::size(ai.dims()); ++i) {
+        for (typename arrnd_info<StorageTraits>::extent_type i = 0; i < std::size(ai.dims()); ++i) {
             *d_sub = (ai.dims()[i] > 1 ? ((ind - ai.indices_boundary().start()) / ai.strides()[i]) % ai.dims()[i] : 0);
             ++d_sub;
         }
     }
 
-    template <typename StorageInfo>
-    inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageInfo>& ai)
+    template <typename StorageTraits>
+    inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageTraits>& ai)
     {
         if (empty(ai)) {
             os << "empty";
@@ -2956,7 +2956,7 @@ namespace details {
         using index_type = typename info_type::extent_type;
         using size_type = typename info_type::extent_type;
 
-        using boundary_storage_type = typename info_type::storage_info_type::template replaced_type<
+        using boundary_storage_type = typename info_type::storage_traits_type::template replaced_type<
             typename info_type::boundary_type>::storage_type;
 
         using window_type = arrnd_window<interval<std::make_signed_t<typename info_type::extent_type>>>;
@@ -3045,7 +3045,7 @@ namespace details {
                 throw std::out_of_range("invalid axis");
             }
 
-            typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows(size(ai));
+            typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows(size(ai));
 
             std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
                 return window_type(
@@ -3224,7 +3224,7 @@ namespace details {
 
         info_type ai_;
 
-        typename info_type::storage_info_type::template replaced_type<window_type>::storage_type windows_;
+        typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows_;
         arrnd_indexer<info_type> indexer_;
 
         boundary_storage_type curr_boundaries_;
@@ -5158,29 +5158,31 @@ namespace details {
         return eye<Arrnd>(dims.begin(), dims.end());
     }
 
-    template <typename T, typename DataStorageInfo = simple_vector_traits<T>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
+    template <typename T, typename DataStorageTraits = simple_vector_traits<T>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
     class arrnd {
-        static_assert(std::is_same_v<T, typename DataStorageInfo::storage_type::value_type>);
+        static_assert(std::is_same_v<T, typename DataStorageTraits::storage_type::value_type>);
 
     public:
-        using value_type = T;
-        using size_type = typename DataStorageInfo::storage_type::size_type;
-        using difference_type = typename DataStorageInfo::storage_type::difference_type;
-        using reference = T&;
-        using const_reference = const T&;
-        using pointer = T*;
-        using const_pointer = const T*;
-
         using tag = arrnd_tag;
 
-        using data_storage_info = DataStorageInfo;
-        using dims_storage_info = DimsStorageInfo;
+        using data_storage_traits = DataStorageTraits;
+        using dims_storage_traits = DimsStorageTraits;
 
-        using storage_type = typename DataStorageInfo::storage_type;
+        using storage_type = typename data_storage_traits::storage_type;
+
         template <typename U>
-        using shared_ref_allocator_type = typename data_storage_info::template allocator_type<U>;
-        using header_type = arrnd_info<DimsStorageInfo>;
+        using allocator_template_type = typename data_storage_traits::template allocator_template_type<U>;
+
+        using value_type = typename storage_type::value_type;
+        using size_type = typename storage_type::size_type;
+        using difference_type = typename storage_type::difference_type;
+        using reference = typename storage_type::reference;
+        using const_reference = typename storage_type::const_reference;
+        using pointer = typename storage_type::pointer;
+        using const_pointer = typename storage_type::const_pointer;
+        
+        using header_type = arrnd_info<DimsStorageTraits>;
         using indexer_type = arrnd_indexer<header_type>;
         using ranger_type = arrnd_windows_slider<header_type>;
 
@@ -5189,9 +5191,9 @@ namespace details {
         using window_type = typename ranger_type::window_type;
         using window_interval_type = typename window_type::interval_type;
 
-        using this_type = arrnd<T, DataStorageInfo, DimsStorageInfo>;
+        using this_type = arrnd<T, DataStorageTraits, DimsStorageTraits>;
         template <typename U>
-        using replaced_type = arrnd<U, typename DataStorageInfo::template replaced_type<U>, DimsStorageInfo>;
+        using replaced_type = arrnd<U, typename DataStorageTraits::template replaced_type<U>, DimsStorageTraits>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -5337,7 +5339,7 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_) ? nullptr
                                              : std::allocate_shared<storage_type>(
-                                                 shared_ref_allocator_type<storage_type>(), first_data, last_data))
+                                                 allocator_template_type<storage_type>(), first_data, last_data))
         {
             // in case that data buffer allocated, check the number of data elements is valid
             if (buffsp_) {
@@ -5361,7 +5363,7 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
+                      : std::allocate_shared<storage_type>(allocator_template_type<storage_type>(), total(hdr_)))
         { }
         template <iterable_of_type_integral Cont>
         explicit constexpr arrnd(const Cont& dims)
@@ -5376,7 +5378,7 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
+                      : std::allocate_shared<storage_type>(allocator_template_type<storage_type>(), total(hdr_)))
         {
             if (buffsp_) {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
@@ -5395,7 +5397,7 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
+                      : std::allocate_shared<storage_type>(allocator_template_type<storage_type>(), total(hdr_)))
         {
             if (buffsp_) {
                 std::fill(buffsp_->begin(), buffsp_->end(), value);
@@ -5416,7 +5418,7 @@ namespace details {
             : hdr_(first_dim, last_dim)
             , buffsp_(oc::arrnd::empty(hdr_)
                       ? nullptr
-                      : std::allocate_shared<storage_type>(shared_ref_allocator_type<storage_type>(), total(hdr_)))
+                      : std::allocate_shared<storage_type>(allocator_template_type<storage_type>(), total(hdr_)))
         {
             if (buffsp_) {
                 std::for_each(buffsp_->begin(), buffsp_->end(), [&func](auto& value) {
@@ -5871,11 +5873,11 @@ namespace details {
             size_type n = std::min(
                 {std::distance(first_new_dim, last_new_dim), static_cast<std::ptrdiff_t>(hdr_.dims().size())});
 
-            typename header_type::storage_info_type::template replaced_type<interval_type>::storage_type prev_ranges(
+            typename header_type::storage_traits_type::template replaced_type<interval_type>::storage_type prev_ranges(
                 hdr_.dims().size());
             std::fill(prev_ranges.begin(), prev_ranges.end(), interval_type::full());
 
-            typename header_type::storage_info_type::template replaced_type<interval_type>::storage_type new_ranges(
+            typename header_type::storage_traits_type::template replaced_type<interval_type>::storage_type new_ranges(
                 std::distance(first_new_dim, last_new_dim));
             std::fill(new_ranges.begin(), new_ranges.end(), interval_type::full());
 
@@ -9441,7 +9443,7 @@ namespace details {
 
     private:
         struct creators_chain {
-            std::shared_ptr<bool> has_original_creator = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
+            std::shared_ptr<bool> has_original_creator = std::allocate_shared<bool>(allocator_template_type<bool>());
             std::weak_ptr<bool> is_creator_valid{};
             const this_type* latest_creator = nullptr;
         };
@@ -9455,40 +9457,53 @@ namespace details {
     // arrnd type deduction by constructors
 
     template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt,
-        typename DataStorageInfo = simple_vector_traits<iterator_value_t<InputDataIt>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
+        typename DataStorageTraits = simple_vector_traits<iterator_value_t<InputDataIt>>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_t<InputDataIt>, DataStorageInfo, DimsStorageInfo>;
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageTraits, DimsStorageTraits>;
 
-    template <typename U, typename DataStorageInfo = simple_vector_traits<U>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
-    arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, std::initializer_list<U>)
-        -> arrnd<U, DataStorageInfo, DimsStorageInfo>;
+    template <iterator_of_type_integral InputDimsIt, typename U,
+        typename DataStorageTraits = simple_vector_traits<U>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(const InputDimsIt&, const InputDimsIt&, const U&)
+        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+    template <iterable_of_type_integral Cont, typename U, typename DataStorageTraits = simple_vector_traits<U>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(const Cont&, const U&) -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+    template <typename U, typename DataStorageTraits = simple_vector_traits<U>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, const U&)
+        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+
+    template <typename U, typename DataStorageTraits = simple_vector_traits<U>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, std::initializer_list<U>)
+        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
 
     template <iterable_of_type_integral Cont, iterable_type DataCont,
-        typename DataStorageInfo = simple_vector_traits<iterable_value_t<DataCont>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
-    arrnd(const Cont&, const DataCont&) -> arrnd<iterable_value_t<DataCont>, DataStorageInfo, DimsStorageInfo>;
+        typename DataStorageTraits = simple_vector_traits<iterable_value_t<DataCont>>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(const Cont&, const DataCont&) -> arrnd<iterable_value_t<DataCont>, DataStorageTraits, DimsStorageTraits>;
 
-    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>, iterator_of_type_integral InputDimsIt>
+    template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>, iterator_of_type_integral InputDimsIt>
         requires(invocable_no_arrnd<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
-    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>, iterable_of_type_integral Cont>
+        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
+    template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>, iterable_of_type_integral Cont>
         requires(invocable_no_arrnd<Func>)
-    arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
-    template <typename Func, typename DataStorageInfo = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
+    arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
+    template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
         requires(invocable_no_arrnd<Func>)
-    arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
+    arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, Func&&)
+        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
 
-    template <typename T, typename DataStorageInfo = simple_vector_traits<typename T::value_type>,
-        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
-    arrnd(const arrnd_info<DimsStorageInfo>&, std::shared_ptr<T>)
-        -> arrnd<typename T::value_type, DataStorageInfo, DimsStorageInfo>;
+    template <typename T, typename DataStorageTraits = simple_vector_traits<typename T::value_type>,
+        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    arrnd(const arrnd_info<DimsStorageTraits>&, std::shared_ptr<T>)
+        -> arrnd<typename T::value_type, DataStorageTraits, DimsStorageTraits>;
 
     // free arrnd iterator functions
 
