@@ -2097,7 +2097,7 @@ TEST(arrnd_test, indexer_deprecated)
     using namespace oc::arrnd;
 
     arrnd<int> arr({3, 1, 2});
-    oc::arrnd::arrnd_indexer<typename arrnd<int>::header_type> indexer(move(arr.header(), 2, 0));
+    oc::arrnd::arrnd_indexer<typename arrnd<int>::info_type> indexer(move(arr.header(), 2, 0));
 
     std::vector<int> indices;
     for (; indexer; ++indexer) {
@@ -2114,7 +2114,7 @@ TEST(arrnd_test, ranger_deprecated)
 
     //auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
     arrnd<int> arr({3, 1, 2});
-    arrnd<int>::ranger_type ranger(arr.header(), 2);
+    arrnd<int>::windows_slider_type ranger(arr.header(), 2);
     std::vector<interval<>> fisrt_ranges{{0, 3}, {0, 1}, {0, 1}};
 
     EXPECT_TRUE(std::equal(fisrt_ranges.cbegin(), fisrt_ranges.cend(), (*ranger).cbegin()));

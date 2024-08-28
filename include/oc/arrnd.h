@@ -2195,7 +2195,8 @@ namespace details {
             return ai;
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(std::begin(ai.strides()), std::end(ai.strides()));
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(
+            std::begin(ai.strides()), std::end(ai.strides()));
 
         std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.strides()),
             std::begin(strides), [](auto boundary, auto stride) {
@@ -2306,7 +2307,7 @@ namespace details {
             }
 
             return arrnd_info<StorageTraits>(typename arrnd_info<StorageTraits>::extent_storage_type(
-                                               1, typename arrnd_info<StorageTraits>::extent_type{1}),
+                                                 1, typename arrnd_info<StorageTraits>::extent_type{1}),
                 typename arrnd_info<StorageTraits>::extent_storage_type(1, ai.strides()[0]), ai.indices_boundary(),
                 ai.hints());
         }
@@ -2428,8 +2429,8 @@ namespace details {
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(
-        const arrnd_info<StorageTraits>& ai, std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> axes)
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(const arrnd_info<StorageTraits>& ai,
+        std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> axes)
     {
         return transpose(ai, axes.begin(), axes.end());
     }
@@ -2517,12 +2518,14 @@ namespace details {
             return 0;
         }
 
-        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()), typename arrnd_info<StorageTraits>::extent_type{1},
+        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()),
+            typename arrnd_info<StorageTraits>::extent_type{1},
             overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type size(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type size(
+        const arrnd_info<StorageTraits>& ai)
     {
         return std::size(ai.dims());
     }
@@ -2620,8 +2623,8 @@ namespace details {
     }
 
     template <typename StorageTraits>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
-        const arrnd_info<StorageTraits>& ai, std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> subs)
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& ai,
+        std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> subs)
     {
         return sub2ind(ai, subs.begin(), subs.end());
     }
@@ -3045,7 +3048,8 @@ namespace details {
                 throw std::out_of_range("invalid axis");
             }
 
-            typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows(size(ai));
+            typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows(
+                size(ai));
 
             std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
                 return window_type(
@@ -3765,12 +3769,12 @@ namespace details {
         using value_type = Arrnd;
         using reference = Arrnd&;
 
-        using ranger_type = typename Arrnd::ranger_type;
+        using windows_slider_type = typename Arrnd::windows_slider_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         friend arrnd_slice_const_iterator<Arrnd>;
 
-        explicit constexpr arrnd_slice_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_slice_iterator(const value_type& arrnd_ref, const windows_slider_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -3875,7 +3879,7 @@ namespace details {
 
     private:
         value_type arrnd_ref_;
-        ranger_type far_;
+        windows_slider_type far_;
 
         mutable value_type slice_;
     };
@@ -3888,10 +3892,10 @@ namespace details {
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
-        using ranger_type = typename Arrnd::ranger_type;
+        using windows_slider_type = typename Arrnd::windows_slider_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
 
-        explicit constexpr arrnd_slice_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_slice_const_iterator(const value_type& arrnd_ref, const windows_slider_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -4022,7 +4026,7 @@ namespace details {
 
     private:
         value_type arrnd_ref_;
-        ranger_type far_;
+        windows_slider_type far_;
 
         mutable value_type slice_;
     };
@@ -4038,12 +4042,12 @@ namespace details {
         using value_type = Arrnd;
         using reference = Arrnd&;
 
-        using ranger_type = typename Arrnd::ranger_type;
+        using windows_slider_type = typename Arrnd::windows_slider_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         friend arrnd_slice_reverse_const_iterator<Arrnd>;
 
-        explicit constexpr arrnd_slice_reverse_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_slice_reverse_iterator(const value_type& arrnd_ref, const windows_slider_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -4148,7 +4152,7 @@ namespace details {
 
     private:
         value_type arrnd_ref_;
-        ranger_type far_;
+        windows_slider_type far_;
 
         mutable value_type slice_;
     };
@@ -4161,10 +4165,11 @@ namespace details {
         using value_type = Arrnd;
         using const_reference = const Arrnd&;
 
-        using ranger_type = typename Arrnd::ranger_type;
+        using windows_slider_type = typename Arrnd::windows_slider_type;
         using returned_type_category = arrnd_returned_slice_iterator_tag;
 
-        explicit constexpr arrnd_slice_reverse_const_iterator(const value_type& arrnd_ref, const ranger_type& far)
+        explicit constexpr arrnd_slice_reverse_const_iterator(
+            const value_type& arrnd_ref, const windows_slider_type& far)
             : arrnd_ref_(arrnd_ref)
             , far_(far)
         {
@@ -4298,7 +4303,7 @@ namespace details {
 
     private:
         value_type arrnd_ref_;
-        ranger_type far_;
+        windows_slider_type far_;
 
         mutable value_type slice_;
     };
@@ -5158,8 +5163,7 @@ namespace details {
         return eye<Arrnd>(dims.begin(), dims.end());
     }
 
-    template <typename T, typename DataStorageTraits = simple_vector_traits<T>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    template <typename T, typename DataStorageTraits = simple_vector_traits<T>, typename ArrndInfo = arrnd_info<>>
     class arrnd {
         static_assert(std::is_same_v<T, typename DataStorageTraits::storage_type::value_type>);
 
@@ -5167,7 +5171,6 @@ namespace details {
         using tag = arrnd_tag;
 
         using data_storage_traits = DataStorageTraits;
-        using dims_storage_traits = DimsStorageTraits;
 
         using storage_type = typename data_storage_traits::storage_type;
 
@@ -5181,19 +5184,18 @@ namespace details {
         using const_reference = typename storage_type::const_reference;
         using pointer = typename storage_type::pointer;
         using const_pointer = typename storage_type::const_pointer;
-        
-        using header_type = arrnd_info<DimsStorageTraits>;
-        using indexer_type = arrnd_indexer<header_type>;
-        using ranger_type = arrnd_windows_slider<header_type>;
 
-        using interval_type = typename header_type::boundary_type;
+        using info_type = ArrndInfo;
 
-        using window_type = typename ranger_type::window_type;
-        using window_interval_type = typename window_type::interval_type;
+        using indexer_type = arrnd_indexer<info_type>;
+        using windows_slider_type = arrnd_windows_slider<info_type>;
 
-        using this_type = arrnd<T, DataStorageTraits, DimsStorageTraits>;
+        using boundary_type = typename info_type::boundary_type;
+        using window_type = typename windows_slider_type::window_type;
+
+        using this_type = arrnd<T, DataStorageTraits, ArrndInfo>;
         template <typename U>
-        using replaced_type = arrnd<U, typename DataStorageTraits::template replaced_type<U>, DimsStorageTraits>;
+        using replaced_type = arrnd<U, typename DataStorageTraits::template replaced_type<U>, ArrndInfo>;
 
         template <typename U, std::int64_t Level>
         using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
@@ -5318,7 +5320,7 @@ namespace details {
 
         virtual constexpr ~arrnd() = default;
 
-        explicit constexpr arrnd(const header_type& hdr, std::shared_ptr<storage_type> buffsp)
+        explicit constexpr arrnd(const info_type& hdr, std::shared_ptr<storage_type> buffsp)
             : hdr_(hdr)
             , buffsp_(buffsp)
         {
@@ -5437,12 +5439,12 @@ namespace details {
             : arrnd(dims.begin(), dims.end(), std::forward<Func>(func))
         { }
 
-        [[nodiscard]] constexpr const header_type& header() const noexcept
+        [[nodiscard]] constexpr const info_type& header() const noexcept
         {
             return hdr_;
         }
 
-        [[nodiscard]] constexpr header_type& header() noexcept
+        [[nodiscard]] constexpr info_type& header() noexcept
         {
             return hdr_;
         }
@@ -5537,16 +5539,16 @@ namespace details {
         {
             return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval_type> ranges) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> ranges) const&
         {
             return (*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<interval_type> ranges) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> ranges) const&&
         {
             return std::move(*this)[std::make_pair(ranges.begin(), ranges.end())];
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval_type range) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type range) const&
         {
             this_type slice{};
             slice.hdr_ = oc::arrnd::squeeze(oc::arrnd::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
@@ -5555,7 +5557,7 @@ namespace details {
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](interval_type range) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type range) const&&
         {
             this_type slice{};
             slice.hdr_ = oc::arrnd::squeeze(oc::arrnd::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
@@ -5563,7 +5565,7 @@ namespace details {
             return slice;
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval_type range, size_type axis) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type range, size_type axis) const&
         {
             this_type slice{};
             slice.hdr_ = oc::arrnd::slice(hdr_, range, axis);
@@ -5572,7 +5574,7 @@ namespace details {
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(interval_type range, size_type axis) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type range, size_type axis) const&&
         {
             this_type slice{};
             slice.hdr_ = oc::arrnd::slice(hdr_, range, axis);
@@ -5764,7 +5766,7 @@ namespace details {
             return copy_to(std::forward<Arrnd>(dst), std::begin(ranges), std::end(ranges));
         }
         template <arrnd_type Arrnd>
-        constexpr const this_type& copy_to(Arrnd&& dst, std::initializer_list<interval_type> ranges) const
+        constexpr const this_type& copy_to(Arrnd&& dst, std::initializer_list<boundary_type> ranges) const
         {
             return copy_to(std::forward<Arrnd>(dst), ranges.begin(), ranges.end());
         }
@@ -5780,7 +5782,7 @@ namespace details {
             if (total(hdr_) == total(dst.header())) {
                 if (!std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(dst.header().dims()),
                         std::end(dst.header().dims()))) {
-                    dst.header() = header_type{hdr_.dims().cbegin(), hdr_.dims().cend()};
+                    dst.header() = info_type{hdr_.dims().cbegin(), hdr_.dims().cend()};
                 }
                 return copy_to(dst);
             }
@@ -5809,7 +5811,7 @@ namespace details {
         [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
             const InputIt& first_new_dim, const InputIt& last_new_dim) const
         {
-            typename this_type::header_type new_header(first_new_dim, last_new_dim);
+            typename this_type::info_type new_header(first_new_dim, last_new_dim);
             assert(total(hdr_) == total(new_header));
 
             if (std::equal(std::begin(hdr_.dims()), std::end(hdr_.dims()), std::begin(new_header.dims()),
@@ -5873,21 +5875,21 @@ namespace details {
             size_type n = std::min(
                 {std::distance(first_new_dim, last_new_dim), static_cast<std::ptrdiff_t>(hdr_.dims().size())});
 
-            typename header_type::storage_traits_type::template replaced_type<interval_type>::storage_type prev_ranges(
+            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type prev_ranges(
                 hdr_.dims().size());
-            std::fill(prev_ranges.begin(), prev_ranges.end(), interval_type::full());
+            std::fill(prev_ranges.begin(), prev_ranges.end(), boundary_type::full());
 
-            typename header_type::storage_traits_type::template replaced_type<interval_type>::storage_type new_ranges(
+            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type new_ranges(
                 std::distance(first_new_dim, last_new_dim));
-            std::fill(new_ranges.begin(), new_ranges.end(), interval_type::full());
+            std::fill(new_ranges.begin(), new_ranges.end(), boundary_type::full());
 
             size_type pi = hdr_.dims().size() - 1;
             size_type ni = std::distance(first_new_dim, last_new_dim) - 1;
             for (int i = n - 1; i >= 0; --i) {
                 size_type prev_dim = *std::next(hdr_.dims().cbegin(), pi);
                 size_type new_dim = *std::next(first_new_dim, ni);
-                *std::next(prev_ranges.begin(), pi--) = interval_type::to(std::min({prev_dim, new_dim}));
-                *std::next(new_ranges.begin(), ni--) = interval_type::to(std::min({prev_dim, new_dim}));
+                *std::next(prev_ranges.begin(), pi--) = boundary_type::to(std::min({prev_dim, new_dim}));
+                *std::next(new_ranges.begin(), ni--) = boundary_type::to(std::min({prev_dim, new_dim}));
             }
 
             auto sthis = (*this)[prev_ranges];
@@ -5961,7 +5963,7 @@ namespace details {
             this_type res({total(hdr_) + total(arr.header())});
             auto new_dims = hdr_.dims();
             new_dims[axis] += *std::next(std::begin(arr.header().dims()), axis);
-            res.hdr_ = header_type(new_dims);
+            res.hdr_ = info_type(new_dims);
 
             indexer_type gen(move(hdr_, axis, 0));
             typename Arrnd::indexer_type arr_gen(move(arr.header(), axis, 0));
@@ -6062,7 +6064,7 @@ namespace details {
             this_type res({total(hdr_) - (total(hdr_) / hdr_.dims()[axis]) * count});
             auto new_dims = hdr_.dims();
             new_dims[axis] -= count;
-            res.hdr_ = header_type(new_dims);
+            res.hdr_ = info_type(new_dims);
 
             if (res.empty()) {
                 return res;
@@ -6234,7 +6236,7 @@ namespace details {
             auto complement_dims = [](auto rdims, auto odims) {
                 assert(std::size(rdims) == std::size(odims));
 
-                typename header_type::extent_storage_type comp_dims(std::size(rdims));
+                typename info_type::extent_storage_type comp_dims(std::size(rdims));
 
                 std::transform(
                     std::begin(rdims), std::end(rdims), std::begin(odims), std::begin(comp_dims), [](auto rd, auto cd) {
@@ -6352,7 +6354,7 @@ namespace details {
             auto complement_dims = [](auto rdims, auto odims) {
                 assert(std::size(rdims) == std::size(odims));
 
-                typename header_type::extent_storage_type comp_dims(std::size(rdims));
+                typename info_type::extent_storage_type comp_dims(std::size(rdims));
 
                 std::transform(
                     std::begin(rdims), std::end(rdims), std::begin(odims), std::begin(comp_dims), [](auto rd, auto cd) {
@@ -6529,7 +6531,7 @@ namespace details {
             } else if (std::size(new_dims) == 1) {
                 new_dims[0] = 1;
             }
-            auto new_header = header_type(new_dims);
+            auto new_header = info_type(new_dims);
             reduced_type res({total(new_header)});
             res.header() = std::move(new_header);
 
@@ -6599,7 +6601,7 @@ namespace details {
             } else if (std::size(new_dims) == 1) {
                 new_dims[0] = 1;
             }
-            auto new_header = header_type(new_dims);
+            auto new_header = info_type(new_dims);
             folded_type res({total(new_header)});
             res.header() = std::move(new_header);
 
@@ -7112,7 +7114,7 @@ namespace details {
                 return this_type();
             }
 
-            header_type new_header = oc::arrnd::transpose(header_type(hdr_.dims()), first_order, last_order);
+            info_type new_header = oc::arrnd::transpose(info_type(hdr_.dims()), first_order, last_order);
             if (oc::arrnd::empty(new_header)) {
                 return this_type();
             }
@@ -7175,7 +7177,7 @@ namespace details {
             assert(division <= axis_dim);
             auto fixed_div = division > 0 ? std::min(axis_dim, division) : axis_dim;
 
-            typename expanded_type::header_type::extent_storage_type new_dims(hdr_.dims().size());
+            typename expanded_type::info_type::extent_storage_type new_dims(hdr_.dims().size());
             std::fill(new_dims.begin(), new_dims.end(), 1);
             *std::next(new_dims.begin(), fixed_axis) = fixed_div;
 
@@ -7188,8 +7190,8 @@ namespace details {
 
             size_type count = 0;
 
-            ranger_type rgr(
-                hdr_, fixed_axis, window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
+            windows_slider_type rgr(hdr_, fixed_axis,
+                window_type(typename window_type::interval_type(0, curr_ival_width), arrnd_window_type::partial));
 
             while (curr_div > 0) {
                 res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
@@ -7202,8 +7204,9 @@ namespace details {
 
                 if (curr_div > 0) {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
-                    rgr.modify_window(
-                        fixed_axis, window_type(window_interval_type(0, curr_ival_width), arrnd_window_type::partial));
+                    rgr.modify_window(fixed_axis,
+                        window_type(
+                            typename window_type::interval_type(0, curr_ival_width), arrnd_window_type::partial));
                 }
 
                 ++count;
@@ -7266,7 +7269,8 @@ namespace details {
 
         template <typename Func>
             requires(invocable_no_arrnd<Func, inner_this_type<0>>)
-        [[nodiscard]] constexpr auto slide(size_type axis, window_interval_type window, bool bounded, Func&& func) const
+        [[nodiscard]] constexpr auto slide(
+            size_type axis, typename window_type::interval_type window, bool bounded, Func&& func) const
         {
             using func_res_type = std::invoke_result_t<Func, this_type>;
             using slide_type = replaced_type<func_res_type>;
@@ -7279,7 +7283,7 @@ namespace details {
 
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
-            ranger_type rgr(
+            windows_slider_type rgr(
                 hdr_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
@@ -7298,8 +7302,8 @@ namespace details {
             requires(invocable_no_arrnd<TransformFunc, inner_this_type<0>>
                 && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<0>>,
                     std::invoke_result_t<TransformFunc, inner_this_type<0>>>)
-        [[nodiscard]] constexpr auto accumulate(
-            size_type axis, window_interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc) const
+        [[nodiscard]] constexpr auto accumulate(size_type axis, typename window_type::interval_type window,
+            bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc) const
         {
             using trans_res_type = std::invoke_result_t<TransformFunc, this_type>;
             using acc_res_type = std::invoke_result_t<ReduceFunc, trans_res_type, trans_res_type>;
@@ -7313,7 +7317,7 @@ namespace details {
 
             size_type axis_dim = *std::next(hdr_.dims().cbegin(), axis);
 
-            ranger_type rgr(
+            windows_slider_type rgr(
                 hdr_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
 
             size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
@@ -7424,7 +7428,7 @@ namespace details {
 
                 const auto& subs = gen.subs();
                 for (size_type axis = 0; axis < std::size(hdr_.dims()) - page_ndims; ++axis) {
-                    page = page[interval_type::at(*std::next(subs.cbegin(), axis))];
+                    page = page[boundary_type::at(*std::next(subs.cbegin(), axis))];
                 }
 
                 pages[*gen] = page;
@@ -7468,8 +7472,8 @@ namespace details {
             size_type this_ndims = std::ssize(hdr_.dims());
             size_type page_ndims = std::ssize((*this)[0].header().dims());
 
-            typename header_type::extent_storage_type new_dims;
-            new_dims = typename header_type::extent_storage_type(this_ndims + page_ndims);
+            typename info_type::extent_storage_type new_dims;
+            new_dims = typename info_type::extent_storage_type(this_ndims + page_ndims);
             const auto& this_dims = hdr_.dims();
             const auto& page_dims = (*this)[0].header().dims();
             std::copy(this_dims.cbegin(), this_dims.cend(), new_dims.begin());
@@ -7510,7 +7514,7 @@ namespace details {
 
             // calculate dimensions according to number of slices in each dimension
 
-            typename header_type::extent_storage_type new_dims(hdr_.dims().size());
+            typename info_type::extent_storage_type new_dims(hdr_.dims().size());
             if (std::distance(first_axis, last_axis) == 0) {
                 std::fill(new_dims.begin(), new_dims.end(), division);
             } else {
@@ -7546,7 +7550,7 @@ namespace details {
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
                     split_impl(
-                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
+                        arr(boundary_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -7599,7 +7603,7 @@ namespace details {
 
             // calculate dimensions according to number of slices in each dimension
 
-            typename header_type::extent_storage_type new_dims(hdr_.dims().size());
+            typename info_type::extent_storage_type new_dims(hdr_.dims().size());
             std::fill(new_dims.begin(), new_dims.end(), 1);
             auto calc_num_slices_at_dim = [&](auto indf, auto indl) {
                 if (*indf == 0) {
@@ -7643,7 +7647,7 @@ namespace details {
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
                     split_impl(
-                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
+                        arr(boundary_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -7660,20 +7664,20 @@ namespace details {
                 ++ind_it;
                 if (prev_ind > 0) {
                     split_impl(
-                        arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
+                        arr(boundary_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind < current_ind) {
                         split_impl(
-                            arr(interval_type{prev_ind, current_ind}, arr.header().dims().size() - current_depth),
+                            arr(boundary_type{prev_ind, current_ind}, arr.header().dims().size() - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind < current_dim) {
-                    split_impl(arr(interval_type{current_ind, current_dim}, arr.header().dims().size() - current_depth),
+                    split_impl(arr(boundary_type{current_ind, current_dim}, arr.header().dims().size() - current_depth),
                         current_depth - 1);
                 }
             };
@@ -7720,7 +7724,7 @@ namespace details {
 
             // calculate dimensions according to number of slices in each dimension
 
-            typename header_type::extent_storage_type new_dims(hdr_.dims().size());
+            typename info_type::extent_storage_type new_dims(hdr_.dims().size());
             std::fill(new_dims.begin(), new_dims.end(), 1);
             auto calc_num_slices_at_dim = [&](auto indf, auto indl, size_type dim) {
                 size_type num_slices = 0;
@@ -7780,7 +7784,7 @@ namespace details {
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.header().dims().size() - current_depth) == last_axis) {
                     exclude_impl(
-                        arr(interval_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
+                        arr(boundary_type::full(), arr.header().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -7797,21 +7801,21 @@ namespace details {
                 ++ind_it;
                 if (prev_ind > 0) {
                     exclude_impl(
-                        arr(interval_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
+                        arr(boundary_type{0, prev_ind}, arr.header().dims().size() - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind + 1 < current_ind) {
                         exclude_impl(
-                            arr(interval_type{prev_ind + 1, current_ind}, arr.header().dims().size() - current_depth),
+                            arr(boundary_type{prev_ind + 1, current_ind}, arr.header().dims().size() - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind + 1 < current_dim) {
                     exclude_impl(
-                        arr(interval_type{current_ind + 1, current_dim}, arr.header().dims().size() - current_depth),
+                        arr(boundary_type{current_ind + 1, current_dim}, arr.header().dims().size() - current_depth),
                         current_depth - 1);
                 }
             };
@@ -9022,172 +9026,178 @@ namespace details {
 
         [[nodiscard]] constexpr auto begin(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto begin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto cbegin(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(
-                    *this, ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto end(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(
-                    *this, ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto cend(arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(
-                    *this, ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               windows_slider_type(hdr_, 0, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag)
         {
             return empty() ? reverse_slice_iterator()
                            : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? reverse_slice_iterator()
                            : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? const_reverse_slice_iterator()
                            : const_reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag)
         {
             return empty() ? reverse_slice_iterator()
                            : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? reverse_slice_iterator()
                            : reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(arrnd_returned_slice_iterator_tag) const
         {
             return empty() ? const_reverse_slice_iterator()
                            : const_reverse_slice_iterator(*this,
-                               ranger_type(hdr_, 0, window_type(window_interval_type{0, 1}, arrnd_window_type::partial),
+                               windows_slider_type(hdr_, 0,
+                                   window_type(typename window_type::interval_type{0, 1}, arrnd_window_type::partial),
                                    arrnd_iterator_position::rend));
         }
 
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto begin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::begin));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? slice_iterator()
-                : slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? slice_iterator()
+                           : slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto cend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_slice_iterator()
-                : const_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::end));
+            return empty() ? const_slice_iterator()
+                           : const_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rbegin));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag)
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? reverse_slice_iterator()
-                : reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rend));
+            return empty() ? reverse_slice_iterator()
+                           : reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(size_type axis, arrnd_returned_slice_iterator_tag) const
         {
-            return empty()
-                ? const_reverse_slice_iterator()
-                : const_reverse_slice_iterator(*this,
-                    ranger_type(hdr_, axis, window_type(window_interval_type{0, 1}), arrnd_iterator_position::rend));
+            return empty() ? const_reverse_slice_iterator()
+                           : const_reverse_slice_iterator(*this,
+                               windows_slider_type(hdr_, axis, window_type(typename window_type::interval_type{0, 1}),
+                                   arrnd_iterator_position::rend));
         }
 
         [[nodiscard]] constexpr auto abs() const
@@ -9448,7 +9458,7 @@ namespace details {
             const this_type* latest_creator = nullptr;
         };
 
-        header_type hdr_{};
+        info_type hdr_{};
         std::shared_ptr<storage_type> buffsp_{nullptr};
 
         creators_chain creators_{};
@@ -9458,52 +9468,48 @@ namespace details {
 
     template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt,
         typename DataStorageTraits = simple_vector_traits<iterator_value_t<InputDataIt>>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+        typename ArrndInfo = arrnd_info<>>
     arrnd(const InputDimsIt&, const InputDimsIt&, const InputDataIt&, const InputDataIt&)
-        -> arrnd<iterator_value_t<InputDataIt>, DataStorageTraits, DimsStorageTraits>;
+        -> arrnd<iterator_value_t<InputDataIt>, DataStorageTraits, ArrndInfo>;
 
-    template <iterator_of_type_integral InputDimsIt, typename U,
-        typename DataStorageTraits = simple_vector_traits<U>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
-    arrnd(const InputDimsIt&, const InputDimsIt&, const U&)
-        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+    template <iterator_of_type_integral InputDimsIt, typename U, typename DataStorageTraits = simple_vector_traits<U>,
+        typename ArrndInfo = arrnd_info<>>
+    arrnd(const InputDimsIt&, const InputDimsIt&, const U&) -> arrnd<U, DataStorageTraits, ArrndInfo>;
     template <iterable_of_type_integral Cont, typename U, typename DataStorageTraits = simple_vector_traits<U>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
-    arrnd(const Cont&, const U&) -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
-    template <typename U, typename DataStorageTraits = simple_vector_traits<U>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+        typename ArrndInfo = arrnd_info<>>
+    arrnd(const Cont&, const U&) -> arrnd<U, DataStorageTraits, ArrndInfo>;
+    template <typename U, typename DataStorageTraits = simple_vector_traits<U>, typename ArrndInfo = arrnd_info<>>
     arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, const U&)
-        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+        -> arrnd<U, DataStorageTraits, ArrndInfo>;
 
-    template <typename U, typename DataStorageTraits = simple_vector_traits<U>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+    template <typename U, typename DataStorageTraits = simple_vector_traits<U>, typename ArrndInfo = arrnd_info<>>
     arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, std::initializer_list<U>)
-        -> arrnd<U, DataStorageTraits, DimsStorageTraits>;
+        -> arrnd<U, DataStorageTraits, ArrndInfo>;
 
     template <iterable_of_type_integral Cont, iterable_type DataCont,
         typename DataStorageTraits = simple_vector_traits<iterable_value_t<DataCont>>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
-    arrnd(const Cont&, const DataCont&) -> arrnd<iterable_value_t<DataCont>, DataStorageTraits, DimsStorageTraits>;
+        typename ArrndInfo = arrnd_info<>>
+    arrnd(const Cont&, const DataCont&) -> arrnd<iterable_value_t<DataCont>, DataStorageTraits, ArrndInfo>;
 
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>, iterator_of_type_integral InputDimsIt>
+        typename ArrndInfo = arrnd_info<>, iterator_of_type_integral InputDimsIt>
         requires(invocable_no_arrnd<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
+        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>, iterable_of_type_integral Cont>
+        typename ArrndInfo = arrnd_info<>, iterable_of_type_integral Cont>
         requires(invocable_no_arrnd<Func>)
-    arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
+    arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
+        typename ArrndInfo = arrnd_info<>>
         requires(invocable_no_arrnd<Func>)
     arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, Func&&)
-        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, DimsStorageTraits>;
+        -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
 
     template <typename T, typename DataStorageTraits = simple_vector_traits<typename T::value_type>,
-        typename DimsStorageTraits = simple_vector_traits<std::size_t>>
-    arrnd(const arrnd_info<DimsStorageTraits>&, std::shared_ptr<T>)
-        -> arrnd<typename T::value_type, DataStorageTraits, DimsStorageTraits>;
+        typename ArrndInfo = arrnd_info<>>
+    arrnd(const ArrndInfo&, std::shared_ptr<T>)
+        -> arrnd<typename T::value_type, DataStorageTraits, ArrndInfo>;
 
     // free arrnd iterator functions
 
@@ -10898,14 +10904,14 @@ namespace details {
 
     template <arrnd_type Arrnd, typename Func>
     [[nodiscard]] inline constexpr auto slide(const Arrnd& arr, typename Arrnd::size_type axis,
-        typename Arrnd::window_interval_type window, bool bounded, Func&& func)
+        typename Arrnd::window_type::interval_type window, bool bounded, Func&& func)
     {
         return arr.slide(axis, window, bounded, std::forward<Func>(func));
     }
 
     template <arrnd_type Arrnd, typename ReduceFunc, typename TransformFunc>
     [[nodiscard]] inline constexpr auto accumulate(const Arrnd& arr, typename Arrnd::size_type axis,
-        typename Arrnd::window_interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc)
+        typename Arrnd::window_type::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc)
     {
         return arr.accumulate(
             axis, window, bounded, std::forward<ReduceFunc>(rfunc), std::forward<TransformFunc>(tfunc));
@@ -11189,7 +11195,7 @@ namespace details {
                         }
                     }
                     ostream_operator_recursive(
-                        os, arco[typename Arrnd::interval_type{i, i + 1}], nvectical_spaces + 1, ndepth_spaces);
+                        os, arco[typename Arrnd::boundary_type{i, i + 1}], nvectical_spaces + 1, ndepth_spaces);
                     if (i < arco.header().dims()[0] - 1) {
                         os << '\n';
                     }
