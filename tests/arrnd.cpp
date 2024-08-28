@@ -33,7 +33,7 @@
 //    };
 //
 //    auto slices_count = std::thread::hardware_concurrency();
-//    auto step_size = arr.header().dims()[0] / slices_count;
+//    auto step_size = arr.info().dims()[0] / slices_count;
 //
 //    std::vector<std::thread> ts(slices_count);
 //
@@ -2097,7 +2097,7 @@ TEST(arrnd_test, indexer_deprecated)
     using namespace oc::arrnd;
 
     arrnd<int> arr({3, 1, 2});
-    oc::arrnd::arrnd_indexer<typename arrnd<int>::info_type> indexer(move(arr.header(), 2, 0));
+    oc::arrnd::arrnd_indexer<typename arrnd<int>::info_type> indexer(move(arr.info(), 2, 0));
 
     std::vector<int> indices;
     for (; indexer; ++indexer) {
@@ -2114,7 +2114,7 @@ TEST(arrnd_test, ranger_deprecated)
 
     //auto ranger = arrnd<int>({3, 1, 2}).ranger(2);
     arrnd<int> arr({3, 1, 2});
-    arrnd<int>::windows_slider_type ranger(arr.header(), 2);
+    arrnd<int>::windows_slider_type ranger(arr.info(), 2);
     std::vector<interval<>> fisrt_ranges{{0, 3}, {0, 1}, {0, 1}};
 
     EXPECT_TRUE(std::equal(fisrt_ranges.cbegin(), fisrt_ranges.cend(), (*ranger).cbegin()));
@@ -2662,7 +2662,7 @@ TEST(arrnd_header_test, reordering_slicing_and_array_memory_buffer_continuity)
 
     //std::cout << arr << "\n\n";
 
-    //auto header = arr.header();
+    //auto header = arr.info();
 
     std::vector<int> order{1, 2, 0};
 
@@ -2680,7 +2680,7 @@ TEST(arrnd_header_test, reordering_slicing_and_array_memory_buffer_continuity)
     EXPECT_TRUE(issliced(shdr2) && istransposed(shdr2) && iscontinuous(shdr2));
     //EXPECT_TRUE(std::equal(shdr2.order().cbegin(), shdr2.order().cend(), order.cbegin(), order.cend()));
 
-    //arr.header() = arr.header().subheader({interval<>::at(2), interval<>::full(), interval<>::at(1)});
+    //arr.info() = arr.info().subheader({interval<>::at(2), interval<>::full(), interval<>::at(1)});
     //std::cout << arr << "\n\n";
 }
 

@@ -264,7 +264,7 @@ TEST(arrnd_test, inv)
 //            {-0.370278, 0.897619, 0.424033, 0.258014, -0.443715, -0.281416, 0.595486, 0.314169, -0.526578, -0.229678,
 //                -0.391643, 0.306355, -0.62348, -0.249667, -0.558755, -0.86074})));
 //
-//    //for (int i = 0; i < l.header().numel(); ++i) {
+//    //for (int i = 0; i < l.info().numel(); ++i) {
 //    //    std::cout << dot(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]) << "\n\n";
 //    //    EXPECT_TRUE(
 //    //        all_close(dot(arr - l[i] * eye<arrnd<double>>({4, 4}), v[{interval<>::full(), interval<>::at(i)}]), o));
@@ -624,21 +624,21 @@ TEST(arrnd_test, squeeze)
         arrnd<int> arr;
         auto sarr = arr.squeeze();
         EXPECT_TRUE(all_equal(sarr, arrnd<int>()));
-        //EXPECT_FALSE(sarr.header().is_slice());
+        //EXPECT_FALSE(sarr.info().is_slice());
     }
 
     {
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
         auto sarr = arr.squeeze();
         EXPECT_TRUE(all_equal(sarr, arr));
-        //EXPECT_FALSE(sarr.header().is_slice());
+        //EXPECT_FALSE(sarr.info().is_slice());
     }
 
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
         auto sarr = arr.squeeze();
         EXPECT_TRUE(all_equal(sarr, arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6})));
-        //EXPECT_TRUE(sarr.header().is_slice());
+        //EXPECT_TRUE(sarr.info().is_slice());
     }
 
     {
@@ -650,7 +650,7 @@ TEST(arrnd_test, squeeze)
 
         arrnd<int> sarr = slice.squeeze();
         EXPECT_TRUE(all_equal(sarr, arrnd<int>({2, 2}, {9, 10, 13, 14})));
-        EXPECT_TRUE(issliced(sarr.header()));
+        EXPECT_TRUE(issliced(sarr.info()));
     }
 
     {
@@ -661,7 +661,7 @@ TEST(arrnd_test, squeeze)
         EXPECT_TRUE(all_equal(sarr1,
             arrnd<arrnd<int>>(
                 {2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2, 1}, {7, 8, 9, 10, 11, 12})})));
-        //EXPECT_TRUE(sarr1.header().is_slice());
+        //EXPECT_TRUE(sarr1.info().is_slice());
 
         //auto sarr2 = squeeze(arr);
         auto sarr2 = transform<0>(arr, [](const auto& val) {
@@ -670,7 +670,7 @@ TEST(arrnd_test, squeeze)
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>(
                 {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
-        //EXPECT_TRUE((sarr2[{0, 0}].header().is_slice() && sarr2[{0, 1}].header().is_slice()));
+        //EXPECT_TRUE((sarr2[{0, 0}].info().is_slice() && sarr2[{0, 1}].info().is_slice()));
     }
 }
 
@@ -680,15 +680,15 @@ TEST(arrnd_test, can_access_relative_array_indices)
 
     arrnd<int> arr({3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-    for (auto i = 0; i < total(arr.header()); ++i) {
+    for (auto i = 0; i < total(arr.info()); ++i) {
         EXPECT_EQ(arr[i], arr(i));
     }
 
     auto slc = arr[{interval<>::at(2), interval<>::full(), interval<>::from(1, 2)}];
     std::vector<int> slc_values{18, 20, 22, 24};
 
-    EXPECT_EQ(slc_values.size(), total(slc.header()));
-    for (auto i = 0; i < total(slc.header()); ++i) {
+    EXPECT_EQ(slc_values.size(), total(slc.info()));
+    for (auto i = 0; i < total(slc.info()); ++i) {
         EXPECT_EQ(slc_values[i], slc(i));
     }
 }
@@ -1280,20 +1280,20 @@ TEST(arrnd_test, can_be_explicitly_be_casted_to_value_type_if_scalar)
 {
     {
         oc::arrnd::arrnd<double> arr({1}, 0.5);
-        EXPECT_TRUE(oc::arrnd::isscalar(arr.header()));
+        EXPECT_TRUE(oc::arrnd::isscalar(arr.info()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
         oc::arrnd::arrnd<double> arr({1, 1, 1}, 0.5);
-        EXPECT_TRUE(oc::arrnd::isscalar(arr.header()));
+        EXPECT_TRUE(oc::arrnd::isscalar(arr.info()));
         EXPECT_EQ(0.5, static_cast<double>(arr));
     }
 
     {
         oc::arrnd::arrnd<double> arr({3, 1, 2}, {0.1, 0.2, 0.3, 0.4, 0.5, 0.6});
         auto slc = arr[{oc::arrnd::interval<>::at(2), oc::arrnd::interval<>::at(0), oc::arrnd::interval<>::at(1)}];
-        EXPECT_TRUE(oc::arrnd::isscalar(slc.header()));
+        EXPECT_TRUE(oc::arrnd::isscalar(slc.info()));
         EXPECT_EQ(0.6, static_cast<double>(slc));
     }
 }
@@ -1326,7 +1326,7 @@ TEST(arrnd_test, can_return_its_data)
     Integer_array arr{{3, 1, 2}, 0};
 
     const auto& storage = *arr.shared_storage();
-    for (std::int64_t i = 0; i < oc::arrnd::total(arr.header()); ++i) {
+    for (std::int64_t i = 0; i < oc::arrnd::total(arr.info()); ++i) {
         EXPECT_EQ(0, storage[i]);
     }
 }
@@ -1405,7 +1405,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
     const int data[] = {1, 2, 3, 4, 5, 6};
 
     Integer_array arr1d{std::vector<int>{6}, data};
-    const std::size_t* dims1d{arr1d.header().dims().data()};
+    const std::size_t* dims1d{arr1d.info().dims().data()};
     for (std::size_t i = 0; i < dims1d[0]; ++i) {
         EXPECT_EQ((arr1d[{i}]), data[i]);
     }
@@ -1417,7 +1417,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
     }
 
     Integer_array arr2d{std::vector<int>{3, 2}, data};
-    const std::size_t* dims2d{arr2d.header().dims().data()};
+    const std::size_t* dims2d{arr2d.info().dims().data()};
     for (std::size_t i = 0; i < dims2d[0]; ++i) {
         for (std::size_t j = 0; j < dims2d[1]; ++j) {
             EXPECT_EQ((arr2d[{i, j}]), data[i * dims2d[1] + j]);
@@ -1433,7 +1433,7 @@ TEST(arrnd_test, have_read_write_access_to_its_cells)
     }
 
     Integer_array arr3d{std::vector<int>{3, 1, 2}, data};
-    const std::size_t* dims3d{arr3d.header().dims().data()};
+    const std::size_t* dims3d{arr3d.info().dims().data()};
     for (std::size_t k = 0; k < dims3d[0]; ++k) {
         for (std::size_t i = 0; i < dims3d[1]; ++i) {
             for (std::size_t j = 0; j < dims3d[2]; ++j) {

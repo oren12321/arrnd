@@ -2551,8 +2551,8 @@ TEST(arrnd_test, resize)
         Integer_array x{};
         Integer_array rarr{x.resize({6})};
         //EXPECT_FALSE(oc::arrnd::all_equal(arr, rarr));
-        EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
-        EXPECT_EQ(6, rarr.header().dims().data()[0]);
+        EXPECT_EQ(arr.info().dims().size(), rarr.info().dims().size());
+        EXPECT_EQ(6, rarr.info().dims().data()[0]);
         EXPECT_NE(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
@@ -3242,13 +3242,13 @@ TEST(arrnd_test, complex_array)
         arrnd<int> carr(std::vector<int>{3, 4, 2, 5, 6}, data);
 
         int i = 0;
-        for (auto ind = typename decltype(carr)::indexer_type(carr.header(), arrnd_iterator_position::begin); ind; ++ind) {
+        for (auto ind = typename decltype(carr)::indexer_type(carr.info(), arrnd_iterator_position::begin); ind; ++ind) {
             EXPECT_EQ(carr[*ind], data[i++]);
         }
         EXPECT_EQ(i, std::ssize(data));
 
         i = std::ssize(data) - 1;
-        for (auto ind = typename decltype(carr)::indexer_type(carr.header(), arrnd_iterator_position::rbegin); ind;
+        for (auto ind = typename decltype(carr)::indexer_type(carr.info(), arrnd_iterator_position::rbegin); ind;
              --ind) {
             EXPECT_EQ(carr[*ind], data[i--]);
         }
@@ -3325,7 +3325,7 @@ TEST(arrnd_test, ostream_operator)
         // array header ostream operator
         {
             ss.str(std::string{});
-            ss << arr.header();
+            ss << arr.info();
             EXPECT_EQ("total: 12\n"
                       "dims: [2 1 2 3]\n"
                       "strides: [6 6 3 1]\n"
@@ -3335,7 +3335,7 @@ TEST(arrnd_test, ostream_operator)
                 ss.str());
 
             ss.str(std::string{});
-            ss << slice.squeeze().header();
+            ss << slice.squeeze().info();
             EXPECT_EQ("total: 4\n"
                       "dims: [2 2]\n"
                       "strides: [3 2]\n"
