@@ -5643,7 +5643,7 @@ namespace details {
 
         [[nodiscard]] constexpr bool empty() const noexcept
         {
-            return oc::arrnd::empty(info_) && (issliced(info_) || !shared_storage_);
+            return oc::arrnd::empty(info_);
         }
 
         template <arrnd_type Arrnd>
