@@ -7139,8 +7139,7 @@ namespace details {
             return transpose(order);
         }
 
-        [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0,
-            bool find_closest_axis_dim_bigger_than_one_to_the_left = false) const
+        [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0) const
         {
             using expanded_type = inner_replaced_type<inner_this_type<0>, 0>;
 
@@ -7151,16 +7150,6 @@ namespace details {
             assert(axis >= 0 && axis < hdr_.dims().size());
 
             auto fixed_axis = axis;
-            if (find_closest_axis_dim_bigger_than_one_to_the_left) {
-                if (*std::next(hdr_.dims().cbegin(), fixed_axis) == 1) {
-                    for (difference_type i = axis - 1; i >= 0; --i) {
-                        if (*std::next(hdr_.dims().cbegin(), i) > 1) {
-                            fixed_axis = i;
-                            break;
-                        }
-                    }
-                }
-            }
 
             auto axis_dim = *std::next(hdr_.dims().cbegin(), fixed_axis);
 
