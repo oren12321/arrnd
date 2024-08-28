@@ -2148,17 +2148,17 @@ namespace details {
 
     template <typename StorageTraits, iterator_of_type_interval InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(
-        const arrnd_info<StorageTraits>& ai, InputIt first_dim_boundary, InputIt last_dim_boundary)
+        const arrnd_info<StorageTraits>& info, InputIt first_dim_boundary, InputIt last_dim_boundary)
     {
         if (std::distance(first_dim_boundary, last_dim_boundary) < 0) {
             throw std::invalid_argument("invalid input iterators distance < 0");
         }
 
-        if (std::size(ai.dims()) == 0 && std::distance(first_dim_boundary, last_dim_boundary) == 0) {
-            return arrnd_info<StorageTraits>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+        if (std::size(info.dims()) == 0 && std::distance(first_dim_boundary, last_dim_boundary) == 0) {
+            return arrnd_info<StorageTraits>(info.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
         }
 
-        if (std::size(ai.dims()) < std::distance(first_dim_boundary, last_dim_boundary)) {
+        if (std::size(info.dims()) < std::distance(first_dim_boundary, last_dim_boundary)) {
             throw std::invalid_argument("invalid dim boundaries - different number from dims");
         }
 
@@ -2167,19 +2167,19 @@ namespace details {
             typename arrnd_info<StorageTraits>::boundary_type>::storage_type
             bounded_dim_boundaries(std::distance(first_dim_boundary, last_dim_boundary));
 
-        std::transform(first_dim_boundary, last_dim_boundary, std::begin(ai.dims()), std::begin(bounded_dim_boundaries),
-            [](auto boundary, auto dim) {
+        std::transform(first_dim_boundary, last_dim_boundary, std::begin(info.dims()),
+            std::begin(bounded_dim_boundaries), [](auto boundary, auto dim) {
                 return bound(static_cast<typename arrnd_info<StorageTraits>::boundary_type>(boundary), 0, dim);
             });
 
         if (!std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
-                std::begin(ai.dims()), true, std::logical_and<>{}, [](auto boundary, auto dim) {
+                std::begin(info.dims()), true, std::logical_and<>{}, [](auto boundary, auto dim) {
                     return empty(boundary) || isbetween(boundary, 0, dim);
                 })) {
             throw std::out_of_range("invalid dim boundaries - not suitable for dims");
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims = ai.dims();
+        typename arrnd_info<StorageTraits>::extent_storage_type dims = info.dims();
         std::transform(
             std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(dims), [](auto boundary) {
                 return absdiff(boundary);
@@ -2188,17 +2188,17 @@ namespace details {
         if (std::any_of(std::begin(dims), std::end(dims), [](auto dim) {
                 return dim == 0;
             })) {
-            return arrnd_info<StorageTraits>(ai.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
+            return arrnd_info<StorageTraits>(info.hints() | arrnd_hint::continuous | arrnd_hint::sliced);
         }
 
-        if (std::equal(std::begin(dims), std::end(dims), std::begin(ai.dims()), std::end(ai.dims()))) {
-            return ai;
+        if (std::equal(std::begin(dims), std::end(dims), std::begin(info.dims()), std::end(info.dims()))) {
+            return info;
         }
 
         typename arrnd_info<StorageTraits>::extent_storage_type strides(
-            std::begin(ai.strides()), std::end(ai.strides()));
+            std::begin(info.strides()), std::end(info.strides()));
 
-        std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(ai.strides()),
+        std::transform(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries), std::begin(info.strides()),
             std::begin(strides), [](auto boundary, auto stride) {
                 if (boundary.step()
                     > std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max() / stride) {
@@ -2207,9 +2207,9 @@ namespace details {
                 return boundary.step() * stride;
             });
 
-        typename arrnd_info<StorageTraits>::extent_type offset = ai.indices_boundary().start()
+        typename arrnd_info<StorageTraits>::extent_type offset = info.indices_boundary().start()
             + std::transform_reduce(std::begin(bounded_dim_boundaries), std::end(bounded_dim_boundaries),
-                std::begin(ai.strides()), typename arrnd_info<StorageTraits>::extent_type{0},
+                std::begin(info.strides()), typename arrnd_info<StorageTraits>::extent_type{0},
                 overflow_check_plus<typename arrnd_info<StorageTraits>::extent_type>{}, [](auto boundary, auto stride) {
                     if (boundary.start()
                         > std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max() / stride) {
@@ -2233,7 +2233,7 @@ namespace details {
             = std::reduce(std::begin(dims), std::end(dims), typename arrnd_info<StorageTraits>::extent_type{1},
                 overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
 
-        arrnd_hint hints = ai.hints() | arrnd_hint::sliced;
+        arrnd_hint hints = info.hints() | arrnd_hint::sliced;
         if (max_index + 1 == num_elem) {
             hints |= arrnd_hint::continuous;
         } else {
@@ -2245,41 +2245,41 @@ namespace details {
 
     template <typename StorageTraits, iterable_of_type_interval Cont>
     [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(
-        const arrnd_info<StorageTraits>& ai, Cont&& dim_boundaries)
+        const arrnd_info<StorageTraits>& info, Cont&& dim_boundaries)
     {
-        return slice(ai, std::begin(dim_boundaries), std::end(dim_boundaries));
+        return slice(info, std::begin(dim_boundaries), std::end(dim_boundaries));
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& info,
         std::initializer_list<typename arrnd_info<StorageTraits>::boundary_type> dim_boundaries)
     {
-        return slice(ai, dim_boundaries.begin(), dim_boundaries.end());
+        return slice(info, dim_boundaries.begin(), dim_boundaries.end());
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> slice(const arrnd_info<StorageTraits>& info,
         template_type<interval> auto dim_boundary, typename arrnd_info<StorageTraits>::extent_type axis)
     {
-        if (std::size(ai.dims()) == 0) {
+        if (std::size(info.dims()) == 0) {
             throw std::invalid_argument("invalid arrnd info");
         }
 
-        if (axis >= std::size(ai.dims())) {
+        if (axis >= std::size(info.dims())) {
             throw std::out_of_range("invalid axis");
         }
 
         typename arrnd_info<StorageTraits>::storage_traits_type::template replaced_type<
-            typename arrnd_info<StorageTraits>::boundary_type>::storage_type dim_boundaries(std::size(ai.dims()),
+            typename arrnd_info<StorageTraits>::boundary_type>::storage_type dim_boundaries(std::size(info.dims()),
             arrnd_info<StorageTraits>::boundary_type::full());
 
         dim_boundaries[axis] = static_cast<typename arrnd_info<StorageTraits>::boundary_type>(dim_boundary);
 
-        return slice(ai, dim_boundaries);
+        return slice(info, dim_boundaries);
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> squeeze(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> squeeze(const arrnd_info<StorageTraits>& info,
         arrnd_squeeze_type squeeze_type,
         typename arrnd_info<StorageTraits>::extent_type max_count
         = std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max())
@@ -2289,31 +2289,31 @@ namespace details {
             throw std::invalid_argument("invalid squeeze type - no max count support for full squeeze type");
         }
 
-        if (size(ai) == 0) {
+        if (size(info) == 0) {
             if (max_count != std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max()
                 && max_count != 0) {
                 throw std::invalid_argument("invalid squeeze - empty squeeze support for max count > 0");
             }
-            return ai;
+            return info;
         }
 
-        if (size(ai) == 1) {
+        if (size(info) == 1) {
             if (max_count != std::numeric_limits<typename arrnd_info<StorageTraits>::extent_type>::max()
                 && max_count > 1) {
                 throw std::invalid_argument("invalid squeeze - no 1d squeeze support for max count > 1");
             }
-            if (max_count == 0 || (max_count == 1 && ai.dims()[0] == 1)) {
-                return ai;
+            if (max_count == 0 || (max_count == 1 && info.dims()[0] == 1)) {
+                return info;
             }
 
             return arrnd_info<StorageTraits>(typename arrnd_info<StorageTraits>::extent_storage_type(
                                                  1, typename arrnd_info<StorageTraits>::extent_type{1}),
-                typename arrnd_info<StorageTraits>::extent_storage_type(1, ai.strides()[0]), ai.indices_boundary(),
-                ai.hints());
+                typename arrnd_info<StorageTraits>::extent_storage_type(1, info.strides()[0]), info.indices_boundary(),
+                info.hints());
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(info.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(info.strides());
 
         if (squeeze_type == arrnd_squeeze_type::left || squeeze_type == arrnd_squeeze_type::trim) {
             typename arrnd_info<StorageTraits>::extent_type left_ones_count = 0;
@@ -2368,30 +2368,30 @@ namespace details {
             }
         }
 
-        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints());
+        return arrnd_info<StorageTraits>(dims, strides, info.indices_boundary(), info.hints());
     }
 
     template <typename StorageTraits, iterator_of_type_integral InputIt>
     [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(
-        const arrnd_info<StorageTraits>& ai, InputIt first_axis, InputIt last_axis)
+        const arrnd_info<StorageTraits>& info, InputIt first_axis, InputIt last_axis)
     {
-        if (std::distance(first_axis, last_axis) != std::size(ai.dims())) {
+        if (std::distance(first_axis, last_axis) != std::size(info.dims())) {
             throw std::invalid_argument("invalid input iterators distance != number of dims");
         }
 
-        if (empty(ai)) {
-            return ai;
+        if (empty(info)) {
+            return info;
         }
 
-        if (std::size(ai.dims()) == 0) {
+        if (std::size(info.dims()) == 0) {
             if (*first_axis != 0) {
                 throw std::out_of_range("invalid axis value");
             }
-            return ai;
+            return info;
         }
 
-        if (std::any_of(first_axis, last_axis, [&ai](std::size_t axis) {
-                return axis < 0 || axis >= std::size(ai.dims());
+        if (std::any_of(first_axis, last_axis, [&info](std::size_t axis) {
+                return axis < 0 || axis >= std::size(info.dims());
             })) {
             throw std::out_of_range("invalid axis value");
         }
@@ -2407,73 +2407,74 @@ namespace details {
         }
 
         if (std::is_sorted(first_axis, last_axis)) {
-            return ai;
+            return info;
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims(std::size(ai.dims()));
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(std::size(ai.strides()));
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(std::size(info.dims()));
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(std::size(info.strides()));
 
         typename arrnd_info<StorageTraits>::extent_type i = 0;
         for (auto axes_it = first_axis; axes_it != last_axis; ++axes_it, ++i) {
-            dims[i] = ai.dims()[*axes_it];
-            strides[i] = ai.strides()[*axes_it];
+            dims[i] = info.dims()[*axes_it];
+            strides[i] = info.strides()[*axes_it];
         }
 
-        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, info.indices_boundary(), info.hints() | arrnd_hint::transposed);
     }
 
     template <typename StorageTraits, iterable_of_type_integral Cont>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(const arrnd_info<StorageTraits>& ai, Cont&& axes)
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(
+        const arrnd_info<StorageTraits>& info, Cont&& axes)
     {
-        return transpose(ai, std::begin(axes), std::end(axes));
+        return transpose(info, std::begin(axes), std::end(axes));
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> transpose(const arrnd_info<StorageTraits>& info,
         std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> axes)
     {
-        return transpose(ai, axes.begin(), axes.end());
+        return transpose(info, axes.begin(), axes.end());
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> swap(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> swap(const arrnd_info<StorageTraits>& info,
         typename arrnd_info<StorageTraits>::extent_type first_axis = 0,
         typename arrnd_info<StorageTraits>::extent_type second_axis = 1)
     {
 
-        if (first_axis >= std::size(ai.dims()) || second_axis >= std::size(ai.dims())) {
+        if (first_axis >= std::size(info.dims()) || second_axis >= std::size(info.dims())) {
             throw std::out_of_range("invalid axis value");
         }
 
         if (first_axis == second_axis) {
-            return ai;
+            return info;
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(info.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(info.strides());
 
         std::swap(dims[first_axis], dims[second_axis]);
         std::swap(strides[first_axis], strides[second_axis]);
 
-        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, info.indices_boundary(), info.hints() | arrnd_hint::transposed);
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> move(const arrnd_info<StorageTraits>& ai,
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> move(const arrnd_info<StorageTraits>& info,
         typename arrnd_info<StorageTraits>::extent_type src_axis = 0,
         typename arrnd_info<StorageTraits>::extent_type dst_axis = 1)
     {
 
-        if (src_axis >= std::size(ai.dims()) || dst_axis >= std::size(ai.dims())) {
+        if (src_axis >= std::size(info.dims()) || dst_axis >= std::size(info.dims())) {
             throw std::out_of_range("invalid axis value");
         }
 
         if (src_axis == dst_axis) {
-            return ai;
+            return info;
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(info.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(info.strides());
 
         auto src_dim = dims[src_axis];
         dims.erase(std::next(std::begin(dims), src_axis));
@@ -2483,21 +2484,21 @@ namespace details {
         strides.erase(std::next(std::begin(strides), src_axis));
         strides.insert(std::next(std::begin(strides), dst_axis), 1, src_stride);
 
-        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, info.indices_boundary(), info.hints() | arrnd_hint::transposed);
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> roll(const arrnd_info<StorageTraits>& ai, int offset = 1)
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> roll(const arrnd_info<StorageTraits>& info, int offset = 1)
     {
-        if (empty(ai) || std::size(ai.dims()) == 1 || offset == 0) {
-            return ai;
+        if (empty(info) || std::size(info.dims()) == 1 || offset == 0) {
+            return info;
         }
 
-        typename arrnd_info<StorageTraits>::extent_storage_type dims(ai.dims());
-        typename arrnd_info<StorageTraits>::extent_storage_type strides(ai.strides());
+        typename arrnd_info<StorageTraits>::extent_storage_type dims(info.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type strides(info.strides());
 
         typename arrnd_info<StorageTraits>::extent_type wrapped_offset
-            = static_cast<typename arrnd_info<StorageTraits>::extent_type>(std::abs(offset)) % std::size(ai.dims());
+            = static_cast<typename arrnd_info<StorageTraits>::extent_type>(std::abs(offset)) % std::size(info.dims());
 
         if (offset > 0) {
             std::rotate(std::rbegin(dims), std::next(std::rbegin(dims), wrapped_offset), std::rend(dims));
@@ -2507,45 +2508,45 @@ namespace details {
             std::rotate(std::begin(strides), std::next(std::begin(strides), wrapped_offset), std::end(strides));
         }
 
-        return arrnd_info<StorageTraits>(dims, strides, ai.indices_boundary(), ai.hints() | arrnd_hint::transposed);
+        return arrnd_info<StorageTraits>(dims, strides, info.indices_boundary(), info.hints() | arrnd_hint::transposed);
     }
 
     template <typename StorageTraits>
     [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type total(
-        const arrnd_info<StorageTraits>& ai)
+        const arrnd_info<StorageTraits>& info)
     {
-        if (empty(ai)) {
+        if (empty(info)) {
             return 0;
         }
 
-        return std::reduce(std::begin(ai.dims()), std::end(ai.dims()),
+        return std::reduce(std::begin(info.dims()), std::end(info.dims()),
             typename arrnd_info<StorageTraits>::extent_type{1},
             overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
     }
 
     template <typename StorageTraits>
     [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type size(
-        const arrnd_info<StorageTraits>& ai)
+        const arrnd_info<StorageTraits>& info)
     {
-        return std::size(ai.dims());
+        return std::size(info.dims());
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool empty(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool empty(const arrnd_info<StorageTraits>& info)
     {
-        return size(ai) == 0;
+        return size(info) == 0;
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool iscontinuous(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool iscontinuous(const arrnd_info<StorageTraits>& info)
     {
-        return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::continuous));
+        return static_cast<bool>(to_underlying(info.hints() & arrnd_hint::continuous));
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool issliced(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool issliced(const arrnd_info<StorageTraits>& info)
     {
-        return static_cast<bool>(to_underlying(ai.hints() & arrnd_hint::sliced));
+        return static_cast<bool>(to_underlying(info.hints() & arrnd_hint::sliced));
     }
 
     template <typename StorageTraits>
@@ -2555,102 +2556,105 @@ namespace details {
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool isvector(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool isvector(const arrnd_info<StorageTraits>& info)
     {
-        return size(ai) == 1;
+        return size(info) == 1;
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool ismatrix(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool ismatrix(const arrnd_info<StorageTraits>& info)
     {
-        return size(ai) == 2;
+        return size(info) == 2;
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool isrow(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool isrow(const arrnd_info<StorageTraits>& info)
     {
-        return ismatrix(ai) && ai.dims().front() == 1;
+        return ismatrix(info) && info.dims().front() == 1;
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool iscolumn(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool iscolumn(const arrnd_info<StorageTraits>& info)
     {
-        return ismatrix(ai) && ai.dims().back() == 1;
+        return ismatrix(info) && info.dims().back() == 1;
     }
 
     template <typename StorageTraits>
-    [[nodiscard]] inline constexpr bool isscalar(const arrnd_info<StorageTraits>& ai)
+    [[nodiscard]] inline constexpr bool isscalar(const arrnd_info<StorageTraits>& info)
     {
-        return total(ai) == 1;
+        return total(info) == 1;
     }
 
     template <typename StorageTraits, iterator_of_type_integral InputIt>
     constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
-        const arrnd_info<StorageTraits>& ai, InputIt first_sub, InputIt last_sub)
+        const arrnd_info<StorageTraits>& info, InputIt first_sub, InputIt last_sub)
     {
         if (std::distance(first_sub, last_sub) <= 0) {
             throw std::invalid_argument("invalid input iterators distance <= 0");
         }
 
-        if (std::distance(first_sub, last_sub) > size(ai)) {
+        if (std::distance(first_sub, last_sub) > size(info)) {
             throw std::invalid_argument("bad sub iterators distance > ndi.ndims");
         }
 
-        if (empty(ai)) {
+        if (empty(info)) {
             throw std::invalid_argument("undefined operation for empty arrnd info");
         }
 
         if (!std::transform_reduce(first_sub, last_sub,
-                std::next(std::begin(ai.dims()), std::size(ai.dims()) - std::distance(first_sub, last_sub)), true,
+                std::next(std::begin(info.dims()), std::size(info.dims()) - std::distance(first_sub, last_sub)), true,
                 std::logical_and<>{}, [](auto sub, auto dim) {
                     return sub >= 0 && sub < dim;
                 })) {
             throw std::out_of_range("invalid subs - not suitable for dims");
         }
 
-        return ai.indices_boundary().start()
+        return info.indices_boundary().start()
             + std::transform_reduce(first_sub, last_sub,
-                std::next(std::begin(ai.strides()), std::size(ai.strides()) - std::distance(first_sub, last_sub)),
+                std::next(std::begin(info.strides()), std::size(info.strides()) - std::distance(first_sub, last_sub)),
                 typename arrnd_info<StorageTraits>::extent_type{0},
                 overflow_check_plus<typename arrnd_info<StorageTraits>::extent_type>{},
                 overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
     }
 
     template <typename StorageTraits, iterable_of_type_integral Cont>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& ai, Cont&& subs)
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+        const arrnd_info<StorageTraits>& info, Cont&& subs)
     {
-        return sub2ind(ai, std::begin(subs), std::end(subs));
+        return sub2ind(info, std::begin(subs), std::end(subs));
     }
 
     template <typename StorageTraits>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& ai,
+    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& info,
         std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> subs)
     {
-        return sub2ind(ai, subs.begin(), subs.end());
+        return sub2ind(info, subs.begin(), subs.end());
     }
 
     template <typename StorageTraits, iterator_of_type_integral OutputIt>
     constexpr void ind2sub(
-        const arrnd_info<StorageTraits>& ai, typename arrnd_info<StorageTraits>::extent_type ind, OutputIt d_sub)
+        const arrnd_info<StorageTraits>& info, typename arrnd_info<StorageTraits>::extent_type ind, OutputIt d_sub)
     {
-        if (empty(ai)) {
+        if (empty(info)) {
             throw std::invalid_argument("undefined operation for empty arrnd info");
         }
 
-        if (!isbetween(ai.indices_boundary(), ind)) {
+        if (!isbetween(info.indices_boundary(), ind)) {
             throw std::out_of_range("invalid ind - not inside indices boundary");
         }
 
-        for (typename arrnd_info<StorageTraits>::extent_type i = 0; i < std::size(ai.dims()); ++i) {
-            *d_sub = (ai.dims()[i] > 1 ? ((ind - ai.indices_boundary().start()) / ai.strides()[i]) % ai.dims()[i] : 0);
+        for (typename arrnd_info<StorageTraits>::extent_type i = 0; i < std::size(info.dims()); ++i) {
+            *d_sub
+                = (info.dims()[i] > 1 ? ((ind - info.indices_boundary().start()) / info.strides()[i]) % info.dims()[i]
+                                      : 0);
             ++d_sub;
         }
     }
 
     template <typename StorageTraits>
-    inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageTraits>& ai)
+    inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageTraits>& info)
     {
-        if (empty(ai)) {
+        if (empty(info)) {
             os << "empty";
             return os;
         }
@@ -2663,18 +2667,18 @@ namespace details {
             os << *std::next(std::cbegin(vec), std::ssize(vec) - 1) << ']';
         };
 
-        os << "total: " << total(ai) << '\n';
+        os << "total: " << total(info) << '\n';
         os << "dims: ";
-        print_vec(ai.dims());
+        print_vec(info.dims());
         os << '\n';
         os << "strides: ";
-        print_vec(ai.strides());
+        print_vec(info.strides());
         os << '\n';
-        os << "indices_boundary: " << ai.indices_boundary() << "\n";
+        os << "indices_boundary: " << info.indices_boundary() << "\n";
         os << "hints (transposed|sliced|continuous): "
-           << std::bitset<to_underlying(arrnd_hint::bitscount)>(to_underlying(ai.hints())) << "\n";
-        os << "props (vector|matrix|row|column|scalar): " << isvector(ai) << ismatrix(ai) << isrow(ai) << iscolumn(ai)
-           << isscalar(ai);
+           << std::bitset<to_underlying(arrnd_hint::bitscount)>(to_underlying(info.hints())) << "\n";
+        os << "props (vector|matrix|row|column|scalar): " << isvector(info) << ismatrix(info) << isrow(info)
+           << iscolumn(info) << isscalar(info);
 
         return os;
     }
@@ -2721,25 +2725,25 @@ namespace details {
         using sub_storage_type = typename info_type::extent_storage_type;
 
         explicit constexpr arrnd_indexer(
-            const info_type& ai, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : ai_(ai)
-            , subs_(size(ai))
-            , pos_(empty(ai) ? arrnd_iterator_position::end : start_pos)
+            const info_type& info, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : info_(info)
+            , subs_(size(info))
+            , pos_(empty(info) ? arrnd_iterator_position::end : start_pos)
         {
-            if (!empty(ai)) {
+            if (!empty(info)) {
                 if (start_pos == arrnd_iterator_position::begin || start_pos == arrnd_iterator_position::rend) {
                     std::fill(std::begin(subs_), std::end(subs_), index_type{0});
-                    curr_abs_ind_ = ai.indices_boundary().start();
+                    curr_abs_ind_ = info.indices_boundary().start();
                     curr_rel_ind_ = index_type{0};
                 } else {
-                    std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(subs_), [](auto dim) {
+                    std::transform(std::begin(info.dims()), std::end(info.dims()), std::begin(subs_), [](auto dim) {
                         return dim - index_type{1};
                     });
-                    curr_abs_ind_ = ai.indices_boundary().stop() - index_type{1};
-                    curr_rel_ind_ = total(ai) - index_type{1};
+                    curr_abs_ind_ = info.indices_boundary().stop() - index_type{1};
+                    curr_rel_ind_ = total(info) - index_type{1};
                 }
                 if (start_pos == arrnd_iterator_position::end) {
-                    curr_rel_ind_ = total(ai);
+                    curr_rel_ind_ = total(info);
                 } else if (start_pos == arrnd_iterator_position::rend) {
                     curr_rel_ind_ = index_type{0} - 1;
                 }
@@ -2767,21 +2771,21 @@ namespace details {
 
             ++curr_rel_ind_;
 
-            for (index_type i = size(ai_); i > 0; --i) {
+            for (index_type i = size(info_); i > 0; --i) {
                 ++subs_[i - 1];
-                curr_abs_ind_ += ai_.strides()[i - 1];
-                if (subs_[i - 1] < ai_.dims()[i - 1]) {
+                curr_abs_ind_ += info_.strides()[i - 1];
+                if (subs_[i - 1] < info_.dims()[i - 1]) {
                     return *this;
                 }
-                curr_abs_ind_ -= ai_.strides()[i - 1] * subs_[i - 1];
+                curr_abs_ind_ -= info_.strides()[i - 1] * subs_[i - 1];
                 subs_[i - 1] = 0;
             }
 
-            std::transform(std::begin(ai_.dims()), std::end(ai_.dims()), std::begin(subs_), [](auto dim) {
+            std::transform(std::begin(info_.dims()), std::end(info_.dims()), std::begin(subs_), [](auto dim) {
                 return dim - index_type{1};
             });
-            curr_abs_ind_ = ai_.indices_boundary().stop() - index_type{1};
-            curr_rel_ind_ = total(ai_);
+            curr_abs_ind_ = info_.indices_boundary().stop() - index_type{1};
+            curr_rel_ind_ = total(info_);
             pos_ = arrnd_iterator_position::end;
 
             return *this;
@@ -2823,18 +2827,18 @@ namespace details {
 
             --curr_rel_ind_;
 
-            for (index_type i = size(ai_); i > 0; --i) {
+            for (index_type i = size(info_); i > 0; --i) {
                 if (subs_[i - 1] >= 1) {
                     --subs_[i - 1];
-                    curr_abs_ind_ -= ai_.strides()[i - 1];
+                    curr_abs_ind_ -= info_.strides()[i - 1];
                     return *this;
                 }
-                subs_[i - 1] = ai_.dims()[i - 1] - index_type{1};
-                curr_abs_ind_ += ai_.strides()[i - 1] * subs_[i - 1];
+                subs_[i - 1] = info_.dims()[i - 1] - index_type{1};
+                curr_abs_ind_ += info_.strides()[i - 1] * subs_[i - 1];
             }
 
             std::fill(std::begin(subs_), std::end(subs_), index_type{0});
-            curr_abs_ind_ = ai_.indices_boundary().start();
+            curr_abs_ind_ = info_.indices_boundary().start();
             curr_rel_ind_ = index_type{0} - 1;
             pos_ = arrnd_iterator_position::rend;
 
@@ -2880,7 +2884,7 @@ namespace details {
 
         [[nodiscard]] constexpr arrnd_indexer operator[](index_type index) const noexcept
         {
-            assert(index >= 0 && index < total(ai_));
+            assert(index >= 0 && index < total(info_));
 
             if (index > curr_rel_ind_) {
                 return *this + (index - curr_rel_ind_);
@@ -2915,7 +2919,7 @@ namespace details {
         }
 
     private:
-        info_type ai_;
+        info_type info_;
 
         sub_storage_type subs_;
 
@@ -2966,13 +2970,13 @@ namespace details {
 
         template <typename InputIt>
             requires(template_type<iterator_value_t<InputIt>, arrnd_window>)
-        explicit constexpr arrnd_windows_slider(const info_type& ai, InputIt first_window, InputIt last_window,
+        explicit constexpr arrnd_windows_slider(const info_type& info, InputIt first_window, InputIt last_window,
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : ai_(ai)
-            , windows_(size(ai))
-            , curr_boundaries_(size(ai))
+            : info_(info)
+            , windows_(size(info))
+            , curr_boundaries_(size(info))
         {
-            if (size(ai) < std::distance(first_window, last_window)) {
+            if (size(info) < std::distance(first_window, last_window)) {
                 throw std::invalid_argument("invalid window size - bigger than number of dims");
             }
 
@@ -2982,8 +2986,8 @@ namespace details {
                 throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
             }
 
-            if (!std::transform_reduce(std::begin(ai.dims()),
-                    std::next(std::begin(ai.dims()), std::distance(first_window, last_window)), first_window, true,
+            if (!std::transform_reduce(std::begin(info.dims()),
+                    std::next(std::begin(info.dims()), std::distance(first_window, last_window)), first_window, true,
                     std::logical_and<>{}, [](auto dim, auto window) {
                         auto ival = window.ival;
                         auto type = window.type;
@@ -3002,18 +3006,18 @@ namespace details {
                     return window_type(static_cast<typename window_type::interval_type>(window.ival), window.type);
                 });
             }
-            if (size(ai) > std::distance(first_window, last_window)) {
-                std::transform(std::next(std::begin(ai.dims()), std::distance(first_window, last_window)),
-                    std::end(ai.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
+            if (size(info) > std::distance(first_window, last_window)) {
+                std::transform(std::next(std::begin(info.dims()), std::distance(first_window, last_window)),
+                    std::end(info.dims()), std::next(std::begin(windows_), std::distance(first_window, last_window)),
                     [](auto dim) {
                         return window_type(typename window_type::interval_type(0, static_cast<size_type>(dim)),
                             arrnd_window_type::complete);
                     });
             }
 
-            typename info_type::extent_storage_type indexer_dims(size(ai));
-            std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows_), std::begin(indexer_dims),
-                [](auto dim, auto window) {
+            typename info_type::extent_storage_type indexer_dims(size(info));
+            std::transform(std::begin(info.dims()), std::end(info.dims()), std::begin(windows_),
+                std::begin(indexer_dims), [](auto dim, auto window) {
                     auto ival = window.ival;
                     if (isunbound(window.ival)) {
                         return index_type{1};
@@ -3023,42 +3027,42 @@ namespace details {
 
             indexer_ = arrnd_indexer(info_type(indexer_dims), start_pos);
 
-            for (size_type i = 0; i < size(ai); ++i) {
-                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai.dims()[i]);
+            for (size_type i = 0; i < size(info); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], info.dims()[i]);
             }
         }
 
         template <iterable_type Cont>
             requires(template_type<iterable_value_t<Cont>, arrnd_window>)
         explicit constexpr arrnd_windows_slider(
-            const info_type& ai, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : arrnd_windows_slider(ai, std::begin(windows), std::end(windows), start_pos)
+            const info_type& info, Cont&& windows, arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
+            : arrnd_windows_slider(info, std::begin(windows), std::end(windows), start_pos)
         { }
 
-        explicit constexpr arrnd_windows_slider(const info_type& ai, std::initializer_list<window_type> windows,
+        explicit constexpr arrnd_windows_slider(const info_type& info, std::initializer_list<window_type> windows,
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
-            : arrnd_windows_slider(ai, windows.begin(), windows.end(), start_pos)
+            : arrnd_windows_slider(info, windows.begin(), windows.end(), start_pos)
         { }
 
-        explicit constexpr arrnd_windows_slider(const info_type& ai, index_type axis,
+        explicit constexpr arrnd_windows_slider(const info_type& info, index_type axis,
             const window_type& window = window_type(typename window_type::interval_type(0, 1)),
             arrnd_iterator_position start_pos = arrnd_iterator_position::begin)
         {
-            if (axis >= size(ai)) {
+            if (axis >= size(info)) {
                 throw std::out_of_range("invalid axis");
             }
 
             typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows(
-                size(ai));
+                size(info));
 
-            std::transform(std::begin(ai.dims()), std::end(ai.dims()), std::begin(windows), [](auto dim) {
+            std::transform(std::begin(info.dims()), std::end(info.dims()), std::begin(windows), [](auto dim) {
                 return window_type(
                     typename window_type::interval_type(0, static_cast<size_type>(dim)), arrnd_window_type::complete);
             });
 
             windows[axis] = window;
 
-            *this = arrnd_windows_slider(ai, windows, start_pos);
+            *this = arrnd_windows_slider(info, windows, start_pos);
         }
 
         constexpr arrnd_windows_slider() = default;
@@ -3072,8 +3076,8 @@ namespace details {
         {
             ++indexer_;
 
-            for (size_type i = 0; i < size(ai_); ++i) {
-                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            for (size_type i = 0; i < size(info_); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], info_.dims()[i]);
             }
 
             return *this;
@@ -3105,8 +3109,8 @@ namespace details {
         {
             --indexer_;
 
-            for (size_type i = 0; i < size(ai_); ++i) {
-                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], ai_.dims()[i]);
+            for (size_type i = 0; i < size(info_); ++i) {
+                curr_boundaries_[i] = window2boundary(windows_[i], indexer_.subs()[i], info_.dims()[i]);
             }
 
             return *this;
@@ -3150,8 +3154,8 @@ namespace details {
 
             arrnd_windows_slider<info_type> temp{*this};
 
-            for (size_type i = 0; i < size(ai_); ++i) {
-                temp.curr_boundaries_[i] = window2boundary(windows_[i], subs[i], ai_.dims()[i]);
+            for (size_type i = 0; i < size(info_); ++i) {
+                temp.curr_boundaries_[i] = window2boundary(windows_[i], subs[i], info_.dims()[i]);
             }
 
             return temp;
@@ -3180,7 +3184,7 @@ namespace details {
         // not so safe function, and should be used with consideration of the internal indexer.
         constexpr void modify_window(index_type axis, window_type window)
         {
-            if (axis >= size(ai_)) {
+            if (axis >= size(info_)) {
                 throw std::out_of_range("invalid axis");
             }
 
@@ -3190,13 +3194,13 @@ namespace details {
                 throw std::invalid_argument("invalid window interval - half bounded intervals currently not supported");
             }
 
-            if (!(isunbound(ival) || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= ai_.dims()[axis]))) {
+            if (!(isunbound(ival) || (ival.start() <= 0 && ival.stop() >= 0 && absdiff(ival) <= info_.dims()[axis]))) {
                 throw std::invalid_argument("invalid window interval");
             }
 
             windows_[axis] = window;
 
-            curr_boundaries_[axis] = window2boundary(windows_[axis], indexer_.subs()[axis], ai_.dims()[axis]);
+            curr_boundaries_[axis] = window2boundary(windows_[axis], indexer_.subs()[axis], info_.dims()[axis]);
         }
 
     private:
@@ -3226,14 +3230,13 @@ namespace details {
             return typename info_type::boundary_type(nstart, nstop, static_cast<index_type>(ival.step()));
         }
 
-        info_type ai_;
+        info_type info_;
 
         typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows_;
         arrnd_indexer<info_type> indexer_;
 
         boundary_storage_type curr_boundaries_;
     };
-
 }
 
 using details::arrnd_indexer;
@@ -5339,9 +5342,10 @@ namespace details {
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
             const InputDataIt& first_data, const InputDataIt& last_data)
             : hdr_(first_dim, last_dim)
-            , shared_storage_(oc::arrnd::empty(hdr_) ? nullptr
-                                             : std::allocate_shared<storage_type>(
-                                                 allocator_template_type<storage_type>(), first_data, last_data))
+            , shared_storage_(oc::arrnd::empty(hdr_)
+                      ? nullptr
+                      : std::allocate_shared<storage_type>(
+                          allocator_template_type<storage_type>(), first_data, last_data))
         {
             // in case that data buffer allocated, check the number of data elements is valid
             if (shared_storage_) {
@@ -8759,61 +8763,63 @@ namespace details {
         }
         [[nodiscard]] constexpr auto cbegin(size_type axis, arrnd_returned_element_iterator_tag) const
         {
-            return empty()
-                ? const_iterator()
-                : const_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::begin));
+            return empty() ? const_iterator()
+                           : const_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::begin));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_element_iterator_tag)
         {
-            return empty() ? iterator()
-                           : iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
+            return empty()
+                ? iterator()
+                : iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto end(size_type axis, arrnd_returned_element_iterator_tag) const
         {
-            return empty() ? iterator()
-                           : iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
+            return empty()
+                ? iterator()
+                : iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto cend(size_type axis, arrnd_returned_element_iterator_tag) const
         {
-            return empty()
-                ? const_iterator()
-                : const_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
+            return empty() ? const_iterator()
+                           : const_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::end));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_element_iterator_tag)
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rbegin(size_type axis, arrnd_returned_element_iterator_tag) const
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto crbegin(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty() ? const_reverse_iterator()
-                           : const_reverse_iterator(
-                               shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
+                           : const_reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rbegin));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_element_iterator_tag)
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto rend(size_type axis, arrnd_returned_element_iterator_tag) const
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
         }
         [[nodiscard]] constexpr auto crend(size_type axis, arrnd_returned_element_iterator_tag) const
         {
             return empty() ? const_reverse_iterator()
-                           : const_reverse_iterator(
-                               shared_storage_->data(), indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
+                           : const_reverse_iterator(shared_storage_->data(),
+                               indexer_type(move(hdr_, axis, 0), arrnd_iterator_position::rend));
         }
 
         // by order iterator functions
@@ -8835,9 +8841,9 @@ namespace details {
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
         {
-            return empty()
-                ? const_iterator()
-                : const_iterator(shared_storage_->data(), indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
+            return empty() ? const_iterator()
+                           : const_iterator(shared_storage_->data(),
+                               indexer_type(oc::arrnd::transpose(hdr_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
