@@ -5440,7 +5440,7 @@ namespace details {
 
         [[nodiscard]] constexpr const this_type* creator() const noexcept
         {
-            return is_creator_valid_.expired() ? nullptr : creator_;
+            return creators_.is_creator_valid.expired() ? nullptr : creators_.latest_creator;
         }
 
         [[nodiscard]] explicit constexpr operator value_type() const noexcept
@@ -5496,8 +5496,8 @@ namespace details {
             this_type slice{};
             slice.hdr_ = oc::arrnd::slice(hdr_, ranges.first, ranges.second);
             slice.buffsp_ = buffsp_;
-            slice.is_creator_valid_ = original_valid_creator_;
-            slice.creator_ = this;
+            slice.creators_.is_creator_valid = creators_.has_original_creator;
+            slice.creators_.latest_creator = this;
             return slice;
         }
         template <iterator_of_type_interval InputIt>
@@ -5532,8 +5532,8 @@ namespace details {
             this_type slice{};
             slice.hdr_ = oc::arrnd::squeeze(oc::arrnd::slice(hdr_, range, 0), arrnd_squeeze_type::left, 1);
             slice.buffsp_ = buffsp_;
-            slice.is_creator_valid_ = original_valid_creator_;
-            slice.creator_ = this;
+            slice.creators_.is_creator_valid = creators_.has_original_creator;
+            slice.creators_.latest_creator = this;
             return slice;
         }
         [[nodiscard]] constexpr shared_ref<this_type> operator[](interval_type range) const&&
@@ -5549,8 +5549,8 @@ namespace details {
             this_type slice{};
             slice.hdr_ = oc::arrnd::slice(hdr_, range, axis);
             slice.buffsp_ = buffsp_;
-            slice.is_creator_valid_ = original_valid_creator_;
-            slice.creator_ = this;
+            slice.creators_.is_creator_valid = creators_.has_original_creator;
+            slice.creators_.latest_creator = this;
             return slice;
         }
         [[nodiscard]] constexpr shared_ref<this_type> operator()(interval_type range, size_type axis) const&&
@@ -7843,8 +7843,8 @@ namespace details {
             this_type squeezed{};
             squeezed.hdr_ = oc::arrnd::squeeze(hdr_, arrnd_squeeze_type::full);
             squeezed.buffsp_ = buffsp_;
-            squeezed.is_creator_valid_ = original_valid_creator_;
-            squeezed.creator_ = this;
+            squeezed.creators_.is_creator_valid = creators_.has_original_creator;
+            squeezed.creators_.latest_creator = this;
             return squeezed;
         }
 
@@ -9423,11 +9423,16 @@ namespace details {
         }
 
     private:
+        struct creators_chain {
+            std::shared_ptr<bool> has_original_creator = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
+            std::weak_ptr<bool> is_creator_valid{};
+            const this_type* latest_creator = nullptr;
+        };
+
         header_type hdr_{};
         std::shared_ptr<storage_type> buffsp_{nullptr};
-        std::shared_ptr<bool> original_valid_creator_ = std::allocate_shared<bool>(shared_ref_allocator_type<bool>());
-        std::weak_ptr<bool> is_creator_valid_{};
-        const this_type* creator_ = nullptr;
+
+        creators_chain creators_{};
     };
 
     // arrnd type deduction by constructors
