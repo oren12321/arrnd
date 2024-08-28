@@ -5332,7 +5332,8 @@ namespace details {
                 if (!shared_storage || std::empty(*shared_storage)) {
                     throw std::invalid_argument("invalid null or empty shared storage");
                 }
-                if (shared_storage->size() > hdr.indices_boundary().stop()) {
+                if (!(hdr.indices_boundary().start() < shared_storage->size()
+                        && hdr.indices_boundary().stop() <= shared_storage->size())) {
                     throw std::invalid_argument("invalid shared storage size not in indices boundaries");
                 }
             }
@@ -5348,8 +5349,8 @@ namespace details {
                           allocator_template_type<storage_type>(), first_data, last_data))
         {
             // in case that data buffer allocated, check the number of data elements is valid
-            if (shared_storage_) {
-                assert(last_data - first_data == total(info_));
+            if (shared_storage_ && std::distance(first_data, last_data) != oc::arrnd::total(info_)) {
+                throw std::invalid_argument("number of elements by dims is not match to the number of data elements");
             }
         }
 
@@ -5470,25 +5471,30 @@ namespace details {
 
         [[nodiscard]] explicit constexpr operator value_type() const noexcept
         {
-            assert(isscalar(info_));
+            if (!oc::arrnd::isscalar(info_)) {
+                throw std::exception("info is not scalar");
+            }
             return (*this)[info_.indices_boundary().start()];
         }
 
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
-            assert(index >= info_.indices_boundary().start() && index <= info_.indices_boundary().stop() - 1);
+            assert(shared_storage_);
+            assert(index >= info_.indices_boundary().start() && index < info_.indices_boundary().stop());
             return shared_storage_->data()[index];
         }
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
         {
-            assert(index >= info_.indices_boundary().start() && index <= info_.indices_boundary().stop() - 1);
+            assert(shared_storage_);
+            assert(index >= info_.indices_boundary().start() && index < info_.indices_boundary().stop());
             return shared_storage_->data()[index];
         }
 
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr const_reference operator[](std::pair<InputIt, InputIt> subs) const noexcept
         {
-            return shared_storage_->data()[sub2ind(info_, subs.first, subs.second)];
+            assert(shared_storage_);
+            return shared_storage_->data()[oc::arrnd::sub2ind(info_, subs.first, subs.second)];
         }
         template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr const_reference operator[](const Cont& subs) const noexcept
@@ -5503,7 +5509,8 @@ namespace details {
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr reference operator[](std::pair<InputIt, InputIt> subs) noexcept
         {
-            return shared_storage_->data()[sub2ind(info_, subs.first, subs.second)];
+            assert(shared_storage_);
+            return shared_storage_->data()[oc::arrnd::sub2ind(info_, subs.first, subs.second)];
         }
         template <iterable_of_type_integral Cont>
         [[nodiscard]] constexpr reference operator[](const Cont& subs) noexcept
@@ -5516,74 +5523,62 @@ namespace details {
         }
 
         template <iterator_of_type_interval InputIt>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> boundaries) const&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::slice(info_, ranges.first, ranges.second);
-            slice.shared_storage_ = shared_storage_;
+            this_type slice(oc::arrnd::slice(info_, boundaries.first, boundaries.second), shared_storage_);
             slice.creators_.is_creator_valid = creators_.has_original_creator;
             slice.creators_.latest_creator = this;
             return slice;
         }
         template <iterator_of_type_interval InputIt>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> ranges) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> boundaries) const&&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::slice(info_, ranges.first, ranges.second);
-            slice.shared_storage_ = shared_storage_;
-            return slice;
+            return this_type(oc::arrnd::slice(info_, boundaries.first, boundaries.second), shared_storage_);
         }
         template <iterable_of_type_interval Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& boundaries) const&
         {
-            return (*this)[std::make_pair(std::cbegin(ranges), std::cend(ranges))];
+            return (*this)[std::make_pair(std::cbegin(boundaries), std::cend(boundaries))];
         }
         template <iterable_of_type_interval Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& ranges) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& boundaries) const&&
         {
-            return std::move(*this)[std::make_pair(std::begin(ranges), std::end(ranges))];
+            return std::move(*this)[std::make_pair(std::begin(boundaries), std::end(boundaries))];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> ranges) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> boundaries) const&
         {
-            return (*this)[std::make_pair(ranges.begin(), ranges.end())];
+            return (*this)[std::make_pair(boundaries.begin(), boundaries.end())];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> ranges) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](
+            std::initializer_list<boundary_type> boundaries) const&&
         {
-            return std::move(*this)[std::make_pair(ranges.begin(), ranges.end())];
+            return std::move(*this)[std::make_pair(boundaries.begin(), boundaries.end())];
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type range) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type boundary) const&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::squeeze(oc::arrnd::slice(info_, range, 0), arrnd_squeeze_type::left, 1);
-            slice.shared_storage_ = shared_storage_;
+            this_type slice(
+                oc::arrnd::squeeze(oc::arrnd::slice(info_, boundary, 0), arrnd_squeeze_type::left, 1), shared_storage_);
             slice.creators_.is_creator_valid = creators_.has_original_creator;
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type range) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type boundary) const&&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::squeeze(oc::arrnd::slice(info_, range, 0), arrnd_squeeze_type::left, 1);
-            slice.shared_storage_ = shared_storage_;
-            return slice;
+            return this_type(
+                oc::arrnd::squeeze(oc::arrnd::slice(info_, boundary, 0), arrnd_squeeze_type::left, 1), shared_storage_);
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type range, size_type axis) const&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type boundary, size_type axis) const&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::slice(info_, range, axis);
-            slice.shared_storage_ = shared_storage_;
+            this_type slice(oc::arrnd::slice(info_, boundary, axis), shared_storage_);
             slice.creators_.is_creator_valid = creators_.has_original_creator;
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type range, size_type axis) const&&
+        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type boundary, size_type axis) const&&
         {
-            this_type slice{};
-            slice.info_ = oc::arrnd::slice(info_, range, axis);
-            slice.shared_storage_ = shared_storage_;
-            return slice;
+            return this_type(oc::arrnd::slice(info_, boundary, axis), shared_storage_);
         }
 
         // access relative array indices, might be slow for slices
@@ -5591,13 +5586,13 @@ namespace details {
         {
             assert(relative_index >= 0 && relative_index <= total(info_));
             return issliced(info_) ? shared_storage_->data()[*(indexer_type(info_) + relative_index)]
-                                  : shared_storage_->data()[relative_index];
+                                   : shared_storage_->data()[relative_index];
         }
         [[nodiscard]] constexpr reference operator()(size_type relative_index) noexcept
         {
             assert(relative_index >= 0 && relative_index <= total(info_));
             return issliced(info_) ? shared_storage_->data()[*(indexer_type(info_) + relative_index)]
-                                  : shared_storage_->data()[relative_index];
+                                   : shared_storage_->data()[relative_index];
         }
 
         template <iterator_of_type_integral InputIt>
@@ -7002,8 +6997,8 @@ namespace details {
                     return impl(page, arr);
                 });
             } else {
-                size_type lhs_num_pages
-                    = total(info_) / ((*std::next(info_.dims().cbegin(), info_.dims().size() - 2)) * info_.dims().back());
+                size_type lhs_num_pages = total(info_)
+                    / ((*std::next(info_.dims().cbegin(), info_.dims().size() - 2)) * info_.dims().back());
                 size_type rhs_num_pages = total(arr.info())
                     / ((*std::next(arr.info().dims().cbegin(), arr.info().dims().size() - 2))
                         * arr.info().dims().back());
@@ -7553,8 +7548,7 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.info().dims().size() - current_depth) == last_axis) {
-                    split_impl(
-                        arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
+                    split_impl(arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -7650,8 +7644,7 @@ namespace details {
 
                 if (std::distance(first_axis, last_axis) > 0
                     && std::find(first_axis, last_axis, arr.info().dims().size() - current_depth) == last_axis) {
-                    split_impl(
-                        arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
+                    split_impl(arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
                     return;
                 }
 
@@ -7674,8 +7667,7 @@ namespace details {
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind < current_ind) {
-                        split_impl(
-                            arr(boundary_type{prev_ind, current_ind}, arr.info().dims().size() - current_depth),
+                        split_impl(arr(boundary_type{prev_ind, current_ind}, arr.info().dims().size() - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
@@ -8872,26 +8864,26 @@ namespace details {
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order)
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(),
-                    indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(oc::arrnd::transpose(info_, first_order, last_order),
+                                   arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order) const
         {
-            return empty()
-                ? reverse_iterator()
-                : reverse_iterator(shared_storage_->data(),
-                    indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::rbegin));
+            return empty() ? reverse_iterator()
+                           : reverse_iterator(shared_storage_->data(),
+                               indexer_type(oc::arrnd::transpose(info_, first_order, last_order),
+                                   arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
         {
-            return empty()
-                ? const_reverse_iterator()
-                : const_reverse_iterator(shared_storage_->data(),
-                    indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::rbegin));
+            return empty() ? const_reverse_iterator()
+                           : const_reverse_iterator(shared_storage_->data(),
+                               indexer_type(oc::arrnd::transpose(info_, first_order, last_order),
+                                   arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
         [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
