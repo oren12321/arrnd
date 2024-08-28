@@ -1321,11 +1321,11 @@ TEST(arrnd_test, can_return_its_data)
 
     Integer_array earr{};
 
-    EXPECT_FALSE(earr.storage());
+    EXPECT_FALSE(earr.shared_storage());
 
     Integer_array arr{{3, 1, 2}, 0};
 
-    const auto& storage = *arr.storage();
+    const auto& storage = *arr.shared_storage();
     for (std::int64_t i = 0; i < oc::arrnd::total(arr.header()); ++i) {
         EXPECT_EQ(0, storage[i]);
     }

@@ -1543,7 +1543,7 @@ TEST(arrnd_test, can_return_slice)
         std::initializer_list<oc::arrnd::interval<std::int64_t>> ranges{};
         Integer_array rarr{arr[ranges]};
         EXPECT_TRUE(oc::arrnd::all_equal(arr, rarr));
-        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     // illegal ranges
@@ -1568,7 +1568,7 @@ TEST(arrnd_test, can_return_slice)
         Integer_array tarr1{tdims1, tdata1};
         Integer_array sarr1{arr[{{0, 3, 2}, {0, 1}, {0, 1}}]};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr1, sarr1));
-        EXPECT_EQ(arr.storage()->data(), sarr1.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), sarr1.shared_storage()->data());
 
         // nranges < ndims
         const int tdata2[] = {3, 4};
@@ -1576,12 +1576,12 @@ TEST(arrnd_test, can_return_slice)
         Integer_array tarr2{tdims2, tdata2};
         Integer_array sarr2{arr[{{1, 3, 2}}]};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr2, sarr2));
-        EXPECT_EQ(arr.storage()->data(), sarr2.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), sarr2.shared_storage()->data());
 
         // nranges > ndims - ignore extra ranges - throws exception
         //Integer_array sarr3{arr[{{0, 3, 2}, {0, 1}, {0, 1}, {100, 101, 5}}]};
         //EXPECT_TRUE(oc::arrnd::all_equal(sarr1, sarr3));
-        //EXPECT_EQ(arr.storage()->data(), sarr3.storage()->data());
+        //EXPECT_EQ(arr.shared_storage()->data(), sarr3.shared_storage()->data());
 
         // out of range and negative indices
         //Integer_array sarr4{ arr[{{-1, 3, -2}, {1}, {-2}}] }; // assertion failure
@@ -2481,14 +2481,14 @@ TEST(arrnd_test, reshape)
 
         Integer_array rarr{arr.reshape({6})};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr, rarr));
-        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
         const std::int64_t tdims[]{3, 1, 2};
         Integer_array rarr{arr.reshape(tdims)};
         EXPECT_TRUE(oc::arrnd::all_equal(arr, rarr));
-        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
@@ -2498,7 +2498,7 @@ TEST(arrnd_test, reshape)
         Integer_array x = arr[{{0, 3, 2}, {}, {}}];
         Integer_array rarr{x.reshape({1, 2})};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr, rarr));
-        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_NE(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     // nested array
@@ -2512,15 +2512,15 @@ TEST(arrnd_test, reshape)
         EXPECT_FALSE(oc::arrnd::all_equal(rnarr1, inarr));
         EXPECT_TRUE(oc::arrnd::all_equal(Integer_array({2, 2}, {1, 2, 3, 4}), rnarr1[{0, 0}]));
         EXPECT_TRUE(oc::arrnd::all_equal(Integer_array({2, 2}, {5, 6, 7, 8}), rnarr1[{0, 1}]));
-        EXPECT_EQ((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
-        EXPECT_EQ((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
+        EXPECT_EQ((rnarr1[{0, 0}].shared_storage()->data()), (inarr[{0, 0}].shared_storage()->data()));
+        EXPECT_EQ((rnarr1[{0, 1}].shared_storage()->data()), (inarr[{0, 1}].shared_storage()->data()));
 
         oc::arrnd::arrnd<Integer_array> rnarr2 = inarr.reshape/*<0>*/({2});
         EXPECT_FALSE(oc::arrnd::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::arrnd::all_equal(rnarr2[{0}], inarr[{0, 0}]));
         EXPECT_TRUE(oc::arrnd::all_equal(rnarr2[{1}], inarr[{0, 1}]));
-        EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
-        EXPECT_EQ((rnarr2[{1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
+        EXPECT_EQ((rnarr2[{0}].shared_storage()->data()), (inarr[{0, 0}].shared_storage()->data()));
+        EXPECT_EQ((rnarr2[{1}].shared_storage()->data()), (inarr[{0, 1}].shared_storage()->data()));
 
         //auto rnarr3 = oc::arrnd::reshape(inarr, oc::arrnd::arrnd_shape_preset::vector);
         auto rnarr3 = oc::arrnd::transform<0>(inarr, [](const auto& val) {
@@ -2553,13 +2553,13 @@ TEST(arrnd_test, resize)
         //EXPECT_FALSE(oc::arrnd::all_equal(arr, rarr));
         EXPECT_EQ(arr.header().dims().size(), rarr.header().dims().size());
         EXPECT_EQ(6, rarr.header().dims().data()[0]);
-        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_NE(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
         Integer_array rarr{arr.resize({6})};
         EXPECT_TRUE(oc::arrnd::all_equal(arr, rarr));
-        EXPECT_EQ(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_EQ(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
@@ -2569,7 +2569,7 @@ TEST(arrnd_test, resize)
 
         Integer_array rarr{arr.resize({2})};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr, rarr));
-        EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
+        EXPECT_NE(tarr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
@@ -2580,7 +2580,7 @@ TEST(arrnd_test, resize)
         Integer_array rarr{arr.resize({3, 1, 2})};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr[{oc::arrnd::interval<>::at(0)}], rarr[{oc::arrnd::interval<>::at(0)}]));
         //std::cout << rarr << "\n\n";
-        EXPECT_NE(tarr.storage()->data(), rarr.storage()->data());
+        EXPECT_NE(tarr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     {
@@ -2588,7 +2588,7 @@ TEST(arrnd_test, resize)
         Integer_array rarr{arr.resize(tdims)};
         EXPECT_FALSE(oc::arrnd::all_equal(arr, rarr));
         EXPECT_TRUE(oc::arrnd::all_equal(arr, (rarr[{{0, 6}}])));
-        EXPECT_NE(arr.storage()->data(), rarr.storage()->data());
+        EXPECT_NE(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     // nested array
@@ -2607,13 +2607,13 @@ TEST(arrnd_test, resize)
             Integer_array({2, 2}, {1, 2, -1, -1})[{oc::arrnd::interval<>::at(0)}], rnarr1[{0, 0}][{oc::arrnd::interval<>::at(0)}]));
         EXPECT_TRUE(oc::arrnd::all_equal(
             Integer_array({2, 2}, {6, 7, -1, -1})[{oc::arrnd::interval<>::at(0)}], rnarr1[{0, 1}][{oc::arrnd::interval<>::at(0)}]));
-        EXPECT_NE((rnarr1[{0, 0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
-        EXPECT_NE((rnarr1[{0, 1}].storage()->data()), (inarr[{0, 1}].storage()->data()));
+        EXPECT_NE((rnarr1[{0, 0}].shared_storage()->data()), (inarr[{0, 0}].shared_storage()->data()));
+        EXPECT_NE((rnarr1[{0, 1}].shared_storage()->data()), (inarr[{0, 1}].shared_storage()->data()));
 
         oc::arrnd::arrnd<Integer_array> rnarr2 = inarr.resize /*<0>*/ ({1});
         EXPECT_FALSE(oc::arrnd::all_equal(rnarr2, inarr));
         EXPECT_TRUE(oc::arrnd::all_equal(rnarr2[{0}], inarr[{0, 0}]));
-        EXPECT_EQ((rnarr2[{0}].storage()->data()), (inarr[{0, 0}].storage()->data()));
+        EXPECT_EQ((rnarr2[{0}].shared_storage()->data()), (inarr[{0, 0}].shared_storage()->data()));
     }
 }
 
