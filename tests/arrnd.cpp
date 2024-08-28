@@ -1059,22 +1059,27 @@ TEST(simple_array, erase)
 //    EXPECT_TRUE(svc.is_view());
 //}
 
-//TEST(arrnd_test, arrnd_view_from_external_type)
-//{
-//    using namespace oc::arrnd;
-//
-//    // create arrnd view from continuous container (e.g. vector, span, etc.)
-//
-//    std::initializer_list<int> vec{1, 2, 3, 4, 5, 6};
-//
-//    auto arrv = view<arrnd<int>>({3, 1, 2}, vec);
-//
-//    arrv.apply([](int value) {
-//        return value * 2;
-//    });
-//
-//    EXPECT_EQ(std::vector<int>(vec), (std::vector<int>{2, 4, 6, 8, 10, 12}));
-//}
+TEST(arrnd_test, arrnd_view_from_external_type)
+{
+    using namespace oc::arrnd;
+
+    // create arrnd view from continuous container that fully/parially
+    // implements simple_vector/simple_array interface.
+
+    std::shared_ptr<simple_vector<int>> svec
+        = std::shared_ptr<simple_vector<int>>(new simple_vector<int>{1, 2, 3, 4, 5, 6});
+    arrnd_info info({3, 1, 2});
+
+    arrnd view(info, svec);
+
+    view.apply([](int value) {
+        return value * 2;
+    });
+
+    std::vector<int> res{2, 4, 6, 8, 10, 12};
+
+    EXPECT_TRUE(std::equal(std::begin(*svec), std::end(*svec), std::begin(res), std::end(res)));
+}
 
 TEST(close_test, two_numbers_can_be_compared_with_specified_percision)
 {

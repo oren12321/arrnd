@@ -5161,6 +5161,8 @@ namespace details {
     template <typename T, typename DataStorageInfo = simple_vector_traits<T>,
         typename DimsStorageInfo = simple_vector_traits<std::size_t>>
     class arrnd {
+        static_assert(std::is_same_v<T, typename DataStorageInfo::storage_type::value_type>);
+
     public:
         using value_type = T;
         using size_type = typename DataStorageInfo::storage_type::size_type;
@@ -5313,6 +5315,21 @@ namespace details {
         }
 
         virtual constexpr ~arrnd() = default;
+
+        explicit constexpr arrnd(const header_type& hdr, std::shared_ptr<storage_type> buffsp)
+            : hdr_(hdr)
+            , buffsp_(buffsp)
+        {
+            // check if the arrnd type invariant is legal.
+            if (!oc::arrnd::empty(hdr)) {
+                if (!buffsp || std::empty(*buffsp)) {
+                    throw std::invalid_argument("invalid null or empty shared storage");
+                }
+                if (buffsp->size() > hdr.indices_boundary().stop()) {
+                    throw std::invalid_argument("invalid shared storage size not in indices boundaries");
+                }
+            }
+        }
 
         template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
@@ -9467,6 +9484,11 @@ namespace details {
         requires(invocable_no_arrnd<Func>)
     arrnd(std::initializer_list<typename DataStorageInfo::storage_type::size_type>, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageInfo, DimsStorageInfo>;
+
+    template <typename T, typename DataStorageInfo = simple_vector_traits<typename T::value_type>,
+        typename DimsStorageInfo = simple_vector_traits<std::size_t>>
+    arrnd(const arrnd_info<DimsStorageInfo>&, std::shared_ptr<T>)
+        -> arrnd<typename T::value_type, DataStorageInfo, DimsStorageInfo>;
 
     // free arrnd iterator functions
 
