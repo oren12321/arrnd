@@ -2651,6 +2651,40 @@ namespace details {
         }
     }
 
+    // convert relative index to abosolute index
+    template <typename StorageTraits>
+    constexpr typename arrnd_info<StorageTraits>::extent_type ind2ind(
+        const arrnd_info<StorageTraits>& info, typename arrnd_info<StorageTraits>::extent_type rel_ind)
+    {
+        if (empty(info)) {
+            throw std::invalid_argument("undefined operation for empty arrnd info");
+        }
+
+        if (rel_ind >= total(info)) {
+            throw std::out_of_range("invalid ind - not inside indices boundary");
+        }
+
+        if (!issliced(info)) {
+            return rel_ind;
+        }
+
+        typename arrnd_info<StorageTraits>::extent_type current_rel_stride
+            = std::reduce(std::next(std::begin(info.dims()), 1), std::end(info.dims()),
+                typename arrnd_info<StorageTraits>::extent_type{1},
+                overflow_check_multiplies<typename arrnd_info<StorageTraits>::extent_type>{});
+
+        typename arrnd_info<StorageTraits>::extent_type abs_ind = info.indices_boundary().start();
+
+        for (typename arrnd_info<StorageTraits>::extent_type i = 0; i < std::size(info.dims()); ++i) {
+            auto sub = (info.dims()[i] > 1 ? (rel_ind / current_rel_stride) % info.dims()[i] : 0);
+            abs_ind += sub * info.strides()[i];
+
+            current_rel_stride /= (i + 1 >= std::size(info.dims()) ? 1 : info.dims()[i + 1]);
+        }
+
+        return abs_ind;
+    }
+
     template <typename StorageTraits>
     inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageTraits>& info)
     {
@@ -2698,6 +2732,7 @@ using details::move;
 using details::roll;
 using details::sub2ind;
 using details::ind2sub;
+using details::ind2ind;
 using details::total;
 using details::size;
 using details::empty;
@@ -5582,17 +5617,17 @@ namespace details {
         }
 
         // access relative array indices, might be slow for slices
-        [[nodiscard]] constexpr const_reference operator()(size_type relative_index) const noexcept
+        [[nodiscard]] constexpr const_reference operator()(size_type index) const noexcept
         {
-            assert(relative_index >= 0 && relative_index <= total(info_));
-            return issliced(info_) ? shared_storage_->data()[*(indexer_type(info_) + relative_index)]
-                                   : shared_storage_->data()[relative_index];
+            assert(index >= 0 && index <= total(info_));
+            return issliced(info_) ? shared_storage_->data()[oc::arrnd::ind2ind(info_, index)]
+                                   : shared_storage_->data()[index];
         }
-        [[nodiscard]] constexpr reference operator()(size_type relative_index) noexcept
+        [[nodiscard]] constexpr reference operator()(size_type index) noexcept
         {
-            assert(relative_index >= 0 && relative_index <= total(info_));
-            return issliced(info_) ? shared_storage_->data()[*(indexer_type(info_) + relative_index)]
-                                   : shared_storage_->data()[relative_index];
+            assert(index >= 0 && index <= total(info_));
+            return issliced(info_) ? shared_storage_->data()[oc::arrnd::ind2ind(info_, index)]
+                                   : shared_storage_->data()[index];
         }
 
         template <iterator_of_type_integral InputIt>
