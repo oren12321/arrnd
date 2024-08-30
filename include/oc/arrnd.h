@@ -5807,6 +5807,9 @@ namespace details {
 
         // Make this array a standard continuous array.
         // The result can be fully/partially shared reference to the input array.
+        // This function might make other shared arrays invalid(e.g. if these
+        // arrays uses different info properties).
+        // For a newley refrehsed array, use clone().refresh().
         [[nodiscard]] constexpr maybe_shared_ref<this_type> refresh() const
         {
             // continuous array, which is not sliced or transposed
@@ -5817,8 +5820,7 @@ namespace details {
             this_type r{};
 
             r.info_ = info_type(info_.dims());
-            r.shared_storage_ = std::allocate_shared<storage_type>(
-                allocator_template_type<storage_type>(), oc::arrnd::total(r.info_));
+            r.shared_storage_ = shared_storage_;
             if constexpr (this_type::is_flat) {
                 for (auto t : zip(zipped_container(*this), zipped_container(r))) {
                     std::get<1>(t) = std::get<0>(t);
@@ -5828,6 +5830,7 @@ namespace details {
                     std::get<1>(t) = std::get<0>(t).refresh();
                 }
             }
+            r.shared_storage_->resize(oc::arrnd::total(r.info_));
 
             return r;
         }

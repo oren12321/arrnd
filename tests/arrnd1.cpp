@@ -2506,7 +2506,7 @@ TEST(arrnd_test, reshape)
         Integer_array x = arr[{{0, 3, 2}, {}, {}}];
         Integer_array rarr{x.reshape({1, 2})};
         EXPECT_TRUE(oc::arrnd::all_equal(tarr, rarr));
-        EXPECT_NE(arr.shared_storage()->data(), rarr.shared_storage()->data());
+        EXPECT_EQ/*EXPECT_NE*/(arr.shared_storage()->data(), rarr.shared_storage()->data());
     }
 
     // nested array
