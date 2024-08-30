@@ -5833,12 +5833,60 @@ namespace details {
             return copy_to(dst);
         }
 
+        // Make this array a standard continuous array.
+        // The result can be fully/partially shared reference to the input array.
+        [[nodiscard]] constexpr maybe_shared_ref<this_type> refresh() const
+        {
+            // continuous array, which is not sliced or transposed
+            if (empty() || info_.hints() == arrnd_hint::continuous) {
+                return *this;
+            }
+
+            this_type r{};
+
+            r.info_ = info_type(info_.dims());
+            r.shared_storage_ = std::allocate_shared<storage_type>(
+                allocator_template_type<storage_type>(), oc::arrnd::total(r.info_));
+            if constexpr (this_type::is_flat) {
+                for (auto t : zip(zipped_container(*this), zipped_container(r))) {
+                    std::get<1>(t) = std::get<0>(t);
+                }
+            } else {
+                for (auto t : zip(zipped_container(*this), zipped_container(r))) {
+                    std::get<1>(t) = std::get<0>(t).refresh();
+                }
+            }
+
+            return r;
+        }
+
         template <arrnd_type Arrnd = this_type>
         [[nodiscard]] constexpr Arrnd clone() const
         {
-            Arrnd res;
-            set_to(res);
-            return res;
+            if (empty()) {
+                return Arrnd();
+            }
+
+            Arrnd c{};
+
+            c.info() =
+                typename Arrnd::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+            if constexpr (this_type::is_flat) {
+                c.shared_storage() = std::allocate_shared<typename Arrnd::storage_type>(
+                    typename Arrnd::template allocator_template_type<typename Arrnd::storage_type>(), *shared_storage_);
+                c.shared_storage()->reserve(shared_storage_->capacity());
+            } else {
+                c.shared_storage() = std::allocate_shared<typename Arrnd::storage_type>(
+                    typename Arrnd::template allocator_template_type<typename Arrnd::storage_type>(),
+                    shared_storage_->size());
+                c.shared_storage()->reserve(shared_storage_->capacity());
+
+                for (auto t : zip(zipped_container(*this), zipped_container(c))) {
+                    std::get<1>(t) = std::get<0>(t).template clone<typename Arrnd::value_type>();
+                }
+            }
+
+            return c;
         }
 
         template <iterator_of_type_integral InputIt>
@@ -5854,7 +5902,7 @@ namespace details {
             }
 
             if (issliced(info_)) {
-                return clone().reshape(first_new_dim, last_new_dim);
+                return refresh().reshape(first_new_dim, last_new_dim);
             }
 
             this_type res(*this);
