@@ -2206,7 +2206,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2226,7 +2227,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2235,7 +2237,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{};
 
         //set(src[{{0, 2}, {0, 1}, {1, 2}}], dst);
-        src[{{0, 2}, {0, 1}, {1, 2}}].set_to(dst);
+        //src[{{0, 2}, {0, 1}, {1, 2}}].set_to(dst);
+        dst = src[{{0, 2}, {0, 1}, {1, 2}}].clone<arrnd<int>>();
         arrnd<int> sres{{2, 1, 1}, {2, 4}};
         EXPECT_TRUE(all_equal(sres, dst));
     }
@@ -2246,7 +2249,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{{3, 1, 2}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2267,7 +2271,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{{6}, {1, 2, 3, 4, 5, 6}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2289,7 +2294,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{{3}, {1, 2, 3}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2310,7 +2316,8 @@ TEST(arrnd_test, set_from)
         arrnd<int> dst{{3, 1, 2}, {6, 5, 4, 3, 2, 1}};
 
         //set(src, dst);
-        src.set_to(dst);
+        //src.set_to(dst);
+        dst = src.clone<arrnd<int>>();
         arrnd<int> res{{10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}};
         EXPECT_TRUE(all_equal(res, dst));
     }
@@ -2338,7 +2345,8 @@ TEST(arrnd_test, set_from)
         arrnd_l0 arr_no_vals;
 
         //set(arr_with_vals, arr_no_vals);
-        arr_with_vals.set_to(arr_no_vals);
+        //arr_with_vals.set_to(arr_no_vals);
+        arr_no_vals = arr_with_vals.clone<arrnd_l0>();
 
         EXPECT_TRUE(all_equal(arr_with_vals, arr_no_vals));
 

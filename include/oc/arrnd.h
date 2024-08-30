@@ -5278,7 +5278,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd(Arrnd&& other)
         {
-            other.set_to(*this);
+            *this = other.clone<this_type>();
             (void)Arrnd(std::move(other));
         }
         constexpr arrnd& operator=(arrnd&& other) & = default;
@@ -5296,7 +5296,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd& operator=(Arrnd&& other) &
         {
-            other.set_to(*this);
+            *this = other.clone<this_type>();
             (void)Arrnd(std::move(other));
             return *this;
         }
@@ -5314,7 +5314,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd(const Arrnd& other)
         {
-            other.set_to(*this);
+            *this = other.clone<this_type>();
         }
         constexpr arrnd& operator=(const arrnd& other) & = default;
         constexpr arrnd& operator=(const arrnd& other) &&
@@ -5330,7 +5330,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd& operator=(const Arrnd& other) &
         {
-            other.set_to(*this);
+            *this = other.clone<this_type>();
             return *this;
         }
         template <arrnd_type Arrnd>
@@ -5803,34 +5803,6 @@ namespace details {
         constexpr const this_type& copy_to(Arrnd&& dst, std::initializer_list<boundary_type> ranges) const
         {
             return copy_to(std::forward<Arrnd>(dst), ranges.begin(), ranges.end());
-        }
-
-        template <arrnd_type Arrnd>
-        constexpr const this_type& set_to(Arrnd& dst) const
-        {
-            if (empty()) {
-                dst = Arrnd{};
-                return *this;
-            }
-
-            if (total(info_) == total(dst.info())) {
-                if (!std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(dst.info().dims()),
-                        std::end(dst.info().dims()))) {
-                    dst.info() = info_type{info_.dims().cbegin(), info_.dims().cend()};
-                }
-                return copy_to(dst);
-            }
-
-            dst = Arrnd{info_.dims().cbegin(), info_.dims().cend()};
-            if constexpr (arrnd_type<value_type>) {
-                indexer_type gen(info_);
-                typename std::remove_cvref_t<Arrnd>::indexer_type dst_gen(dst.info());
-
-                for (; gen && dst_gen; ++gen, ++dst_gen) {
-                    (*this)[*gen].set_to(dst[*dst_gen]);
-                }
-            }
-            return copy_to(dst);
         }
 
         // Make this array a standard continuous array.
