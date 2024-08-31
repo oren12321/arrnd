@@ -5805,11 +5805,11 @@ namespace details {
             return copy_to(std::forward<Arrnd>(dst), ranges.begin(), ranges.end());
         }
 
-        // Make this array a standard continuous array.
-        // The result can be fully/partially shared reference to the input array.
-        // This function might make other shared arrays invalid(e.g. if these
-        // arrays uses different info properties).
-        // For a newley refrehsed array, use clone().refresh().
+        // Modify this array to a standard continuous array.
+        // The returned value is fully/partially shared reference to this array.
+        // Other shared arrays of this array might be invalid.
+        // For a guaranteed newley refreshed array, this function
+        // should be used on a cloned array.
         [[nodiscard]] constexpr maybe_shared_ref<this_type> refresh() const
         {
             // continuous array, which is not sliced or transposed
@@ -5820,21 +5820,17 @@ namespace details {
             this_type r{};
 
             r.info_ = info_type(info_.dims());
+
             r.shared_storage_ = shared_storage_;
-            if constexpr (this_type::is_flat) {
-                for (auto t : zip(zipped_container(*this), zipped_container(r))) {
-                    std::get<1>(t) = std::get<0>(t);
-                }
-            } else {
-                for (auto t : zip(zipped_container(*this), zipped_container(r))) {
-                    std::get<1>(t) = std::get<0>(t).refresh();
-                }
+            for (auto t : zip(zipped_container(*this), zipped_container(r))) {
+                std::get<1>(t) = std::move(std::get<0>(t));
             }
             r.shared_storage_->resize(oc::arrnd::total(r.info_));
 
             return r;
         }
 
+        // Ensures a full copy of this array and its inner arrays.
         template <arrnd_type Arrnd = this_type>
         [[nodiscard]] constexpr Arrnd clone() const
         {
@@ -5877,7 +5873,7 @@ namespace details {
             }
 
             if (issliced(info_)) {
-                return refresh().reshape(first_new_dim, last_new_dim);
+                return clone().refresh().reshape(first_new_dim, last_new_dim);
             }
 
             this_type res(*this);
