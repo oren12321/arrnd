@@ -586,6 +586,16 @@ namespace details {
             std::tuple<typename ItPack::riter_type...> data_;
         };
 
+        using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>&...>;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using reference = value_type&;
+        using const_reference = const value_type&;
+        using pointer = value_type*;
+        using const_pointer = const value_type*;
+        using const_iterator = iterator;
+        using const_reverse_iterator = reverse_iterator;
+
         zip(ItPack... packs)
             : packs_(std::forward_as_tuple(packs...))
         { }
