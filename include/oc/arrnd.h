@@ -5594,7 +5594,7 @@ namespace details {
             return creators_.is_creator_valid.expired() ? nullptr : creators_.latest_creator;
         }
 
-        [[nodiscard]] explicit constexpr operator value_type() const noexcept
+        [[nodiscard]] explicit constexpr operator value_type() const
         {
             if (!oc::arrnd::isscalar(info_)) {
                 throw std::exception("info is not scalar");
