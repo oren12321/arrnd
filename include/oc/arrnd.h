@@ -200,6 +200,42 @@ namespace details {
         const T(&res)[array_elements_count<U>()] = *reinterpret_cast<const T(*)[array_elements_count<U>()]>(ptr);
         return res;
     }
+
+    template <typename T>
+    struct iterator_type_of {
+        using type = typename T::iterator;
+    };
+
+    template <typename T>
+    struct iterator_type_of<T*> {
+        using type = T*;
+    };
+
+    template <typename T, std::size_t N>
+    struct iterator_type_of<T[N]> {
+        using type = T*;
+    };
+
+    template <typename T>
+    using iterator_type_of_t = iterator_type_of<T>::type;
+
+    template <typename T>
+    struct reverse_iterator_type_of {
+        using type = typename T::reverse_iterator;
+    };
+
+    template <typename T>
+    struct reverse_iterator_type_of<T*> {
+        using type = std::reverse_iterator<iterator_type_of<T>>;
+    };
+
+    template <typename T, std::size_t N>
+    struct reverse_iterator_type_of<T[N]> {
+        using type = std::reverse_iterator<iterator_type_of<T>>;
+    };
+
+    template <typename T>
+    using reverse_iterator_type_of_t = reverse_iterator_type_of<T>::type;
 }
 
 using details::array_cast;
@@ -242,30 +278,69 @@ namespace details {
     template <typename Cont, typename... Args>
     class zipped_container {
     public:
-        using cont_type = Cont;
-        using iter_type = decltype(begin(std::declval<Cont&>(), Args{}...));
-        using riter_type = decltype(rbegin(std::declval<Cont&>(), Args{}...));
+        using container_type = Cont;
+        using iterator_type = iterator_type_of_t<Cont>;
+        using reverse_iterator_type = reverse_iterator_type_of_t<Cont>;
+
+        constexpr zipped_container() = default;
 
         constexpr zipped_container(Cont& cont, Args&&... args)
-            : cont_(cont)
+            : cont_(&cont)
             , args_(std::forward_as_tuple(std::forward<Args>(args)...))
         { }
 
-        constexpr zipped_container(const zipped_container&) = default;
-        constexpr zipped_container(zipped_container&&) = default;
+        constexpr zipped_container(Cont&& cont, Args&&... args)
+            : copy_(std::forward<Cont>(cont))
+            , cont_(&copy_)
+            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
+        { }
 
-        constexpr zipped_container& operator=(const zipped_container&) = default;
-        constexpr zipped_container& operator=(zipped_container&&) = default;
+        constexpr zipped_container(const zipped_container& other)
+            : copy_(other.copy_)
+            , cont_(other.cont_ == std::addressof(other.copy_) ? &copy_ : other.cont_)
+            , args_(other.args_)
+        { }
+        constexpr zipped_container(zipped_container&& other)
+            : copy_(std::move(other.copy_))
+            , cont_(other.cont_ == std::addressof(other.copy_) ? &copy_ : other.cont_)
+            , args_(std::move(other.args_))
+        {
+            other.cont_ = nullptr;
+        }
+
+        constexpr zipped_container& operator=(const zipped_container& other)
+        {
+            if (&other == this) {
+                return *this;
+            }
+
+            copy_ = other.copy_;
+            cont_ = (other.cont_ == std::addressof(other.copy_) ? &copy_ : other.cont_);
+            args_ = other.args_;
+            return *this;
+        }
+        constexpr zipped_container& operator=(zipped_container&& other)
+        {
+            if (&other == this) {
+                return *this;
+            }
+
+            copy_ = std::move(other.copy_);
+            cont_ = (other.cont_ == std::addressof(other.copy_) ? &copy_ : other.cont_);
+            args_ = std::move(other.args_);
+            other.cont_ = nullptr;
+            return *this;
+        }
 
         constexpr virtual ~zipped_container() = default;
 
         constexpr auto& cont() noexcept
         {
-            return cont_;
+            return *cont_;
         }
         constexpr const auto& cont() const noexcept
         {
-            return cont_;
+            return *cont_;
         }
 
         constexpr auto& args() noexcept
@@ -278,7 +353,53 @@ namespace details {
         }
 
     private:
-        Cont& cont_;
+        Cont copy_;
+        Cont* cont_ = nullptr;
+        std::tuple<Args...> args_ = std::tuple<>{};
+    };
+
+    template <typename Cont, typename... Args>
+    class zipped_raw_array {
+    public:
+        using container_type = Cont;
+        using iterator_type = iterator_type_of_t<container_type>;
+        using reverse_iterator_type = reverse_iterator_type_of_t<container_type>;
+
+        constexpr zipped_raw_array() = default;
+
+        constexpr zipped_raw_array(Cont& cont, Args&&... args)
+            : cont_(&cont)
+            , args_(std::forward_as_tuple(std::forward<Args>(args)...))
+        { }
+
+        constexpr zipped_raw_array(const zipped_raw_array& other) = default;
+        constexpr zipped_raw_array(zipped_raw_array&& other) = default;
+
+        constexpr zipped_raw_array& operator=(const zipped_raw_array& other) = default;
+        constexpr zipped_raw_array& operator=(zipped_raw_array&& other) = default;
+
+        constexpr virtual ~zipped_raw_array() = default;
+
+        constexpr auto& cont() noexcept
+        {
+            return *cont_;
+        }
+        constexpr const auto& cont() const noexcept
+        {
+            return *cont_;
+        }
+
+        constexpr auto& args() noexcept
+        {
+            return args_;
+        }
+        constexpr const auto& args() const
+        {
+            return args_;
+        }
+
+    private:
+        Cont* cont_ = nullptr;
         std::tuple<Args...> args_ = std::tuple<>{};
     };
 
@@ -286,9 +407,11 @@ namespace details {
     class zipped_iterator {
     public:
         struct unknown { };
-        using cont_type = unknown;
-        using iter_type = InputIt;
-        using riter_type = InputIt;
+        using container_type = unknown;
+        using iterator_type = InputIt;
+        using reverse_iterator_type = InputIt;
+
+        constexpr zipped_iterator() = default;
 
         constexpr zipped_iterator(const InputIt& first, const InputIt& last)
             : first_(first)
@@ -341,15 +464,15 @@ namespace details {
     public:
         struct iterator {
             using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::iter_type>...>;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::iterator_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::iterator_type>...>;
             using difference_type = std::int64_t;
 
             [[nodiscard]] constexpr reference operator*() const
             {
                 return std::apply(
                     []<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                        return reference(*std::forward<Ts>(e)...);
                     },
                     data_);
             }
@@ -424,26 +547,26 @@ namespace details {
 
             [[nodiscard]] constexpr auto operator!=(const iterator& iter) const
             {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr auto operator==(const iterator& iter) const
             {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr reference operator[](std::int64_t index) const
             {
                 return std::apply(
                     [index]<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                        return reference(std::forward<Ts>(e)[index]...);
                     },
                     data_);
             }
 
             [[nodiscard]] constexpr bool operator<(const iterator& iter) const noexcept
             {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr std::int64_t operator-(const iterator& iter) const noexcept
@@ -456,24 +579,24 @@ namespace details {
                           });
                       };
 
-                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
                 return diffs;
             }
 
-            std::tuple<typename ItPack::iter_type...> data_;
+            std::tuple<typename ItPack::iterator_type...> data_;
         };
 
         struct reverse_iterator {
             using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::tuple<std::iter_value_t<typename ItPack::riter_type>...>;
-            using reference = std::tuple<std::iter_reference_t<typename ItPack::riter_type>...>;
+            using value_type = std::tuple<std::iter_value_t<typename ItPack::reverse_iterator_type>...>;
+            using reference = std::tuple<std::iter_reference_t<typename ItPack::reverse_iterator_type>...>;
             using difference_type = std::int64_t;
 
             [[nodiscard]] constexpr reference operator*() const
             {
                 return std::apply(
                     []<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(*std::forward<Ts>(e)...);
+                        return reference(*std::forward<Ts>(e)...);
                     },
                     data_);
             }
@@ -548,26 +671,26 @@ namespace details {
 
             [[nodiscard]] constexpr auto operator!=(const reverse_iterator& iter) const
             {
-                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return !any_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr auto operator==(const reverse_iterator& iter) const
             {
-                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return all_equals(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr reference operator[](std::int64_t index) const
             {
                 return std::apply(
                     [index]<typename... Ts>(Ts&&... e) {
-                        return std::forward_as_tuple(std::forward<Ts>(e)[index]...);
+                        return reference(std::forward<Ts>(e)[index]...);
                     },
                     data_);
             }
 
             [[nodiscard]] constexpr bool operator<(const reverse_iterator& iter) const noexcept
             {
-                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                return all_lesseq(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
             }
 
             [[nodiscard]] constexpr std::int64_t operator-(const reverse_iterator& iter) const noexcept
@@ -579,14 +702,14 @@ namespace details {
                           });
                       };
 
-                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::cont_type...>{});
+                auto diffs = impl(data_, iter.data_, std::index_sequence_for<typename ItPack::container_type...>{});
                 return diffs;
             }
 
-            std::tuple<typename ItPack::riter_type...> data_;
+            std::tuple<typename ItPack::reverse_iterator_type...> data_;
         };
 
-        using value_type = std::tuple<std::iter_value_t<typename ItPack::iter_type>&...>;
+        using value_type = std::tuple<std::iter_value_t<typename ItPack::iterator_type>&...>;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
         using reference = value_type&;
@@ -596,14 +719,16 @@ namespace details {
         using const_iterator = iterator;
         using const_reverse_iterator = reverse_iterator;
 
+        zip() = default;
+
         zip(ItPack... packs)
             : packs_(std::forward_as_tuple(packs...))
         { }
 
         auto begin()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::begin;
                     return begin(ip.cont(), std::get<I>(ip.args())...);
                 } else {
@@ -615,17 +740,18 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
 
         auto begin() const
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::begin;
-                    return begin(ip.cont(), std::get<I>(ip.args())...);
+                    return begin(const_cast<typename std::remove_cvref_t<P>::container_type&>(ip.cont()),
+                        std::get<I>(ip.args())...);
                 } else {
                     return ip.first();
                 }
@@ -635,15 +761,15 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
 
         auto end()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::end;
                     return end(ip.cont(), std::get<I>(ip.args())...);
                 } else {
@@ -655,17 +781,18 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
 
         auto end() const
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::end;
-                    return end(ip.cont(), std::get<I>(ip.args())...);
+                    return end(const_cast<typename std::remove_cvref_t<P>::container_type&>(ip.cont()),
+                        std::get<I>(ip.args())...);
                 } else {
                     return ip.last();
                 }
@@ -675,15 +802,15 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
 
         auto rbegin()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::rbegin;
                     return rbegin(ip.cont(), std::get<I>(ip.args())...);
                 } else {
@@ -695,17 +822,18 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
 
         auto rbegin() const
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::rbegin;
-                    return rbegin(ip.cont(), std::get<I>(ip.args())...);
+                    return rbegin(const_cast<typename std::remove_cvref_t<P>::container_type&>(ip.cont()),
+                        std::get<I>(ip.args())...);
                 } else {
                     return ip.first();
                 }
@@ -715,15 +843,15 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
 
         auto rend()
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::rend;
                     return rend(ip.cont(), std::get<I>(ip.args())...);
                 } else {
@@ -735,17 +863,18 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
 
         auto rend() const
         {
-            auto impl = []<typename P, std::size_t... I>(P ip, std::index_sequence<I...>) {
-                if constexpr (template_type<P, zipped_container>) {
+            auto impl = []<typename P, std::size_t... I>(P&& ip, std::index_sequence<I...>) {
+                if constexpr (template_type<P, zipped_container> || template_type<P, zipped_raw_array>) {
                     using std::rend;
-                    return rend(ip.cont(), std::get<I>(ip.args())...);
+                    return rend(const_cast<typename std::remove_cvref_t<P>::container_type&>(ip.cont()),
+                        std::get<I>(ip.args())...);
                 } else {
                     return ip.last();
                 }
@@ -755,7 +884,7 @@ namespace details {
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
                         std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(std::forward<Ts>(e).args())>>>{})...);
+                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
@@ -766,6 +895,7 @@ namespace details {
 }
 
 using details::zipped_container;
+using details::zipped_raw_array;
 using details::zipped_iterator;
 using details::zip;
 }
@@ -5466,7 +5596,7 @@ namespace details {
 
         template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
         explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
-            const InputDataIt& first_data, const InputDataIt& last_data)
+            InputDataIt first_data, InputDataIt last_data)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
