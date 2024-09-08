@@ -216,6 +216,16 @@ namespace details {
         using type = T*;
     };
 
+    template <typename T, std::size_t N>
+    struct iterator_type_of<T (&)[N]> {
+        using type = T*;
+    };
+
+    template <typename T, std::size_t N>
+    struct iterator_type_of<const T (&)[N]> {
+        using type = T*;
+    };
+
     template <typename T>
     using iterator_type_of_t = iterator_type_of<T>::type;
 
@@ -231,6 +241,16 @@ namespace details {
 
     template <typename T, std::size_t N>
     struct reverse_iterator_type_of<T[N]> {
+        using type = std::reverse_iterator<iterator_type_of<T>>;
+    };
+
+    template <typename T, std::size_t N>
+    struct reverse_iterator_type_of<T (&)[N]> {
+        using type = std::reverse_iterator<iterator_type_of<T>>;
+    };
+
+    template <typename T, std::size_t N>
+    struct reverse_iterator_type_of<const T (&)[N]> {
         using type = std::reverse_iterator<iterator_type_of<T>>;
     };
 
@@ -285,7 +305,7 @@ namespace details {
         constexpr zipped_container() = default;
 
         constexpr zipped_container(Cont& cont, Args&&... args)
-            : cont_(&cont)
+            : cont_(std::addressof(cont))
             , args_(std::forward_as_tuple(std::forward<Args>(args)...))
         { }
 
@@ -368,7 +388,7 @@ namespace details {
         constexpr zipped_raw_array() = default;
 
         constexpr zipped_raw_array(Cont& cont, Args&&... args)
-            : cont_(&cont)
+            : cont_(std::addressof(cont))
             , args_(std::forward_as_tuple(std::forward<Args>(args)...))
         { }
 
@@ -458,6 +478,24 @@ namespace details {
         InputIt last_;
         std::tuple<> args_ = std::tuple<>{};
     };
+
+    template <iterable_type Cont, typename... Args>
+    [[nodiscard]] inline constexpr auto zipped(Cont&& cont, Args&&... args)
+    {
+        if constexpr (std::is_array_v<std::remove_cvref_t<Cont>>) {
+            return zipped_raw_array<std::remove_reference_t<Cont>, Args...>(
+                std::forward<Cont>(cont), std::forward<Args>(args)...);
+        } else {
+            return zipped_container<std::remove_reference_t<Cont>, Args...>(
+                std::forward<Cont>(cont), std::forward<Args>(args)...);
+        }
+    }
+
+    template <iterator_type InputIt>
+    [[nodiscard]] inline constexpr auto zipped(InputIt first, InputIt last)
+    {
+        return zipped_iterator<InputIt>(first, last);
+    }
 
     template <typename... ItPack>
     class zip {
@@ -739,8 +777,7 @@ namespace details {
             return iterator(std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
@@ -760,8 +797,7 @@ namespace details {
             return iterator(std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
@@ -780,8 +816,7 @@ namespace details {
             return iterator{std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
@@ -801,8 +836,7 @@ namespace details {
             return iterator{std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
@@ -821,8 +855,7 @@ namespace details {
             return reverse_iterator(std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
@@ -842,8 +875,7 @@ namespace details {
             return reverse_iterator(std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_));
         }
@@ -862,8 +894,7 @@ namespace details {
             return reverse_iterator{std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
@@ -883,8 +914,7 @@ namespace details {
             return reverse_iterator{std::apply(
                 [&]<typename... Ts>(Ts&&... e) {
                     return std::make_tuple(impl(std::forward<Ts>(e),
-                        std::make_index_sequence<
-                            std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
+                        std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(e.args())>>>{})...);
                 },
                 packs_)};
         }
@@ -897,6 +927,7 @@ namespace details {
 using details::zipped_container;
 using details::zipped_raw_array;
 using details::zipped_iterator;
+using details::zipped;
 using details::zip;
 }
 
@@ -5595,8 +5626,8 @@ namespace details {
         }
 
         template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim,
-            InputDataIt first_data, InputDataIt last_data)
+        explicit constexpr arrnd(
+            const InputDimsIt& first_dim, const InputDimsIt& last_dim, InputDataIt first_data, InputDataIt last_data)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
@@ -6411,8 +6442,6 @@ namespace details {
             return *this;
         }
 
-        
-
         template <std::size_t FromDepth, std::size_t ToDepth, typename UnaryOp, std::size_t CurrDepth = 0>
             requires(FromDepth <= ToDepth)
         [[nodiscard]] constexpr auto transform(UnaryOp op) const
@@ -6438,9 +6467,11 @@ namespace details {
                 transform_t res;
                 res.info()
                     = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
-                    typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                    shared_storage_->size()) : nullptr;
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
                 if (shared_storage_) {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
@@ -6463,9 +6494,11 @@ namespace details {
                 transform_t res;
                 res.info()
                     = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
-                    typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                    shared_storage_->size()) : nullptr;
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
                 if (shared_storage_) {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
@@ -6490,15 +6523,18 @@ namespace details {
                     return op(mid);
                 }
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
+                using transform_t
+                    = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
                         value_type, decltype(op(std::declval<value_type>()))>>;
 
                 transform_t res;
                 res.info()
                     = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
-                    typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                    shared_storage_->size()) : nullptr;
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
                 if (shared_storage_) {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
@@ -6519,15 +6555,18 @@ namespace details {
                     return op(res);
                 }
             } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
+                using transform_t
+                    = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
                         value_type, decltype(op(std::declval<value_type>()))>>;
 
                 transform_t res;
                 res.info()
                     = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
-                    typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                    shared_storage_->size()) : nullptr;
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
                 if (shared_storage_) {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
