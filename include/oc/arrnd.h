@@ -6073,7 +6073,7 @@ namespace details {
             r.info_ = info_type(info_.dims());
 
             r.shared_storage_ = shared_storage_;
-            for (auto t : zip(zipped_container(*this), zipped_container(r))) {
+            for (auto t : zip(zipped(*this), zipped(r))) {
                 std::get<1>(t) = std::move(std::get<0>(t));
             }
             r.shared_storage_->resize(oc::arrnd::total(r.info_));
@@ -6103,7 +6103,7 @@ namespace details {
                     shared_storage_->size());
                 c.shared_storage()->reserve(shared_storage_->capacity());
 
-                for (auto t : zip(zipped_container(*this), zipped_container(c))) {
+                for (auto t : zip(zipped(*this), zipped(c))) {
                     std::get<1>(t) = std::get<0>(t).template clone<typename Arrnd::value_type>();
                 }
             }
@@ -6413,7 +6413,7 @@ namespace details {
 
         template <std::size_t FromDepth, std::size_t ToDepth, typename UnaryOp, std::size_t CurrDepth = 0>
             requires(FromDepth <= ToDepth)
-        [[nodiscard]] constexpr auto apply(UnaryOp op)
+        constexpr auto apply(UnaryOp op)
         {
             // Traverse and perform operation on leaves.
             if constexpr (arrnd_type<value_type>) {
@@ -6436,6 +6436,39 @@ namespace details {
                     op(*this);
                 } else {
                     *this = op(*this);
+                }
+            }
+
+            return *this;
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, iterable_type Cont, typename Op,
+            std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth)
+        constexpr auto apply(const Cont& cont, Op op)
+        {
+            // Traverse and perform operation on leaves.
+            if constexpr (arrnd_type<value_type>) {
+                for (auto inner : *this) {
+                    std::get<0>(inner)
+                        = std::get<0>(inner).template apply<FromDepth, ToDepth, Op, CurrDepth + 1>(cont, op);
+                }
+            } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
+                for (auto values : zip(zipped(*this), zipped(cont))) {
+                    if constexpr (std::is_void_v<decltype(op(std::get<0>(values), std::get<1>(values)))>) {
+                        op(std::get<0>(values), std::get<1>(values));
+                    } else {
+                        std::get<0>(values) = op(std::get<0>(values), std::get<1>(values));
+                    }
+                }
+            }
+
+            // Apply operation on array if depth is relevant
+            if constexpr (CurrDepth >= FromDepth && CurrDepth <= ToDepth) {
+                if constexpr (std::is_void_v<decltype(op(*this, cont))>) {
+                    op(*this, cont);
+                } else {
+                    *this = op(*this, cont);
                 }
             }
 
@@ -6476,7 +6509,7 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped_container(*this), zipped_container(res))) {
+                for (auto t : zip(zipped(*this), zipped(res))) {
                     std::get<1>(t) = std::get<0>(t).template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op);
                 }
 
@@ -6503,7 +6536,7 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped_container(*this), zipped_container(res))) {
+                for (auto t : zip(zipped(*this), zipped(res))) {
                     std::get<1>(t) = std::get<0>(t).template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op);
                 }
 
@@ -6523,9 +6556,8 @@ namespace details {
                     return op(mid);
                 }
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t
-                    = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
-                        value_type, decltype(op(std::declval<value_type>()))>>;
+                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this)))>,
+                    value_type, decltype(op(*std::begin(*this)))>>;
 
                 transform_t res;
                 res.info()
@@ -6539,7 +6571,7 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped_container(*this), zipped_container(res))) {
+                for (auto t : zip(zipped(*this), zipped(res))) {
                     if constexpr (std::is_void_v<decltype(op(std::get<0>(t)))>) {
                         std::get<1>(t) = std::get<0>(t);
                         op(std::get<1>(t));
@@ -6555,9 +6587,8 @@ namespace details {
                     return op(res);
                 }
             } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t
-                    = replaced_type<std::conditional_t<std::is_void_v<decltype(op(std::declval<value_type>()))>,
-                        value_type, decltype(op(std::declval<value_type>()))>>;
+                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this)))>,
+                    value_type, decltype(op(*std::begin(*this)))>>;
 
                 transform_t res;
                 res.info()
@@ -6571,12 +6602,162 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped_container(*this), zipped_container(res))) {
+                for (auto t : zip(zipped(*this), zipped(res))) {
                     if constexpr (std::is_void_v<decltype(op(std::get<0>(t)))>) {
                         std::get<1>(t) = std::get<0>(t);
                         op(std::get<1>(t));
                     } else {
                         std::get<1>(t) = op(std::get<0>(t));
+                    }
+                }
+
+                return res;
+            } else {
+                // No transformations
+                return *this;
+            }
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, iterable_type Cont, typename UnaryOp,
+            std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth)
+        [[nodiscard]] constexpr auto transform(const Cont& cont, UnaryOp op) const
+        {
+            // The main thing done in this function is the returned type deduction.
+
+            // Main compilation branches:
+            // - If arrnd_type<value_type> and relevant(CurrentDepth)
+            // - Else If arrnd_type<value_type>: Do not transform, just recursive call
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && !relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and !relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type>: Do not transform, no recursive call
+
+            constexpr bool is_current_depth_relevant = CurrDepth >= FromDepth && CurrDepth <= ToDepth;
+            constexpr bool is_next_depth_relevant = CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth;
+
+            if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
+                using transform_t
+                    = replaced_type<decltype(std::declval<value_type>()
+                                                 .template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(
+                                                     op))>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res))) {
+                    std::get<1>(t)
+                        = std::get<0>(t).template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(cont, op);
+                }
+
+                if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                    op(res, cont);
+                    return res;
+                } else {
+                    return op(res, cont);
+                }
+            } else if constexpr (arrnd_type<value_type>) {
+                using transform_t
+                    = replaced_type<decltype(std::declval<value_type>()
+                                                 .template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(
+                                                     cont, op))>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res))) {
+                    std::get<1>(t)
+                        = std::get<0>(t).template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(cont, op);
+                }
+
+                return res;
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && !is_next_depth_relevant) {
+                using transform_t = std::conditional_t<std::is_void_v<decltype(op(*this, cont))>, this_type,
+                    decltype(op(*this, cont))>;
+
+                transform_t res;
+
+                if constexpr (std::is_void_v<decltype(op(*this, cont))>) {
+                    res = *this;
+                    op(res, cont);
+                    return res;
+                } else {
+                    this_type mid = *this;
+                    return op(mid, cont);
+                }
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
+                using transform_t = replaced_type<
+                    std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>, value_type,
+                        decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                        std::get<1>(t) = std::get<0>(t);
+                        op(std::get<1>(t), std::get<2>(t));
+                    } else {
+                        std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                    }
+                }
+
+                if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                    op(res, cont);
+                    return res;
+                } else {
+                    return op(res, cont);
+                }
+            } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
+                using transform_t = replaced_type<
+                    std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>, value_type,
+                        decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                        std::get<1>(t) = std::get<0>(t);
+                        op(std::get<1>(t), std::get<2>(t));
+                    } else {
+                        std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
                     }
                 }
 
