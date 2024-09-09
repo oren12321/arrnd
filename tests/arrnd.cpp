@@ -3242,3 +3242,317 @@ TEST(arrnd_type, find_adjacents)
             arr, arrnd<int>({3, 2, 4}, {1, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0, 13, 0, 15, 0, 17, 0, 0, 0, 21, 0, 0, 0})));
     }
 }
+
+TEST(arrnd_type, traverse)
+{
+    using namespace oc::arrnd;
+
+    arrnd<int>::nested_t<2> base1({1, 2},
+        {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6})}),
+            arrnd<int>::nested_t<1>(
+                {2}, {arrnd<int>({2, 2}, {7, 8, 9, 10}), arrnd<int>({3, 2}, {11, 12, 13, 14, 15, 16})})});
+
+    arrnd<double>::nested_t<2> base2({1, 2},
+        {arrnd<double>::nested_t<1>({1, 1}, {arrnd<double>({3, 1, 2}, {1.5, 2.5, 3.5, 4.5, 5.5, 6.5})}),
+            arrnd<double>::nested_t<1>({2},
+                {arrnd<double>({2, 2}, {7.5, 8.5, 9.5, 10.5}),
+                    arrnd<double>({3, 2}, {11.5, 12.5, 13.5, 14.5, 15.5, 16.5})})});
+
+    // dfs::apply
+    {
+        auto iarr = base1.clone();
+
+        std::stringstream ss;
+
+        iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::apply>([&ss](const auto& value) {
+            ss << value;
+        });
+
+        EXPECT_EQ("123456[[[1 2]]\n"
+                  " [[3 4]]\n"
+                  " [[5 6]]]{[[[1 2]]\n"
+                  "  [[3 4]]\n"
+                  "  [[5 6]]]}78910[[7 8]\n"
+                  " [9 10]]111213141516[[11 12]\n"
+                  " [13 14]\n"
+                  " [15 16]]{[[7 8]\n"
+                  "  [9 10]]\n"
+                  " [[11 12]\n"
+                  "  [13 14]\n"
+                  "  [15 16]]}{{[[[1 2]]\n"
+                  "   [[3 4]]\n"
+                  "   [[5 6]]]}\n"
+                  " {[[7 8]\n"
+                  "   [9 10]]\n"
+                  "  [[11 12]\n"
+                  "   [13 14]\n"
+                  "   [15 16]]}}",
+            ss.str());
+    }
+
+    // bfs::apply
+    {
+        auto iarr = base1.clone();
+
+        std::stringstream ss;
+
+        iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::apply>([&ss](const auto& value) {
+            ss << value;
+        });
+
+        EXPECT_EQ("{{[[[1 2]]\n"
+                  "   [[3 4]]\n"
+                  "   [[5 6]]]}\n"
+                  " {[[7 8]\n"
+                  "   [9 10]]\n"
+                  "  [[11 12]\n"
+                  "   [13 14]\n"
+                  "   [15 16]]}}{[[[1 2]]\n"
+                  "  [[3 4]]\n"
+                  "  [[5 6]]]}[[[1 2]]\n"
+                  " [[3 4]]\n"
+                  " [[5 6]]]123456{[[7 8]\n"
+                  "  [9 10]]\n"
+                  " [[11 12]\n"
+                  "  [13 14]\n"
+                  "  [15 16]]}[[7 8]\n"
+                  " [9 10]]78910[[11 12]\n"
+                  " [13 14]\n"
+                  " [15 16]]111213141516",
+            ss.str());
+    }
+
+    // dfs::transform
+    {
+        auto iarr = base1.clone();
+
+        std::stringstream ss;
+
+        iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>([&ss](const auto& value) {
+            ss << value;
+        });
+
+        EXPECT_EQ("123456[[[1 2]]\n"
+                  " [[3 4]]\n"
+                  " [[5 6]]]{[[[1 2]]\n"
+                  "  [[3 4]]\n"
+                  "  [[5 6]]]}78910[[7 8]\n"
+                  " [9 10]]111213141516[[11 12]\n"
+                  " [13 14]\n"
+                  " [15 16]]{[[7 8]\n"
+                  "  [9 10]]\n"
+                  " [[11 12]\n"
+                  "  [13 14]\n"
+                  "  [15 16]]}{{[[[1 2]]\n"
+                  "   [[3 4]]\n"
+                  "   [[5 6]]]}\n"
+                  " {[[7 8]\n"
+                  "   [9 10]]\n"
+                  "  [[11 12]\n"
+                  "   [13 14]\n"
+                  "   [15 16]]}}",
+            ss.str());
+    }
+
+    // bfs::transform
+    {
+        auto iarr = base1.clone();
+
+        std::stringstream ss;
+
+        iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::transform>([&ss](const auto& value) {
+            ss << value;
+        });
+
+        EXPECT_EQ("{{[[[1 2]]\n"
+                  "   [[3 4]]\n"
+                  "   [[5 6]]]}\n"
+                  " {[[7 8]\n"
+                  "   [9 10]]\n"
+                  "  [[11 12]\n"
+                  "   [13 14]\n"
+                  "   [15 16]]}}{[[[1 2]]\n"
+                  "  [[3 4]]\n"
+                  "  [[5 6]]]}[[[1 2]]\n"
+                  " [[3 4]]\n"
+                  " [[5 6]]]123456{[[7 8]\n"
+                  "  [9 10]]\n"
+                  " [[11 12]\n"
+                  "  [13 14]\n"
+                  "  [15 16]]}[[7 8]\n"
+                  " [9 10]]78910[[11 12]\n"
+                  " [13 14]\n"
+                  " [15 16]]111213141516",
+            ss.str());
+    }
+
+    // dfs::apply::carry
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::apply, arrnd_traversal_container::carry>(
+            cont, [](auto& value, const auto& c) {
+                if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                    value += size(c.info());
+                }
+            });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {3, 4, 5, 6, 7, 8})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {9, 10, 11, 12}), arrnd<int>({3, 2}, {13, 14, 15, 16, 17, 18})})});
+
+        EXPECT_TRUE(all_equal(res, iarr));
+    }
+
+    // bfs::apply::carry
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::apply, arrnd_traversal_container::carry>(
+            cont, [](auto& value, const auto& c) {
+                if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                    value += size(c.info());
+                }
+            });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {3, 4, 5, 6, 7, 8})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {9, 10, 11, 12}), arrnd<int>({3, 2}, {13, 14, 15, 16, 17, 18})})});
+
+        EXPECT_TRUE(all_equal(res, iarr));
+    }
+
+    // dfs::apply::propagate
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::apply,
+            arrnd_traversal_container::propagate>(cont, [](auto& value, const auto& c) {
+            if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                value += c;
+            }
+        });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {2, 4, 6, 8, 10, 12})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {14, 16, 18, 20}), arrnd<int>({3, 2}, {22, 24, 26, 28, 30, 32})})});
+
+        EXPECT_TRUE(all_equal(res, iarr));
+    }
+
+    // bfs::apply::propagate
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::apply,
+            arrnd_traversal_container::propagate>(cont, [](auto& value, const auto& c) {
+            if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                value += c;
+            }
+        });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {2, 4, 6, 8, 10, 12})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {14, 16, 18, 20}), arrnd<int>({3, 2}, {22, 24, 26, 28, 30, 32})})});
+
+        EXPECT_TRUE(all_equal(res, iarr));
+    }
+
+    // dfs::transform::carry
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        auto tiarr = iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::transform,
+            arrnd_traversal_container::carry>(cont, [](const auto& value, const auto& c) {
+            if constexpr (std::is_fundamental_v<std::remove_cvref_t<decltype(value)>>) {
+                return value + size(c.info());
+            } else {
+                return value;
+            }
+        });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {3, 4, 5, 6, 7, 8})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {9, 10, 11, 12}), arrnd<int>({3, 2}, {13, 14, 15, 16, 17, 18})})});
+
+        EXPECT_TRUE(all_equal(res, tiarr));
+    }
+
+    // bfs::transform::carry
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        auto tiarr = iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::transform,
+            arrnd_traversal_container::carry>(cont, [](const auto& value, const auto& c) {
+            if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                return value + size(c.info());
+            } else {
+                return value;
+            }
+        });
+
+        arrnd<int>::nested_t<2> res({1, 2},
+            {arrnd<int>::nested_t<1>({1, 1}, {arrnd<int>({3, 1, 2}, {3, 4, 5, 6, 7, 8})}),
+                arrnd<int>::nested_t<1>(
+                    {2}, {arrnd<int>({2, 2}, {9, 10, 11, 12}), arrnd<int>({3, 2}, {13, 14, 15, 16, 17, 18})})});
+
+        EXPECT_TRUE(all_equal(res, tiarr));
+    }
+
+    // dfs::transform::propagate
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        auto tiarr = iarr.traverse<0, 3, arrnd_traversal_type::dfs, arrnd_traversal_result::transform,
+            arrnd_traversal_container::propagate>(cont, [](const auto& value, const auto& c) {
+            if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                return value + c;
+            } else {
+                return value;
+            }
+        });
+
+        arrnd<double>::nested_t<2> res({1, 2},
+            {arrnd<double>::nested_t<1>({1, 1}, {arrnd<double>({3, 1, 2}, {2.5, 4.5, 6.5, 8.5, 10.5, 12.5})}),
+                arrnd<double>::nested_t<1>({2},
+                    {arrnd<double>({2, 2}, {14.5, 16.5, 18.5, 20.5}),
+                        arrnd<double>({3, 2}, {22.5, 24.5, 26.5, 28.5, 30.5, 32.5})})});
+
+        EXPECT_TRUE(all_equal(res, tiarr));
+    }
+
+    // bfs::transform::propagate
+    {
+        auto iarr = base1.clone();
+        auto cont = base2.clone();
+
+        auto tiarr = iarr.traverse<0, 3, arrnd_traversal_type::bfs, arrnd_traversal_result::transform,
+            arrnd_traversal_container::propagate>(cont, [](const auto& value, const auto& c) {
+            if constexpr (std::is_integral_v<std::remove_cvref_t<decltype(value)>>) {
+                return value + c;
+            } else {
+                return value;
+            }
+        });
+
+        arrnd<double>::nested_t<2> res({1, 2},
+            {arrnd<double>::nested_t<1>({1, 1}, {arrnd<double>({3, 1, 2}, {2.5, 4.5, 6.5, 8.5, 10.5, 12.5})}),
+                arrnd<double>::nested_t<1>({2},
+                    {arrnd<double>({2, 2}, {14.5, 16.5, 18.5, 20.5}),
+                        arrnd<double>({3, 2}, {22.5, 24.5, 26.5, 28.5, 30.5, 32.5})})});
+
+        EXPECT_TRUE(all_equal(res, tiarr));
+    }
+}

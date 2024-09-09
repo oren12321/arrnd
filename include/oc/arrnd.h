@@ -5452,6 +5452,10 @@ namespace details {
         return eye<Arrnd>(dims.begin(), dims.end());
     }
 
+    enum class arrnd_traversal_type { dfs, bfs };
+    enum class arrnd_traversal_result { apply, transform };
+    enum class arrnd_traversal_container { carry, propagate };
+
     template <typename T, typename DataStorageTraits = simple_vector_traits<T>, typename ArrndInfo = arrnd_info<>>
     class arrnd {
         static_assert(std::is_same_v<T, typename DataStorageTraits::storage_type::value_type>);
@@ -6411,14 +6415,15 @@ namespace details {
             return erase(fixed_count, ind, axis);
         }
 
-        template <std::size_t FromDepth, std::size_t ToDepth, typename UnaryOp, std::size_t CurrDepth = 0>
-            requires(FromDepth <= ToDepth)
-        constexpr auto apply(UnaryOp op)
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType, arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs && TraversalResult == arrnd_traversal_result::apply)
+        constexpr auto traverse(UnaryOp op)
         {
             // Traverse and perform operation on leaves.
             if constexpr (arrnd_type<value_type>) {
                 for (auto& inner : *this) {
-                    inner = inner.template apply<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op);
+                    inner = inner.template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                        CurrDepth + 1>(op);
                 }
             } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
                 for (auto& value : *this) {
@@ -6442,23 +6447,77 @@ namespace details {
             return *this;
         }
 
-        template <std::size_t FromDepth, std::size_t ToDepth, iterable_type Cont, typename Op,
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::bfs
+                && TraversalResult == arrnd_traversal_result::apply)
+        constexpr auto traverse(UnaryOp op)
+        {
+            // Apply operation on array if depth is relevant
+            if constexpr (CurrDepth >= FromDepth && CurrDepth <= ToDepth) {
+                if constexpr (std::is_void_v<decltype(op(*this))>) {
+                    op(*this);
+                } else {
+                    *this = op(*this);
+                }
+            }
+
+            // Traverse and perform operation on leaves.
+            if constexpr (arrnd_type<value_type>) {
+                for (auto& inner : *this) {
+                    inner = inner.template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                        CurrDepth + 1>(op);
+                }
+            } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
+                for (auto& value : *this) {
+                    if constexpr (std::is_void_v<decltype(op(value))>) {
+                        op(value);
+                    } else {
+                        value = op(value);
+                    }
+                }
+            }
+
+            return *this;
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont, typename Op,
             std::size_t CurrDepth = 0>
-            requires(FromDepth <= ToDepth)
-        constexpr auto apply(const Cont& cont, Op op)
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs
+                && TraversalResult == arrnd_traversal_result::apply)
+        constexpr auto traverse(const Cont& cont, Op op)
         {
             // Traverse and perform operation on leaves.
             if constexpr (arrnd_type<value_type>) {
-                for (auto inner : *this) {
-                    std::get<0>(inner)
-                        = std::get<0>(inner).template apply<FromDepth, ToDepth, Op, CurrDepth + 1>(cont, op);
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto& inner : *this) {
+                        inner = inner.template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                            TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+                } else {
+                    for (auto inners : zip(zipped(*this), zipped(cont))) {
+                        std::get<0>(inners) = std::get<0>(inners)
+                                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<1>(inners))>, Op, CurrDepth + 1>(std::get<1>(inners), op);
+                    }
                 }
             } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
-                for (auto values : zip(zipped(*this), zipped(cont))) {
-                    if constexpr (std::is_void_v<decltype(op(std::get<0>(values), std::get<1>(values)))>) {
-                        op(std::get<0>(values), std::get<1>(values));
-                    } else {
-                        std::get<0>(values) = op(std::get<0>(values), std::get<1>(values));
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto& value : *this) {
+                        if constexpr (std::is_void_v<decltype(op(value, cont))>) {
+                            op(value, cont);
+                        } else {
+                            value = op(value, cont);
+                        }
+                    }
+                } else {
+                    for (auto values : zip(zipped(*this), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(values), std::get<1>(values)))>) {
+                            op(std::get<0>(values), std::get<1>(values));
+                        } else {
+                            std::get<0>(values) = op(std::get<0>(values), std::get<1>(values));
+                        }
                     }
                 }
             }
@@ -6475,9 +6534,65 @@ namespace details {
             return *this;
         }
 
-        template <std::size_t FromDepth, std::size_t ToDepth, typename UnaryOp, std::size_t CurrDepth = 0>
-            requires(FromDepth <= ToDepth)
-        [[nodiscard]] constexpr auto transform(UnaryOp op) const
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont,
+            typename Op, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::bfs
+                && TraversalResult == arrnd_traversal_result::apply)
+        constexpr auto traverse(const Cont& cont, Op op)
+        {
+            // Apply operation on array if depth is relevant
+            if constexpr (CurrDepth >= FromDepth && CurrDepth <= ToDepth) {
+                if constexpr (std::is_void_v<decltype(op(*this, cont))>) {
+                    op(*this, cont);
+                } else {
+                    *this = op(*this, cont);
+                }
+            }
+
+            // Traverse and perform operation on leaves.
+            if constexpr (arrnd_type<value_type>) {
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto& inner : *this) {
+                        inner = inner.template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                            TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+                } else {
+                    for (auto inners : zip(zipped(*this), zipped(cont))) {
+                        std::get<0>(inners) = std::get<0>(inners)
+                                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<1>(inners))>, Op, CurrDepth + 1>(
+                                      std::get<1>(inners), op);
+                    }
+                }
+            } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto& value : *this) {
+                        if constexpr (std::is_void_v<decltype(op(value, cont))>) {
+                            op(value, cont);
+                        } else {
+                            value = op(value, cont);
+                        }
+                    }
+                } else {
+                    for (auto values : zip(zipped(*this), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(values), std::get<1>(values)))>) {
+                            op(std::get<0>(values), std::get<1>(values));
+                        } else {
+                            std::get<0>(values) = op(std::get<0>(values), std::get<1>(values));
+                        }
+                    }
+                }
+            }
+
+            return *this;
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs
+                && TraversalResult == arrnd_traversal_result::transform)
+        [[nodiscard]] constexpr auto traverse(UnaryOp op) const
         {
             // The main thing done in this function is the returned type deduction.
 
@@ -6495,7 +6610,8 @@ namespace details {
             if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
                 using transform_t
                     = replaced_type<decltype(std::declval<value_type>()
-                                                 .template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op))>;
+                                                               .template traverse<FromDepth, ToDepth, TraversalType,
+                                                                   TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
                 transform_t res;
                 res.info()
@@ -6510,7 +6626,9 @@ namespace details {
                 }
 
                 for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t) = std::get<0>(t).template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op);
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                                             CurrDepth + 1>(op);
                 }
 
                 if constexpr (std::is_void_v<decltype(op(res))>) {
@@ -6522,7 +6640,8 @@ namespace details {
             } else if constexpr (arrnd_type<value_type>) {
                 using transform_t
                     = replaced_type<decltype(std::declval<value_type>()
-                                                 .template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op))>;
+                                                               .template traverse<FromDepth, ToDepth, TraversalType,
+                                                                   TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
                 transform_t res;
                 res.info()
@@ -6537,7 +6656,9 @@ namespace details {
                 }
 
                 for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t) = std::get<0>(t).template transform<FromDepth, ToDepth, UnaryOp, CurrDepth + 1>(op);
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                                             CurrDepth + 1>(op);
                 }
 
                 return res;
@@ -6618,10 +6739,11 @@ namespace details {
             }
         }
 
-        template <std::size_t FromDepth, std::size_t ToDepth, iterable_type Cont, typename UnaryOp,
-            std::size_t CurrDepth = 0>
-            requires(FromDepth <= ToDepth)
-        [[nodiscard]] constexpr auto transform(const Cont& cont, UnaryOp op) const
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::bfs
+                && TraversalResult == arrnd_traversal_result::transform)
+        [[nodiscard]] constexpr auto traverse(UnaryOp op) const
         {
             // The main thing done in this function is the returned type deduction.
 
@@ -6637,10 +6759,44 @@ namespace details {
             constexpr bool is_next_depth_relevant = CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth;
 
             if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
+                auto invoke = [&op](auto arr) {
+                    if constexpr (std::is_void_v<decltype(op(arr))>) {
+                        op(arr);
+                        return arr;
+                    } else {
+                        return op(arr);
+                    }
+                };
+                auto mid = invoke(*this);
+
+                using transform_t = replaced_type<decltype((*std::begin(mid))
+                                                               .template traverse<FromDepth, ToDepth, TraversalType,
+                                                                   TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(mid), zipped(res))) {
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                                             CurrDepth + 1>(op);
+                }
+
+                return res;
+            } else if constexpr (arrnd_type<value_type>) {
                 using transform_t
                     = replaced_type<decltype(std::declval<value_type>()
-                                                 .template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(
-                                                     op))>;
+                                                               .template traverse<FromDepth, ToDepth, TraversalType,
+                                                                   TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
                 transform_t res;
                 res.info()
@@ -6655,21 +6811,185 @@ namespace details {
                 }
 
                 for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t)
-                        = std::get<0>(t).template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(cont, op);
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, UnaryOp,
+                                             CurrDepth + 1>(op);
                 }
 
-                if constexpr (std::is_void_v<decltype(op(res, cont))>) {
-                    op(res, cont);
+                return res;
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && !is_next_depth_relevant) {
+                using transform_t
+                    = std::conditional_t<std::is_void_v<decltype(op(*this))>, this_type, decltype(op(*this))>;
+
+                transform_t res;
+
+                if constexpr (std::is_void_v<decltype(op(*this))>) {
+                    res = *this;
+                    op(res);
                     return res;
                 } else {
-                    return op(res, cont);
+                    this_type mid = *this;
+                    return op(mid);
+                }
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
+                auto invoke = [&op](auto arr) {
+                    if constexpr (std::is_void_v<decltype(op(arr))>) {
+                        op(arr);
+                        return arr;
+                    } else {
+                        return op(arr);
+                    }
+                };
+                auto mid = invoke(*this);
+
+                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid)))>,
+                    value_type, decltype(op(*std::begin(mid)))>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(mid), zipped(res))) {
+                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t)))>) {
+                        std::get<1>(t) = std::get<0>(t);
+                        op(std::get<1>(t));
+                    } else {
+                        std::get<1>(t) = op(std::get<0>(t));
+                    }
+                }
+
+                return res;
+            } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
+                using transform_t = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this)))>,
+                    value_type, decltype(op(*std::begin(*this)))>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res))) {
+                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t)))>) {
+                        std::get<1>(t) = std::get<0>(t);
+                        op(std::get<1>(t));
+                    } else {
+                        std::get<1>(t) = op(std::get<0>(t));
+                    }
+                }
+
+                return res;
+            } else {
+                // No transformations
+                return *this;
+            }
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont,
+            typename Op, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs
+                && TraversalResult == arrnd_traversal_result::transform)
+        [[nodiscard]] constexpr auto traverse(const Cont& cont, Op op) const
+        {
+            // The main thing done in this function is the returned type deduction.
+
+            // Main compilation branches:
+            // - If arrnd_type<value_type> and relevant(CurrentDepth)
+            // - Else If arrnd_type<value_type>: Do not transform, just recursive call
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && !relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and !relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type>: Do not transform, no recursive call
+
+            constexpr bool is_current_depth_relevant = CurrDepth >= FromDepth && CurrDepth <= ToDepth;
+            constexpr bool is_next_depth_relevant = CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth;
+
+            if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<decltype(std::declval<value_type>()
+                                                     .template traverse<FromDepth, ToDepth, TraversalType,
+                                                         TraversalResult, TraversalCont, Cont, Op, CurrDepth + 1>(
+                                                         cont, op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        std::get<1>(t) = std::get<0>(t)
+                                             .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                 TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+
+                    if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                        op(res, cont);
+                        return res;
+                    } else {
+                        return op(res, cont);
+                    }
+                } else {
+                    using transform_t = replaced_type<
+                        decltype(std::declval<value_type>()
+                                     .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                         TraversalCont, std::remove_reference_t<decltype(*std::begin(cont))>, Op,
+                                         CurrDepth + 1>(*std::begin(cont), op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        std::get<1>(t)
+                            = std::get<0>(t)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<2>(t))>, Op, CurrDepth + 1>(
+                                      std::get<2>(t), op);
+                    }
+
+                    if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                        op(res, cont);
+                        return res;
+                    } else {
+                        return op(res, cont);
+                    }
                 }
             } else if constexpr (arrnd_type<value_type>) {
                 using transform_t
                     = replaced_type<decltype(std::declval<value_type>()
-                                                 .template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(
-                                                     cont, op))>;
+                                                 .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                     TraversalCont, Cont, Op, CurrDepth + 1>(cont, op))>;
 
                 transform_t res;
                 res.info()
@@ -6684,8 +7004,9 @@ namespace details {
                 }
 
                 for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t)
-                        = std::get<0>(t).template transform<FromDepth, ToDepth, Cont, UnaryOp, CurrDepth + 1>(cont, op);
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                             TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
                 }
 
                 return res;
@@ -6704,9 +7025,12 @@ namespace details {
                     return op(mid, cont);
                 }
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = replaced_type<
-                    std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>, value_type,
-                        decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
+                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
+                        decltype(op(*std::begin(*this), cont))>>,
+                    replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
 
                 transform_t res;
                 res.info()
@@ -6720,12 +7044,23 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
-                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
-                        std::get<1>(t) = std::get<0>(t);
-                        op(std::get<1>(t), std::get<2>(t));
-                    } else {
-                        std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), cont);
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), cont);
+                        }
+                    }
+                } else {
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), std::get<2>(t));
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                        }
                     }
                 }
 
@@ -6736,9 +7071,12 @@ namespace details {
                     return op(res, cont);
                 }
             } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = replaced_type<
-                    std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>, value_type,
-                        decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
+                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
+                        decltype(op(*std::begin(*this), cont))>>,
+                    replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
 
                 transform_t res;
                 res.info()
@@ -6752,12 +7090,245 @@ namespace details {
                     res.shared_storage()->reserve(shared_storage_->capacity());
                 }
 
-                for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
-                    if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
-                        std::get<1>(t) = std::get<0>(t);
-                        op(std::get<1>(t), std::get<2>(t));
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), cont);
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), cont);
+                        }
+                    }
+                } else {
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), std::get<2>(t));
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                        }
+                    }
+                }
+
+                return res;
+            } else {
+                // No transformations
+                return *this;
+            }
+        }
+
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont,
+            typename Op, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::bfs
+                && TraversalResult == arrnd_traversal_result::transform)
+        [[nodiscard]] constexpr auto traverse(const Cont& cont, Op op) const
+        {
+            // The main thing done in this function is the returned type deduction.
+
+            // Main compilation branches:
+            // - If arrnd_type<value_type> and relevant(CurrentDepth)
+            // - Else If arrnd_type<value_type>: Do not transform, just recursive call
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and relevant(CurrentDepth) && !relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type> and !relevant(CurrentDepth) && relevant(CurrentDepth + 1)
+            // - Else If !arrnd_type<value_type>: Do not transform, no recursive call
+
+            constexpr bool is_current_depth_relevant = CurrDepth >= FromDepth && CurrDepth <= ToDepth;
+            constexpr bool is_next_depth_relevant = CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth;
+
+            if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
+                auto invoke = [&op, &cont](auto arr) {
+                    if constexpr (std::is_void_v<decltype(op(arr, cont))>) {
+                        op(arr, cont);
+                        return arr;
                     } else {
-                        std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                        return op(arr, cont);
+                    }
+                };
+                auto mid = invoke(*this);
+
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<decltype((*std::begin(mid))
+                                                     .template traverse<FromDepth, ToDepth, TraversalType,
+                                                         TraversalResult, TraversalCont, Cont, Op, CurrDepth + 1>(
+                                                         cont, op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(mid), zipped(res))) {
+                        std::get<1>(t) = std::get<0>(t)
+                                             .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                 TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+
+                    return res;
+                } else {
+                    using transform_t = replaced_type<
+                        decltype((*std::begin(mid))
+                                     .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                         TraversalCont, std::remove_reference_t<decltype(*std::begin(cont))>, Op,
+                                         CurrDepth + 1>(*std::begin(cont), op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(mid), zipped(res), zipped(cont))) {
+                        std::get<1>(t)
+                            = std::get<0>(t)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<2>(t))>, Op, CurrDepth + 1>(
+                                      std::get<2>(t), op);
+                    }
+
+                    return res;
+                }
+            } else if constexpr (arrnd_type<value_type>) {
+                using transform_t
+                    = replaced_type<decltype(std::declval<value_type>()
+                                                 .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                     TraversalCont, Cont, Op, CurrDepth + 1>(cont, op))>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                for (auto t : zip(zipped(*this), zipped(res))) {
+                    std::get<1>(t) = std::get<0>(t)
+                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                             TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                }
+
+                return res;
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && !is_next_depth_relevant) {
+                using transform_t = std::conditional_t<std::is_void_v<decltype(op(*this, cont))>, this_type,
+                    decltype(op(*this, cont))>;
+
+                transform_t res;
+
+                if constexpr (std::is_void_v<decltype(op(*this, cont))>) {
+                    res = *this;
+                    op(res, cont);
+                    return res;
+                } else {
+                    this_type mid = *this;
+                    return op(mid, cont);
+                }
+            } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
+                auto invoke = [&op, &cont](auto arr) {
+                    if constexpr (std::is_void_v<decltype(op(arr, cont))>) {
+                        op(arr, cont);
+                        return arr;
+                    } else {
+                        return op(arr, cont);
+                    }
+                };
+                auto mid = invoke(*this);
+
+                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
+                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), cont))>, value_type,
+                        decltype(op(*std::begin(mid), cont))>>,
+                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), *std::begin(cont)))>,
+                        value_type, decltype(op(*std::begin(mid), *std::begin(cont)))>>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto t : zip(zipped(mid), zipped(res))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), cont);
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), cont);
+                        }
+                    }
+                } else {
+                    for (auto t : zip(zipped(mid), zipped(res), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), std::get<2>(t));
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                        }
+                    }
+                }
+
+                return res;
+            } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
+                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
+                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
+                        decltype(op(*std::begin(*this), cont))>>,
+                    replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
+
+                transform_t res;
+                res.info()
+                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                res.shared_storage() = shared_storage_
+                    ? std::allocate_shared<typename transform_t::storage_type>(
+                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
+                        shared_storage_->size())
+                    : nullptr;
+                if (shared_storage_) {
+                    res.shared_storage()->reserve(shared_storage_->capacity());
+                }
+
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), cont);
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), cont);
+                        }
+                    }
+                } else {
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
+                            std::get<1>(t) = std::get<0>(t);
+                            op(std::get<1>(t), std::get<2>(t));
+                        } else {
+                            std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
+                        }
                     }
                 }
 
@@ -12002,6 +12573,10 @@ using details::arrnd_json;
 
 using details::arrnd_inner;
 using details::arrnd_inner_t;
+
+using details::arrnd_traversal_type;
+using details::arrnd_traversal_result;
+using details::arrnd_traversal_container;
 
 using details::arrnd_shape_preset;
 using details::arrnd_filter_proxy;
