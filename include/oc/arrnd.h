@@ -6441,8 +6441,10 @@ namespace details {
             return erase(fixed_count, ind, axis);
         }
 
-        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType, arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
-            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs && TraversalResult == arrnd_traversal_result::apply)
+        template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
+            arrnd_traversal_result TraversalResult, typename UnaryOp, std::size_t CurrDepth = 0>
+            requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs
+                && TraversalResult == arrnd_traversal_result::apply)
         constexpr auto& traverse(UnaryOp op)
         {
             // Traverse and perform operation on leaves.
@@ -6508,8 +6510,8 @@ namespace details {
         }
 
         template <std::size_t FromDepth, std::size_t ToDepth, arrnd_traversal_type TraversalType,
-            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont, typename Op,
-            std::size_t CurrDepth = 0>
+            arrnd_traversal_result TraversalResult, arrnd_traversal_container TraversalCont, iterable_type Cont,
+            typename Op, std::size_t CurrDepth = 0>
             requires(FromDepth <= ToDepth && TraversalType == arrnd_traversal_type::dfs
                 && TraversalResult == arrnd_traversal_result::apply)
         constexpr auto& traverse(const Cont& cont, Op op)
@@ -6523,9 +6525,11 @@ namespace details {
                     }
                 } else {
                     for (auto inners : zip(zipped(*this), zipped(cont))) {
-                        std::get<0>(inners) = std::get<0>(inners)
-                                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
-                                      std::remove_reference_t<decltype(std::get<1>(inners))>, Op, CurrDepth + 1>(std::get<1>(inners), op);
+                        std::get<0>(inners)
+                            = std::get<0>(inners)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<1>(inners))>, Op, CurrDepth + 1>(
+                                      std::get<1>(inners), op);
                     }
                 }
             } else if constexpr (CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth) {
@@ -6585,8 +6589,9 @@ namespace details {
                     }
                 } else {
                     for (auto inners : zip(zipped(*this), zipped(cont))) {
-                        std::get<0>(inners) = std::get<0>(inners)
-                                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                        std::get<0>(inners)
+                            = std::get<0>(inners)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
                                       std::remove_reference_t<decltype(std::get<1>(inners))>, Op, CurrDepth + 1>(
                                       std::get<1>(inners), op);
                     }
@@ -6634,8 +6639,7 @@ namespace details {
             constexpr bool is_next_depth_relevant = CurrDepth + 1 >= FromDepth && CurrDepth + 1 <= ToDepth;
 
             if constexpr (arrnd_type<value_type> && is_current_depth_relevant) {
-                using transform_t
-                    = replaced_type<decltype(std::declval<value_type>()
+                using transform_t = replaced_type<decltype(std::declval<value_type>()
                                                                .template traverse<FromDepth, ToDepth, TraversalType,
                                                                    TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
@@ -6664,8 +6668,7 @@ namespace details {
                     return op(res);
                 }
             } else if constexpr (arrnd_type<value_type>) {
-                using transform_t
-                    = replaced_type<decltype(std::declval<value_type>()
+                using transform_t = replaced_type<decltype(std::declval<value_type>()
                                                                .template traverse<FromDepth, ToDepth, TraversalType,
                                                                    TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
@@ -6819,8 +6822,7 @@ namespace details {
 
                 return res;
             } else if constexpr (arrnd_type<value_type>) {
-                using transform_t
-                    = replaced_type<decltype(std::declval<value_type>()
+                using transform_t = replaced_type<decltype(std::declval<value_type>()
                                                                .template traverse<FromDepth, ToDepth, TraversalType,
                                                                    TraversalResult, UnaryOp, CurrDepth + 1>(op))>;
 
@@ -7365,62 +7367,11 @@ namespace details {
             }
         }
 
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto transform(Func&& func) const
-        //{
-        //    using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>>, Level>;
-
-        //    if (empty()) {
-        //        return transformed_type();
-        //    }
-
-        //    transformed_type res(info_.dims().cbegin(), info_.dims().cend());
-
-        //    indexer_type gen(info_);
-        //    typename transformed_type::indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = (*this)[*gen].template transform<Level - 1, Func>(std::forward<Func>(func));
-        //    }
-
-        //    return res;
-        //}
-
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto transform(Func&& func) const
-        //{
-        //    using transformed_type = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>>, Level>;
-
-        //    if (empty()) {
-        //        return transformed_type();
-        //    }
-
-        //    transformed_type res(info_.dims().cbegin(), info_.dims().cend());
-
-        //    indexer_type gen(info_);
-        //    typename transformed_type::indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = func((*this)[*gen]);
-        //    }
-
-        //    return res;
-        //}
-
         template <std::size_t AtDepth = this_type::depth, typename UnaryOp>
         [[nodiscard]] constexpr auto transform(UnaryOp op) const
         {
             return traverse<AtDepth + 1, AtDepth + 1, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(op);
         }
-
-        //template <typename Func>
-        //    requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>>
-        //[[nodiscard]] constexpr auto transform(Func&& func) const
-        //{
-        //    return transform<this_type::depth, Func>(std::forward<Func>(func));
-        //}
 
         template <std::int64_t Level, arrnd_type Arrnd, typename Func>
             requires(Level > 0
@@ -7541,49 +7492,6 @@ namespace details {
             return transform<this_type::depth, Arrnd, Func>(arr, std::forward<Func>(func));
         }
 
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>>)
-        //constexpr this_type& apply(Func&& func)
-        //{
-        //    if (empty()) {
-        //        return *this;
-        //    }
-
-        //    for (indexer_type gen(info_); gen; ++gen) {
-        //        (*this)[*gen].template apply<Level - 1, Func>(std::forward<Func>(func));
-        //    }
-
-        //    return *this;
-        //}
-
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>>)
-        //constexpr this_type& apply(Func&& func)
-        //{
-        //    if (empty()) {
-        //        return *this;
-        //    }
-
-        //    constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, inner_value_type<Level>>, void>;
-
-        //    for (indexer_type gen(info_); gen; ++gen) {
-        //        if constexpr (is_void_func) {
-        //            func((*this)[*gen]);
-        //        } else {
-        //            (*this)[*gen] = func((*this)[*gen]);
-        //        }
-        //    }
-
-        //    return *this;
-        //}
-
-        //template <typename Func>
-        //    requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>>
-        //constexpr this_type& apply(Func&& func)
-        //{
-        //    return apply<this_type::depth, Func>(std::forward<Func>(func));
-        //}
-
         template <std::size_t AtDepth = this_type::depth, typename UnaryOp>
         [[nodiscard]] constexpr auto& apply(UnaryOp op)
         {
@@ -7700,60 +7608,9 @@ namespace details {
                 return std::reduce(std::next(arr.begin(), 1), arr.end(), static_cast<reduce_t>(*(arr.begin())), op);
             };
 
-            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(reduce_impl);
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
+                reduce_impl);
         }
-
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto reduce(Func&& func) const
-        //{
-        //    using reduced_type = std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>>;
-
-        //    if (empty()) {
-        //        return reduced_type();
-        //    }
-
-        //    indexer_type gen(info_);
-
-        //    reduced_type res = (((*this)[*gen]));
-        //    ++gen;
-
-        //    while (gen) {
-        //        res = func(std::forward<reduced_type>(res), (*this)[*gen]);
-        //        ++gen;
-        //    }
-
-        //    return res;
-        //}
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto reduce(Func&& func) const
-        //{
-        //    using reduced_type
-        //        = inner_replaced_type<std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>>,
-        //            Level - 1>;
-
-        //    if (empty()) {
-        //        return reduced_type();
-        //    }
-
-        //    reduced_type res(info_.dims());
-
-        //    indexer_type gen(info_);
-        //    indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func>(std::forward<Func>(func));
-        //    }
-
-        //    return res;
-        //}
-        //template <typename Func>
-        //    requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>>)
-        //[[nodiscard]] constexpr auto reduce(Func&& func) const
-        //{
-        //    return reduce<this_type::depth, Func>(std::forward<Func>(func));
-        //}
 
         template <std::size_t AtDepth = this_type::depth, typename U, typename BinaryOp>
         [[nodiscard]] constexpr auto fold(const U& init, BinaryOp op) const
@@ -7771,51 +7628,6 @@ namespace details {
 
             return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(fold_impl);
         }
-
-        //template <std::int64_t Level, typename U, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, U, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto fold(const U& init, Func&& func) const
-        //{
-        //    using folded_type = std::invoke_result_t<Func, U, inner_value_type<Level>>;
-
-        //    if (empty()) {
-        //        return init;
-        //    }
-
-        //    folded_type res = (init);
-        //    for (indexer_type gen{info_}; gen; ++gen) {
-        //        res = func(res, (*this)[*gen]);
-        //    }
-
-        //    return res;
-        //}
-        //template <std::int64_t Level, typename U, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, U, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto fold(const U& init, Func&& func) const
-        //{
-        //    using folded_type = inner_replaced_type<std::invoke_result_t<Func, U, inner_value_type<Level>>, Level - 1>;
-
-        //    if (empty()) {
-        //        return folded_type();
-        //    }
-
-        //    folded_type res(info_.dims());
-
-        //    indexer_type gen(info_);
-        //    indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = (*this)[*gen].template fold<Level - 1, U, Func>(init, std::forward<Func>(func));
-        //    }
-
-        //    return res;
-        //}
-        //template <typename U, typename Func>
-        //    requires(invocable_no_arrnd<Func, U, inner_value_type<this_type::depth>>)
-        //[[nodiscard]] constexpr auto fold(const U& init, Func&& func) const
-        //{
-        //    return fold<this_type::depth, U, Func>(init, std::forward<Func>(func));
-        //}
 
         template <std::size_t AtDepth = this_type::depth, typename BinaryOp>
         [[nodiscard]] constexpr auto reduce(size_type axis, BinaryOp op) const
@@ -7850,67 +7662,6 @@ namespace details {
             return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
                 reduce_impl);
         }
-
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto reduce(size_type axis, Func&& func) const
-        //{
-        //    using reduced_type
-        //        = replaced_type<std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>>>;
-
-        //    if (empty()) {
-        //        return reduced_type();
-        //    }
-
-        //    auto new_header = oc::arrnd::reduce(info_, axis);
-        //    reduced_type res({total(new_header)});
-        //    res.info() = std::move(new_header);
-
-        //    indexer_type gen(move(info_, std::ssize(info_.dims()) - axis - 1, 0));
-        //    indexer_type res_gen(res.info());
-
-        //    const size_type reduction_iteration_cycle{info_.dims()[axis]};
-
-        //    while (gen && res_gen) {
-        //        typename reduced_type::value_type res_element = (((*this)[*gen]));
-        //        ++gen;
-        //        for (size_type i = 0; i < reduction_iteration_cycle - 1; ++i, ++gen) {
-        //            res_element = func(std::forward<typename reduced_type::value_type>(res_element), (*this)[*gen]);
-        //        }
-        //        res[*res_gen] = res_element;
-        //        ++res_gen;
-        //    }
-
-        //    return res;
-        //}
-        //template <std::int64_t Level, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, inner_value_type<Level>, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto reduce(size_type axis, Func&& func) const
-        //{
-        //    using reduced_type = inner_replaced_type<
-        //        replaced_type<std::invoke_result_t<Func, inner_value_type<Level>, inner_value_type<Level>>>, Level - 1>;
-
-        //    if (empty()) {
-        //        return reduced_type();
-        //    }
-
-        //    reduced_type res(info_.dims());
-
-        //    indexer_type gen(info_);
-        //    indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen] = (*this)[*gen].template reduce<Level - 1, Func>(axis, std::forward<Func>(func));
-        //    }
-
-        //    return res;
-        //}
-        //template <typename Func>
-        //    requires(invocable_no_arrnd<Func, inner_value_type<this_type::depth>, inner_value_type<this_type::depth>>)
-        //[[nodiscard]] constexpr auto reduce(size_type axis, Func&& func) const
-        //{
-        //    return reduce<this_type::depth, Func>(axis, std::forward<Func>(func));
-        //}
 
         template <std::size_t AtDepth = this_type::depth, iterator_type InputIt, typename BinaryOp>
         [[nodiscard]] constexpr auto fold(size_type axis, InputIt first_init, InputIt last_init, BinaryOp op) const
@@ -7964,385 +7715,166 @@ namespace details {
             return fold<AtDepth>(axis, inits.begin(), inits.end(), std::forward<BinaryOp>(op));
         }
 
-        //template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-        //    requires(Level == 0 && invocable_no_arrnd<Func, typename Arrnd::value_type, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto fold(size_type axis, const Arrnd& inits, Func&& func) const
-        //{
-        //    using folded_type
-        //        = replaced_type<std::invoke_result_t<Func, typename Arrnd::value_type, inner_value_type<Level>>>;
-
-        //    if (empty()) {
-        //        return folded_type();
-        //    }
-
-        //    assert(inits.info().dims().size() == 1 && inits.info().dims()[0] == total(info_) / info_.dims()[axis]);
-
-        //    auto new_dims = info_.dims();
-        //    if (std::size(new_dims) > 1) {
-        //        new_dims.erase(std::next(std::begin(new_dims), axis));
-        //        new_dims.shrink_to_fit();
-        //    } else if (std::size(new_dims) == 1) {
-        //        new_dims[0] = 1;
-        //    }
-        //    auto new_header = info_type(new_dims);
-        //    folded_type res({total(new_header)});
-        //    res.info() = std::move(new_header);
-
-        //    indexer_type gen(move(info_, std::ssize(info_.dims()) - axis - 1, 0));
-        //    indexer_type res_gen(res.info());
-        //    typename Arrnd::indexer_type init_gen(inits.info());
-
-        //    const size_type reduction_iteration_cycle{info_.dims()[axis]};
-
-        //    while (gen && res_gen && init_gen) {
-        //        typename folded_type::value_type res_element = ((inits[*init_gen]));
-        //        for (size_type i = 0; i < reduction_iteration_cycle; ++i, ++gen) {
-        //            res_element = func(res_element, (*this)[*gen]);
-        //        }
-        //        res[*res_gen] = std::move(res_element);
-        //        ++res_gen;
-        //        ++init_gen;
-        //    }
-
-        //    return res;
-        //}
-        //template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-        //    requires(Level > 0 && invocable_no_arrnd<Func, typename Arrnd::value_type, inner_value_type<Level>>)
-        //[[nodiscard]] constexpr auto fold(size_type axis, const Arrnd& inits, Func&& func) const
-        //{
-        //    using folded_type = inner_replaced_type<
-        //        replaced_type<std::invoke_result_t<Func, typename Arrnd::value_type, inner_value_type<Level>>>,
-        //        Level - 1>;
-
-        //    if (empty()) {
-        //        return folded_type();
-        //    }
-
-        //    folded_type res(info_.dims());
-
-        //    indexer_type gen(info_);
-        //    indexer_type res_gen(res.info());
-
-        //    for (; gen && res_gen; ++gen, ++res_gen) {
-        //        res[*res_gen]
-        //            = (*this)[*gen].template fold<Level - 1, Arrnd, Func>(axis, inits, std::forward<Func>(func));
-        //    }
-
-        //    return res;
-        //}
-        //template <arrnd_type Arrnd, typename Func>
-        //    requires(invocable_no_arrnd<Func, typename Arrnd::value_type, inner_value_type<this_type::depth>>)
-        //[[nodiscard]] constexpr auto fold(size_type axis, const Arrnd& inits, Func&& func) const
-        //{
-        //    return fold<this_type::depth, Arrnd, Func>(axis, inits, std::forward<Func>(func));
-        //}
-
-        template <std::int64_t Level, typename Pred>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr this_type filter(Pred&& pred) const
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
+            requires(!iterable_of_type_integral<Pred>)
+        [[nodiscard]] constexpr auto filter(Pred pred) const
         {
-            if (empty()) {
-                return this_type();
-            }
+            auto filter_impl = [&pred](const auto& arr) {
+                using filter_t = std::remove_cvref_t<decltype(arr)>;
 
-            this_type res({total(info_)});
-
-            indexer_type gen(info_);
-            indexer_type res_gen(res.info_);
-
-            size_type res_count{0};
-
-            while (gen && res_gen) {
-                if (pred((*this)[*gen])) {
-                    res[*res_gen] = (*this)[*gen];
-                    ++res_count;
-                    ++res_gen;
+                if (arr.empty()) {
+                    return filter_t{};
                 }
-                ++gen;
-            }
 
-            if (res_count == 0) {
-                return this_type();
-            }
+                filter_t res({total(arr.info())});
 
-            if (res_count < total(info_)) {
-                return res.resize({res_count});
-            }
+                size_type count = 0;
 
-            return res;
-        }
-        template <std::int64_t Level, typename Pred>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr this_type filter(Pred&& pred) const
-        {
-            if (empty()) {
-                return this_type();
-            }
-
-            this_type res(info_.dims().cbegin(), info_.dims().cend());
-
-            indexer_type gen(info_);
-            indexer_type res_gen(res.info());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template filter<Level - 1, Pred>(std::forward<Pred>(pred));
-            }
-
-            return res;
-        }
-        template <typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>
-        [[nodiscard]] constexpr this_type filter(Pred&& pred) const
-        {
-            return filter<this_type::depth, Pred>(std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, arrnd_type Arrnd>
-            requires(Level == 0)
-        [[nodiscard]] constexpr this_type filter(const Arrnd& selector) const
-        {
-            if (empty()) {
-                return this_type();
-            }
-
-            if constexpr (std::is_same_v<bool, typename Arrnd::value_type>) {
-                assert(std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(selector.info().dims()),
-                    std::end(selector.info().dims())));
-
-                this_type res({total(info_)});
-
-                indexer_type gen(info_);
-                typename Arrnd::indexer_type selector_gen(selector.info());
-
-                indexer_type res_gen(res.info_);
-
-                size_type res_count{0};
-
-                while (gen && selector_gen && res_gen) {
-                    if (selector[*selector_gen]) {
-                        res[*res_gen] = (*this)[*gen];
-                        ++res_count;
-                        ++res_gen;
+                std::copy_if(arr.cbegin(), arr.cend(), res.begin(), [&pred, &count](const auto& value) {
+                    if (pred(value)) {
+                        ++count;
+                        return true;
                     }
-                    ++gen;
-                    ++selector_gen;
+                    return false;
+                });
+
+                return count == 0 ? filter_t{} : res.resize({count});
+            };
+
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
+                filter_impl);
+        }
+
+        template <std::size_t AtDepth = this_type::depth, iterable_of_type_integral Cont>
+        [[nodiscard]] constexpr auto filter(const Cont& selector) const
+        {
+            auto filter_impl = [&selector](const auto& arr) {
+                using filter_t = std::remove_cvref_t<decltype(arr)>;
+
+                // mask - should be inside arr dims limit
+                if constexpr (arrnd_type<Cont> && std::is_same_v<bool, typename Cont::value_type>) {
+                    if (!std::equal(std::begin(arr.info().dims()), std::end(arr.info().dims()),
+                            std::begin(selector.info().dims()), std::end(selector.info().dims()))) {
+                        throw std::invalid_argument("different dims between arr and selector");
+                    }
+
+                    if (arr.empty()) {
+                        return filter_t{};
+                    }
+
+                    filter_t res({total(arr.info())});
+                    auto rit = res.begin();
+                    size_type count = 0;
+
+                    for (auto t : zip(zipped(arr), zipped(selector))) {
+                        if (std::get<1>(t)) {
+                            *rit = std::get<0>(t);
+                            ++rit;
+                            ++count;
+                        }
+                    }
+
+                    return count == 0 ? filter_t{} : res.resize({count});
+                } else {
+                    auto first_ind = std::begin(selector);
+                    auto last_ind = std::end(selector);
+
+                    if (std::distance(first_ind, last_ind) > total(arr.info())) {
+                        throw std::invalid_argument("different total size between arr and selector");
+                    }
+
+                    if (arr.empty()) {
+                        return filter_t{};
+                    }
+
+                    filter_t res({static_cast<size_type>(std::distance(first_ind, last_ind))});
+                    auto rit = std::begin(res);
+
+                    for (auto ind : selector) {
+                        *rit = arr[ind];
+                        ++rit;
+                    }
+
+                    return res;
+                }
+            };
+
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
+                filter_impl);
+        }
+
+        template <std::int64_t AtDepth = this_type::depth>
+        [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> inds) const
+        {
+            return filter<AtDepth>(zip(zipped(inds.begin(), inds.end())));
+        }
+
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
+            requires(!iterable_of_type_integral<Pred>)
+        [[nodiscard]] constexpr auto find(Pred pred) const
+        {
+            auto find_impl = [&pred](const auto& arr) {
+                using find_t = typename std::remove_cvref_t<decltype(arr)>::template replaced_type<size_type>;
+
+                if (arr.empty()) {
+                    return find_t{};
                 }
 
-                if (res_count == 0) {
-                    return this_type();
+                find_t res({total(arr.info())});
+
+                size_type count = 0;
+                auto rit = res.begin();
+
+                for (typename std::remove_cvref_t<decltype(arr)>::indexer_type indexer(arr.info()); indexer;
+                     ++indexer) {
+                    if (pred(arr[*indexer])) {
+                        *rit = *indexer;
+                        ++rit;
+                        ++count;
+                    }
                 }
 
-                if (res_count < total(info_)) {
-                    return res.resize({res_count});
-                }
+                return count == 0 ? find_t{} : res.resize({count});
+            };
 
-                return res;
-            } else {
-                this_type res(selector.info().dims());
-
-                indexer_type res_gen(res.info_);
-                typename Arrnd::indexer_type slc_gen(selector.info());
-
-                for (; res_gen && slc_gen; ++res_gen, ++slc_gen) {
-                    res[*res_gen] = (*this)[selector[*slc_gen]];
-                }
-
-                return res;
-            }
-        }
-        template <std::int64_t Level, arrnd_type Arrnd>
-            requires(Level > 0)
-        [[nodiscard]] constexpr this_type filter(const Arrnd& selector) const
-        {
-            if (empty()) {
-                return this_type();
-            }
-
-            this_type res(info_.dims().cbegin(), info_.dims().cend());
-
-            indexer_type gen(info_);
-            indexer_type res_gen(res.info());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template filter<Level - 1, Arrnd>(selector);
-            }
-
-            return res;
-        }
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr this_type filter(const Arrnd& selector) const
-        {
-            return filter<this_type::depth, Arrnd>(selector);
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(find_impl);
         }
 
-        template <std::int64_t Level, iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
-        {
-            return filter<Level>(replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
-        }
-        template <std::int64_t Level, iterable_of_type_integral Cont>
-            requires(!arrnd_type<Cont>)
-        [[nodiscard]] constexpr auto filter(const Cont& indices) const
-        {
-            return filter<Level>(
-                replaced_type<size_type>({std::ssize(indices)}, std::begin(indices), std::end(indices)));
-        }
-        template <std::int64_t Level>
-        [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
-        {
-            return filter<Level>(replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
-        }
-
-        template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto filter(InputIt first_ind, InputIt last_ind) const
-        {
-            return filter<this_type::depth>(
-                replaced_type<size_type>({std::distance(first_ind, last_ind)}, first_ind, last_ind));
-        }
-        template <iterable_of_type_integral Cont>
-            requires(!arrnd_type<Cont>)
-        [[nodiscard]] constexpr auto filter(const Cont& indices) const
-        {
-            return filter<this_type::depth>(
-                replaced_type<size_type>({std::ssize(indices)}, std::begin(indices), std::end(indices)));
-        }
-        [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> indices) const
-        {
-            return filter<this_type::depth>(
-                replaced_type<size_type>({std::ssize(indices)}, indices.begin(), indices.end()));
-        }
-
-        template <std::int64_t Level, typename Pred>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr auto find(Pred&& pred) const
-        {
-            using found_type = inner_replaced_type<size_type, Level>;
-
-            if (empty()) {
-                return found_type();
-            }
-
-            found_type res({total(info_)});
-
-            indexer_type gen(info_);
-            typename found_type::indexer_type res_gen(res.info());
-
-            size_type res_count{0};
-
-            while (gen && res_gen) {
-                if (pred((*this)[*gen])) {
-                    res[*res_gen] = *gen;
-                    ++res_count;
-                    ++res_gen;
-                }
-                ++gen;
-            }
-
-            if (res_count == 0) {
-                return found_type();
-            }
-
-            if (res_count < total(info_)) {
-                return res.resize({res_count});
-            }
-
-            return res;
-        }
-        template <std::int64_t Level, typename Pred>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr auto find(Pred&& pred) const
-        {
-            using found_type = inner_replaced_type<size_type, Level>;
-
-            if (empty()) {
-                return found_type();
-            }
-
-            found_type res(info_.dims().cbegin(), info_.dims().cend());
-
-            indexer_type gen(info_);
-            indexer_type res_gen(res.info());
-
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template find<Level - 1, Pred>(std::forward<Pred>(pred));
-            }
-
-            return res;
-        }
-        template <typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>
-        [[nodiscard]] constexpr auto find(Pred&& pred) const
-        {
-            return find<this_type::depth, Pred>(std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, arrnd_type Arrnd>
-            requires(Level == 0)
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd>
         [[nodiscard]] constexpr auto find(const Arrnd& mask) const
         {
-            using found_type = inner_replaced_type<size_type, Level>;
+            auto find_impl = [&mask](const auto& arr) {
+                using find_t = typename std::remove_cvref_t<decltype(arr)>::template replaced_type<size_type>;
 
-            if (empty()) {
-                return found_type();
-            }
-
-            assert(std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(mask.info().dims()),
-                std::end(mask.info().dims())));
-
-            found_type res({total(info_)});
-
-            indexer_type gen(info_);
-            typename Arrnd::indexer_type mask_gen(mask.info());
-
-            typename found_type::indexer_type res_gen(res.info());
-
-            size_type res_count{0};
-
-            while (gen && mask_gen && res_gen) {
-                if (mask[*mask_gen]) {
-                    res[*res_gen] = *gen;
-                    ++res_count;
-                    ++res_gen;
+                if (!std::equal(std::begin(arr.info().dims()), std::end(arr.info().dims()),
+                        std::begin(mask.info().dims()), std::end(mask.info().dims()))) {
+                    throw std::invalid_argument("different dims between arr and mask");
                 }
-                ++gen;
-                ++mask_gen;
-            }
 
-            if (res_count == 0) {
-                return found_type();
-            }
+                if (arr.empty()) {
+                    return find_t{};
+                }
 
-            if (res_count < total(info_)) {
-                return res.resize({res_count});
-            }
+                find_t res({total(arr.info())});
 
-            return res;
-        }
-        template <std::int64_t Level, arrnd_type Arrnd>
-            requires(Level > 0)
-        [[nodiscard]] constexpr auto find(const Arrnd& mask) const
-        {
-            using found_type = inner_replaced_type<size_type, Level>;
+                auto rit = res.begin();
+                size_type count = 0;
 
-            if (empty()) {
-                return found_type();
-            }
+                typename std::remove_cvref_t<decltype(arr)>::indexer_type arr_indexer(arr.info());
+                typename Arrnd::indexer_type mask_indexer(mask.info());
 
-            found_type res(info_.dims().cbegin(), info_.dims().cend());
+                for (; arr_indexer && mask_indexer; ++arr_indexer, ++mask_indexer) {
+                    if (mask[*mask_indexer]) {
+                        *rit = *arr_indexer;
+                        ++rit;
+                        ++count;
+                    }
+                }
 
-            indexer_type gen(info_);
-            indexer_type res_gen(res.info());
+                return count == 0 ? find_t{} : res.resize({count});
+            };
 
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res[*res_gen] = (*this)[*gen].template find<Level - 1, Arrnd>(mask);
-            }
-
-            return res;
-        }
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr auto find(const Arrnd& mask) const
-        {
-            return find<this_type::depth, Arrnd>(mask);
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(find_impl);
         }
 
         template <arrnd_type Arrnd>
