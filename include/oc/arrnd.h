@@ -486,8 +486,16 @@ namespace details {
             return zipped_raw_array<std::remove_reference_t<Cont>, Args...>(
                 std::forward<Cont>(cont), std::forward<Args>(args)...);
         } else {
-            return zipped_container<std::remove_reference_t<Cont>, Args...>(
-                std::forward<Cont>(cont), std::forward<Args>(args)...);
+            if constexpr (std::is_lvalue_reference_v<Cont>) {
+                std::add_lvalue_reference_t<std::remove_const_t<std::remove_reference_t<Cont>>> nc_cont
+                    = const_cast<std::add_lvalue_reference_t<std::remove_const_t<std::remove_reference_t<Cont>>>>(cont);
+                return zipped_container<std::remove_reference_t<decltype(nc_cont)>, Args...>(
+                    std::forward<decltype(nc_cont)>(nc_cont), std::forward<Args>(args)...);
+            }
+            else {
+                return zipped_container<std::remove_reference_t<Cont>, Args...>(
+                    std::forward<Cont>(cont), std::forward<Args>(args)...);
+            }
         }
     }
 
@@ -924,9 +932,6 @@ namespace details {
     };
 }
 
-using details::zipped_container;
-using details::zipped_raw_array;
-using details::zipped_iterator;
 using details::zipped;
 using details::zip;
 }
