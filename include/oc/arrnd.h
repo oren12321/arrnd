@@ -491,8 +491,7 @@ namespace details {
                     = const_cast<std::add_lvalue_reference_t<std::remove_const_t<std::remove_reference_t<Cont>>>>(cont);
                 return zipped_container<std::remove_reference_t<decltype(nc_cont)>, Args...>(
                     std::forward<decltype(nc_cont)>(nc_cont), std::forward<Args>(args)...);
-            }
-            else {
+            } else {
                 return zipped_container<std::remove_reference_t<Cont>, Args...>(
                     std::forward<Cont>(cont), std::forward<Args>(args)...);
             }
@@ -7019,30 +7018,61 @@ namespace details {
                     }
                 }
             } else if constexpr (arrnd_type<value_type>) {
-                using transform_t
-                    = replaced_type<decltype(std::declval<value_type>()
-                                                 .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
-                                                     TraversalCont, Cont, Op, CurrDepth + 1>(cont, op))>;
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<decltype(std::declval<value_type>()
+                                                     .template traverse<FromDepth, ToDepth, TraversalType,
+                                                         TraversalResult, TraversalCont, Cont, Op, CurrDepth + 1>(
+                                                         cont, op))>;
 
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        std::get<1>(t) = std::get<0>(t)
+                                             .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                 TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+
+                    return res;
+                } else {
+                    using transform_t = replaced_type<
+                        decltype(std::declval<value_type>()
+                                     .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                         TraversalCont, std::remove_reference_t<decltype(*std::begin(cont))>, Op,
+                                         CurrDepth + 1>(*std::begin(cont), op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        std::get<1>(t)
+                            = std::get<0>(t)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<2>(t))>, Op, CurrDepth + 1>(
+                                      std::get<2>(t), op);
+                    }
+
+                    return res;
                 }
-
-                for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t) = std::get<0>(t)
-                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
-                                             TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
-                }
-
-                return res;
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && !is_next_depth_relevant) {
                 using transform_t = std::conditional_t<std::is_void_v<decltype(op(*this, cont))>, this_type,
                     decltype(op(*this, cont))>;
@@ -7058,26 +7088,23 @@ namespace details {
                     return op(mid, cont);
                 }
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
-                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
-                        decltype(op(*std::begin(*this), cont))>>,
-                    replaced_type<
-                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
-                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
-
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
-                }
-
                 if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>,
+                            value_type, decltype(op(*std::begin(*this), cont))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7086,7 +7113,30 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), cont);
                         }
                     }
+
+                    if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                        op(res, cont);
+                        return res;
+                    } else {
+                        return op(res, cont);
+                    }
                 } else {
+                    using transform_t = replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7095,35 +7145,32 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
                         }
                     }
-                }
 
-                if constexpr (std::is_void_v<decltype(op(res, cont))>) {
-                    op(res, cont);
-                    return res;
-                } else {
-                    return op(res, cont);
+                    if constexpr (std::is_void_v<decltype(op(res, cont))>) {
+                        op(res, cont);
+                        return res;
+                    } else {
+                        return op(res, cont);
+                    }
                 }
             } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
-                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
-                        decltype(op(*std::begin(*this), cont))>>,
-                    replaced_type<
-                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
-                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
-
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
-                }
-
                 if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>,
+                            value_type, decltype(op(*std::begin(*this), cont))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7132,7 +7179,25 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), cont);
                         }
                     }
+
+                    return res;
                 } else {
+                    using transform_t = replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7141,9 +7206,9 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
                         }
                     }
-                }
 
-                return res;
+                    return res;
+                }
             } else {
                 // No transformations
                 return *this;
@@ -7237,30 +7302,61 @@ namespace details {
                     return res;
                 }
             } else if constexpr (arrnd_type<value_type>) {
-                using transform_t
-                    = replaced_type<decltype(std::declval<value_type>()
-                                                 .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
-                                                     TraversalCont, Cont, Op, CurrDepth + 1>(cont, op))>;
+                if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<decltype(std::declval<value_type>()
+                                                     .template traverse<FromDepth, ToDepth, TraversalType,
+                                                         TraversalResult, TraversalCont, Cont, Op, CurrDepth + 1>(
+                                                         cont, op))>;
 
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res))) {
+                        std::get<1>(t) = std::get<0>(t)
+                                             .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                                 TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
+                    }
+
+                    return res;
+                } else {
+                    using transform_t = replaced_type<
+                        decltype(std::declval<value_type>()
+                                     .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
+                                         TraversalCont, std::remove_reference_t<decltype(*std::begin(cont))>, Op,
+                                         CurrDepth + 1>(*std::begin(cont), op))>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
+                    for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
+                        std::get<1>(t)
+                            = std::get<0>(t)
+                                  .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult, TraversalCont,
+                                      std::remove_reference_t<decltype(std::get<2>(t))>, Op, CurrDepth + 1>(
+                                      std::get<2>(t), op);
+                    }
+
+                    return res;
                 }
-
-                for (auto t : zip(zipped(*this), zipped(res))) {
-                    std::get<1>(t) = std::get<0>(t)
-                                         .template traverse<FromDepth, ToDepth, TraversalType, TraversalResult,
-                                             TraversalCont, Cont, Op, CurrDepth + 1>(cont, op);
-                }
-
-                return res;
             } else if constexpr (!arrnd_type<value_type> && is_current_depth_relevant && !is_next_depth_relevant) {
                 using transform_t = std::conditional_t<std::is_void_v<decltype(op(*this, cont))>, this_type,
                     decltype(op(*this, cont))>;
@@ -7286,25 +7382,23 @@ namespace details {
                 };
                 auto mid = invoke(*this);
 
-                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
-                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), cont))>, value_type,
-                        decltype(op(*std::begin(mid), cont))>>,
-                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), *std::begin(cont)))>,
-                        value_type, decltype(op(*std::begin(mid), *std::begin(cont)))>>>;
-
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
-                }
-
                 if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), cont))>,
+                            value_type, decltype(op(*std::begin(mid), cont))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(mid), zipped(res))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7313,7 +7407,25 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), cont);
                         }
                     }
+
+                    return res;
                 } else {
+                    using transform_t = replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(mid), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(mid), *std::begin(cont)))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(mid), zipped(res), zipped(cont))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7322,30 +7434,27 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
                         }
                     }
-                }
 
-                return res;
+                    return res;
+                }
             } else if constexpr (!arrnd_type<value_type> && !is_current_depth_relevant && is_next_depth_relevant) {
-                using transform_t = std::conditional_t<TraversalCont == arrnd_traversal_container::carry,
-                    replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>, value_type,
-                        decltype(op(*std::begin(*this), cont))>>,
-                    replaced_type<
-                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
-                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>>;
-
-                transform_t res;
-                res.info()
-                    = transform_t::info_type(info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
-                res.shared_storage() = shared_storage_
-                    ? std::allocate_shared<typename transform_t::storage_type>(
-                        typename transform_t::template allocator_template_type<typename transform_t::storage_type>(),
-                        shared_storage_->size())
-                    : nullptr;
-                if (shared_storage_) {
-                    res.shared_storage()->reserve(shared_storage_->capacity());
-                }
-
                 if constexpr (TraversalCont == arrnd_traversal_container::carry) {
+                    using transform_t
+                        = replaced_type<std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), cont))>,
+                            value_type, decltype(op(*std::begin(*this), cont))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), cont))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7354,7 +7463,25 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), cont);
                         }
                     }
+
+                    return res;
                 } else {
+                    using transform_t = replaced_type<
+                        std::conditional_t<std::is_void_v<decltype(op(*std::begin(*this), *std::begin(cont)))>,
+                            value_type, decltype(op(*std::begin(*this), *std::begin(cont)))>>;
+
+                    transform_t res;
+                    res.info() = transform_t::info_type(
+                        info_.dims(), info_.strides(), info_.indices_boundary(), info_.hints());
+                    res.shared_storage() = shared_storage_ ? std::allocate_shared<typename transform_t::storage_type>(
+                                               typename transform_t::template allocator_template_type<
+                                                   typename transform_t::storage_type>(),
+                                               shared_storage_->size())
+                                                           : nullptr;
+                    if (shared_storage_) {
+                        res.shared_storage()->reserve(shared_storage_->capacity());
+                    }
+
                     for (auto t : zip(zipped(*this), zipped(res), zipped(cont))) {
                         if constexpr (std::is_void_v<decltype(op(std::get<0>(t), std::get<2>(t)))>) {
                             std::get<1>(t) = std::get<0>(t);
@@ -7363,9 +7490,9 @@ namespace details {
                             std::get<1>(t) = op(std::get<0>(t), std::get<2>(t));
                         }
                     }
-                }
 
-                return res;
+                    return res;
+                }
             } else {
                 // No transformations
                 return *this;
