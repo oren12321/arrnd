@@ -97,7 +97,7 @@ template <typename T>
 // because its operator* not returning reference
 namespace std {
 template <typename Tuple>
-void swap(Tuple&& lhs, Tuple&& rhs)
+void swap(Tuple&& lhs, Tuple&& rhs) noexcept
 {
     lhs.swap(rhs);
 }
@@ -7498,106 +7498,172 @@ namespace details {
         }
 
         template <std::size_t AtDepth = this_type::depth, typename UnaryOp>
-        [[nodiscard]] constexpr auto& apply(UnaryOp op)
+        constexpr auto& apply(UnaryOp op)
         {
             return traverse<AtDepth + 1, AtDepth + 1, arrnd_traversal_type::dfs, arrnd_traversal_result::apply>(op);
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-            requires(Level == 0
-                && invocable_no_arrnd<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        constexpr this_type& apply(const Arrnd& arr, Func&& func)
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd, typename BinaryOp>
+        constexpr auto& apply(const Arrnd& arr, BinaryOp op)
         {
-            if (empty() || arr.empty()) {
-                return *this;
-            }
-
-            if (isscalar(arr.info())) {
-                auto val = arr(0);
-                auto tfunc = [&](const auto& a) {
-                    return func(a, val);
-                };
-                return apply<Level>(tfunc);
-            }
-
-            auto carr = arr;
-
-            auto is_reduced_dims = [](auto rdims, auto odims) {
-                if (std::size(rdims) != std::size(odims)) {
-                    return false;
+            auto apply_impl = [&rhs = arr, &op](auto& lhs) {
+                if (lhs.empty() && rhs.empty()) {
+                    return lhs;
                 }
 
-                return !std::equal(std::begin(rdims), std::end(rdims), std::begin(odims), std::end(odims))
-                    && std::transform_reduce(std::begin(rdims), std::end(rdims), std::begin(odims), true,
-                        std::logical_and<>{}, [](auto d1, auto d2) {
-                            return d1 == d2 || d1 == 1;
-                        });
-            };
+                constexpr bool is_void_op = std::is_same_v<
+                    std::invoke_result_t<BinaryOp, decltype(*std::begin(lhs)), decltype(*std::begin(rhs))>, void>;
 
-            auto complement_dims = [](auto rdims, auto odims) {
-                assert(std::size(rdims) == std::size(odims));
-
-                typename info_type::extent_storage_type comp_dims(std::size(rdims));
-
-                std::transform(
-                    std::begin(rdims), std::end(rdims), std::begin(odims), std::begin(comp_dims), [](auto rd, auto cd) {
-                        return cd - rd + 1;
+                if (isscalar(rhs.info())) {
+                    return lhs.template apply<0>([&op, &rval = rhs(0)](auto&& lval) {
+                        if constexpr (std::is_void_v<decltype(op(std::forward<decltype(lval)>(lval), rval))>) {
+                            op(std::forward<decltype(lval)>(lval), rval);
+                        } else {
+                            return op(std::forward<decltype(lval)>(lval), rval);
+                        }
                     });
+                }
 
-                return comp_dims;
+                if (total(lhs.info()) == total(rhs.info())) {
+                    return lhs.template traverse<1, 1, arrnd_traversal_type::dfs, arrnd_traversal_result::apply,
+                        arrnd_traversal_container::propagate>(rhs, op);
+                }
+
+                if (total(lhs.info()) > total(rhs.info()) && size(lhs.info()) == size(rhs.info())) {
+                    auto zipped_dims = (zip(zipped(lhs.info().dims()), zipped(rhs.info().dims())));
+                    if (std::any_of(std::begin(zipped_dims), std::end(zipped_dims), [](auto t) {
+                            return std::get<0>(t) % std::get<1>(t) != 0;
+                        })) {
+                        throw std::invalid_argument("invalid input array dims for boradcast");
+                    }
+
+                    using lhs_t = std::remove_cvref_t<decltype(lhs)>;
+
+                    typename lhs_t::info_type::storage_traits_type::template replaced_type<
+                        typename lhs_t::window_type>::storage_type windows(size(lhs.info()));
+
+                    std::transform(std::begin(rhs.info().dims()), std::end(rhs.info().dims()), std::begin(windows),
+                        [](typename lhs_t::difference_type d) {
+                            return typename lhs_t::window_type(
+                                typename lhs_t::window_type::interval_type{0, d}, arrnd_window_type::complete);
+                        });
+
+                    for (typename lhs_t::windows_slider_type slider(lhs.info(), windows); slider; ++slider) {
+                        auto slc = lhs[*slider];
+                        slc.template traverse<1, 1, arrnd_traversal_type::dfs, arrnd_traversal_result::apply,
+                            arrnd_traversal_container::propagate>(rhs, op);
+                    }
+
+                    return lhs;
+                }
+
+                throw std::invalid_argument("invalid input array dims");
             };
 
-            if (is_reduced_dims(arr.info().dims(), info_.dims())) {
-                auto reps = complement_dims(arr.info().dims(), info_.dims());
-                carr = arr.repeat(reps);
-            }
-
-            assert(total(info_) == total(carr.info()));
-
-            indexer_type gen(info_);
-            typename std::remove_cvref_t<Arrnd>::indexer_type arr_gen(carr.info());
-
-            constexpr bool is_void_func = std::is_same_v<
-                std::invoke_result_t<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>,
-                void>;
-
-            for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if constexpr (is_void_func) {
-                    func((*this)[*gen], carr[*arr_gen]);
-                } else {
-                    (*this)[*gen] = func((*this)[*gen], carr[*arr_gen]);
-                }
-            }
-
-            return *this;
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::apply>(apply_impl);
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-            requires(Level > 0
-                && invocable_no_arrnd<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        constexpr this_type& apply(const Arrnd& arr, Func&& func)
-        {
-            if (empty() || arr.empty()) {
-                return *this;
-            }
+        //template <std::int64_t Level, arrnd_type Arrnd, typename Func>
+        //    requires(Level == 0
+        //        && invocable_no_arrnd<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
+        //constexpr this_type& apply(const Arrnd& arr, Func&& func)
+        //{
+        //    if (empty() || arr.empty()) {
+        //        return *this;
+        //    }
 
-            assert(total(info_) == total(arr.info()));
+        //    if (isscalar(arr.info())) {
+        //        auto val = arr(0);
+        //        auto tfunc = [&](const auto& a) {
+        //            return func(a, val);
+        //        };
+        //        return apply<Level>(tfunc);
+        //    }
 
-            for (indexer_type gen(info_); gen; ++gen) {
-                (*this)[*gen].template apply<Level - 1, typename Arrnd::template inner_value_type<Level - 1>, Func>(
-                    arr, std::forward<Func>(func));
-            }
+        //    constexpr bool is_void_func = std::is_same_v<
+        //        std::invoke_result_t<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>,
+        //        void>;
 
-            return *this;
-        }
+        //    if (total(info_) == total(arr.info())) {
 
-        template <arrnd_type Arrnd, typename Func>
-            requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>,
-                typename Arrnd::template inner_value_type<Arrnd::depth>>
-        constexpr this_type& apply(const Arrnd& arr, Func&& func)
-        {
-            return apply<this_type::depth, Arrnd, Func>(arr, std::forward<Func>(func));
-        }
+        //        indexer_type gen(info_);
+        //        typename std::remove_cvref_t<Arrnd>::indexer_type arr_gen(arr.info());
+
+        //        for (; gen && arr_gen; ++gen, ++arr_gen) {
+        //            if constexpr (is_void_func) {
+        //                func((*this)[*gen], arr[*arr_gen]);
+        //            } else {
+        //                (*this)[*gen] = func((*this)[*gen], arr[*arr_gen]);
+        //            }
+        //        }
+        //    } else if (total(info_) > total(arr.info()) && size(info_) == size(arr.info())) {
+        //        auto c1 = info_.dims();
+        //        auto c2 = arr.info().dims();
+        //        auto zipped_dims = zip(zipped(c1), zipped(c2));
+        //        if (std::all_of(std::begin(zipped_dims), std::end(zipped_dims), [](auto t) {
+        //                return std::get<0>(t) % std::get<1>(t) == 0;
+        //            })) {
+
+        //            typename info_type::storage_traits_type::template replaced_type<window_type>::storage_type windows(
+        //                size(info_));
+
+        //            std::transform(std::begin(arr.info().dims()), std::end(arr.info().dims()), std::begin(windows),
+        //                [](difference_type d) {
+        //                    return window_type(typename window_type::interval_type{0, d}, arrnd_window_type::complete);
+        //                });
+
+        //            for (windows_slider_type slider(info_, windows); slider; ++slider) {
+        //                auto slc = (*this)[*slider];
+
+        //                indexer_type gen(slc.info());
+        //                typename std::remove_cvref_t<Arrnd>::indexer_type arr_gen(arr.info());
+
+        //                for (; gen && arr_gen; ++gen, ++arr_gen) {
+        //                    if constexpr (is_void_func) {
+        //                        func(slc[*gen], arr[*arr_gen]);
+        //                    } else {
+        //                        slc[*gen] = func(slc[*gen], arr[*arr_gen]);
+        //                    }
+        //                }
+        //            }
+        //        }
+        //        else {
+        //            assert(false && "invalid dims broadcast");
+        //        }
+        //    }
+        //    else {
+        //        assert(false && "invalid dims");
+        //    }
+
+        //    return *this;
+        //}
+
+        //template <std::int64_t Level, arrnd_type Arrnd, typename Func>
+        //    requires(Level > 0
+        //        && invocable_no_arrnd<Func, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
+        //constexpr this_type& apply(const Arrnd& arr, Func&& func)
+        //{
+        //    if (empty() || arr.empty()) {
+        //        return *this;
+        //    }
+
+        //    assert(total(info_) == total(arr.info()));
+
+        //    for (indexer_type gen(info_); gen; ++gen) {
+        //        (*this)[*gen].template apply<Level - 1, typename Arrnd::template inner_value_type<Level - 1>, Func>(
+        //            arr, std::forward<Func>(func));
+        //    }
+
+        //    return *this;
+        //}
+
+        //template <arrnd_type Arrnd, typename Func>
+        //    requires invocable_no_arrnd<Func, inner_value_type<this_type::depth>,
+        //        typename Arrnd::template inner_value_type<Arrnd::depth>>
+        //constexpr this_type& apply(const Arrnd& arr, Func&& func)
+        //{
+        //    return apply<this_type::depth, Arrnd, Func>(arr, std::forward<Func>(func));
+        //}
 
         template <std::size_t AtDepth = this_type::depth, typename BinaryOp>
         [[nodiscard]] constexpr auto reduce(BinaryOp op) const
