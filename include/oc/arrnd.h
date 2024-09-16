@@ -2922,7 +2922,7 @@ namespace details {
         if (!issliced(info)) {
             return rel_ind;
         }
-        
+
         if (iscontinuous(info)) {
             return info.indices_boundary().start() + rel_ind;
         }
@@ -10232,257 +10232,6 @@ namespace details {
                                    arrnd_iterator_position::rend));
         }
 
-        [[nodiscard]] constexpr auto abs() const
-        {
-            return transform([](const auto& a) {
-                using std::abs;
-                return abs(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto acos() const
-        {
-            return transform([](const auto& a) {
-                using std::acos;
-                return acos(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto acosh() const
-        {
-            return transform([](const auto& a) {
-                using std::acosh;
-                return acosh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto asin() const
-        {
-            return transform([](const auto& a) {
-                using std::asin;
-                return asin(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto asinh() const
-        {
-            return transform([](const auto& a) {
-                using std::asinh;
-                return asinh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto atan() const
-        {
-            return transform([](const auto& a) {
-                using std::atan;
-                return atan(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto atanh() const
-        {
-            return transform([](const auto& a) {
-                using std::atanh;
-                return atanh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto cos() const
-        {
-            return transform([](const auto& a) {
-                using std::cos;
-                return cos(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto cosh() const
-        {
-            return transform([](const auto& a) {
-                using std::cosh;
-                return cosh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto exp() const
-        {
-            return transform([](const auto& a) {
-                using std::exp;
-                return exp(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto log() const
-        {
-            return transform([](const auto& a) {
-                using std::log;
-                return log(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto log10() const
-        {
-            return transform([](const auto& a) {
-                using std::log10;
-                return log10(a);
-            });
-        }
-
-        template <typename U>
-            requires(!arrnd_type<U>)
-        [[nodiscard]] constexpr auto pow(const U& value) const
-        {
-            return transform([&value](const auto& a) {
-                using std::pow;
-                return pow(a, value);
-            });
-        }
-
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr auto pow(const Arrnd& arr) const
-        {
-            return transform(arr, [](const auto& a, const auto& b) {
-                using std::pow;
-                return pow(a, b);
-            });
-        }
-
-        [[nodiscard]] constexpr auto sin() const
-        {
-            return transform([](const auto& a) {
-                using std::sin;
-                return sin(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto sinh() const
-        {
-            return transform([](const auto& a) {
-                using std::sinh;
-                return sinh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto sqrt() const
-        {
-            return transform([](const auto& a) {
-                using std::sqrt;
-                return sqrt(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto tan() const
-        {
-            return transform([](const auto& a) {
-                using std::tan;
-                return tan(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto tanh() const
-        {
-            return transform([](const auto& a) {
-                using std::tanh;
-                return tanh(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto round() const
-        {
-            return transform([](const auto& a) {
-                using std::round;
-                return round(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto ceil() const
-        {
-            return transform([](const auto& a) {
-                using std::ceil;
-                return ceil(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto floor() const
-        {
-            return transform([](const auto& a) {
-                using std::floor;
-                return floor(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto real() const
-        {
-            return transform([](const auto& a) {
-                using std::real;
-                return real(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto imag() const
-        {
-            return transform([](const auto& a) {
-                using std::imag;
-                return imag(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto arg() const
-        {
-            return transform([](const auto& a) {
-                using std::arg;
-                return arg(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto norm() const
-        {
-            return transform([](const auto& a) {
-                using std::norm;
-                return norm(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto conj() const
-        {
-            return transform([](const auto& a) {
-                using std::conj;
-                return conj(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto proj() const
-        {
-            return transform([](const auto& a) {
-                using std::proj;
-                return proj(a);
-            });
-        }
-
-        [[nodiscard]] constexpr auto polar() const
-        {
-            return transform([](const auto& r) {
-                using std::polar;
-                return polar(r);
-            });
-        }
-
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr auto polar(const Arrnd& thetas) const
-        {
-            return transform(thetas, [](const auto& r, const auto& theta) {
-                using std::polar;
-                return polar(r, theta);
-            });
-        }
-
-        [[nodiscard]] constexpr auto sign() const
-        {
-            return transform([](const auto& a) {
-                return details::sign(a);
-            });
-        }
-
     private:
         struct creators_chain {
             std::shared_ptr<bool> has_original_creator = std::allocate_shared<bool>(allocator_template_type<bool>());
@@ -11642,181 +11391,280 @@ namespace details {
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto abs(const Arrnd& arr)
     {
-        return arr.abs();
+        return arr.transform([](const auto& a) {
+            using std::abs;
+            return abs(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto acos(const Arrnd& arr)
     {
-        return arr.acos();
+        return arr.transform([](const auto& a) {
+            using std::acos;
+            return acos(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto acosh(const Arrnd& arr)
     {
-        return arr.acosh();
+        return arr.transform([](const auto& a) {
+            using std::acosh;
+            return acosh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto asin(const Arrnd& arr)
     {
-        return arr.asin();
+        return arr.transform([](const auto& a) {
+            using std::asin;
+            return asin(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto asinh(const Arrnd& arr)
     {
-        return arr.asinh();
+        return arr.transform([](const auto& a) {
+            using std::asinh;
+            return asinh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto atan(const Arrnd& arr)
     {
-        return arr.atan();
+        return arr.transform([](const auto& a) {
+            using std::atan;
+            return atan(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto atanh(const Arrnd& arr)
     {
-        return arr.atanh();
+        return arr.transform([](const auto& a) {
+            using std::atanh;
+            return atanh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto cos(const Arrnd& arr)
     {
-        return arr.cos();
+        return arr.transform([](const auto& a) {
+            using std::cos;
+            return cos(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto cosh(const Arrnd& arr)
     {
-        return arr.cosh();
+        return arr.transform([](const auto& a) {
+            using std::cosh;
+            return cosh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto exp(const Arrnd& arr)
     {
-        return arr.exp();
+        return arr.transform([](const auto& a) {
+            using std::exp;
+            return exp(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto log(const Arrnd& arr)
     {
-        return arr.log();
+        return arr.transform([](const auto& a) {
+            using std::log;
+            return log(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto log10(const Arrnd& arr)
     {
-        return arr.log10();
+        return arr.transform([](const auto& a) {
+            using std::log10;
+            return log10(a);
+        });
     }
 
-    template <arrnd_type Arrnd, typename U>
+    template <typename Arrnd, typename U>
+        requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr auto pow(const Arrnd& arr, const U& value)
     {
-        return arr.pow(value);
+        return arr.transform([&value](const auto& a) {
+            using std::pow;
+            return pow(a, value);
+        });
+    }
+
+    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
+    [[nodiscard]] inline constexpr auto pow(const Arrnd1& arr, const Arrnd2& values)
+    {
+        return arr.transform(values, [](const auto& a, const auto& b) {
+            using std::pow;
+            return pow(a, b);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sin(const Arrnd& arr)
     {
-        return arr.sin();
+        return arr.transform([](const auto& a) {
+            using std::sin;
+            return sin(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sinh(const Arrnd& arr)
     {
-        return arr.sinh();
+        return arr.transform([](const auto& a) {
+            using std::sinh;
+            return sinh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sqrt(const Arrnd& arr)
     {
-        return arr.sqrt();
+        return arr.transform([](const auto& a) {
+            using std::sqrt;
+            return sqrt(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto tan(const Arrnd& arr)
     {
-        return arr.tan();
+        return arr.transform([](const auto& a) {
+            using std::tan;
+            return tan(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto tanh(const Arrnd& arr)
     {
-        return arr.tanh();
+        return arr.transform([](const auto& a) {
+            using std::tanh;
+            return tanh(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto round(const Arrnd& arr)
     {
-        return arr.round();
+        return arr.transform([](const auto& a) {
+            using std::round;
+            return round(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto ceil(const Arrnd& arr)
     {
-        return arr.ceil();
+        return arr.transform([](const auto& a) {
+            using std::ceil;
+            return ceil(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto floor(const Arrnd& arr)
     {
-        return arr.floor();
+        return arr.transform([](const auto& a) {
+            using std::floor;
+            return floor(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto real(const Arrnd& arr)
     {
-        return arr.real();
+        return arr.transform([](const auto& a) {
+            using std::real;
+            return real(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto imag(const Arrnd& arr)
     {
-        return arr.imag();
+        return arr.transform([](const auto& a) {
+            using std::imag;
+            return imag(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto arg(const Arrnd& arr)
     {
-        return arr.arg();
+        return arr.transform([](const auto& a) {
+            using std::arg;
+            return arg(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto norm(const Arrnd& arr)
     {
-        return arr.norm();
+        return arr.transform([](const auto& a) {
+            using std::norm;
+            return norm(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto conj(const Arrnd& arr)
     {
-        return arr.conj();
+        return arr.transform([](const auto& a) {
+            using std::conj;
+            return conj(a);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto proj(const Arrnd& arr)
     {
-        return arr.proj();
+        return arr.transform([](const auto& a) {
+            using std::proj;
+            return proj(a);
+        });
     }
 
     template <arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto polar(const Arrnd& rs)
+    [[nodiscard]] inline constexpr auto polar(const Arrnd& arr)
     {
-        return rs.polar();
+        return arr.transform([](const auto& r) {
+            using std::polar;
+            return polar(r);
+        });
     }
 
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto polar(const Arrnd1& rs, const Arrnd2& thetas)
+    template <arrnd_type Arrnd1, typename Arrnd2>
+    [[nodiscard]] inline constexpr auto polar(const Arrnd1& arr, const Arrnd2& thetas)
     {
-        return rs.polar(thetas);
+        return arr.transform(thetas, [](const auto& r, const auto& theta) {
+            using std::polar;
+            return polar(r, theta);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sign(const Arrnd& arr)
     {
-        return arr.sign();
+        return arr.transform([](const auto& a) {
+            return details::sign(a);
+        });
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
