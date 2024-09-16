@@ -6191,63 +6191,73 @@ namespace details {
             }
         }
 
+        // Similar to std::vector, resize inner buffer to suitable input dims
+        // and arrange array elements according to it.
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        constexpr this_type& resize(const InputIt& first_dim, const InputIt& last_dim)
         {
-            if (std::equal(info_.dims().cbegin(), info_.dims().cend(), first_new_dim, last_new_dim)) {
+            if (empty()) {
+                *this = this_type(first_dim, last_dim);
                 return *this;
             }
 
-            if (empty()) {
-                return this_type(first_new_dim, last_new_dim);
+            info_type new_info(first_dim, last_dim);
+
+            // in case of same number of elements and standard array, resize can be done by reshape operation
+            if (total(info_) == total(new_info) && info_.hints() == arrnd_hint::continuous) {
+                *this = reshape(first_dim, last_dim);
+                return *this;
+            }
+            
+            // check if there's enough space to arrange elements, and resize internal buffer if not
+            bool is_post_resize_required = total(new_info) <= shared_storage_->size();
+            if (!is_post_resize_required) {
+                shared_storage_->resize(total(new_info));
             }
 
-            this_type res(first_new_dim, last_new_dim);
+            this_type res(new_info, shared_storage_);
 
-            size_type n = std::min(
-                {std::distance(first_new_dim, last_new_dim), static_cast<std::ptrdiff_t>(info_.dims().size())});
+            size_type min_num_dims = std::min(size(info_), size(new_info));
 
-            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type prev_ranges(
-                info_.dims().size());
-            std::fill(prev_ranges.begin(), prev_ranges.end(), boundary_type::full());
+            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type boundaries(
+                size(info_), boundary_type::full());
 
-            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type new_ranges(
-                std::distance(first_new_dim, last_new_dim));
-            std::fill(new_ranges.begin(), new_ranges.end(), boundary_type::full());
+            typename info_type::storage_traits_type::template replaced_type<boundary_type>::storage_type new_boundaries(
+                size(new_info), boundary_type::full());
 
-            size_type pi = info_.dims().size() - 1;
-            size_type ni = std::distance(first_new_dim, last_new_dim) - 1;
-            for (int i = n - 1; i >= 0; --i) {
-                size_type prev_dim = *std::next(info_.dims().cbegin(), pi);
-                size_type new_dim = *std::next(first_new_dim, ni);
-                *std::next(prev_ranges.begin(), pi--) = boundary_type::to(std::min({prev_dim, new_dim}));
-                *std::next(new_ranges.begin(), ni--) = boundary_type::to(std::min({prev_dim, new_dim}));
+            auto z = zip(zipped(boundaries), zipped(new_boundaries), zipped(info_.dims()), zipped(new_info.dims()));
+
+            std::for_each(std::rbegin(z), std::next(std::rbegin(z), min_num_dims), [](auto t) {
+                auto dim = std::get<2>(t);
+                auto new_dim = std::get<3>(t);
+
+                auto& boundary = std::get<0>(t);
+                boundary = boundary_type::to(std::min(dim, new_dim));
+
+                auto& new_boundary = std::get<1>(t);
+                new_boundary = boundary_type::to(std::min(dim, new_dim));
+            });
+
+            res[new_boundaries] = (*this)[boundaries];
+
+            if (is_post_resize_required) {
+                shared_storage_->resize(total(new_info));
             }
 
-            auto sthis = (*this)[prev_ranges];
-            auto sres = res[new_ranges];
+            *this = std::move(res);
 
-            indexer_type gen(sthis.info());
-            indexer_type res_gen(sres.info());
-
-            while (gen && res_gen) {
-                sres[*res_gen] = sthis[*gen];
-                ++gen;
-                ++res_gen;
-            }
-
-            return res;
+            return *this;
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(const Cont& new_dims) const
+        constexpr this_type& resize(const Cont& dims)
         {
-            return resize(std::begin(new_dims), std::end(new_dims));
+            return resize(std::begin(dims), std::end(dims));
         }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> resize(std::initializer_list<size_type> new_dims) const
+
+        constexpr this_type& resize(std::initializer_list<size_type> dims)
         {
-            return resize(new_dims.begin(), new_dims.end());
+            return resize(dims.begin(), dims.end());
         }
 
         template <arrnd_type Arrnd>
