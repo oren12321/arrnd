@@ -2557,14 +2557,9 @@ namespace details {
                 && max_count > 1) {
                 throw std::invalid_argument("invalid squeeze - no 1d squeeze support for max count > 1");
             }
-            if (max_count == 0 || (max_count == 1 && info.dims()[0] == 1)) {
-                return info;
-            }
 
-            return arrnd_info<StorageTraits>(typename arrnd_info<StorageTraits>::extent_storage_type(
-                                                 1, typename arrnd_info<StorageTraits>::extent_type{1}),
-                typename arrnd_info<StorageTraits>::extent_storage_type(1, info.strides()[0]), info.indices_boundary(),
-                info.hints());
+            // max_count is valid - no squeeze in case of 1d
+            return info;
         }
 
         typename arrnd_info<StorageTraits>::extent_storage_type dims(info.dims());
@@ -5158,7 +5153,7 @@ namespace details {
     template <typename T, typename R, std::int64_t Level>
     using inner_replaced_type_t = inner_replaced_type<T, R, Level>::type;
 
-    enum class arrnd_shape_preset { vector, row, column };
+    enum class arrnd_common_shape { vector, row, column };
 
     template <arrnd_type Arrnd, typename Constraint>
     class arrnd_filter_proxy {
@@ -5944,7 +5939,7 @@ namespace details {
             return (*this)(replaced_type<size_type>(dims.begin(), dims.end(), indices.begin(), indices.end()));
         }
 
-        [[nodiscard]] constexpr auto operator()(arrnd_shape_preset shape) const
+        [[nodiscard]] constexpr auto operator()(arrnd_common_shape shape) const
         {
             return reshape(shape);
         }
@@ -6099,24 +6094,21 @@ namespace details {
         // Other shared arrays of this array might be invalid.
         // For a guaranteed newley refreshed array, this function
         // should be used on a cloned array.
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> refresh() const
+        constexpr this_type& refresh()
         {
             // continuous array, which is not sliced or transposed
             if (empty() || info_.hints() == arrnd_hint::continuous) {
                 return *this;
             }
 
-            this_type r{};
+            this_type tmp(info_type(info_.dims()), shared_storage_);
 
-            r.info_ = info_type(info_.dims());
+            std::move(begin(), end(), tmp.begin());
+            tmp.shared_storage_->resize(total(tmp.info_));
 
-            r.shared_storage_ = shared_storage_;
-            for (auto t : zip(zipped(*this), zipped(r))) {
-                std::get<1>(t) = std::move(std::get<0>(t));
-            }
-            r.shared_storage_->resize(oc::arrnd::total(r.info_));
+            *this = std::move(tmp);
 
-            return r;
+            return *this;
         }
 
         // Ensures a full copy of this array and its inner arrays.
@@ -6150,53 +6142,52 @@ namespace details {
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(
-            const InputIt& first_new_dim, const InputIt& last_new_dim) const
+        [[nodiscard]] constexpr shared_ref<this_type> reshape(InputIt first_dim, InputIt last_dim) const
         {
-            typename this_type::info_type new_header(first_new_dim, last_new_dim);
-            assert(total(info_) == total(new_header));
+            if (total(info_) != total(info_type(first_dim, last_dim))) {
+                throw std::invalid_argument("invalid input dims - different total size from array");
+            }
 
-            if (std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(new_header.dims()),
-                    std::end(new_header.dims()))) {
+            // no reshape
+            if (std::equal(std::begin(info_.dims()), std::end(info_.dims()), first_dim, last_dim)) {
                 return *this;
             }
 
-            if (issliced(info_)) {
-                return clone().refresh().reshape(first_new_dim, last_new_dim);
+            if (info_.hints() != arrnd_hint::continuous) {
+                throw std::invalid_argument("invalid reshape operation for non-standard array (might be "
+                                            "sliced/transposed) - try to use refresh()");
             }
 
-            this_type res(*this);
-            res.info_ = std::move(new_header);
-
-            return res;
+            return this_type(info_type(first_dim, last_dim), shared_storage_);
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(const Cont& new_dims) const
+        [[nodiscard]] constexpr shared_ref<this_type> reshape(const Cont& dims) const
         {
-            return reshape(std::begin(new_dims), std::end(new_dims));
-        }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(std::initializer_list<size_type> new_dims) const
-        {
-            return reshape(new_dims.begin(), new_dims.end());
+            return reshape(std::begin(dims), std::end(dims));
         }
 
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> reshape(arrnd_shape_preset shape) const
+        [[nodiscard]] constexpr shared_ref<this_type> reshape(std::initializer_list<size_type> dims) const
+        {
+            return reshape(dims.begin(), dims.end());
+        }
+
+        [[nodiscard]] constexpr shared_ref<this_type> reshape(arrnd_common_shape shape) const
         {
             if (empty()) {
                 return *this;
             }
 
             switch (shape) {
-            case arrnd_shape_preset::vector:
+            case arrnd_common_shape::vector:
                 return reshape({total(info_)});
-            case arrnd_shape_preset::row:
+            case arrnd_common_shape::row:
                 return reshape({size_type{1}, total(info_)});
-            case arrnd_shape_preset::column:
+            case arrnd_common_shape::column:
                 return reshape({total(info_), size_type{1}});
             default:
-                assert(false && "unknown arrnd_shape_preset value");
-                return this_type();
+                assert(false && "unknown arrnd_common_shape value");
+                return *this;
             }
         }
 
@@ -12227,7 +12218,7 @@ using details::arrnd_traversal_type;
 using details::arrnd_traversal_result;
 using details::arrnd_traversal_container;
 
-using details::arrnd_shape_preset;
+using details::arrnd_common_shape;
 using details::arrnd_filter_proxy;
 using details::arrnd;
 
