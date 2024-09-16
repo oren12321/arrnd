@@ -2922,6 +2922,10 @@ namespace details {
         if (!issliced(info)) {
             return rel_ind;
         }
+        
+        if (iscontinuous(info)) {
+            return info.indices_boundary().start() + rel_ind;
+        }
 
         typename arrnd_info<StorageTraits>::extent_type current_rel_stride
             = std::reduce(std::next(std::begin(info.dims()), 1), std::end(info.dims()),
