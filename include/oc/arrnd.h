@@ -6469,57 +6469,83 @@ namespace details {
             return repeat(std::begin(reps), std::end(reps));
         }
 
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> erase(
-            size_type count, size_type ind, size_type axis = 0) const
+        constexpr this_type& erase(size_type count, size_type index, size_type axis = 0)
         {
             if (empty()) {
-                assert(ind == 0 && count == 0);
+                if (index != 0) {
+                    throw std::invalid_argument("invalid index for empty array");
+                }
+                if (count != 0) {
+                    throw std::invalid_argument("invalid count for empty array");
+                }
+
                 return *this;
             }
 
-            assert(ind >= 0 && ind < *std::next(info_.dims().cbegin(), axis));
-            assert(ind + count <= *std::next(info_.dims().cbegin(), axis));
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
+            if (index < 0 || index >= info_.dims()[axis]) {
+                throw std::invalid_argument("invalid index");
+            }
+            if (index + count > info_.dims()[axis]) {
+                throw std::invalid_argument("invalid count");
+            }
 
-            this_type res({total(info_) - (total(info_) / info_.dims()[axis]) * count});
+            // check if resulted array is empty
             auto new_dims = info_.dims();
             new_dims[axis] -= count;
-            res.info_ = info_type(new_dims);
+            info_type new_info(new_dims);
 
-            if (res.empty()) {
-                return res;
+            if (oc::arrnd::empty(new_info)) {
+                *this = this_type{};
+                return *this;
             }
 
-            indexer_type gen(move(info_, axis, 0));
-            indexer_type res_gen(move(res.info_, axis, 0));
+            refresh();
 
-            size_type cycle = ind
-                * (std::reduce(res.info_.dims().begin(), res.info_.dims().end(), size_type{1}, std::multiplies<>{})
-                    / *std::next(res.info_.dims().cbegin(), axis));
+            this_type res(new_info, shared_storage_);
 
+            size_type num_pre_removals = index * (total(res.info_) / res.info_.dims()[axis]);
             size_type removals = total(info_) - total(res.info_);
 
-            auto ptr = shared_storage()->data();
-            auto res_ptr = res.shared_storage()->data();
+            if (shared_storage_->capacity() - shared_storage_->size() >= total(res.info())) {
+                auto current_shared_storage_size = shared_storage_->size();
 
-            for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
-                res_ptr[*res_gen] = ptr[*gen];
-            }
-            for (; gen && removals; --removals, ++gen) {
-                //ptr[*gen] = arr_ptr[*arr_gen];
-            }
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res_ptr[*res_gen] = ptr[*gen];
+                // temporarily resize data storage to its capacity size
+                shared_storage_->resize(shared_storage_->capacity());
+
+                auto tmp_it = std::next(std::begin(*shared_storage_), current_shared_storage_size);
+                std::move(cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    std::next(cbegin(axis, arrnd_returned_element_iterator_tag{}), num_pre_removals), tmp_it);
+                std::move(std::next(cbegin(axis, arrnd_returned_element_iterator_tag{}), num_pre_removals + removals),
+                    cend(axis, arrnd_returned_element_iterator_tag{}), std::next(tmp_it, num_pre_removals));
+
+                std::move(tmp_it, std::next(tmp_it, total(res.info())), std::begin(*shared_storage_));
+
+                shared_storage_->resize(current_shared_storage_size);
+            } else {
+                storage_type tmp(total(info_));
+                std::move(cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    std::next(cbegin(axis, arrnd_returned_element_iterator_tag{}), num_pre_removals), std::begin(tmp));
+                std::move(std::next(cbegin(axis, arrnd_returned_element_iterator_tag{}), num_pre_removals + removals),
+                    cend(axis, arrnd_returned_element_iterator_tag{}), std::next(std::begin(tmp), num_pre_removals));
+
+                std::move(std::begin(tmp), std::end(tmp), std::begin(*shared_storage_));
             }
 
-            return res;
+            shared_storage_->resize(total(new_info));
+
+            *this = std::move(res);
+            return *this;
         }
 
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_front(size_type count = 1, size_type axis = 0) const
+        constexpr this_type& pop_front(size_type count = 1, size_type axis = 0)
         {
             return erase(empty() ? 0 : count, 0, axis);
         }
 
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> pop_back(size_type count = 1, size_type axis = 0) const
+        constexpr this_type& pop_back(size_type count = 1, size_type axis = 0)
         {
             size_type fixed_count = empty() ? 0 : count;
             size_type ind = empty() ? size_type{0} : *std::next(info_.dims().cbegin(), axis) - fixed_count;
