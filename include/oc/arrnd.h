@@ -6208,7 +6208,7 @@ namespace details {
                 *this = reshape(first_dim, last_dim);
                 return *this;
             }
-            
+
             // check if there's enough space to arrange elements, and resize internal buffer if not
             bool is_post_resize_required = total(new_info) <= shared_storage_->size();
             if (!is_post_resize_required) {
@@ -8968,15 +8968,11 @@ namespace details {
             }
 
             this_type res = reduce<0>(info_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
-                std::cout << "push back:\n" << b << "\nto:\n" << a << "\nat axis:" << (info_.dims().size() - 1) << "\n";
                 return a.clone().push_back(b, info_.dims().size() - 1);
             });
 
             for (difference_type axis = info_.dims().size() - 2; axis >= 0; --axis) {
                 res = res.reduce<0>(axis, [axis](const value_type& a, const value_type& b) {
-                    std::cout << "push back:\n"
-                              << b << "\nto:\n"
-                              << a << "\nat axis:" << axis << "\n";
                     return a.clone().push_back(b, axis);
                 });
             }
