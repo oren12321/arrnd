@@ -6261,76 +6261,152 @@ namespace details {
         }
 
         template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> push_back(const Arrnd& arr, size_type axis = 0) const
+        constexpr this_type& push_back(const Arrnd& arr, size_type axis = 0)
         {
-            size_type ind = empty() ? size_type{0} : *std::next(info_.dims().cbegin(), axis);
-            return insert<Arrnd>(arr, ind, axis);
+            size_type index = empty() ? 0 : info_.dims()[axis];
+            return insert<Arrnd>(arr, index, axis);
         }
 
         template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> push_front(const Arrnd& arr, size_type axis = 0) const
+        constexpr this_type& push_front(const Arrnd& arr, size_type axis = 0)
         {
-            size_type ind = empty() ? size_type{0} : *std::next(info_.dims().cbegin(), axis);
             return insert<Arrnd>(arr, 0, axis);
         }
 
+        /*
+        * Insert arr as set of values at index/axis, such that 0<=index<=dims[axis] and 0<=axis<size(dims)
+        * Algorithm:
+        * - if array and arr are empty:
+        *   - index should be valid and axis is irrelevant
+        *   - return *this
+        * - if arr is empty:
+        *   - index and axis are irrelevant
+        *   - return *this
+        * - if array is empty:
+        *   - index should be valid and axis is irrelevant
+        *   - return clone(arr)
+        * - else (both array and arr contain values):
+        *   - check arr size validity (should be the same as array except at axis)
+        *   - refresh array for space efficiency
+        *   - calculate new info, and new total
+        *   - append capacity according to (total(new) - total(prev))
+        *   - build ref with new info
+        *   - copy values
+        */
         template <arrnd_type Arrnd>
-            requires(arrnd_depths_match<this_type, Arrnd>)
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> insert(
-            const Arrnd& arr, size_type ind, size_type axis = 0) const
+        constexpr this_type& insert(const Arrnd& arr, size_type index, size_type axis = 0)
         {
             if (empty() && arr.empty()) {
-                assert(ind == 0);
+                if (index != 0) {
+                    throw std::invalid_argument("invalid index for empty arrays");
+                }
+
+                return *this;
+            }
+
+            if (arr.empty()) {
+                if (axis < 0 || axis >= size(info_)) {
+                    throw std::invalid_argument("invalid axis for empty input");
+                }
+                if (index < 0 || index > info_.dims()[axis]) {
+                    throw std::invalid_argument("invalid index for empty input");
+                }
+
                 return *this;
             }
 
             if (empty()) {
-                assert(ind == 0);
-                return arr.template clone<this_type>();
-            }
+                if (index != 0) {
+                    throw std::invalid_argument("invalid index for empty array");
+                }
 
-            if (arr.empty()) {
-                assert(ind >= 0 && ind <= *std::next(info_.dims().cbegin(), axis));
+                *this = arr.template clone<this_type>();
                 return *this;
             }
 
-            assert(ind >= 0 && ind <= *std::next(info_.dims().cbegin(), axis));
-            assert(std::ssize(info_.dims()) == std::ssize(arr.info().dims()));
-
-            bool same_dims_except_at_axis = std::equal(info_.dims().cbegin(), std::next(info_.dims().cbegin(), axis),
-                arr.info().dims().cbegin(), std::next(arr.info().dims().cbegin(), axis));
-            same_dims_except_at_axis &= std::equal(std::next(info_.dims().cbegin(), axis + 1), info_.dims().cend(),
-                std::next(arr.info().dims().cbegin(), axis + 1), arr.info().dims().cend());
-            assert(same_dims_except_at_axis);
-
-            this_type res({total(info_) + total(arr.info())});
-            auto new_dims = info_.dims();
-            new_dims[axis] += *std::next(std::begin(arr.info().dims()), axis);
-            res.info_ = info_type(new_dims);
-
-            indexer_type gen(move(info_, axis, 0));
-            typename Arrnd::indexer_type arr_gen(move(arr.info(), axis, 0));
-            indexer_type res_gen(move(res.info_, axis, 0));
-
-            size_type cycle = ind
-                * (std::reduce(res.info_.dims().begin(), res.info_.dims().end(), size_type{1}, std::multiplies<>{})
-                    / *std::next(res.info_.dims().cbegin(), axis));
-
-            auto ptr = shared_storage()->data();
-            auto res_ptr = res.shared_storage()->data();
-            auto arr_ptr = arr.shared_storage()->data();
-
-            for (; gen && res_gen && cycle; --cycle, ++gen, ++res_gen) {
-                res_ptr[*res_gen] = ptr[*gen];
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
             }
-            for (; arr_gen && res_gen; ++arr_gen, ++res_gen) {
-                res_ptr[*res_gen] = arr_ptr[*arr_gen];
-            }
-            for (; gen && res_gen; ++gen, ++res_gen) {
-                res_ptr[*res_gen] = ptr[*gen];
+            if (index < 0 || index > info_.dims()[axis]) {
+                throw std::invalid_argument("invalid index");
             }
 
-            return res;
+            if (size(info_) != size(arr.info())) {
+                throw std::invalid_argument("invalid input - different number of dims");
+            }
+
+            auto dims = info_.dims();
+            dims[axis] = arr.info().dims()[axis];
+            if (!std::equal(
+                    std::begin(arr.info().dims()), std::end(arr.info().dims()), std::begin(dims), std::end(dims))) {
+                throw std::invalid_argument("invalid input - dims should be the same except at axis");
+            }
+
+            refresh();
+
+            auto& new_dims = dims;
+            new_dims[axis] += info_.dims()[axis];
+            info_type new_info(new_dims);
+
+            auto total_diff = total(new_info) - total(info_);
+            shared_storage_->append(total_diff);
+
+            this_type res(new_info, shared_storage_);
+
+            // if push_back at axis zero, no need to move current data in storage
+            if (index == info_.dims()[axis] && axis == 0) {
+                std::copy(arr.cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    arr.cend(axis, arrnd_returned_element_iterator_tag{}),
+                    std::next(res.begin(axis, arrnd_returned_element_iterator_tag{}), total(info_)));
+            }
+            // if there's enough capacity in data storage, use if for temp data
+            else if (shared_storage_->capacity() - shared_storage_->size() >= total(info_)) {
+                auto current_shared_storage_size = shared_storage_->size();
+
+                // temporarily resize data storage to its capacity size
+                shared_storage_->resize(shared_storage_->capacity());
+
+                auto tmp_it = std::next(std::begin(*shared_storage_), current_shared_storage_size);
+                std::move(cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    cend(axis, arrnd_returned_element_iterator_tag{}), tmp_it);
+
+                auto num_pre_input_copies = index * (total(res.info_) / res.info_.dims()[axis]);
+
+                std::move(tmp_it, std::next(tmp_it, num_pre_input_copies),
+                    res.begin(axis, arrnd_returned_element_iterator_tag{}));
+
+                std::copy(arr.cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    arr.cend(axis, arrnd_returned_element_iterator_tag{}),
+                    std::next(res.begin(axis, arrnd_returned_element_iterator_tag{}), num_pre_input_copies));
+
+                std::move(std::next(tmp_it, num_pre_input_copies), std::next(tmp_it, total(info_)),
+                    std::next(res.begin(axis, arrnd_returned_element_iterator_tag{}),
+                        num_pre_input_copies + total(arr.info())));
+
+                shared_storage_->resize(current_shared_storage_size);
+            }
+            // else create a temporary data storage
+            else {
+                storage_type tmp(total(info_));
+                std::move(cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    cend(axis, arrnd_returned_element_iterator_tag{}), std::begin(tmp));
+
+                auto num_pre_input_copies = index * (total(res.info_) / res.info_.dims()[axis]);
+
+                std::move(std::begin(tmp), std::next(std::begin(tmp), num_pre_input_copies),
+                    res.begin(axis, arrnd_returned_element_iterator_tag{}));
+
+                std::copy(arr.cbegin(axis, arrnd_returned_element_iterator_tag{}),
+                    arr.cend(axis, arrnd_returned_element_iterator_tag{}),
+                    std::next(res.begin(axis, arrnd_returned_element_iterator_tag{}), num_pre_input_copies));
+
+                std::move(std::next(std::begin(tmp), num_pre_input_copies), std::end(tmp),
+                    std::next(res.begin(axis, arrnd_returned_element_iterator_tag{}),
+                        num_pre_input_copies + total(arr.info())));
+            }
+
+            *this = std::move(res);
+            return *this;
         }
 
         template <iterator_of_template_type<std::tuple> InputIt>
@@ -6343,7 +6419,7 @@ namespace details {
 
             std::for_each(first_tuple, last_tuple, [&res, &mid](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res.push_back(mid, std::get<1>(tuple));
+                    res = res.clone().push_back(mid, std::get<1>(tuple));
                 }
                 mid = res;
             });
@@ -6375,7 +6451,7 @@ namespace details {
             size_type axis = 0;
             std::for_each(z.begin(), z.end(), [&res, &mid, &axis](const auto& tuple) {
                 for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res.push_back(mid, axis);
+                    res = res.clone().push_back(mid, axis);
                 }
                 ++axis;
                 mid = res;
@@ -8282,7 +8358,7 @@ namespace details {
             ++gen;
 
             while (gen) {
-                res = res.push_back((*this)[*gen], assumed_axis);
+                res = res.clone().push_back((*this)[*gen], assumed_axis);
                 ++gen;
             }
 
@@ -8866,12 +8942,16 @@ namespace details {
             }
 
             this_type res = reduce<0>(info_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
-                return a.push_back(b, info_.dims().size() - 1);
+                std::cout << "push back:\n" << b << "\nto:\n" << a << "\nat axis:" << (info_.dims().size() - 1) << "\n";
+                return a.clone().push_back(b, info_.dims().size() - 1);
             });
 
             for (difference_type axis = info_.dims().size() - 2; axis >= 0; --axis) {
                 res = res.reduce<0>(axis, [axis](const value_type& a, const value_type& b) {
-                    return a.push_back(b, axis);
+                    std::cout << "push back:\n"
+                              << b << "\nto:\n"
+                              << a << "\nat axis:" << axis << "\n";
+                    return a.clone().push_back(b, axis);
                 });
             }
 
@@ -8932,7 +9012,7 @@ namespace details {
             auto sorted = expanded.sort(std::forward<Comp>(comp));
 
             auto reduced = sorted.template reduce<0>([axis](const auto& acc, const auto& cur) {
-                return acc.push_back(cur, axis);
+                return acc.clone().push_back(cur, axis);
             });
 
             return reduced.reshape(info_.dims());
@@ -9020,7 +9100,7 @@ namespace details {
             });
 
             auto reordered = expanded.template reduce<0>([axis](const auto& acc, const auto& cur) {
-                return acc.push_back(cur, axis);
+                return acc.clone().push_back(cur, axis);
             });
 
             return reordered;
@@ -10361,7 +10441,7 @@ namespace details {
     template <arrnd_type First, arrnd_type Second>
     [[nodiscard]] inline constexpr First concat(const First& first, const Second& second)
     {
-        return first.push_back(second);
+        return first.clone().push_back(second);
     }
 
     template <arrnd_type First, arrnd_type Second, typename Third, typename... Others>
@@ -10371,15 +10451,15 @@ namespace details {
     {
         if constexpr (sizeof...(Others) == 0) {
             if constexpr (std::signed_integral<Third>) {
-                return first.push_back(second, third);
+                return first.clone().push_back(second, third);
             } else {
-                return first.push_back(second).push_back(third);
+                return first.clone().push_back(second).push_back(third);
             }
         } else {
             if constexpr (std::signed_integral<Third>) {
-                return concat(first.push_back(second, third), std::forward<Others>(others)...);
+                return concat(first.clone().push_back(second, third), std::forward<Others>(others)...);
             } else {
-                return concat(first.push_back(second), third, std::forward<Others>(others)...);
+                return concat(first.clone().push_back(second), third, std::forward<Others>(others)...);
             }
         }
     }
