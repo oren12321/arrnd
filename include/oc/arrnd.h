@@ -6441,61 +6441,72 @@ namespace details {
         }
 
         template <iterator_of_template_type<std::tuple> InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_tuple, InputIt last_tuple) const
+        constexpr this_type& repeat(InputIt first_tuple, InputIt last_tuple)
         {
-            assert(std::distance(first_tuple, last_tuple) >= 0);
+            if (std::distance(first_tuple, last_tuple) <= 0) {
+                return *this;
+            }
 
             auto res = *this;
-            auto mid = res;
+            auto mid = res.clone();
 
-            std::for_each(first_tuple, last_tuple, [&res, &mid](const auto& tuple) {
-                for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res.clone().push_back(mid, std::get<1>(tuple));
+            for (auto t_it = first_tuple; t_it != last_tuple; ++t_it) {
+                const auto& t = *t_it;
+                for (size_type i = 0; i < std::get<0>(t) - 1; ++i) {
+                    res.push_back(mid, std::get<1>(t));
                 }
-                mid = res;
-            });
+                mid = res.clone();
+            }
 
-            return res;
+            *this = std::move(res);
+
+            return *this;
         }
+
         template <template_type<std::tuple> Tuple>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<Tuple> count_axis_tuples) const
+        constexpr this_type& repeat(std::initializer_list<Tuple> count_axis_tuples)
         {
             return repeat(count_axis_tuples.begin(), count_axis_tuples.end());
         }
+
         template <iterable_of_template_type<std::tuple> Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& count_axis_tuples) const
+        constexpr this_type& repeat(const Cont& count_axis_tuples)
         {
             return repeat(std::begin(count_axis_tuples), std::end(count_axis_tuples));
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(InputIt first_rep, InputIt last_rep) const
+        constexpr this_type& repeat(InputIt first_rep, InputIt last_rep)
         {
-            assert(std::distance(first_rep, last_rep) <= info_.dims().size());
-
-            auto nreps = std::distance(first_rep, last_rep);
-
-            auto z = zip(zipped_iterator(first_rep, last_rep));
+            if (std::distance(first_rep, last_rep) > info_.dims().size()) {
+                throw std::invalid_argument("invalid number of input reps");
+            }
 
             auto res = *this;
-            auto mid = res;
-            size_type axis = 0;
-            std::for_each(z.begin(), z.end(), [&res, &mid, &axis](const auto& tuple) {
-                for (size_type i = 0; i < std::get<0>(tuple) - 1; ++i) {
-                    res = res.clone().push_back(mid, axis);
-                }
-                ++axis;
-                mid = res;
-            });
+            auto mid = res.clone();
 
-            return res;
+            size_type curr_axis = 0;
+
+            for (auto r_it = first_rep; r_it != last_rep; ++r_it) {
+                for (size_type i = 0; i < *r_it - 1; ++i) {
+                    res.push_back(mid, curr_axis);
+                }
+                ++curr_axis;
+                mid = res.clone();
+            }
+
+            *this = std::move(res);
+
+            return *this;
         }
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(std::initializer_list<size_type> reps) const
+
+        constexpr this_type& repeat(std::initializer_list<size_type> reps)
         {
             return repeat(reps.begin(), reps.end());
         }
+
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr maybe_shared_ref<this_type> repeat(const Cont& reps) const
+        constexpr this_type& repeat(const Cont& reps)
         {
             return repeat(std::begin(reps), std::end(reps));
         }
