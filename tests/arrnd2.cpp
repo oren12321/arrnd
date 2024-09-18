@@ -40,6 +40,16 @@ TEST(arrnd_test, dot)
             return dot(val1, val2);
         });
 
+        /*auto rest = arr1.traverse<2, 2, arrnd_traversal_type::dfs, arrnd_traversal_result::transform,
+            arrnd_traversal_container::propagate>(arr2, [](const auto& a, const auto& b) {
+            return dot(a, b);
+        });
+
+        auto rest1 = arr1.traverse<1, 1, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
+            [&rhs = arr2[0]](const auto& a) {
+                return dot(a[0], rhs[0]);
+            });*/
+
         EXPECT_TRUE(all_equal(res,
             arrnd<arrnd<arrnd<double>>>(
                 {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 2, 1}, {14, 32, 122, 167, 338, 410})})})));
@@ -1240,6 +1250,29 @@ TEST(arrnd_test, parameterized_constructors_compilation)
     //}
 }
 
+//TEST(arrnd_test, as_arrnd)
+//{
+//    using namespace oc::arrnd;
+//
+//    std::vector<int> vec{1, 2, 3, 4, 5, 6};
+//
+//    auto view = as_arrnd(arrnd_info<>({3, 2}), &vec);
+//
+//    std::cout << view << "\n";
+//
+//    auto trans = view.apply([](auto x) {
+//        return x + 1;
+//    });
+//
+//    std::cout << trans << "\n";
+//
+//    auto t2 = view.transform([](auto x) {
+//        return x + 1;
+//    });
+//
+//    std::cout << t2 << "\n";
+//}
+
 TEST(arrnd_test, subscript_operators_compilation)
 {
     using namespace oc::arrnd;
@@ -1369,7 +1402,7 @@ TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compil
     static_assert(!oc::arrnd::arrnd_with_trait<oc::arrnd::arrnd<int>, std::is_floating_point>);
 }
 
-TEST(arrnd_test, check_nested_arrnd_shape_preset)
+TEST(arrnd_test, check_nested_arrnd_common_shape)
 {
     using namespace oc::arrnd;
 
@@ -1386,7 +1419,7 @@ TEST(arrnd_test, check_nested_arrnd_shape_preset)
     static_assert(std::is_same_v<oc::arrnd::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
 }
 
-TEST(arrnd_test, can_replace_arrnd_shape_preset_at_specific_depth)
+TEST(arrnd_test, can_replace_arrnd_common_shape_at_specific_depth)
 {
     using namespace oc::arrnd;
 
@@ -1649,10 +1682,24 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
         arrnd<int> rarr({1, 2, 1}, {1, 2});
 
+        /*std::vector<arrnd<int>::window_type> windows{
+            arrnd<int>::window_type{interval<>{0, 1}, arrnd_window_type::complete},
+            arrnd<int>::window_type{interval<>{0, 2}, arrnd_window_type::complete},
+            arrnd<int>::window_type{interval<>{0, 1}, arrnd_window_type::complete}};
+        arrnd<int>::windows_slider_type slider(iarr.info(), windows);
+
+        for (; slider; ++slider) {
+            std::cout << iarr[*slider] << "\n";
+            iarr[*slider] += rarr;
+        }
+        std::cout << iarr << "\n";*/
+        //auto z = zip(zipped(/*iarr.info().dims())*/std::vector<int>{1, 2, 3}), zipped(rarr.info().dims()));
+        //auto t = z.begin();
+
+
         apply(iarr, rarr, [](int a, int b) {
             return a + b;
         });
-
         EXPECT_TRUE(all_equal(iarr,
             arrnd<int>(
                 {3, 2, 4}, {2, 3, 4, 5, 7, 8, 9, 10, 10, 11, 12, 13, 15, 16, 17, 18, 18, 19, 20, 21, 23, 24, 25, 26})));
@@ -1835,7 +1882,7 @@ TEST(arrnd_test, reduce_elements)
         auto r6 = oc::arrnd::fold<0>(inarr1, oc::arrnd::arrnd<int>({4}, 2), std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r6, oc::arrnd::arrnd<int>({4}, {8, 10, 12, 14})));
 
-        auto r7 = oc::arrnd::fold(inarr2, 0, oc::arrnd::arrnd<int>({2}, 2), std::plus<>{});
+        auto r7 = inarr2.fold(0, {2, 2}, std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r7,
             oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 2}, {oc::arrnd::arrnd<int>({1, 2}, {11, 14}), oc::arrnd::arrnd<int>({1, 2}, {29, 32})})));
 

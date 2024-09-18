@@ -2270,7 +2270,7 @@ TEST(arrnd_test, zip)
         arrnd<int> arr1({3, 2}, {1, 2, 3, 4, 5, 6});
         arrnd<int> arr2({6, 1}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_container(arr1, 1, arrnd_returned_element_iterator_tag{}), zipped_container(arr2));
+        auto z = zip(zipped(arr1, 1, arrnd_returned_element_iterator_tag{}), zipped(arr2));
 
         std::for_each(z.rbegin(), z.rend(), [&pairs](const auto& t) {
             auto [a, b] = t;
@@ -2287,7 +2287,7 @@ TEST(arrnd_test, zip)
         std::vector<int> inds{0, 1, 2, 3, 4, 5};
         arrnd<int> vals({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_container(inds), zipped_container(vals));
+        auto z = zip(zipped(inds), zipped(vals));
 
         auto [_, sum] = std::reduce(z.begin(), z.end(), std::make_tuple(0, 0), [](std::tuple<int, int> acc, auto t) {
             auto [ind, val] = t;
@@ -2303,7 +2303,7 @@ TEST(arrnd_test, zip)
         std::vector<std::string> vec{"a", "b", "c", "d", "e", "f"};
         arrnd<int> arr({3, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto z = zip(zipped_container(indices), zipped_container(vec), zipped_container(arr));
+        auto z = zip(zipped(indices), zipped(vec), zipped(arr));
 
         std::sort(z.begin(), z.end(), [](const auto& a, const auto& b) {
             return std::get<0>(a) < std::get<0>(b);
@@ -2344,14 +2344,14 @@ TEST(arrnd_test, zip)
         std::vector<int> valst;
 
         valst.clear();
-        auto z1 = zip(zipped_container(vals1), zipped_iterator(vals2.begin(), vals2.end()));
+        auto z1 = zip(zipped(vals1), zipped(vals2.begin(), vals2.end()));
         std::transform(z1.begin(), z1.end(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
         EXPECT_EQ(valst, res);
 
         valst.clear();
-        auto z2 = zip(zipped_container(vals1), zipped_iterator(vals2.rbegin(), vals2.rend()));
+        auto z2 = zip(zipped(vals1), zipped(vals2.rbegin(), vals2.rend()));
         std::transform(z2.rbegin(), z2.rend(), std::back_inserter(valst), [](auto t) {
             return std::get<0>(t) * std::get<1>(t);
         });
@@ -2364,23 +2364,23 @@ TEST(arrnd_test, zip)
     //
     //auto expanded = arr.expand(0);
 
-    //for (auto [i, v] : zip(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped{indices}, zipped{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //}
-    //zip pack(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}});
+    //zip pack(zipped{indices}, zipped{expanded, 0, arrnd_returned_element_iterator_tag{}});
     //auto t1 = begin(pack);
     ////swap(*t1, *t1);
     //std::sort(pack.begin(), pack.end(), [](auto a, auto b) {
     //    return std::get<0>(a) < std::get<0>(b);
     //});
 
-    //for (auto [i, v] : zip(zipped_container{indices}, zipped_container{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
+    //for (auto [i, v] : zip(zipped{indices}, zipped{expanded, 0, arrnd_returned_element_iterator_tag{}})) {
     //    std::cout << i << ", " << v << "\n";
     //    /*i = 10;
     //    v[{0,0}] = 100;*/
     //}
 
-    //zip z(zipped_container{indices}, zipped_container{arr, 0, arrnd_returned_slice_iterator_tag{}});
+    //zip z(zipped{indices}, zipped{arr, 0, arrnd_returned_slice_iterator_tag{}});
 
     //std::for_each(z.rbegin(), z.rend(), [](const auto& t) {
     //    auto [i, v] = t;
@@ -2425,7 +2425,7 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(
             /*sort<1>(arrnd<arrnd<int>>(), dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
                 [dummy_less](const auto& val) {
-                    return val.sort(dummy_less);
+                    return val.clone().sort(dummy_less);
                 }),
             arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(arrnd<arrnd<int>>() .sort /*<0>*/ (0, dummy_less), arrnd<arrnd<int>>()));
@@ -2456,7 +2456,7 @@ TEST(arrnd_test, sort)
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, std::less<>{});
         auto sarr1 = transform<0>(iarr, [](const auto& val) {
-            return val.sort(std::less<>{});
+            return val.clone().sort(std::less<>{});
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, std::less<>{})*/
             transform<0>(sarr1,
@@ -2471,7 +2471,7 @@ TEST(arrnd_test, sort)
                     arrnd<int>({3, 1, 2}, {2, 3, 4, 6, 6, 8})})));
 
         EXPECT_FALSE(iarr.is_sorted/*<0>*/(sum_less));
-        auto sarr2 = iarr.sort/*<0>*/(sum_less);
+        auto sarr2 = iarr.clone().sort /*<0>*/ (sum_less);
         EXPECT_TRUE(sarr2.is_sorted/*<0>*/(sum_less));
         EXPECT_TRUE(all_equal(sarr2,
             arrnd<arrnd<int>>({1, 2},
