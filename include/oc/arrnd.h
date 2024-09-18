@@ -8982,13 +8982,11 @@ namespace details {
             return res(0);
         }
 
-        [[nodiscard]] constexpr this_type squeeze() const
+        [[nodiscard]] constexpr this_type squeeze(arrnd_squeeze_type type = arrnd_squeeze_type::full) const
         {
-            this_type squeezed{};
-            squeezed.info_ = oc::arrnd::squeeze(info_, arrnd_squeeze_type::full);
-            squeezed.shared_storage_ = shared_storage_;
-            squeezed.creators_.is_creator_valid = creators_.has_original_creator;
-            squeezed.creators_.latest_creator = this;
+            this_type squeezed = *this;
+            squeezed.info_ = oc::arrnd::squeeze(info_, type);
+
             return squeezed;
         }
 
