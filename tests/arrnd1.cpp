@@ -429,7 +429,7 @@ TEST(arrnd_test, transpose)
         41.0, 42.0, 47.0, 48.0};
     oc::arrnd::arrnd rarr{rdims, rdata};
 
-    EXPECT_TRUE(oc::arrnd::all_equal(rarr, iarr.transpose({2, 0, 1, 3})));
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr, transpose(iarr, {2, 0, 1, 3})));
 
     //EXPECT_TRUE(oc::arrnd::all_equal(rarr, oc::arrnd::transpose(iarr, { 2, 0, 1, 3, 2 }))); // assertion failure
     //EXPECT_TRUE(oc::arrnd::empty(oc::arrnd::transpose(iarr, { 2, 0, 1, 4 }))); // assertion failure
@@ -441,18 +441,18 @@ TEST(arrnd_test, transpose)
 
         //auto r1 = oc::arrnd::transpose(inarr, {1, 0});
         auto r1 = oc::arrnd::transform<0>(inarr, [](const auto& val) {
-            return val.transpose({1, 0});
+            return transpose(val, {1, 0});
         });
         EXPECT_TRUE(oc::arrnd::all_equal(r1,
             oc::arrnd::arrnd<oc::arrnd::arrnd<int>>(
                 {1, 2}, {oc::arrnd::arrnd<int>({6, 1}, {1, 2, 3, 4, 5, 6}), oc::arrnd::arrnd<int>({4, 1}, {1, 2, 3, 4})})));
-        EXPECT_TRUE(oc::arrnd::all_equal(inarr.transpose({1, 0}), inarr.transpose()));
+        EXPECT_TRUE(oc::arrnd::all_equal(transpose(inarr, {1, 0}), transpose(inarr)));
 
-        auto r2 = inarr.transpose/*<0>*/({1, 0});
+        auto r2 = transpose/*<0>*/(inarr, {1, 0});
         EXPECT_TRUE(oc::arrnd::all_equal(r2,
             oc::arrnd::arrnd<oc::arrnd::arrnd<int>>(
                 {2, 1}, {oc::arrnd::arrnd<int>({1, 6}, {1, 2, 3, 4, 5, 6}), oc::arrnd::arrnd<int>({1, 4}, {1, 2, 3, 4})})));
-        EXPECT_TRUE(oc::arrnd::all_equal(inarr.transpose /*<0>*/ ({1, 0}), inarr.transpose /*<0>*/ ()));
+        EXPECT_TRUE(oc::arrnd::all_equal(transpose /*<0>*/ (inarr, {1, 0}), transpose /*<0>*/ (inarr)));
     }
 }
 

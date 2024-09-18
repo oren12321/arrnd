@@ -3095,7 +3095,7 @@ TEST(arrnd_test, browse)
         arrnd<int> arr({1, 2}, {1, 2});
 
         auto res = browse(arr, 2, [](arrnd<int> page) {
-            return page.transpose({1, 0});
+            return transpose(page, {1, 0});
         });
 
         EXPECT_TRUE(all_equal(res, arrnd<int>({2, 1}, {1, 2})));
@@ -3140,7 +3140,7 @@ TEST(arrnd_test, browse)
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
         auto res = browse(arr, 2, [](arrnd<int> page) {
-            return page.transpose({1, 0});
+            return transpose(page, {1, 0});
         });
 
         EXPECT_TRUE(all_equal(res, arrnd<int>({3, 2, 1}, {1, 2, 3, 4, 5, 6})));
@@ -3154,7 +3154,7 @@ TEST(arrnd_test, browse)
         //});
         auto res = transform<0>(arr, [](const auto& val) {
             return browse(val, 2, [](arrnd<int> page) {
-                return page.transpose({1, 0});
+                return transpose(page, {1, 0});
             });
         });
 

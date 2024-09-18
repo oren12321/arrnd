@@ -8185,7 +8185,7 @@ namespace details {
                 ret_type res({lhs.info().dims().front(), rhs.info().dims().back()});
 
                 size_type ind = 0;
-                auto trhs = rhs.transpose({1, 0});
+                auto trhs = transpose(rhs, {1, 0});
                 std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}),
                     lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
                         std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}),
@@ -8303,7 +8303,7 @@ namespace details {
                     }
                 }
 
-                return (value_type{1} / d) * res.transpose({1, 0});
+                return (value_type{1} / d) * transpose(res, {1, 0});
             };
 
             if (ismatrix(info_)) {
@@ -8313,59 +8313,6 @@ namespace details {
             return browse(2, [inv_impl](auto page) {
                 return inv_impl(page);
             });
-        }
-
-        template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr this_type transpose(const InputIt& first_order, const InputIt& last_order) const
-        {
-            if (empty()) {
-                return this_type();
-            }
-
-            info_type new_header = oc::arrnd::transpose(info_type(info_.dims()), first_order, last_order);
-            if (oc::arrnd::empty(new_header)) {
-                return this_type();
-            }
-
-            this_type res({total(info_)});
-            res.info_ = std::move(new_header);
-
-            indexer_type gen(oc::arrnd::transpose(info_, first_order, last_order));
-            indexer_type res_gen(res.info_);
-
-            while (gen && res_gen) {
-                res[*res_gen] = (*this)[*gen];
-                ++gen;
-                ++res_gen;
-            }
-
-            return res;
-        }
-
-        template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr this_type transpose(const Cont& order) const
-        {
-            return transpose(std::begin(order), std::end(order));
-        }
-        [[nodiscard]] constexpr this_type transpose(std::initializer_list<size_type> order) const
-        {
-            return transpose(order.begin(), order.end());
-        }
-
-        [[nodiscard]] constexpr this_type transpose() const
-        {
-            if (empty()) {
-                return this_type();
-            }
-
-            this_type::template replaced_type<size_type> order({static_cast<size_type>(info_.dims().size())});
-            std::iota(order.begin(), order.end(), size_type{0});
-
-            if (total(order.info()) > 1) {
-                std::swap(order[total(order.info()) - 1], order[total(order.info()) - 2]);
-            }
-
-            return transpose(order);
         }
 
         [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0) const
@@ -8426,7 +8373,9 @@ namespace details {
             return res;
         }
 
-        // collapse should only used on valid expanded arrays
+        // collapse should only used on valid expanded arrays.
+        // returns reference to expanded array creator if
+        // exists, or new collpsed array otherwise.
         [[nodiscard]] constexpr auto collapse() const
             requires(!this_type::is_flat)
         {
@@ -8464,24 +8413,22 @@ namespace details {
 
             indexer_type gen(info_);
 
-            collapsed_type res = (*this)[*gen];
+            collapsed_type res = (*this)[*gen].clone();
             ++gen;
 
             while (gen) {
-                res = res.clone().push_back((*this)[*gen], assumed_axis);
+                res = res.push_back((*this)[*gen].clone(), assumed_axis);
                 ++gen;
             }
 
             return res;
         }
 
-        template <typename Func>
-            requires(invocable_no_arrnd<Func, inner_this_type<0>>)
+        template <typename UnaryOp>
         [[nodiscard]] constexpr auto slide(
-            size_type axis, typename window_type::interval_type window, bool bounded, Func&& func) const
+            size_type axis, typename window_type::interval_type window, bool bounded, UnaryOp op) const
         {
-            using func_res_type = std::invoke_result_t<Func, this_type>;
-            using slide_type = replaced_type<func_res_type>;
+            using slide_type = replaced_type<std::invoke_result_t<UnaryOp, this_type>>;
 
             if (empty()) {
                 return slide_type();
@@ -8500,7 +8447,7 @@ namespace details {
             typename slide_type::indexer_type res_gen(res.info());
 
             for (; rgr && res_gen; ++rgr, ++res_gen) {
-                res[*res_gen] = func((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]);
+                res[*res_gen] = op((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]);
             }
 
             return res;
@@ -10954,10 +10901,49 @@ namespace details {
                 dims.begin(), dims.end(), indices.begin(), indices.end()));
     }
 
+    template <arrnd_type Arrnd, iterator_of_type_integral InputIt>
+    [[nodiscard]] inline constexpr auto transpose(const Arrnd& arr, InputIt first_axis, InputIt last_axis)
+    {
+        if (arr.empty() || size(arr.info()) == 1) {
+            return arr;
+        }
+
+        Arrnd res({total(arr.info())});
+        res.info() = simplify(transpose(arr.info(), first_axis, last_axis));
+
+        for (auto t : zip(zipped(arr.begin(first_axis, last_axis), arr.end(first_axis, last_axis)), zipped(res))) {
+            std::get<1>(t) = std::get<0>(t);
+        }
+
+        return res;
+    }
+
+    template <arrnd_type Arrnd, iterable_of_type_integral Cont>
+    [[nodiscard]] inline constexpr auto transpose(const Arrnd& arr, const Cont& axes)
+    {
+        return transpose(arr, std::begin(axes), std::end(axes));
+    }
+
+    template <arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto transpose(
+        const Arrnd& arr, std::initializer_list<typename Arrnd::size_type> axes)
+    {
+        return transpose(arr, axes.begin(), axes.end());
+    }
+
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto transpose(const Arrnd& arr)
     {
-        return arr.transpose();
+        if (arr.empty() || size(arr.info()) == 1) {
+            return arr;
+        }
+
+        typename Arrnd::info_type::extent_storage_type axes(size(arr.info()));
+        std::iota(std::begin(axes), std::end(axes), 0);
+
+        std::swap(axes[std::size(axes) - 1], axes[std::size(axes) - 2]);
+
+        return transpose(arr, axes);
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
