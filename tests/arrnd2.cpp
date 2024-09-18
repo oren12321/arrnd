@@ -516,7 +516,7 @@ TEST(arrnd_test, eye)
 //    }
 //}
 
-TEST(arrnd_test, arrnd_filter_proxy)
+TEST(arrnd_test, arrnd_lazy_filter)
 {
     using namespace oc::arrnd;
 
@@ -581,7 +581,7 @@ TEST(arrnd_test, arrnd_filter_proxy)
     //arrnd<int> inds({1, 2}, {2, 0});
     //arrnd<int> vals({2, 2}, {1000, 2000, 3000, 4000});
 
-    //arrnd_filter_proxy(arr, inds) = vals;
+    //arrnd_lazy_filter(arr, inds) = vals;
     //arr(
     //    [](int n, int factor) {
     //        return n * factor > 1000;
@@ -618,9 +618,9 @@ TEST(arrnd_test, arrnd_filter_proxy)
     // - arrnd x = arr(filter) => decltype(x) == acg::Arrnd (filter result, i.e cast result from acg to Arrnd)
     // - auto x = arr(filter) = <value,array> => decltype(x) == acg::Arrnd
 
-    //arrnd_filter_proxy(arr, inds) = vals;
+    //arrnd_lazy_filter(arr, inds) = vals;
     // cg = 100; // only rvalue assignment
-    //auto x = arrnd_filter_proxy(arr, arr > 10) = 1000)(arr > 2);
+    //auto x = arrnd_lazy_filter(arr, arr > 10) = 1000)(arr > 2);
     //arrnd<int> p = arr(arr > 10);
     //std::cout << arr << "\n";
     //std::cout << p << "\n";

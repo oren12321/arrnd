@@ -5156,11 +5156,11 @@ namespace details {
     enum class arrnd_common_shape { vector, row, column };
 
     template <arrnd_type Arrnd, typename Constraint>
-    class arrnd_filter_proxy {
+    class arrnd_lazy_filter {
     public:
-        constexpr arrnd_filter_proxy() = delete;
+        constexpr arrnd_lazy_filter() = delete;
 
-        explicit constexpr arrnd_filter_proxy(Arrnd arr_ref, Constraint constraint)
+        explicit constexpr arrnd_lazy_filter(Arrnd arr_ref, Constraint constraint)
             : arr_ref_(arr_ref)
             , constraint_(constraint)
         { }
@@ -5175,9 +5175,9 @@ namespace details {
             return arr_ref_.filter(constraint_);
         }
 
-        constexpr arrnd_filter_proxy(arrnd_filter_proxy&& other) = default;
+        constexpr arrnd_lazy_filter(arrnd_lazy_filter&& other) = default;
         template <arrnd_type OtherArrnd, typename OtherConstraint>
-        constexpr arrnd_filter_proxy& operator=(arrnd_filter_proxy<OtherArrnd, OtherConstraint>&& other)
+        constexpr arrnd_lazy_filter& operator=(arrnd_lazy_filter<OtherArrnd, OtherConstraint>&& other)
         {
             // copy array elements from one proxy to another according to mask
 
@@ -5191,86 +5191,86 @@ namespace details {
 
             arr_ref_.copy_from(other_filtered, constraint_);
 
-            (void)arrnd_filter_proxy<OtherArrnd, OtherConstraint>(std::move(other));
+            (void)arrnd_lazy_filter<OtherArrnd, OtherConstraint>(std::move(other));
 
             return *this;
         }
 
-        constexpr arrnd_filter_proxy(const arrnd_filter_proxy& other) = delete;
-        constexpr arrnd_filter_proxy& operator=(const arrnd_filter_proxy& other) = delete;
+        constexpr arrnd_lazy_filter(const arrnd_lazy_filter& other) = delete;
+        constexpr arrnd_lazy_filter& operator=(const arrnd_lazy_filter& other) = delete;
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator+=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator+=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) + other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator-=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator-=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) - other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator*=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator*=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) * other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator/=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator/=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) / other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator%=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator%=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) % other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator^=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator^=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) ^ other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator&=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator&=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) & other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator|=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator|=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) | other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator<<=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator<<=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) << other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator>>=(const Arrnd& other) &&
+        constexpr arrnd_lazy_filter& operator>>=(const Arrnd& other) &&
         {
             arr_ref_.copy_from(arr_ref_.filter(constraint_) >> other, constraint_);
             return *this;
@@ -5278,134 +5278,134 @@ namespace details {
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator+=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator+=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ + value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ + value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator-=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator-=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ - value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ - value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator*=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator*=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ * value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ * value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator/=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator/=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ / value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ / value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator%=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator%=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ % value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ % value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator^=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator^=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ ^ value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ ^ value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator&=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator&=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ & value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ & value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator|=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator|=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ | value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ | value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator<<=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator<<=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ << value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ << value, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator>>=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator>>=(const U& value) &&
         {
-            *this = arrnd_filter_proxy(arr_ref_ >> value, constraint_);
+            *this = arrnd_lazy_filter(arr_ref_ >> value, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator++() &&
+        constexpr arrnd_lazy_filter& operator++() &&
         {
             auto c = arr_ref_.clone();
-            *this = arrnd_filter_proxy(++c, constraint_);
+            *this = arrnd_lazy_filter(++c, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
-        constexpr arrnd_filter_proxy& operator--() &&
+        constexpr arrnd_lazy_filter& operator--() &&
         {
             auto c = arr_ref_.clone();
-            *this = arrnd_filter_proxy(--c, constraint_);
+            *this = arrnd_lazy_filter(--c, constraint_);
             return *this;
         }
 
         template <typename U>
             requires(!arrnd_type<U>)
-        constexpr arrnd_filter_proxy& operator=(const U& value) &&
+        constexpr arrnd_lazy_filter& operator=(const U& value) &&
         {
             if (arr_ref_.empty()) {
                 return *this;
             }
 
             if constexpr (arrnd_type<Constraint>) {
-                if constexpr (std::is_same_v<typename Constraint::value_type, bool>) {
-                    assert(std::equal(std::begin(constraint_.info().dims()), std::end(constraint_.info().dims()),
-                               std::begin(arr_ref_.info().dims()), std::end(arr_ref_.info().dims()))
-                        && "boolean constraint considered as mask");
+                // constraint is a mask
+                if constexpr (std::is_same_v<bool, typename Constraint::value_type>) {
+                    if (!std::equal(std::begin(arr_ref_.info().dims()), std::end(arr_ref_.info().dims()),
+                            std::begin(constraint_.info().dims()), std::end(constraint_.info().dims()))) {
+                        throw std::invalid_argument("invalid mask constraint");
+                    }
 
-                    typename Arrnd::indexer_type gen(arr_ref_.info());
-                    typename Constraint::indexer_type cgen(constraint_.info());
-
-                    for (; gen && cgen; ++gen, ++cgen) {
-                        if (constraint_[*cgen]) {
-                            arr_ref_[*gen] = value;
+                    for (auto t : zip(zipped(arr_ref_), zipped(constraint_))) {
+                        if (std::get<1>(t)) {
+                            std::get<0>(t) = value;
                         }
                     }
-
-                } else {
-                    for (typename Constraint::indexer_type gen(constraint_.info()); gen; ++gen) {
-                        arr_ref_[constraint_[*gen]] = value;
+                }
+                // constraint is indices
+                else if constexpr (arrnd_type<Constraint>) {
+                    for (auto index : constraint_) {
+                        arr_ref_[index] = value;
                     }
                 }
-            } else { // might be predicator type
-                typename Arrnd::indexer_type gen(arr_ref_.info());
-
-                for (; gen; ++gen) {
-                    if (constraint_(arr_ref_[*gen])) {
-                        arr_ref_[*gen] = value;
+            }
+            // constraint might be predicator
+            else {
+                for (auto& element : arr_ref_) {
+                    if (constraint_(element)) {
+                        element = value;
                     }
                 }
             }
@@ -5413,7 +5413,7 @@ namespace details {
             return *this;
         }
 
-        virtual constexpr ~arrnd_filter_proxy() = default;
+        virtual constexpr ~arrnd_lazy_filter() = default;
 
     private:
         Arrnd arr_ref_;
@@ -5931,7 +5931,7 @@ namespace details {
             requires(std::integral<typename Arrnd::value_type>)
         [[nodiscard]] constexpr auto operator()(const Arrnd& selector) const
         {
-            return arrnd_filter_proxy(*this, selector);
+            return arrnd_lazy_filter(*this, selector);
         }
         [[nodiscard]] constexpr auto operator()(std::initializer_list<size_type> indices) const
         {
@@ -5952,7 +5952,7 @@ namespace details {
                 return pred(value);
             };
 
-            return arrnd_filter_proxy(*this, selector);
+            return arrnd_lazy_filter(*this, selector);
         }
 
         [[nodiscard]] constexpr bool empty() const noexcept
@@ -12352,7 +12352,7 @@ using details::arrnd_traversal_result;
 using details::arrnd_traversal_container;
 
 using details::arrnd_common_shape;
-using details::arrnd_filter_proxy;
+using details::arrnd_lazy_filter;
 using details::arrnd;
 
 using details::begin;
