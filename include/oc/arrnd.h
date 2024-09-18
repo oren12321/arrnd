@@ -2964,6 +2964,46 @@ namespace details {
         return arrnd_info<StorageTraits>(new_dims);
     }
 
+    // undo transposed info by rearranging dims accoding to sorted strides.
+    template <typename StorageTraits>
+    [[nodiscard]] constexpr arrnd_info<StorageTraits> unstranspose(const arrnd_info<StorageTraits>& info)
+    {
+        if (empty(info)) {
+            return arrnd_info<StorageTraits>{};
+        }
+
+        if (!istransposed(info)) {
+            return info;
+        }
+
+        typename arrnd_info<StorageTraits>::extent_storage_type new_dims(info.dims());
+        typename arrnd_info<StorageTraits>::extent_storage_type new_strides(info.strides());
+
+        auto z = zip(zipped(new_strides), zipped(new_dims));
+        std::sort(std::begin(z), std::end(z), [](auto t1, auto t2) {
+            return std::get<0>(t1) > std::get<0>(t2);
+        });
+
+        return arrnd_info<StorageTraits>(
+            new_dims, new_strides, info.indices_boundary(), info.hints() & ~arrnd_hint::transposed);
+    }
+
+    // return simple arrnd info by dims only,
+    // ignoring hints such as sliced.
+    template <typename StorageTraits>
+    [[nodiscard]] constexpr arrnd_info<StorageTraits> simplify(const arrnd_info<StorageTraits>& info)
+    {
+        if (empty(info)) {
+            return arrnd_info<StorageTraits>{};
+        }
+
+        if (info.hints() == arrnd_hint::continuous) {
+            return info;
+        }
+
+        return arrnd_info<StorageTraits>(info.dims());
+    }
+
     template <typename StorageTraits>
     inline constexpr std::ostream& operator<<(std::ostream& os, const arrnd_info<StorageTraits>& info)
     {
@@ -3024,6 +3064,8 @@ using details::isrow;
 using details::iscolumn;
 using details::isscalar;
 using details::reduce;
+using details::unstranspose;
+using details::simplify;
 }
 
 namespace oc::arrnd {
@@ -6120,11 +6162,8 @@ namespace details {
             return copy_from(data.begin(), data.end(), boundaries.begin(), boundaries.end());
         }
 
-        // Modify this array to a standard continuous array.
-        // The returned value is fully/partially shared reference to this array.
-        // Other shared arrays of this array might be invalid.
-        // For a guaranteed newley refreshed array, this function
-        // should be used on a cloned array.
+        // Modify array by simplifying info and by squeeze internal buffer
+        // data in the front of it for efficient internal buffer usage.
         constexpr this_type& refresh()
         {
             // continuous array, which is not sliced or transposed
@@ -6132,12 +6171,15 @@ namespace details {
                 return *this;
             }
 
-            this_type tmp(info_type(info_.dims()), shared_storage_);
+            // in order to perform the rearranging of the array elements
+            // without using temporary buffer, a unstranspose of the array
+            // info is required.
+            this_type tmp(unstranspose(info_), shared_storage_);
 
-            std::move(begin(), end(), tmp.begin());
+            std::move(tmp.begin(), tmp.end(), std::begin(*shared_storage_));
             tmp.shared_storage_->resize(total(tmp.info_));
 
-            *this = std::move(tmp);
+            *this = this_type(simplify(info_), shared_storage_);
 
             return *this;
         }

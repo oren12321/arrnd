@@ -2626,18 +2626,55 @@ TEST(arrnd_test, refresh)
 {
     using namespace oc::arrnd;
 
-    arrnd arr({6}, {1, 2, 3, 4, 5, 6});
+    // sliced
+    {
+        arrnd arr({6}, {1, 2, 3, 4, 5, 6});
 
-    auto same = arr.refresh();
+        auto same = arr.refresh();
 
-    EXPECT_TRUE(all_equal(same, arr));
-    EXPECT_EQ(same.shared_storage()->data(), arr.shared_storage()->data());
+        EXPECT_TRUE(all_equal(same, arr));
+        EXPECT_EQ(same.shared_storage()->data(), arr.shared_storage()->data());
 
-    auto refslc = arr[interval<>::from(2)].refresh();
+        auto refslc = arr[interval<>::from(2)].refresh();
 
-    EXPECT_TRUE(all_equal(refslc, arrnd({4}, {3, 4, 5, 6})));
-    EXPECT_EQ(refslc.shared_storage()->data(), arr.shared_storage()->data());
-    EXPECT_EQ(refslc.shared_storage()->capacity(), arr.shared_storage()->capacity());
+        EXPECT_TRUE(all_equal(refslc, arrnd({4}, {3, 4, 5, 6})));
+        EXPECT_EQ(refslc.shared_storage()->data(), arr.shared_storage()->data());
+        EXPECT_EQ(refslc.shared_storage()->capacity(), arr.shared_storage()->capacity());
+    }
+
+    // transposed
+    {
+        arrnd<int> arr({3, 2, 4, 5});
+        std::iota(arr.shared_storage()->begin(), arr.shared_storage()->end(), 1);
+        arr.info() = transpose(arr.info(), {3, 2, 0, 1});
+
+        auto slc = arr[{interval<>::from(1), interval<>::from(1), interval<>::from(1), interval<>::from(1)}];
+
+        {
+            std::vector<std::size_t> actual_dims(std::begin(slc.info().dims()), std::end(slc.info().dims()));
+            std::vector<std::size_t> expected_dims({4, 3, 2, 1});
+
+            EXPECT_EQ(actual_dims, expected_dims);
+        }
+
+        slc.refresh();
+
+        {
+            std::vector<std::size_t> actual_dims(std::begin(slc.info().dims()), std::end(slc.info().dims()));
+            std::vector<std::size_t> expected_dims({4, 3, 2, 1});
+
+            EXPECT_EQ(actual_dims, expected_dims);
+        }
+
+        {
+            std::vector<std::size_t> actual_data(std::begin(*slc.shared_storage()), std::end(*slc.shared_storage()));
+            std::vector<std::size_t> expected_data{67, 68, 69, 70, 72, 73, 74, 75, 77, 78, 79, 80, 107, 108, 109, 110,
+                112, 113, 114, 115, 117, 118, 119, 120};
+
+            EXPECT_EQ(actual_data, expected_data);
+            EXPECT_EQ(arr.shared_storage()->data(), slc.shared_storage()->data());
+        }
+    }
 }
 
 TEST(arrnd_test, resize)
@@ -3106,7 +3143,7 @@ TEST(arrnd_test, repeat)
     // by axis
     {
         auto arr1 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).clone().repeat({std::tuple(2, 2), std::tuple(3, 1), std::tuple(2, 0)});
-        std::cout << arr1 << "\n";
+        
         arrnd<int> res({2, 6, 4},
             {1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4, 1, 2, 1, 2,
                 3, 4, 3, 4, 1, 2, 1, 2, 3, 4, 3, 4});
@@ -3119,7 +3156,7 @@ TEST(arrnd_test, repeat)
         auto z = zip(zipped(reps), zipped(axes));
 
         auto arr2 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).clone().repeat(z.begin(), z.end());
-        std::cout << arr2 << "\n";
+
         EXPECT_TRUE(all_equal(arr2, res));
 
         auto arr3 = arrnd<int>({1, 2, 2}, {1, 2, 3, 4}).clone().repeat({2, 3, 2});
