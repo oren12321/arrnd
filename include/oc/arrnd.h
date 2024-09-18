@@ -5189,7 +5189,7 @@ namespace details {
 
             auto other_filtered = static_cast<OtherArrnd>(other);
 
-            other_filtered.copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(other_filtered, constraint_);
 
             (void)arrnd_filter_proxy<OtherArrnd, OtherConstraint>(std::move(other));
 
@@ -5202,77 +5202,77 @@ namespace details {
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator=(const Arrnd& other) &&
         {
-            other.copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator+=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) + other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) + other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator-=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) - other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) - other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator*=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) * other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) * other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator/=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) / other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) / other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator%=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) % other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) % other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator^=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) ^ other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) ^ other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator&=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) & other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) & other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator|=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) | other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) | other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator<<=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) << other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) << other, constraint_);
             return *this;
         }
 
         template <arrnd_type Arrnd>
         constexpr arrnd_filter_proxy& operator>>=(const Arrnd& other) &&
         {
-            (arr_ref_.filter(constraint_) >> other).copy_to(arr_ref_, constraint_);
+            arr_ref_.copy_from(arr_ref_.filter(constraint_) >> other, constraint_);
             return *this;
         }
 
@@ -5572,7 +5572,7 @@ namespace details {
                 return *this;
             }
 
-            other.copy_to(*this);
+            copy_from(other);
             (void)arrnd(std::move(other));
             return *this;
         }
@@ -5588,7 +5588,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd& operator=(Arrnd&& other) &&
         {
-            other.copy_to(*this);
+            copy_from(other);
             (void)Arrnd(std::move(other));
             return *this;
         }
@@ -5607,7 +5607,7 @@ namespace details {
                 return *this;
             }
 
-            other.copy_to(*this);
+            copy_from(other);
             return *this;
         }
         template <arrnd_type Arrnd>
@@ -5621,7 +5621,7 @@ namespace details {
             requires arrnd_depths_match<arrnd, Arrnd>
         constexpr arrnd& operator=(const Arrnd& other) &&
         {
-            other.copy_to(*this);
+            copy_from(other);
             return *this;
         }
 
@@ -5960,133 +5960,164 @@ namespace details {
             return oc::arrnd::empty(info_);
         }
 
-        template <arrnd_type Arrnd>
-        constexpr const this_type& copy_to(Arrnd&& dst) const
+        template <iterator_type InputIt>
+        constexpr this_type& copy_from(InputIt first_data, InputIt last_data)
         {
-            if (empty() || dst.empty()) {
+            if (empty() || std::distance(first_data, last_data) <= 0) {
                 return *this;
             }
 
-            indexer_type gen(info_);
-            typename std::remove_cvref_t<Arrnd>::indexer_type dst_gen(dst.info());
-
-            for (; gen && dst_gen; ++gen, ++dst_gen) {
-                if constexpr (arrnd_type<value_type>) {
-                    (*this)[*gen].copy_to(dst[*dst_gen]); // deep copying
+            for (auto t : zip(zipped(*this), zipped(first_data, last_data))) {
+                if constexpr (arrnd_type<value_type> && arrnd_type<decltype(std::get<1>(t))>) {
+                    std::get<0>(t).copy_from(std::begin(std::get<1>(t)), std::end(std::get<1>(t)));
                 } else {
-                    dst[*dst_gen] = (*this)[*gen];
+                    std::get<0>(t) = std::get<1>(t);
                 }
             }
 
             return *this;
         }
 
-        template <arrnd_type Arrnd, iterator_of_type_integral InputIt>
-        constexpr const this_type& copy_to(Arrnd&& dst, std::pair<InputIt, InputIt> indices) const
+        template <iterable_type Cont>
+        constexpr this_type& copy_from(const Cont& data)
         {
-            if (empty() || dst.empty() || std::distance(indices.first, indices.second) <= 0) {
+            return copy_from(std::begin(data), std::end(data));
+        }
+
+        template <typename U>
+        constexpr this_type& copy_from(std::initializer_list<U> data)
+        {
+            return copy_from(data.begin(), data.end());
+        }
+
+        template <iterator_type InputIt1, iterator_of_type_integral InputIt2>
+        constexpr this_type& copy_from(
+            InputIt1 first_data, InputIt1 last_data, InputIt2 first_index, InputIt2 last_index)
+        {
+            if (empty() || std::distance(first_data, last_data) <= 0 || std::distance(first_index, last_index) <= 0) {
                 return *this;
             }
 
-            indexer_type gen(info_);
-            auto inds_it = indices.first;
+            if (std::any_of(first_index, last_index, [&](auto index) {
+                    return index < info_.indices_boundary().start() || index >= info_.indices_boundary().stop();
+                })) {
+                throw std::invalid_argument("invalid input indices");
+            }
 
-            for (; gen && inds_it != indices.second; ++gen, ++inds_it) {
-                if constexpr (arrnd_type<value_type>) {
-                    (*this)[*gen].copy_to(dst[*inds_it]); // deep copying
+            for (auto t : zip(zipped(first_data, last_data), zipped(first_index, last_index))) {
+                if constexpr (arrnd_type<value_type> && arrnd_type<decltype(std::get<0>(t))>) {
+                    (*this)[std::get<1>(t)].copy_from(std::get<0>(t));
                 } else {
-                    dst[*inds_it] = (*this)[*gen];
+                    (*this)[std::get<1>(t)] = std::get<0>(t);
                 }
             }
 
             return *this;
         }
-        template <arrnd_type Arrnd, iterable_of_type_integral Cont>
-            requires(!arrnd_type<Cont>)
-        constexpr const this_type& copy_to(Arrnd&& dst, const Cont& indices) const
+
+        template <iterable_type Cont1, iterable_of_type_integral Cont2>
+            requires(!std::is_same_v<bool, iterable_value_t<Cont2>>) // to prevent ambiguity with mask
+        constexpr this_type& copy_from(const Cont1& data, const Cont2& indices)
         {
-            return copy_to(std::forward<Arrnd>(dst), std::make_pair(std::begin(indices), std::end(indices)));
+            return copy_from(std::begin(data), std::end(data), std::begin(indices), std::end(indices));
         }
+
+        template <typename U>
+        constexpr this_type& copy_from(std::initializer_list<U> data, std::initializer_list<size_type> indices)
+        {
+            return copy_from(data.begin(), data.end(), indices.begin(), indices.end());
+        }
+
         template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-            requires(std::integral<typename Arrnd2::value_type>)
-        constexpr const this_type& copy_to(Arrnd1&& dst, const Arrnd2& selector) const
+            requires(std::is_same_v<bool, typename Arrnd2::value_type>)
+        constexpr this_type& copy_from(const Arrnd1& data, const Arrnd2& mask)
         {
-            // in case that indices isn't a vector treat it as a mask
-            if constexpr (std::is_same_v<bool, typename Arrnd2::value_type>) {
-                if (empty() || dst.empty() || selector.empty()) {
-                    return *this;
-                }
-
-                assert(std::equal(std::begin(dst.info().dims()), std::end(dst.info().dims()),
-                           std::begin(selector.info().dims()), std::end(selector.info().dims()))
-                    && "boolean constraint considered as mask");
-
-                indexer_type gen(info_);
-                typename std::remove_cvref_t<Arrnd1>::indexer_type dst_gen(dst.info());
-                typename Arrnd2::indexer_type slc_gen(selector.info());
-
-                for (; gen && dst_gen && slc_gen; ++dst_gen, ++slc_gen) {
-                    if (selector[*slc_gen]) {
-                        if constexpr (arrnd_type<value_type>) {
-                            (*this)[*gen].copy_to(dst[*dst_gen]); // deep copying
-                        } else {
-                            dst[*dst_gen] = (*this)[*gen];
-                        }
-                        ++gen;
-                    }
-                }
-
-                return *this;
-            } else {
-                return copy_to(std::forward<Arrnd1>(dst), std::make_pair(std::begin(selector), std::end(selector)));
-            }
-        }
-        template <arrnd_type Arrnd>
-        constexpr const this_type& copy_to(Arrnd&& dst, std::initializer_list<size_type> indices) const
-        {
-            return copy_to(std::forward<Arrnd>(dst), std::make_pair(indices.begin(), indices.end()));
-        }
-
-        template <arrnd_type Arrnd, typename Pred>
-            requires invocable_no_arrnd<Pred, value_type>
-        constexpr const this_type& copy_to(Arrnd&& dst, Pred&& pred) const
-        {
-            if (empty() || dst.empty()) {
+            if (empty() || data.empty() || mask.empty()) {
                 return *this;
             }
 
-            indexer_type gen(info_);
-            typename std::remove_cvref_t<Arrnd>::indexer_type dst_gen(dst.info());
+            if (!std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(mask.info().dims()),
+                    std::end(mask.info().dims()))) {
+                throw std::invalid_argument("invalid mask dims");
+            }
 
-            for (; gen && dst_gen; ++dst_gen) {
-                if (pred(dst[*dst_gen])) {
-                    if constexpr (arrnd_type<value_type>) {
-                        (*this)[*gen].copy_to(dst[*dst_gen]); // deep copying
+            auto dst_it = begin();
+            auto src_it = data.begin();
+            auto msk_it = mask.begin();
+
+            for (; dst_it != end() && src_it != data.end() && msk_it != mask.end(); ++dst_it, ++msk_it) {
+                if (*msk_it) {
+                    if constexpr (arrnd_type<value_type> && arrnd_type<decltype(*src_it)>) {
+                        (*dst_it).copy_from(*src_it);
                     } else {
-                        dst[*dst_gen] = (*this)[*gen];
+                        *dst_it = *src_it;
                     }
-                    ++gen;
+                    ++src_it;
+                }
+            }
+        }
+
+        template <iterator_type InputIt, typename Pred>
+            requires(std::is_invocable_v<Pred, value_type> && !arrnd_type<Pred>)
+        constexpr this_type& copy_from(InputIt first_data, InputIt last_data, Pred pred)
+        {
+            if (empty() || std::distance(first_data, last_data) <= 0) {
+                return *this;
+            }
+
+            if (total(info_) < std::distance(first_data, last_data)) {
+                throw std::invalid_argument("invalid input data - number of input data might be small for array");
+            }
+
+            auto dst_it = begin();
+            auto src_it = first_data;
+
+            for (; dst_it != end() && src_it != last_data; ++dst_it) {
+                if (pred(*dst_it)) {
+                    if constexpr (arrnd_type<value_type> && arrnd_type<decltype(*src_it)>) {
+                        (*dst_it).copy_from(*src_it);
+                    } else {
+                        *dst_it = *src_it;
+                    }
+                    ++src_it;
                 }
             }
 
             return *this;
         }
 
-        template <arrnd_type Arrnd, iterator_of_type_interval InputIt>
-        constexpr const this_type& copy_to(Arrnd&& dst, const InputIt& first_range, const InputIt& last_range) const
+        template <iterable_type Cont, typename Pred>
+            requires(std::is_invocable_v<Pred, value_type> && !arrnd_type<Pred>)
+        constexpr this_type& copy_from(const Cont& data, Pred&& pred)
         {
-            copy_to(dst[std::make_pair(first_range, last_range)]);
+            return copy_from(std::begin(data), std::end(data), std::forward<Pred>(pred));
+        }
+
+        template <typename U, typename Pred>
+            requires(std::is_invocable_v<Pred, value_type> && !arrnd_type<Pred>)
+        constexpr this_type& copy_from(std::initializer_list<U> data, Pred&& pred)
+        {
+            return copy_from(data.begin(), data.end(), std::forward<Pred>(pred));
+        }
+
+        template <iterator_type InputIt1, iterator_of_type_interval InputIt2>
+        constexpr this_type& copy_from(
+            InputIt1 first_data, InputIt1 last_data, InputIt2 first_boundary, InputIt2 last_boundary)
+        {
+            (*this)[std::make_pair(first_boundary, last_boundary)].copy_from(first_data, last_data);
             return *this;
         }
-        template <arrnd_type Arrnd, iterable_of_type_interval Cont>
-        constexpr const this_type& copy_to(Arrnd&& dst, const Cont& ranges) const
+
+        template <iterable_type Cont1, iterable_of_type_interval Cont2>
+        constexpr this_type& copy_from(const Cont1& data, const Cont2& boundaries)
         {
-            return copy_to(std::forward<Arrnd>(dst), std::begin(ranges), std::end(ranges));
+            return copy_from(std::begin(data), std::end(data), std::begin(boundaries), std::end(boundaries));
         }
-        template <arrnd_type Arrnd>
-        constexpr const this_type& copy_to(Arrnd&& dst, std::initializer_list<boundary_type> ranges) const
+
+        template <typename U, arrnd_type Arrnd>
+        constexpr this_type& copy_from(std::initializer_list<U> data, std::initializer_list<boundary_type> boundaries)
         {
-            return copy_to(std::forward<Arrnd>(dst), ranges.begin(), ranges.end());
+            return copy_from(data.begin(), data.end(), boundaries.begin(), boundaries.end());
         }
 
         // Modify this array to a standard continuous array.
