@@ -9003,20 +9003,13 @@ namespace details {
         }
 
         template <typename Comp>
-            requires(invocable_no_arrnd<Comp, inner_value_type<0>, inner_value_type<0>>)
-        [[nodiscard]] constexpr this_type sort(Comp&& comp) const
+        constexpr this_type& sort(Comp comp)
         {
-            if (empty()) {
-                return this_type();
-            }
-
-            this_type res = clone();
-
-            std::sort(res.begin(), res.end(), [&comp](const auto& lhs, const auto& rhs) {
+            std::sort(begin(), end(), [&comp](const auto& lhs, const auto& rhs) {
                 return comp(lhs, rhs);
             });
 
-            return res;
+            return *this;
         }
 
         template <typename Comp>
@@ -9041,8 +9034,7 @@ namespace details {
         }
 
         template <typename Comp>
-            requires(invocable_no_arrnd<Comp, inner_value_type<0>, inner_value_type<0>>)
-        [[nodiscard]] constexpr bool is_sorted(Comp&& comp) const
+        [[nodiscard]] constexpr bool is_sorted(Comp comp) const
         {
             if (empty()) {
                 return true;
