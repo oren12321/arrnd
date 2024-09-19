@@ -5046,7 +5046,7 @@ namespace details {
     concept arrnd_type = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
 
     template <typename T, typename U>
-    concept same_depth = (T::depth == U::depth);
+    concept arrnd_same_depth = (T::depth == U::depth);
 
     template <typename T, typename... Args>
     concept invocable_no_arrnd = !
@@ -5109,7 +5109,7 @@ namespace details {
     concept arrnd_with_trait = arrnd_type<T> && is_arrnd_with_trait<T, Trait>();
 
     template <typename ArrndSrc, typename ArrndDst>
-    concept arrnd_depths_match = arrnd_type<ArrndSrc> && arrnd_type<ArrndDst> && same_depth<ArrndSrc, ArrndDst>;
+    concept arrnd_depths_match = arrnd_type<ArrndSrc> && arrnd_type<ArrndDst> && arrnd_same_depth<ArrndSrc, ArrndDst>;
 
     template <typename T, std::int64_t Depth>
         requires(Depth >= 0 && Depth <= T::depth)
@@ -8409,7 +8409,7 @@ namespace details {
 
         template <typename BinaryOp, typename UnaryOp>
         [[nodiscard]] constexpr auto accumulate(
-            size_type axis, window_type window, BinaryOp&& reduce_op, UnaryOp&& transform_op) const
+            size_type axis, window_type window, BinaryOp reduce_op, UnaryOp transform_op) const
         {
             using transform_t = std::invoke_result_t<UnaryOp, this_type>;
             using reduce_t = std::invoke_result_t<BinaryOp, transform_t, transform_t>;
@@ -8451,105 +8451,92 @@ namespace details {
             return res;
         }
 
-        template <typename Func>
-            requires(invocable_no_arrnd<Func, this_type>)
-        constexpr auto browse(size_type page_size, Func&& func) const
+        template <typename UnaryOp>
+        constexpr auto browse(size_type page_size, UnaryOp&& op) const
         {
-            constexpr bool is_void_func = std::is_same_v<std::invoke_result_t<Func, this_type>, void>;
-            using func_res_type = std::conditional_t<is_void_func, this_type, std::invoke_result_t<Func, this_type>>;
-            using returned_type = std::conditional_t<arrnd_type<func_res_type> && same_depth<func_res_type, this_type>,
-                func_res_type, replaced_type<func_res_type>>;
+            if constexpr (std::is_void_v<std::invoke_result_t<UnaryOp, this_type>>) {
+                using browse_t = this_type;
 
-            auto invoke_func = [&func](auto page) {
-                if constexpr (arrnd_type<func_res_type> && same_depth<func_res_type, this_type>) {
-                    if constexpr (is_void_func) {
-                        func(page);
-                        return page;
-                    } else {
-                        return func(page);
-                    }
-                } else { // in case that the returned type of func is not arrnd_type, then it should not be void returned type
-                    return returned_type({1}, {func(page)});
+                if (empty()) {
+                    return browse_t{};
                 }
-            };
 
-            if (empty()) {
-                return returned_type{};
-            }
+                if (size(info_) < page_size) {
+                    throw std::invalid_argument("invalid page size - smaller than number of dims");
+                }
 
-            assert(info_.dims().size() >= page_size);
-
-            if (info_.dims().size() == page_size) {
-                if constexpr (is_void_func) {
-                    invoke_func(*this);
+                if (size(info_) == page_size) {
+                    op(*this);
                     return *this;
-                } else {
-
-                    return invoke_func(*this);
                 }
-            }
 
-            auto expanded = pages(page_size);
-
-            using trans_expanded_type = typename decltype(expanded)::template replaced_type<returned_type>;
-
-            trans_expanded_type trans_expanded{};
-            if constexpr (std::is_same_v<decltype(expanded), trans_expanded_type>) {
-                trans_expanded = expanded;
-            } else {
-                trans_expanded = trans_expanded_type(expanded.info().dims());
-            }
-
-            typename decltype(expanded)::indexer_type exp_gen(expanded.info());
-            typename trans_expanded_type::indexer_type trs_gen(trans_expanded.info());
-
-            for (; exp_gen && trs_gen; ++exp_gen, ++trs_gen) {
-                auto page = expanded[*exp_gen];
-
-                auto processed = invoke_func(page);
-
-                trans_expanded[*trs_gen] = processed;
-            }
-
-            if constexpr (is_void_func) {
+                pages(page_size).template apply<0>(std::forward<UnaryOp>(op));
                 return *this;
-            } else {
+            }
+            else {
+                using type_t = std::invoke_result_t<UnaryOp, this_type>;
+                using browse_t = std::conditional_t<arrnd_type<type_t> && arrnd_same_depth<type_t, this_type>, type_t,
+                    replaced_type<type_t>>;
 
-                return trans_expanded.book();
+                if (empty()) {
+                    return browse_t{};
+                }
+
+                if (size(info_) < page_size) {
+                    throw std::invalid_argument("invalid page size - smaller than number of dims");
+                }
+
+                auto invoke = [&op](auto page) {
+                    if constexpr (arrnd_type<type_t> && arrnd_same_depth<type_t, this_type>) {
+                        return op(page);
+                    } else { // in case that the returned type of op is not arrnd_type, then it should not be void returned type
+                        return browse_t({1}, {op(page)});
+                    }
+                };
+
+                if (size(info_) == page_size) {
+                    return invoke(*this);
+                }
+
+                return pages(page_size).template transform<0>(invoke).book();
             }
         }
 
-        [[nodiscard]] constexpr typename this_type::template replaced_type<this_type> pages(
-            size_type page_ndims = 2) const
+        [[nodiscard]] constexpr auto pages(
+            size_type page_size = 2) const
         {
-            assert(page_ndims > 0 && page_ndims <= std::ssize(info_.dims()));
+            using pages_t = replaced_type<this_type>;
 
-            if (page_ndims == std::ssize(info_.dims())) {
-                return typename this_type::template replaced_type<this_type>({1}, {*this});
+            if (empty()) {
+                return pages_t{};
             }
 
-            typename this_type::template replaced_type<this_type> pages =
-                typename this_type::template replaced_type<this_type>(
-                    info_.dims().cbegin(), std::next(info_.dims().cbegin(), std::ssize(info_.dims()) - page_ndims));
+            if (page_size <= 0 || page_size > size(info_)) {
+                throw std::invalid_argument("invalid page size");
+            }
 
-            for (auto gen = decltype(pages)::indexer_type(pages.info()); gen; ++gen) {
+            if (page_size == size(info_)) {
+                return pages_t({1}, {*this});
+            }
+
+            pages_t pages(std::begin(info_.dims()), std::next(std::begin(info_.dims()), size(info_) - page_size));
+
+            for (auto indexer = typename pages_t::indexer_type(pages.info()); indexer; ++indexer) {
+                const auto& subs = indexer.subs();
                 auto page = *this;
-
-                const auto& subs = gen.subs();
-                for (size_type axis = 0; axis < std::size(info_.dims()) - page_ndims; ++axis) {
-                    page = page[boundary_type::at(*std::next(subs.cbegin(), axis))];
+                for (size_type axis = 0; axis < size(info_) - page_size; ++axis) {
+                    page = page[boundary_type::at(subs[axis])];
                 }
 
-                pages[*gen] = page;
+                pages[*indexer] = page;
             }
 
             return pages;
         }
 
-        [[nodiscard]] constexpr value_type book() const
+        [[nodiscard]] constexpr auto book() const
+            requires(!this_type::is_flat)
         {
-            assert(!this_type::is_flat);
-
             if (empty()) {
                 return value_type{};
             }
@@ -8565,10 +8552,10 @@ namespace details {
                 == cend();
 
             if (all_pages_source_known && all_pages_from_same_source) {
-                return *(*this)[0].creator();
+                return *((*this)(0).creator());
             }
 
-            bool all_pages_with_same_dimensions
+            bool all_pages_with_same_dimes
                 = std::adjacent_find(cbegin(), cend(),
                       [](const auto& page1, const auto& page2) {
                           return !std::equal(page1.info().dims().cbegin(), page1.info().dims().cend(),
@@ -8576,24 +8563,26 @@ namespace details {
                       })
                 == cend();
 
-            assert(all_pages_with_same_dimensions);
+            if (!all_pages_with_same_dimes) {
+                throw std::exception("unable to book pages with different dims");
+            }
 
-            size_type this_ndims = std::ssize(info_.dims());
-            size_type page_ndims = std::ssize((*this)[0].info().dims());
+            size_type this_size = size(info_);
+            size_type page_size = size((*this)(0).info());
 
-            typename info_type::extent_storage_type new_dims;
-            new_dims = typename info_type::extent_storage_type(this_ndims + page_ndims);
             const auto& this_dims = info_.dims();
-            const auto& page_dims = (*this)[0].info().dims();
-            std::copy(this_dims.cbegin(), this_dims.cend(), new_dims.begin());
-            std::copy(page_dims.cbegin(), page_dims.cend(), std::next(new_dims.begin(), this_ndims));
+            const auto& page_dims = (*this)(0).info().dims();
+
+            typename info_type::extent_storage_type new_dims(this_size + page_size);
+            std::copy(std::begin(this_dims), std::end(this_dims), std::begin(new_dims));
+            std::copy(std::begin(page_dims), std::end(page_dims), std::next(std::begin(new_dims), this_size));
 
             value_type res(new_dims);
-            indexer_type res_gen(res.info());
+            auto res_it = res.begin();
 
             for (const auto& page : *this) {
-                for (indexer_type page_gen(page.info()); page_gen && res_gen; ++page_gen, ++res_gen) {
-                    res[*res_gen] = page[*page_gen];
+                for (auto page_it = page.begin(); page_it != page.end() && res_it != res.end(); ++page_it, ++res_it) {
+                    *res_it = *page_it;
                 }
             }
 
@@ -11961,27 +11950,6 @@ namespace details {
         return operator--(arr, int{});
     }
 
-    template <arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto slide(const Arrnd& arr, typename Arrnd::size_type axis,
-        typename Arrnd::window_type::interval_type window, bool bounded, Func&& func)
-    {
-        return arr.slide(axis, window, bounded, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename ReduceFunc, typename TransformFunc>
-    [[nodiscard]] inline constexpr auto accumulate(const Arrnd& arr, typename Arrnd::size_type axis,
-        typename Arrnd::window_type::interval_type window, bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc)
-    {
-        return arr.accumulate(
-            axis, window, bounded, std::forward<ReduceFunc>(rfunc), std::forward<TransformFunc>(tfunc));
-    }
-
-    template <arrnd_type Arrnd, typename Func>
-    inline constexpr auto browse(const Arrnd& arr, typename Arrnd::size_type page_size, Func&& func)
-    {
-        return arr.browse(page_size, std::forward<Func>(func));
-    }
-
     template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
         requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
     [[nodiscard]] inline constexpr bool all(const Arrnd& arr, Pred&& pred)
@@ -12422,9 +12390,6 @@ using details::crend;
 
 using details::concat;
 
-using details::slide;
-using details::accumulate;
-using details::browse;
 using details::all;
 using details::any;
 using details::all_match;

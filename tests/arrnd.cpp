@@ -3091,7 +3091,8 @@ TEST(arrnd_test, browse)
 
     // empty array
     {
-        auto res = browse(arrnd<int>{}, 2, [](arrnd<int> page) {
+        auto res = arrnd<int> { }
+        .browse(2, [](arrnd<int> page) {
             return page;
         });
 
@@ -3102,7 +3103,7 @@ TEST(arrnd_test, browse)
     {
         arrnd<int> arr({1, 2}, {1, 2});
 
-        auto res = browse(arr, 2, [](arrnd<int> page) {
+        auto res = arr.browse(2, [](arrnd<int> page) {
             return transpose(page, {1, 0});
         });
 
@@ -3113,7 +3114,7 @@ TEST(arrnd_test, browse)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = browse(arr, 2, [](arrnd<int> page) {
+        auto res = arr.browse(2, [](arrnd<int> page) {
             page.apply([](int value) {
                 return value * 2;
             });
@@ -3132,7 +3133,7 @@ TEST(arrnd_test, browse)
         //    });
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return browse(val, 2, [](arrnd<int> page) {
+            return val.browse(2, [](arrnd<int> page) {
                 page.apply([](int value) {
                     return value * 2;
                 });
@@ -3147,7 +3148,7 @@ TEST(arrnd_test, browse)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = browse(arr, 2, [](arrnd<int> page) {
+        auto res = arr.browse(2, [](arrnd<int> page) {
             return transpose(page, {1, 0});
         });
 
@@ -3161,7 +3162,7 @@ TEST(arrnd_test, browse)
         //    return page.transpose({1, 0});
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return browse(val, 2, [](arrnd<int> page) {
+            return val.browse(2, [](arrnd<int> page) {
                 return transpose(page, {1, 0});
             });
         });
@@ -3173,13 +3174,13 @@ TEST(arrnd_test, browse)
     {
         arrnd<int> arr1({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res1 = browse(arr1, 2, [](arrnd<int> page) {
+        auto res1 = arr1.browse(2, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
         EXPECT_TRUE(all_equal(res1, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
 
-        auto res2 = browse(arr1, 1, [](arrnd<int> page) {
+        auto res2 = arr1.browse(1, [](arrnd<int> page) {
             return 0.5 * page.sum();
         });
 
@@ -3187,7 +3188,7 @@ TEST(arrnd_test, browse)
 
         arrnd<int> arr2({2, 3, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
-        auto res3 = browse(arr2, 3, [](arrnd<int> page) {
+        auto res3 = arr2.browse(3, [](arrnd<int> page) {
             return page.sum();
         });
 
@@ -3201,7 +3202,7 @@ TEST(arrnd_test, browse)
         //    return 0.5 * page.sum();
         //});
         auto res = transform<0>(arr, [](const auto& val) {
-            return browse(val, 2, [](arrnd<int> page) {
+            return val.browse(2, [](arrnd<int> page) {
                 return 0.5 * page.sum();
             });
         });
@@ -3213,7 +3214,7 @@ TEST(arrnd_test, browse)
     {
         arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-        auto res = browse(arr, 2, [](arrnd<int> page) {
+        auto res = arr.browse(2, [](arrnd<int> page) {
             return arrnd<arrnd<int>>({1}, {page});
         });
 
