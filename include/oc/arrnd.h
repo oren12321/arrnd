@@ -8170,58 +8170,6 @@ namespace details {
             return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(find_impl);
         }
 
-        template <arrnd_type Arrnd>
-            requires(this_type::is_flat && Arrnd::is_flat)
-        [[nodiscard]] constexpr auto dot(const Arrnd& arr) const
-        {
-            using ret_type = replaced_type<decltype(value_type{} * (typename Arrnd::value_type{}))>;
-
-            assert(info_.dims().size() >= 2 && arr.info().dims().size() >= 2);
-
-            auto impl = [](const auto& lhs, const auto& rhs) {
-                assert(ismatrix(lhs.info()) && ismatrix(rhs.info()));
-                assert(lhs.info().dims().back() == rhs.info().dims().front());
-
-                ret_type res({lhs.info().dims().front(), rhs.info().dims().back()});
-
-                size_type ind = 0;
-                auto trhs = transpose(rhs, {1, 0});
-                std::for_each(lhs.cbegin(arrnd_returned_slice_iterator_tag{}),
-                    lhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trhs, &ind](const auto& row) {
-                        std::for_each(trhs.cbegin(arrnd_returned_slice_iterator_tag{}),
-                            trhs.cend(arrnd_returned_slice_iterator_tag{}), [&res, &ind, &row](const auto& col) {
-                                res[ind++] = (row * col).template reduce<0>(std::plus<>{});
-                            });
-                    });
-
-                return res;
-            };
-
-            if (ismatrix(info_) && ismatrix(arr.info())) {
-                return impl(*this, arr);
-            }
-
-            if (ismatrix(arr.info())) {
-                return browse(2, [&arr, impl](auto page) {
-                    return impl(page, arr);
-                });
-            } else {
-                size_type lhs_num_pages = total(info_)
-                    / ((*std::next(info_.dims().cbegin(), info_.dims().size() - 2)) * info_.dims().back());
-                size_type rhs_num_pages = total(arr.info())
-                    / ((*std::next(arr.info().dims().cbegin(), arr.info().dims().size() - 2))
-                        * arr.info().dims().back());
-                assert(lhs_num_pages == rhs_num_pages);
-
-                auto arr_pages = arr.pages(2);
-                typename decltype(arr_pages)::indexer_type arr_pages_gen(arr_pages.info());
-
-                return browse(2, [&arr_pages, &arr_pages_gen, &impl](auto page) {
-                    return impl(page, arr_pages[*(arr_pages_gen++)]);
-                });
-            }
-        }
-
         [[nodiscard]] constexpr auto det() const
             requires(this_type::is_flat)
         {
@@ -10507,13 +10455,76 @@ namespace details {
         }
     }
 
+    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
+    [[nodiscard]] inline constexpr auto dot(const Arrnd1& lhs, const Arrnd2& rhs)
+    {
+        using dot_t = typename Arrnd1::template replaced_type<decltype((typename Arrnd1::value_type{})
+            * (typename Arrnd2::value_type{}))>;
+
+        if (size(lhs.info()) < 2 || size(rhs.info()) < 2) {
+            throw std::invalid_argument("invalid inputs - should be at least matrices");
+        }
+
+        auto dot_impl = [](const auto& lmat, const auto& rmat) {
+            if (!ismatrix(lmat.info()) || !ismatrix(rmat.info())) {
+                throw std::invalid_argument("invalid inputs - not matrices");
+            }
+
+            if (lmat.info().dims().back() != rmat.info().dims().front()) {
+                throw std::invalid_argument("invalid inputs - matrices size not suitable for multiplication");
+            }
+
+            dot_t res({lmat.info().dims().front(), rmat.info().dims().back()});
+
+            typename Arrnd1::size_type element_index = 0;
+
+            auto trmat = transpose(rmat, {1, 0});
+
+            std::for_each(lmat.cbegin(arrnd_returned_slice_iterator_tag{}),
+                lmat.cend(arrnd_returned_slice_iterator_tag{}), [&res, &trmat, &element_index](const auto& row) {
+                    std::for_each(trmat.cbegin(arrnd_returned_slice_iterator_tag{}),
+                        trmat.cend(arrnd_returned_slice_iterator_tag{}), [&res, &element_index, &row](const auto& col) {
+                            res[element_index++] = (row * col).template reduce<0>(std::plus<>{});
+                        });
+                });
+
+            return res;
+        };
+
+        if (ismatrix(lhs.info()) && ismatrix(rhs.info())) {
+            return dot_impl(lhs, rhs);
+        }
+
+        if (ismatrix(rhs.info())) {
+            return lhs.browse(2, [&rhs, dot_impl](const auto& mat) {
+                return dot_impl(mat, rhs);
+            });
+        } else {
+            auto lhs_num_pages
+                = total(lhs.info()) / (lhs.info().dims()[size(lhs.info()) - 2] * lhs.info().dims().back());
+            auto rhs_num_pages
+                = total(rhs.info()) / (rhs.info().dims()[size(rhs.info()) - 2] * rhs.info().dims().back());
+
+            if (lhs_num_pages != rhs_num_pages) {
+                std::invalid_argument("invalid inputs - arrays does not have the same number of pages");
+            }
+
+            auto rhs_pages = rhs.pages(2);
+            auto rhs_pages_it = rhs_pages.begin();
+
+            return lhs.browse(2, [&rhs_pages_it, &dot_impl](const auto& mat) {
+                return dot_impl(mat, *(rhs_pages_it++));
+            });
+        }
+    }
+
     template <arrnd_type Arrnd1, arrnd_type Arrnd2, arrnd_type... Arrnds>
     [[nodiscard]] inline constexpr auto dot(const Arrnd1& arr1, const Arrnd2& arr2, Arrnds&&... others)
     {
         if constexpr (sizeof...(others) == 0) {
-            return arr1.dot(arr2);
+            return dot(arr1, arr2);
         } else {
-            return dot(arr1.dot(arr2), std::forward<Arrnds>(others)...);
+            return dot(dot(arr1, arr2), std::forward<Arrnds>(others)...);
         }
     }
 
