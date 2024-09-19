@@ -8324,7 +8324,7 @@ namespace details {
         // collapse should only used on valid expanded arrays.
         // returns reference to expanded array creator if
         // exists, or new collpsed array otherwise.
-        [[nodiscard]] constexpr auto collapse() const
+        [[nodiscard]] constexpr auto collapse(bool ignore_creators = false) const
             requires(!this_type::is_flat)
         {
             using collpase_t = value_type;
@@ -8335,15 +8335,17 @@ namespace details {
 
             // from array creator
 
-            bool all_nested_values_have_the_same_creator
-                = std::adjacent_find(cbegin(), cend(),
-                      [](const collpase_t& vt1, const collpase_t& vt2) {
-                          return !vt1.creator() || !vt2.creator() || vt1.creator() != vt2.creator();
-                      })
-                == cend();
+            if (!ignore_creators) {
+                bool all_nested_values_have_the_same_creator
+                    = std::adjacent_find(cbegin(), cend(),
+                          [](const collpase_t& vt1, const collpase_t& vt2) {
+                              return !vt1.creator() || !vt2.creator() || vt1.creator() != vt2.creator();
+                          })
+                    == cend();
 
-            if (all_nested_values_have_the_same_creator && (*this)(0).creator() != nullptr) {
-                return *((*this)(0).creator());
+                if (all_nested_values_have_the_same_creator && (*this)(0).creator() != nullptr) {
+                    return *((*this)(0).creator());
+                }
             }
 
             // from one collapsed array
@@ -8534,25 +8536,27 @@ namespace details {
             return pages;
         }
 
-        [[nodiscard]] constexpr auto book() const
+        [[nodiscard]] constexpr auto book(bool ignore_creators = false) const
             requires(!this_type::is_flat)
         {
             if (empty()) {
                 return value_type{};
             }
 
-            bool all_pages_source_known = std::all_of(cbegin(), cend(), [](const auto& page) {
-                return page.creator() != nullptr;
-            });
+            if (!ignore_creators) {
+                bool all_pages_source_known = std::all_of(cbegin(), cend(), [](const auto& page) {
+                    return page.creator() != nullptr;
+                });
 
-            bool all_pages_from_same_source = std::adjacent_find(cbegin(), cend(),
-                                                  [](const auto& page1, const auto& page2) {
-                                                      return page1.creator() != page2.creator();
-                                                  })
-                == cend();
+                bool all_pages_from_same_source = std::adjacent_find(cbegin(), cend(),
+                                                      [](const auto& page1, const auto& page2) {
+                                                          return page1.creator() != page2.creator();
+                                                      })
+                    == cend();
 
-            if (all_pages_source_known && all_pages_from_same_source) {
-                return *((*this)(0).creator());
+                if (all_pages_source_known && all_pages_from_same_source) {
+                    return *((*this)(0).creator());
+                }
             }
 
             bool all_pages_with_same_dimes
@@ -8985,24 +8989,20 @@ namespace details {
         }
 
         template <typename Comp>
-            requires(invocable_no_arrnd<Comp, inner_this_type<0>, inner_this_type<0>>)
-        [[nodiscard]] constexpr this_type sort(size_type axis, Comp&& comp) const
+        [[nodiscard]] constexpr this_type& sort(size_type axis, Comp&& comp)
         {
             if (empty()) {
-                return this_type();
+                return *this;
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
-            auto expanded = expand(axis);
+            auto sorted_tmp = expand(axis).sort(std::forward<Comp>(comp)).collapse(true);
+            std::copy(sorted_tmp.cbegin(), sorted_tmp.cend(), begin());
 
-            auto sorted = expanded.sort(std::forward<Comp>(comp));
-
-            auto reduced = sorted.template reduce<0>([axis](const auto& acc, const auto& cur) {
-                return acc.clone().push_back(cur, axis);
-            });
-
-            return reduced.reshape(info_.dims());
+            return *this;
         }
 
         template <typename Comp>
@@ -9018,18 +9018,17 @@ namespace details {
         }
 
         template <typename Comp>
-            requires(invocable_no_arrnd<Comp, inner_this_type<0>, inner_this_type<0>>)
         [[nodiscard]] constexpr bool is_sorted(size_type axis, Comp&& comp) const
         {
             if (empty()) {
                 return true;
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
-            auto expanded = expand(axis);
-
-            return expanded.is_sorted(std::forward<Comp>(comp));
+            return expand(axis).is_sorted(std::forward<Comp>(comp));
         }
 
         template <iterator_of_type_integral InputIt>

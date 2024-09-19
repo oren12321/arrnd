@@ -2432,7 +2432,7 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(
             /*sort<1>(arrnd<arrnd<int>>(), 0, dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
                 [dummy_less](const auto& val) {
-                    return val.sort(0, dummy_less);
+                    return val.clone().sort(0, dummy_less);
                 }),
             arrnd<arrnd<int>>()));
     }
@@ -2489,8 +2489,10 @@ TEST(arrnd_test, sort)
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, 0, sum_less);
         auto sarr1 = transform<0>(iarr, [sum_less](const auto& val) {
-            return val.sort(0, sum_less);
+            return val.clone().sort(0, sum_less);
         });
+        //std::cout << iarr << "\n";
+        //std::cout << sarr1 << "\n";
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, 0, sum_less)*/
             transform<0>(sarr1,
                 [sum_less](const auto& val) {
@@ -2510,7 +2512,7 @@ TEST(arrnd_test, sort)
             arrnd<bool>({1, 2}, {false, true})));
         //auto sarr2 = sort(iarr, 1, sum_less);
         auto sarr2 = transform<0>(iarr, [sum_less](const auto& val) {
-            return val.sort(1, sum_less);
+            return val.clone().sort(1, sum_less);
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr2, 1, sum_less)*/
             transform<0>(sarr2,
@@ -2526,7 +2528,7 @@ TEST(arrnd_test, sort)
         EXPECT_FALSE(iarr.is_sorted/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
             return sum_less(lhs[{0}], rhs[{0}]);
         }));
-        auto sarr3 = iarr.sort/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
+        auto sarr3 = iarr.clone().sort /*<0>*/ (1, [sum_less](const auto& lhs, const auto& rhs) {
             return sum_less(lhs[{0}], rhs[{0}]);
         });
         EXPECT_TRUE(sarr3.is_sorted/*<0>*/(1, [sum_less](const auto& lhs, const auto& rhs) {
