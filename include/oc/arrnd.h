@@ -8265,58 +8265,58 @@ namespace details {
 
         [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0) const
         {
-            using expanded_type = inner_replaced_type<inner_this_type<0>, 0>;
+            using expand_t = replaced_type<this_type>;
 
             if (empty()) {
-                return expanded_type();
+                return expand_t{};
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
-            auto fixed_axis = axis;
+            if (division > info_.dims()[axis]) {
+                throw std::invalid_argument("invalid division for axis dim");
+            }
 
-            auto axis_dim = *std::next(info_.dims().cbegin(), fixed_axis);
+            auto fixed_div = division > 0 ? std::min(info_.dims()[axis], division) : info_.dims()[axis];
 
-            assert(division <= axis_dim);
-            auto fixed_div = division > 0 ? std::min(axis_dim, division) : axis_dim;
+            typename expand_t::info_type::extent_storage_type new_dims(size(info_), 1);
+            new_dims[axis] = fixed_div;
 
-            typename expanded_type::info_type::extent_storage_type new_dims(info_.dims().size());
-            std::fill(new_dims.begin(), new_dims.end(), 1);
-            *std::next(new_dims.begin(), fixed_axis) = fixed_div;
-
-            expanded_type res(new_dims);
-            typename expanded_type::indexer_type res_gen(res.info());
+            expand_t res(new_dims);
+            auto res_it = res.begin();
 
             auto curr_div = fixed_div;
-            auto curr_axis_dim = axis_dim;
+            auto curr_axis_dim = info_.dims()[axis];
             auto curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
 
-            size_type count = 0;
+            size_type res_total = 0;
 
-            windows_slider_type rgr(info_, fixed_axis,
+            windows_slider_type slider(info_, axis,
                 window_type(typename window_type::interval_type(0, curr_ival_width), arrnd_window_type::partial));
 
             while (curr_div > 0) {
-                res[*res_gen] = (*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())];
+                *(res_it++) = (*this)[std::make_pair((*slider).cbegin(), (*slider).cend())];
 
-                rgr += curr_ival_width;
-                ++res_gen;
+                slider += curr_ival_width;
 
                 --curr_div;
                 curr_axis_dim -= curr_ival_width;
 
                 if (curr_div > 0) {
                     curr_ival_width = static_cast<size_type>(std::ceil(curr_axis_dim / static_cast<double>(curr_div)));
-                    rgr.modify_window(fixed_axis,
+                    slider.modify_window(axis,
                         window_type(
                             typename window_type::interval_type(0, curr_ival_width), arrnd_window_type::partial));
                 }
 
-                ++count;
+                ++res_total;
             }
 
-            if (count != fixed_div) {
-                return res.resize({count});
+            if (res_total != fixed_div) {
+                new_dims[axis] = res_total;
+                return res.resize(new_dims);
             }
             return res;
         }
@@ -8327,17 +8327,17 @@ namespace details {
         [[nodiscard]] constexpr auto collapse() const
             requires(!this_type::is_flat)
         {
-            using collapsed_type = value_type;
+            using collpase_t = value_type;
 
             if (empty()) {
-                return collapsed_type();
+                return collpase_t{};
             }
 
             // from array creator
 
             bool all_nested_values_have_the_same_creator
                 = std::adjacent_find(cbegin(), cend(),
-                      [](const collapsed_type& vt1, const collapsed_type& vt2) {
+                      [](const collpase_t& vt1, const collpase_t& vt2) {
                           return !vt1.creator() || !vt2.creator() || vt1.creator() != vt2.creator();
                       })
                 == cend();
@@ -8354,19 +8354,21 @@ namespace details {
 
             // from assumed axis hint
 
-            assert(std::count(info_.dims().cbegin(), info_.dims().cend(), 1) == info_.dims().size() - 1);
+            if (std::count(std::begin(info_.dims()), std::end(info_.dims()), 1) != size(info_) - 1) {
+                throw std::exception("invalid exapnded array dims structure");
+            }
 
-            auto axis_dim_it = std::find(info_.dims().cbegin(), info_.dims().cend(), total(info_));
-            auto assumed_axis = axis_dim_it - info_.dims().cbegin();
+            auto assumed_axis
+                = std::find(std::begin(info_.dims()), std::end(info_.dims()), total(info_)) - std::begin(info_.dims());
 
-            indexer_type gen(info_);
+            auto element_it = begin();
 
-            collapsed_type res = (*this)[*gen].clone();
-            ++gen;
+            collpase_t res = (*element_it).clone();
+            ++element_it;
 
-            while (gen) {
-                res = res.push_back((*this)[*gen].clone(), assumed_axis);
-                ++gen;
+            while (element_it != end()) {
+                res = res.push_back((*element_it).clone(), assumed_axis);
+                ++element_it;
             }
 
             return res;
