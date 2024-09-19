@@ -2944,14 +2944,17 @@ TEST(arrnd_test, slide)
         };
 
         {
-            EXPECT_TRUE(
-                all_equal(arrnd<arrnd<double>>(), slide/*<0>*/(arrnd<arrnd<int>>(), 0, {-1, 2}, false, weigted_sum/*, 0.5*/)));
+            EXPECT_TRUE(all_equal(arrnd<arrnd<double>>(),
+                arrnd<arrnd<int>>().slide /*<0>*/ (0,
+                    typename arrnd<arrnd<int>>::window_type{{-1, 2}, arrnd_window_type::partial},
+                    weigted_sum /*, 0.5*/)));
         }
 
         {
             //auto res = slide(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
-                return slide(val, 0, {-1, 3}, false, weigted_sum/*, 0.5*/);
+                return val.slide(
+                    0, typename arrnd<int>::window_type{{-1, 3}, arrnd_window_type::partial}, weigted_sum /*, 0.5*/);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -2963,11 +2966,12 @@ TEST(arrnd_test, slide)
         {
             //auto res = slide(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
             auto res = transform<0>(arr, [weigted_sum](const auto& val) {
-                return slide(val, 0, {-1, 2}, true, weigted_sum/*, 0.5*/);
+                return val.slide(
+                    0, typename arrnd<int>::window_type{{-1, 2}, arrnd_window_type::complete}, weigted_sum /*, 0.5*/);
             });
             EXPECT_TRUE(all_equal(res,
-                arrnd<arrnd<double>>(
-                    {1, 2}, {arrnd<double>({1}, {10.5}), arrnd<double>({8}, {3., 4.5, 6., 7.5, 9., 10.5, 12., 13.5})})));
+                arrnd<arrnd<double>>({1, 2},
+                    {arrnd<double>({1}, {10.5}), arrnd<double>({8}, {3., 4.5, 6., 7.5, 9., 10.5, 12., 13.5})})));
         }
     }
 }
@@ -2989,13 +2993,16 @@ TEST(arrnd_test, accumulate)
         };
 
         {
-            EXPECT_TRUE(all_equal(arrnd<int>(), accumulate(arrnd<int>(), 0, {-1, 3}, false, add_prev, slice_sum)));
+            EXPECT_TRUE(all_equal(arrnd<int>(),
+                arrnd<int>().accumulate(
+                    0, typename arrnd<int>::window_type{{-1, 3}, arrnd_window_type::partial}, add_prev, slice_sum)));
         }
 
         {
             //auto res = accumulate(arr, 0, {-1, 2}, false, add_prev, slice_sum);
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
-                return accumulate(val, 0, {-1, 3}, false, add_prev, slice_sum);
+                return val.accumulate(
+                    0, typename arrnd<int>::window_type{{-1, 3}, arrnd_window_type::partial}, add_prev, slice_sum);
             });
 
             EXPECT_TRUE(all_equal(res,
@@ -3006,7 +3013,8 @@ TEST(arrnd_test, accumulate)
         {
             //auto res = accumulate(arr, 0, {-1, 2}, true, add_prev, slice_sum);
             auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
-                return accumulate(val, 0, {-1, 2}, true, add_prev, slice_sum);
+                return val.accumulate(
+                    0, typename arrnd<int>::window_type{{-1, 2}, arrnd_window_type::complete}, add_prev, slice_sum);
             });
             EXPECT_TRUE(all_equal(res,
                 arrnd<arrnd<int>>(

@@ -8375,73 +8375,77 @@ namespace details {
         }
 
         template <typename UnaryOp>
-        [[nodiscard]] constexpr auto slide(
-            size_type axis, typename window_type::interval_type window, bool bounded, UnaryOp op) const
+        [[nodiscard]] constexpr auto slide(size_type axis, window_type window, UnaryOp op) const
         {
-            using slide_type = replaced_type<std::invoke_result_t<UnaryOp, this_type>>;
+            using slide_t = replaced_type<std::invoke_result_t<UnaryOp, this_type>>;
 
             if (empty()) {
-                return slide_type();
+                return slide_t{};
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
-            size_type axis_dim = *std::next(info_.dims().cbegin(), axis);
+            windows_slider_type slider(info_, axis, window);
 
-            windows_slider_type rgr(
-                info_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
+            size_type res_total = window.type == arrnd_window_type::complete
+                ? info_.dims()[axis] - window.ival.stop() + window.ival.start() + 1
+                : info_.dims()[axis];
 
-            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
+            slide_t res({res_total});
+            if (res.empty()) {
+                return res;
+            }
 
-            slide_type res({res_numel});
-            typename slide_type::indexer_type res_gen(res.info());
+            auto res_it = res.begin();
 
-            for (; rgr && res_gen; ++rgr, ++res_gen) {
-                res[*res_gen] = op((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]);
+            for (; slider && res_it != res.end(); ++slider, ++res_it) {
+                *res_it = op((*this)[std::make_pair((*slider).cbegin(), (*slider).cend())]);
             }
 
             return res;
         }
 
-        template <typename ReduceFunc, typename TransformFunc>
-            requires(invocable_no_arrnd<TransformFunc, inner_this_type<0>>
-                && invocable_no_arrnd<ReduceFunc, std::invoke_result_t<TransformFunc, inner_this_type<0>>,
-                    std::invoke_result_t<TransformFunc, inner_this_type<0>>>)
-        [[nodiscard]] constexpr auto accumulate(size_type axis, typename window_type::interval_type window,
-            bool bounded, ReduceFunc&& rfunc, TransformFunc&& tfunc) const
+        template <typename BinaryOp, typename UnaryOp>
+        [[nodiscard]] constexpr auto accumulate(
+            size_type axis, window_type window, BinaryOp&& reduce_op, UnaryOp&& transform_op) const
         {
-            using trans_res_type = std::invoke_result_t<TransformFunc, this_type>;
-            using acc_res_type = std::invoke_result_t<ReduceFunc, trans_res_type, trans_res_type>;
-            using accumulate_type = replaced_type<acc_res_type>;
+            using transform_t = std::invoke_result_t<UnaryOp, this_type>;
+            using reduce_t = std::invoke_result_t<BinaryOp, transform_t, transform_t>;
+            using accumulate_t = replaced_type<reduce_t>;
 
             if (empty()) {
-                return accumulate_type();
+                return accumulate_t{};
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
             size_type axis_dim = *std::next(info_.dims().cbegin(), axis);
 
-            windows_slider_type rgr(
-                info_, axis, window_type(window, bounded ? arrnd_window_type::complete : arrnd_window_type::partial));
+            windows_slider_type slider(info_, axis, window);
 
-            size_type res_numel = bounded ? axis_dim - window.stop() + window.start() + 1 : axis_dim;
+            size_type res_total = window.type == arrnd_window_type::complete
+                ? info_.dims()[axis] - window.ival.stop() + window.ival.start() + 1
+                : info_.dims()[axis];
 
-            accumulate_type res({res_numel});
-            typename accumulate_type::indexer_type res_gen(res.info());
-
+            accumulate_t res({res_total});
             if (res.empty()) {
                 return res;
             }
 
-            res[*res_gen] = tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]);
-            auto prev = res[*res_gen];
-            ++res_gen;
-            ++rgr;
+            auto res_it = res.begin();
 
-            for (; rgr && res_gen; ++rgr, ++res_gen) {
-                res[*res_gen] = rfunc(prev, tfunc((*this)[std::make_pair((*rgr).cbegin(), (*rgr).cend())]));
-                prev = res[*res_gen];
+            *res_it = transform_op((*this)[std::make_pair((*slider).cbegin(), (*slider).cend())]);
+            auto prev = *res_it;
+            ++res_it;
+            ++slider;
+
+            for (; slider && res_it != res.end(); ++slider, ++res_it) {
+                *res_it = reduce_op(prev, transform_op((*this)[std::make_pair((*slider).cbegin(), (*slider).cend())]));
+                prev = *res_it;
             }
 
             return res;
