@@ -8596,41 +8596,53 @@ namespace details {
         template <iterator_of_type_integral AxesIt>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, size_type division) const
         {
-            using split_type = replaced_type<this_type>;
+            using split_t = replaced_type<this_type>;
 
             if (empty()) {
-                return split_type();
+                return split_t{};
             }
 
-            assert(std::is_sorted(first_axis, last_axis));
-            assert(std::adjacent_find(first_axis, last_axis) == last_axis);
-            assert(std::distance(first_axis, last_axis) >= 0
-                && std::distance(first_axis, last_axis) <= info_.dims().size());
-            assert(std::all_of(first_axis, last_axis, [&](size_type axis) {
-                return axis >= 0 && axis < info_.dims().size();
-            }));
+            if (!std::is_sorted(first_axis, last_axis)) {
+                throw std::invalid_argument("invalid axes - not sorted");
+            }
 
-            assert(std::all_of(info_.dims().cbegin(), info_.dims().cend(), [division](size_type d) {
-                return division > 0 && division <= d;
-            }));
+            if (std::adjacent_find(first_axis, last_axis) != last_axis) {
+                throw std::invalid_argument("invalid axes - not unique");
+            }
+
+            if (std::distance(first_axis, last_axis) < 0
+                || std::distance(first_axis, last_axis) > info_.dims().size()) {
+                throw std::invalid_argument("invalid number of axes");
+            }
+
+            if (std::any_of(first_axis, last_axis, [&](auto axis) {
+                return axis < 0 || axis >= size(info_);
+                })) {
+                throw std::invalid_argument("invalid axes for dims");
+            }
+
+            if (std::any_of(std::begin(info_.dims()), std::end(info_.dims()), [division](auto dim) {
+                return division <= 0 || division > dim;
+                })) {
+                throw std::invalid_argument("invalid division");
+            }
 
             // calculate dimensions according to number of slices in each dimension
 
-            typename info_type::extent_storage_type new_dims(info_.dims().size());
+            typename info_type::extent_storage_type new_dims(size(info_));
             if (std::distance(first_axis, last_axis) == 0) {
-                std::fill(new_dims.begin(), new_dims.end(), division);
+                std::fill(std::begin(new_dims), std::end(new_dims), division);
             } else {
-                std::fill(new_dims.begin(), new_dims.end(), 1);
-                std::for_each(first_axis, last_axis, [&](size_type axis) {
-                    *std::next(new_dims.begin(), axis) = division;
+                std::fill(std::begin(new_dims), std::end(new_dims), 1);
+                std::for_each(first_axis, last_axis, [&new_dims, division](auto axis) {
+                    new_dims[axis] = division;
                 });
             }
 
             // --------------------------------------------------------------------
 
-            split_type slices(new_dims);
-            typename split_type::indexer_type slc_gen(slices.info());
-
+            split_t slices(new_dims);
+            auto slices_it = slices.begin();
             size_type actual_num_slices = 0;
 
             std::function<void(this_type, size_type)> split_impl;
@@ -8641,32 +8653,25 @@ namespace details {
                 }
 
                 if (current_depth == 0) {
-                    assert(static_cast<bool>(slc_gen));
-
-                    slices[*slc_gen] = arr;
-                    ++slc_gen;
+                    *slices_it = arr;
+                    ++slices_it;
                     ++actual_num_slices;
                     return;
                 }
 
                 if (std::distance(first_axis, last_axis) > 0
-                    && std::find(first_axis, last_axis, arr.info().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
+                    && std::find(first_axis, last_axis, size(arr.info()) - current_depth) == last_axis) {
+                    split_impl(arr(boundary_type::full(), size(arr.info()) - current_depth), current_depth - 1);
                     return;
                 }
 
-                size_type current_dim
-                    = *std::next(arr.info().dims().cbegin(), arr.info().dims().size() - current_depth);
-
-                auto exp = arr.expand(arr.info().dims().size() - current_depth, division);
-                typename decltype(exp)::indexer_type exp_gen(exp.info());
-
-                for (; exp_gen; ++exp_gen) {
-                    split_impl(exp[*exp_gen], current_depth - 1);
+                auto exp = arr.expand(size(arr.info()) - current_depth, division);
+                for (auto value : exp) {
+                    split_impl(value, current_depth - 1);
                 }
             };
 
-            split_impl(*this, info_.dims().size());
+            split_impl(*this, size(info_));
 
             assert(actual_num_slices == total(slices.info()));
 
@@ -8685,22 +8690,39 @@ namespace details {
         template <iterator_of_type_integral AxesIt, iterator_of_type_integral IndsIt>
         [[nodiscard]] constexpr auto split(AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
-            using split_type = replaced_type<this_type>;
+            using split_t = replaced_type<this_type>;
 
             if (empty()) {
-                return split_type();
+                return split_t{};
             }
 
-            assert(std::is_sorted(first_ind, last_ind));
-            assert(std::adjacent_find(first_ind, last_ind) == last_ind);
+            if(!std::is_sorted(first_ind, last_ind))
+            {
+                throw std::invalid_argument("invalid indices - not sorted");
+            }
 
-            assert(std::is_sorted(first_axis, last_axis));
-            assert(std::adjacent_find(first_axis, last_axis) == last_axis);
-            assert(std::distance(first_axis, last_axis) >= 0
-                && std::distance(first_axis, last_axis) <= info_.dims().size());
-            assert(std::all_of(first_axis, last_axis, [&](size_type axis) {
-                return axis >= 0 && axis < info_.dims().size();
-            }));
+            if (std::adjacent_find(first_ind, last_ind) != last_ind) {
+                throw std::invalid_argument("invalid indices - not unique");
+            }
+
+            if (!std::is_sorted(first_axis, last_axis)) {
+                throw std::invalid_argument("invalid axes - not sorted");
+            }
+
+            if (std::adjacent_find(first_axis, last_axis) != last_axis) {
+                throw std::invalid_argument("invalid axes - not unique");
+            }
+
+            if (std::distance(first_axis, last_axis) < 0
+                || std::distance(first_axis, last_axis) > info_.dims().size()) {
+                throw std::invalid_argument("invalid number of axes");
+            }
+
+            if (std::any_of(first_axis, last_axis, [&](auto axis) {
+                    return axis < 0 || axis >= size(info_);
+                })) {
+                throw std::invalid_argument("invalid axes for dims");
+            }
 
             // calculate dimensions according to number of slices in each dimension
 
@@ -8718,15 +8740,14 @@ namespace details {
                 });
             } else {
                 std::for_each(first_axis, last_axis, [&](size_type axis) {
-                    *std::next(new_dims.begin(), axis) = calc_num_slices_at_dim(first_ind, last_ind);
+                    new_dims[axis] = calc_num_slices_at_dim(first_ind, last_ind);
                 });
             }
 
             // --------------------------------------------------------------------
 
-            split_type slices(new_dims);
-            typename split_type::indexer_type slc_gen(slices.info());
-
+            split_t slices(new_dims);
+            auto slices_it = slices.begin();
             size_type actual_num_slices = 0;
 
             std::function<void(this_type, size_type)> split_impl;
@@ -8737,51 +8758,51 @@ namespace details {
                 }
 
                 if (current_depth == 0) {
-                    assert(static_cast<bool>(slc_gen));
-
-                    slices[*slc_gen] = arr;
-                    ++slc_gen;
+                    *slices_it = arr;
+                    ++slices_it;
                     ++actual_num_slices;
                     return;
                 }
 
                 if (std::distance(first_axis, last_axis) > 0
-                    && std::find(first_axis, last_axis, arr.info().dims().size() - current_depth) == last_axis) {
-                    split_impl(arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
+                    && std::find(first_axis, last_axis, size(arr.info()) - current_depth) == last_axis) {
+                    split_impl(arr(boundary_type::full(), size(arr.info()) - current_depth), current_depth - 1);
                     return;
                 }
 
-                size_type current_dim
-                    = *std::next(arr.info().dims().cbegin(), arr.info().dims().size() - current_depth);
+                size_type current_dim = arr.info().dims()[size(arr.info()) - current_depth];
 
-                assert(std::distance(first_ind, last_ind) > 0 && std::distance(first_ind, last_ind) <= current_dim);
-                assert(std::all_of(first_ind, last_ind, [current_dim](size_type ind) {
-                    return ind >= 0 && ind < current_dim;
-                }));
+                if (std::distance(first_ind, last_ind) <= 0 || std::distance(first_ind, last_ind) > current_dim) {
+                    throw std::invalid_argument("invalid number of indices");
+                }
+                if (std::any_of(first_ind, last_ind, [current_dim](size_type ind) {
+                        return ind < 0 || ind >= current_dim;
+                    })) {
+                    throw std::invalid_argument("invalid indices for dims");
+                }
 
                 size_type prev_ind = *first_ind;
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    split_impl(
-                        arr(boundary_type{0, prev_ind}, arr.info().dims().size() - current_depth), current_depth - 1);
+                    split_impl(arr(boundary_type{0, prev_ind}, size(arr.info()) - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind < current_ind) {
-                        split_impl(arr(boundary_type{prev_ind, current_ind}, arr.info().dims().size() - current_depth),
+                        split_impl(arr(boundary_type{prev_ind, current_ind}, size(arr.info()) - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind < current_dim) {
-                    split_impl(arr(boundary_type{current_ind, current_dim}, arr.info().dims().size() - current_depth),
+                    split_impl(arr(boundary_type{current_ind, current_dim}, size(arr.info()) - current_depth),
                         current_depth - 1);
                 }
             };
 
-            split_impl(*this, info_.dims().size());
+            split_impl(*this, size(info_));
 
             assert(actual_num_slices == total(slices.info()));
 
@@ -8804,28 +8825,42 @@ namespace details {
         [[nodiscard]] constexpr auto exclude(
             AxesIt first_axis, AxesIt last_axis, IndsIt first_ind, IndsIt last_ind) const
         {
-            using exclude_type = replaced_type<this_type>;
+            using exclude_t = replaced_type<this_type>;
 
             if (empty()) {
-                return exclude_type();
+                return exclude_t();
             }
 
-            assert(std::is_sorted(first_ind, last_ind));
-            assert(std::adjacent_find(first_ind, last_ind) == last_ind);
+            if (!std::is_sorted(first_ind, last_ind)) {
+                throw std::invalid_argument("invalid indices - not sorted");
+            }
 
-            assert(std::is_sorted(first_axis, last_axis));
-            assert(std::adjacent_find(first_axis, last_axis) == last_axis);
-            assert(std::distance(first_axis, last_axis) >= 0
-                && std::distance(first_axis, last_axis) <= info_.dims().size());
-            assert(std::all_of(first_axis, last_axis, [&](size_type axis) {
-                return axis >= 0 && axis < info_.dims().size();
-            }));
+            if (std::adjacent_find(first_ind, last_ind) != last_ind) {
+                throw std::invalid_argument("invalid indices - not unique");
+            }
+
+            if (!std::is_sorted(first_axis, last_axis)) {
+                throw std::invalid_argument("invalid axes - not sorted");
+            }
+
+            if (std::adjacent_find(first_axis, last_axis) != last_axis) {
+                throw std::invalid_argument("invalid axes - not unique");
+            }
+
+            if (std::distance(first_axis, last_axis) < 0
+                || std::distance(first_axis, last_axis) > info_.dims().size()) {
+                throw std::invalid_argument("invalid number of axes");
+            }
+
+            if (std::any_of(first_axis, last_axis, [&](auto axis) {
+                    return axis < 0 || axis >= size(info_);
+                })) {
+                throw std::invalid_argument("invalid axes for dims");
+            }
 
             // calculate dimensions according to number of slices in each dimension
 
-            typename info_type::extent_storage_type new_dims(info_.dims().size());
-            std::fill(new_dims.begin(), new_dims.end(), 1);
-            auto calc_num_slices_at_dim = [&](auto indf, auto indl, size_type dim) {
+            auto calc_num_slices_at_dim = [](auto indf, auto indl, size_type dim) {
                 size_type num_slices = 0;
                 size_type prev = *indf;
                 if (prev > 0) {
@@ -8845,22 +8880,22 @@ namespace details {
                 }
                 return num_slices;
             };
+
+            typename info_type::extent_storage_type new_dims(size(info_), 1);
             if (std::distance(first_axis, last_axis) == 0) {
-                std::transform(info_.dims().cbegin(), info_.dims().cend(), new_dims.begin(), [&](size_type dim) {
+                std::transform(std::begin(info_.dims()), std::end(info_.dims()), std::begin(new_dims), [&](auto dim) {
                     return calc_num_slices_at_dim(first_ind, last_ind, dim);
                 });
             } else {
-                std::for_each(first_axis, last_axis, [&](size_type axis) {
-                    *std::next(new_dims.begin(), axis)
-                        = calc_num_slices_at_dim(first_ind, last_ind, *std::next(info_.dims().cbegin(), axis));
+                std::for_each(first_axis, last_axis, [&](auto axis) {
+                    new_dims[axis] = calc_num_slices_at_dim(first_ind, last_ind, info_.dims()[axis]);
                 });
             }
 
             // --------------------------------------------------------------------
 
-            exclude_type slices(new_dims);
-            typename exclude_type::indexer_type slc_gen(slices.info());
-
+            exclude_t slices(new_dims);
+            auto slices_it = slices.begin();
             size_type actual_num_slices = 0;
 
             std::function<void(this_type, size_type)> exclude_impl;
@@ -8871,55 +8906,53 @@ namespace details {
                 }
 
                 if (current_depth == 0) {
-                    assert(static_cast<bool>(slc_gen));
-
-                    slices[*slc_gen] = arr;
-                    ++slc_gen;
+                    *slices_it = arr;
+                    ++slices_it;
                     ++actual_num_slices;
 
                     return;
                 }
 
                 if (std::distance(first_axis, last_axis) > 0
-                    && std::find(first_axis, last_axis, arr.info().dims().size() - current_depth) == last_axis) {
-                    exclude_impl(
-                        arr(boundary_type::full(), arr.info().dims().size() - current_depth), current_depth - 1);
+                    && std::find(first_axis, last_axis, size(arr.info()) - current_depth) == last_axis) {
+                    exclude_impl(arr(boundary_type::full(), size(arr.info()) - current_depth), current_depth - 1);
                     return;
                 }
 
-                size_type current_dim
-                    = *std::next(arr.info().dims().cbegin(), arr.info().dims().size() - current_depth);
+                size_type current_dim = arr.info().dims()[size(arr.info()) - current_depth];
 
-                assert(std::distance(first_ind, last_ind) > 0 && std::distance(first_ind, last_ind) <= current_dim);
-                assert(std::all_of(first_ind, last_ind, [current_dim](size_type ind) {
-                    return ind >= 0 && ind < current_dim;
-                }));
+                if (std::distance(first_ind, last_ind) <= 0 || std::distance(first_ind, last_ind) > current_dim) {
+                    throw std::invalid_argument("invalid number of indices");
+                }
+                if (std::any_of(first_ind, last_ind, [current_dim](size_type ind) {
+                        return ind < 0 || ind >= current_dim;
+                    })) {
+                    throw std::invalid_argument("invalid indices for dims");
+                }
 
                 size_type prev_ind = *first_ind;
                 auto ind_it = first_ind;
                 ++ind_it;
                 if (prev_ind > 0) {
-                    exclude_impl(
-                        arr(boundary_type{0, prev_ind}, arr.info().dims().size() - current_depth), current_depth - 1);
+                    exclude_impl(arr(boundary_type{0, prev_ind}, size(arr.info()) - current_depth), current_depth - 1);
                 }
                 size_type current_ind = prev_ind;
                 for (; ind_it != last_ind; ++ind_it) {
                     current_ind = *ind_it;
                     if (prev_ind + 1 < current_ind) {
-                        exclude_impl(
-                            arr(boundary_type{prev_ind + 1, current_ind}, arr.info().dims().size() - current_depth),
+                        exclude_impl(arr(boundary_type{prev_ind + 1, current_ind}, size(arr.info()) - current_depth),
                             current_depth - 1);
                     }
                     prev_ind = current_ind;
                 }
                 if (current_ind + 1 < current_dim) {
                     exclude_impl(
-                        arr(boundary_type{current_ind + 1, current_dim}, arr.info().dims().size() - current_depth),
+                        arr(boundary_type{current_ind + 1, current_dim}, size(arr.info()) - current_depth),
                         current_depth - 1);
                 }
             };
 
-            exclude_impl(*this, info_.dims().size());
+            exclude_impl(*this, size(info_));
 
             assert(actual_num_slices == total(slices.info()));
 
@@ -8938,20 +8971,20 @@ namespace details {
             return exclude(axes.begin(), axes.end(), inds.begin(), inds.end());
         }
 
-        [[nodiscard]] constexpr value_type merge() const
+        [[nodiscard]] constexpr auto merge() const
             requires(!this_type::is_flat)
         {
             if (empty()) {
-                return value_type();
+                return value_type{};
             }
 
-            this_type res = reduce<0>(info_.dims().size() - 1, [&](const value_type& a, const value_type& b) {
-                return a.clone().push_back(b, info_.dims().size() - 1);
+            this_type res = clone().reduce<0>(size(info_) - 1, [&](value_type a, value_type b) {
+                return a.push_back(b, size(info_) - 1);
             });
 
-            for (difference_type axis = info_.dims().size() - 2; axis >= 0; --axis) {
-                res = res.reduce<0>(axis, [axis](const value_type& a, const value_type& b) {
-                    return a.clone().push_back(b, axis);
+            for (difference_type axis = size(info_) - 2; axis >= 0; --axis) {
+                res = res.reduce<0>(axis, [axis](value_type a, value_type b) {
+                    return a.push_back(b, axis);
                 });
             }
 
