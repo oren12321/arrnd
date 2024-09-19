@@ -9202,48 +9202,29 @@ namespace details {
             return find_adjacents(subs.begin(), subs.end(), offset);
         }
 
-        template <std::int64_t Level, typename Pred>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
         [[nodiscard]] constexpr bool all(Pred&& pred) const
         {
             if (empty()) {
                 return true;
             }
 
-            for (indexer_type gen(info_); gen; ++gen) {
-                if (!pred((*this)[*gen])) {
-                    return false;
+            for (auto inner : *this) {
+                if constexpr (AtDepth == 0) {
+                    if (!pred(inner)) {
+                        return false;
+                    }
+                } else {
+                    if (!inner.template all<AtDepth - 1, Pred>(std::forward<Pred>(pred))) {
+                        return false;
+                    }
                 }
             }
 
             return true;
         }
 
-        template <std::int64_t Level, typename Pred>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool all(Pred&& pred) const
-        {
-            if (empty()) {
-                return true;
-            }
-
-            for (indexer_type gen(info_); gen; ++gen) {
-                if (!(*this)[*gen].template all<Level - 1, Pred>(std::forward<Pred>(pred))) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        template <typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>
-        [[nodiscard]] constexpr bool all(Pred&& pred) const
-        {
-            return all<this_type::depth, Pred>(std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level = this_type::depth>
+        template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr bool all() const
         {
             return all<this_type::depth>([](const auto& value) {
@@ -9251,10 +9232,8 @@ namespace details {
             });
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-            requires(Level == 0
-                && invocable_no_arrnd<Pred, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool all_match(const Arrnd& arr, Pred&& pred) const
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd, typename BinaryPred>
+        [[nodiscard]] constexpr bool all_match(const Arrnd& arr, BinaryPred&& pred) const
         {
             if (empty() && arr.empty()) {
                 return true;
@@ -9269,61 +9248,26 @@ namespace details {
                 return false;
             }
 
-            indexer_type gen(info_);
-            typename Arrnd::indexer_type arr_gen(arr.info());
-
-            for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (!pred((*this)[*gen], arr[*arr_gen])) {
-                    return false;
+            for (auto inners : zip(zipped(*this), zipped(arr))) {
+                if constexpr (AtDepth == 0) {
+                    if (!pred(std::get<0>(inners), std::get<1>(inners))) {
+                        return false;
+                    }
+                } else {
+                    if (!std::get<0>(inners).template all_match<AtDepth - 1, typename Arrnd::value_type, BinaryPred>(
+                            std::get<1>(inners), std::forward<BinaryPred>(pred))) {
+                        return false;
+                    }
                 }
             }
 
             return true;
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-            requires(Level > 0
-                && invocable_no_arrnd<Pred, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool all_match(const Arrnd& arr, Pred&& pred) const
-        {
-            if (empty() && arr.empty()) {
-                return true;
-            }
-
-            if (empty() || arr.empty()) {
-                return false;
-            }
-
-            if (!std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(arr.info().dims()),
-                    std::end(arr.info().dims()))) {
-                return false;
-            }
-
-            indexer_type gen(info_);
-            typename Arrnd::indexer_type arr_gen(arr.info());
-
-            for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (!(*this)[*gen].template all_match<Level - 1, typename Arrnd::value_type, Pred>(
-                        arr[*arr_gen], std::forward<Pred>(pred))) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        template <arrnd_type Arrnd, typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
-                typename Arrnd::template inner_value_type<Arrnd::depth>>
-        [[nodiscard]] constexpr bool all_match(const Arrnd& arr, Pred&& pred) const
-        {
-            return all_match<this_type::depth, Pred, Arrnd>(arr, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, arrnd_type Arrnd>
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd>
         [[nodiscard]] constexpr bool all_match(const Arrnd& arr) const
         {
-            return all_match<Level, Arrnd>(arr, [](const auto& a, const auto& b) {
+            return all_match<AtDepth, Arrnd>(arr, [](const auto& a, const auto& b) {
                 if constexpr (arrnd_type<decltype(a)> && arrnd_type<decltype(b)>) {
                     return (a == b).template all<this_type::depth>();
                 } else {
@@ -9332,33 +9276,20 @@ namespace details {
             });
         }
 
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr bool all_match(const Arrnd& arr) const
+        template <std::size_t AtDepth = this_type::depth, typename U, typename BinaryPred>
+            requires(!arrnd_type<U>)
+        [[nodiscard]] constexpr bool all_match(const U& u, BinaryPred pred) const
         {
-            return all_match<this_type::depth, Arrnd>(arr);
-        }
-
-        template <std::int64_t Level, typename U, typename Pred>
-            requires(!arrnd_type<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
-        [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
-        {
-            return all<Level>([&u, &pred](const auto& a) {
+            return all<AtDepth>([&u, &pred](const auto& a) {
                 return pred(a, u);
             });
         }
 
-        template <typename U, typename Pred>
-            requires(!arrnd_type<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
-        [[nodiscard]] constexpr bool all_match(const U& u, Pred&& pred) const
-        {
-            return all_match<this_type::depth, U, Pred>(u, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, typename U>
+        template <std::size_t AtDepth = this_type::depth, typename U>
             requires(!arrnd_type<U>)
         [[nodiscard]] constexpr bool all_match(const U& u) const
         {
-            return all<Level>([&u](const auto& a) {
+            return all<AtDepth>([&u](const auto& a) {
                 if constexpr (arrnd_type<decltype(a)>) {
                     return (a == u).template all<this_type::depth>();
                 } else {
@@ -9367,55 +9298,31 @@ namespace details {
             });
         }
 
-        template <typename U>
-            requires(!arrnd_type<U>)
-        [[nodiscard]] constexpr bool all_match(const U& u) const
-        {
-            return all_match<this_type::depth, U>(u);
-        }
+        
 
-        template <std::int64_t Level, typename Pred>
-            requires(Level == 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
         [[nodiscard]] constexpr bool any(Pred&& pred) const
         {
             if (empty()) {
                 return true;
             }
 
-            for (indexer_type gen(info_); gen; ++gen) {
-                if (pred((*this)[*gen])) {
-                    return true;
+            for (auto inner : *this) {
+                if constexpr (AtDepth == 0) {
+                    if (pred(inner)) {
+                        return true;
+                    }
+                } else {
+                    if (inner.template any<AtDepth - 1, Pred>(std::forward<Pred>(pred))) {
+                        return true;
+                    }
                 }
             }
 
             return false;
         }
 
-        template <std::int64_t Level, typename Pred>
-            requires(Level > 0 && invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool any(Pred&& pred) const
-        {
-            if (empty()) {
-                return true;
-            }
-
-            for (indexer_type gen(info_); gen; ++gen) {
-                if ((*this)[*gen].template any<Level - 1, Pred>(std::forward<Pred>(pred))) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        template <typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>
-        [[nodiscard]] constexpr bool any(Pred&& pred) const
-        {
-            return any<this_type::depth, Pred>(std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level = this_type::depth>
+        template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr bool any() const
         {
             return any<this_type::depth>([](const auto& value) {
@@ -9423,10 +9330,8 @@ namespace details {
             });
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-            requires(Level == 0
-                && invocable_no_arrnd<Pred, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool any_match(const Arrnd& arr, Pred&& pred) const
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd, typename BinaryPred>
+        [[nodiscard]] constexpr bool any_match(const Arrnd& arr, BinaryPred&& pred) const
         {
             if (empty() && arr.empty()) {
                 return true;
@@ -9441,61 +9346,26 @@ namespace details {
                 return false;
             }
 
-            indexer_type gen(info_);
-            typename Arrnd::indexer_type arr_gen(arr.info());
-
-            for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if (pred((*this)[*gen], arr[*arr_gen])) {
-                    return true;
+            for (auto inners : zip(zipped(*this), zipped(arr))) {
+                if constexpr (AtDepth == 0) {
+                    if (pred(std::get<0>(inners), std::get<1>(inners))) {
+                        return true;
+                    }
+                } else {
+                    if (std::get<0>(inners).template any_match<AtDepth - 1, typename Arrnd::value_type, BinaryPred>(
+                            std::get<1>(inners), std::forward<BinaryPred>(pred))) {
+                        return true;
+                    }
                 }
             }
 
             return false;
         }
 
-        template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-            requires(Level > 0
-                && invocable_no_arrnd<Pred, inner_value_type<Level>, typename Arrnd::template inner_value_type<Level>>)
-        [[nodiscard]] constexpr bool any_match(const Arrnd& arr, Pred&& pred) const
-        {
-            if (empty() && arr.empty()) {
-                return true;
-            }
-
-            if (empty() || arr.empty()) {
-                return false;
-            }
-
-            if (!std::equal(std::begin(info_.dims()), std::end(info_.dims()), std::begin(arr.info().dims()),
-                    std::end(arr.info().dims()))) {
-                return false;
-            }
-
-            indexer_type gen(info_);
-            typename Arrnd::indexer_type arr_gen(arr.info());
-
-            for (; gen && arr_gen; ++gen, ++arr_gen) {
-                if ((*this)[*gen].template any_match<Level - 1, typename Arrnd::value_type, Pred>(
-                        arr[*arr_gen], std::forward<Pred>(pred))) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        template <arrnd_type Arrnd, typename Pred>
-            requires invocable_no_arrnd<Pred, inner_value_type<this_type::depth>,
-                typename Arrnd::template inner_value_type<Arrnd::depth>>
-        [[nodiscard]] constexpr bool any_match(const Arrnd& arr, Pred&& pred) const
-        {
-            return any_match<this_type::depth, Pred, Arrnd>(arr, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, arrnd_type Arrnd>
+        template <std::size_t AtDepth = this_type::depth, arrnd_type Arrnd>
         [[nodiscard]] constexpr bool any_match(const Arrnd& arr) const
         {
-            return any_match<Level, Arrnd>(arr, [](const auto& a, const auto& b) {
+            return any_match<AtDepth, Arrnd>(arr, [](const auto& a, const auto& b) {
                 if constexpr (arrnd_type<decltype(a)> && arrnd_type<decltype(b)>) {
                     return (a == b).template any<this_type::depth>();
                 } else {
@@ -9504,33 +9374,20 @@ namespace details {
             });
         }
 
-        template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr bool any_match(const Arrnd& arr) const
+        template <std::size_t AtDepth = this_type::depth, typename U, typename BinaryPred>
+            requires(!arrnd_type<U>)
+        [[nodiscard]] constexpr bool any_match(const U& u, BinaryPred pred) const
         {
-            return any_match<this_type::depth, Arrnd>(arr);
-        }
-
-        template <std::int64_t Level, typename U, typename Pred>
-            requires(!arrnd_type<U> && invocable_no_arrnd<Pred, inner_value_type<Level>, U>)
-        [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
-        {
-            return any<Level>([&u, &pred](const auto& a) {
+            return any<AtDepth>([&u, &pred](const auto& a) {
                 return pred(a, u);
             });
         }
 
-        template <typename U, typename Pred>
-            requires(!arrnd_type<U> && invocable_no_arrnd<Pred, inner_value_type<this_type::depth>, U>)
-        [[nodiscard]] constexpr bool any_match(const U& u, Pred&& pred) const
-        {
-            return any_match<this_type::depth, U, Pred>(u, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level, typename U>
+        template <std::size_t AtDepth = this_type::depth, typename U>
             requires(!arrnd_type<U>)
         [[nodiscard]] constexpr bool any_match(const U& u) const
         {
-            return any<Level>([&u](const auto& a) {
+            return any<AtDepth>([&u](const auto& a) {
                 if constexpr (arrnd_type<decltype(a)>) {
                     return (a == u).template any<this_type::depth>();
                 } else {
@@ -9539,30 +9396,17 @@ namespace details {
             });
         }
 
-        template <typename U>
-            requires(!arrnd_type<U>)
-        [[nodiscard]] constexpr bool any_match(const U& u) const
-        {
-            return any_match<this_type::depth, U>(u);
-        }
 
-        template <std::int64_t Level, typename Pred>
-            requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
+
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
+        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred pred) const
         {
-            return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
+            return reduce<AtDepth>(axis, [&pred](const auto& a, const auto& b) {
                 return a && pred(b);
             });
         }
 
-        template <typename Pred>
-            requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
-        [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred&& pred) const
-        {
-            return all<this_type::depth>(axis, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level = this_type::depth>
+        template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis) const
         {
             return all(axis, [](const auto& a) {
@@ -9570,23 +9414,15 @@ namespace details {
             });
         }
 
-        template <std::int64_t Level, typename Pred>
-            requires(invocable_no_arrnd<Pred, inner_value_type<Level>>)
-        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
+        template <std::size_t AtDepth = this_type::depth, typename Pred>
+        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred pred) const
         {
-            return reduce<Level>(axis, [&pred](const auto& a, const auto& b) {
+            return reduce<AtDepth>(axis, [&pred](const auto& a, const auto& b) {
                 return a || pred(b);
             });
         }
 
-        template <typename Pred>
-            requires(invocable_no_arrnd<Pred, inner_value_type<this_type::depth>>)
-        [[nodiscard]] constexpr replaced_type<bool> any(size_type axis, Pred&& pred) const
-        {
-            return any<this_type::depth>(axis, std::forward<Pred>(pred));
-        }
-
-        template <std::int64_t Level = this_type::depth>
+        template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr replaced_type<bool> any(size_type axis) const
         {
             return any(axis, [](const auto& a) {
