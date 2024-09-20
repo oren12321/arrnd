@@ -433,7 +433,7 @@ namespace details {
 
         constexpr zipped_iterator() = default;
 
-        constexpr zipped_iterator(const InputIt& first, const InputIt& last)
+        constexpr zipped_iterator(InputIt first, InputIt last)
             : first_(first)
             , last_(last)
         { }
@@ -4681,25 +4681,25 @@ namespace details {
 
         arrnd_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_back(cont);
+            cont_->push_back(cont);
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_back(std::move(cont));
+            cont_->push_back(std::move(cont));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->push_back(Arrnd({1}, value));
+            cont_->push_back(Arrnd({1}, value));
             return *this;
         }
 
         arrnd_back_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->push_back(std::move(Arrnd({1}, value)));
+            cont_->push_back(std::move(Arrnd({1}, value)));
             return *this;
         }
 
@@ -4741,25 +4741,25 @@ namespace details {
 
         arrnd_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_front(cont);
+            cont_->push_front(cont);
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_front(std::move(cont));
+            cont_->push_front(std::move(cont));
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->push_front(Arrnd({1}, value));
+            cont_->push_front(Arrnd({1}, value));
             return *this;
         }
 
         arrnd_front_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->push_front(std::move(Arrnd({1}, value)));
+            cont_->push_front(std::move(Arrnd({1}, value)));
             return *this;
         }
 
@@ -4803,28 +4803,28 @@ namespace details {
 
         arrnd_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, ind_);
+            cont_->insert(cont, ind_);
             ind_ += cont.info().numel();
             return *this;
         }
 
         arrnd_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), ind_);
+            cont_->insert(std::move(cont), ind_);
             ind_ += cont.info().numel();
             return *this;
         }
 
         arrnd_insert_iterator& operator=(const typename Arrnd::value_type& value)
         {
-            *cont_ = cont_->insert(Arrnd({1}, value), ind_);
+            cont_->insert(Arrnd({1}, value), ind_);
             ind_ += 1;
             return *this;
         }
 
         arrnd_insert_iterator& operator=(typename Arrnd::value_type&& value)
         {
-            *cont_ = cont_->insert(std::move(Arrnd({1}, value)), ind_);
+            cont_->insert(std::move(Arrnd({1}, value)), ind_);
             ind_ += 1;
             return *this;
         }
@@ -4871,13 +4871,13 @@ namespace details {
 
         arrnd_slice_back_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->push_back(cont, axis_);
+            cont_->push_back(cont, axis_);
             return *this;
         }
 
         arrnd_slice_back_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->push_back(std::move(cont), axis_);
+            cont_->push_back(std::move(cont), axis_);
             return *this;
         }
 
@@ -4923,13 +4923,13 @@ namespace details {
 
         arrnd_slice_front_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, 0, axis_);
+            cont_->insert(cont, 0, axis_);
             return *this;
         }
 
         arrnd_slice_front_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), 0, axis_);
+            cont_->insert(std::move(cont), 0, axis_);
             return *this;
         }
 
@@ -4976,14 +4976,14 @@ namespace details {
 
         arrnd_slice_insert_iterator& operator=(const Arrnd& cont)
         {
-            *cont_ = cont_->insert(cont, ind_, axis_);
+            cont_->insert(cont, ind_, axis_);
             ind_ += cont.info().dims()[axis_];
             return *this;
         }
 
         arrnd_slice_insert_iterator& operator=(Arrnd&& cont)
         {
-            *cont_ = cont_->insert(std::move(cont), ind_, axis_);
+            cont_->insert(std::move(cont), ind_, axis_);
             ind_ += cont.info().dims()[axis_];
             return *this;
         }
@@ -5704,7 +5704,7 @@ namespace details {
 
         template <iterator_of_type_integral InputDimsIt, iterator_type InputDataIt>
         explicit constexpr arrnd(
-            const InputDimsIt& first_dim, const InputDimsIt& last_dim, InputDataIt first_data, InputDataIt last_data)
+            InputDimsIt first_dim, InputDimsIt last_dim, InputDataIt first_data, InputDataIt last_data)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
@@ -5744,7 +5744,7 @@ namespace details {
         { }
 
         template <iterator_of_type_integral InputDimsIt>
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const_reference value)
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const_reference value)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
@@ -5763,7 +5763,7 @@ namespace details {
         { }
 
         template <iterator_of_type_integral InputDimsIt, typename U>
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, const U& value)
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, const U& value)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
@@ -5784,7 +5784,7 @@ namespace details {
 
         template <iterator_of_type_integral InputDimsIt, typename Func>
             requires(invocable_no_arrnd<Func>)
-        explicit constexpr arrnd(const InputDimsIt& first_dim, const InputDimsIt& last_dim, Func&& func)
+        explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, Func&& func)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
                       ? nullptr
@@ -6269,7 +6269,7 @@ namespace details {
         // Similar to std::vector, resize inner buffer to suitable input dims
         // and arrange array elements according to it.
         template <iterator_of_type_integral InputIt>
-        constexpr this_type& resize(const InputIt& first_dim, const InputIt& last_dim)
+        constexpr this_type& resize(InputIt first_dim, InputIt last_dim)
         {
             if (empty()) {
                 *this = this_type(first_dim, last_dim);
@@ -9033,8 +9033,7 @@ namespace details {
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto adjacent_indices(
-            const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
+        [[nodiscard]] constexpr auto adjacent_indices(InputIt first_sub, InputIt last_sub, size_type offset = 1) const
         {
             using adjacent_indices_t = replaced_type<size_type>;
 
@@ -9509,28 +9508,28 @@ namespace details {
         // by order iterator functions
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order)
+        [[nodiscard]] constexpr auto begin(InputIt first_order, InputIt last_order)
         {
             return empty()
                 ? iterator()
                 : iterator(shared_storage_->data(), indexer_type(oc::arrnd::transpose(info_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto begin(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto begin(InputIt first_order, InputIt last_order) const
         {
             return empty()
                 ? iterator()
                 : iterator(shared_storage_->data(), indexer_type(oc::arrnd::transpose(info_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto cbegin(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto cbegin(InputIt first_order, InputIt last_order) const
         {
             return empty() ? const_iterator()
                            : const_iterator(shared_storage_->data(),
                                indexer_type(oc::arrnd::transpose(info_, first_order, last_order)));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order)
+        [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order)
         {
             return empty()
                 ? iterator()
@@ -9538,7 +9537,7 @@ namespace details {
                     indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto end(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto end(InputIt first_order, InputIt last_order) const
         {
             return empty()
                 ? iterator()
@@ -9546,7 +9545,7 @@ namespace details {
                     indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto cend(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto cend(InputIt first_order, InputIt last_order) const
         {
             return empty()
                 ? const_iterator()
@@ -9554,7 +9553,7 @@ namespace details {
                     indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::end));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order)
+        [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order)
         {
             return empty() ? reverse_iterator()
                            : reverse_iterator(shared_storage_->data(),
@@ -9562,7 +9561,7 @@ namespace details {
                                    arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto rbegin(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto rbegin(InputIt first_order, InputIt last_order) const
         {
             return empty() ? reverse_iterator()
                            : reverse_iterator(shared_storage_->data(),
@@ -9570,7 +9569,7 @@ namespace details {
                                    arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto crbegin(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto crbegin(InputIt first_order, InputIt last_order) const
         {
             return empty() ? const_reverse_iterator()
                            : const_reverse_iterator(shared_storage_->data(),
@@ -9578,7 +9577,7 @@ namespace details {
                                    arrnd_iterator_position::rbegin));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order)
+        [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order)
         {
             return empty()
                 ? reverse_iterator()
@@ -9586,7 +9585,7 @@ namespace details {
                     indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::rend));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto rend(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto rend(InputIt first_order, InputIt last_order) const
         {
             return empty()
                 ? reverse_iterator()
@@ -9594,7 +9593,7 @@ namespace details {
                     indexer_type(oc::arrnd::transpose(info_, first_order, last_order), arrnd_iterator_position::rend));
         }
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto crend(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr auto crend(InputIt first_order, InputIt last_order) const
         {
             return empty()
                 ? const_reverse_iterator()
