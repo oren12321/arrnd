@@ -2088,7 +2088,7 @@ namespace details {
 
     template <typename T, typename U>
         requires(std::is_fundamental_v<T> && std::is_fundamental_v<U>)
-    [[nodiscard]] constexpr bool operator==(const interval<T>& lhs, const interval<U>& rhs) noexcept
+    [[nodiscard]] inline constexpr bool operator==(const interval<T>& lhs, const interval<U>& rhs) noexcept
     {
         return (empty(lhs) && empty(rhs))
             || (lhs.start() == rhs.start() && lhs.stop() == rhs.stop() && lhs.step() == rhs.step());
@@ -2836,7 +2836,7 @@ namespace details {
     }
 
     template <typename StorageTraits, iterator_of_type_integral InputIt>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
         const arrnd_info<StorageTraits>& info, InputIt first_sub, InputIt last_sub)
     {
         if (std::distance(first_sub, last_sub) <= 0) {
@@ -2868,21 +2868,22 @@ namespace details {
     }
 
     template <typename StorageTraits, iterable_of_type_integral Cont>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
         const arrnd_info<StorageTraits>& info, Cont&& subs)
     {
         return sub2ind(info, std::begin(subs), std::end(subs));
     }
 
     template <typename StorageTraits>
-    constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(const arrnd_info<StorageTraits>& info,
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type sub2ind(
+        const arrnd_info<StorageTraits>& info,
         std::initializer_list<typename arrnd_info<StorageTraits>::extent_type> subs)
     {
         return sub2ind(info, subs.begin(), subs.end());
     }
 
     template <typename StorageTraits, iterator_of_type_integral OutputIt>
-    constexpr void ind2sub(
+    inline constexpr void ind2sub(
         const arrnd_info<StorageTraits>& info, typename arrnd_info<StorageTraits>::extent_type ind, OutputIt d_sub)
     {
         if (empty(info)) {
@@ -2903,7 +2904,7 @@ namespace details {
 
     // convert relative index to abosolute index
     template <typename StorageTraits>
-    constexpr typename arrnd_info<StorageTraits>::extent_type ind2ind(
+    [[nodiscard]] inline constexpr typename arrnd_info<StorageTraits>::extent_type ind2ind(
         const arrnd_info<StorageTraits>& info, typename arrnd_info<StorageTraits>::extent_type rel_ind)
     {
         if (empty(info)) {
@@ -2942,7 +2943,7 @@ namespace details {
     // return arrnd info suitable for reduced dimension at specified axis.
     // previous strides and hints are being ignored.
     template <typename StorageTraits>
-    [[nodiscard]] constexpr arrnd_info<StorageTraits> reduce(
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> reduce(
         const arrnd_info<StorageTraits>& info, typename arrnd_info<StorageTraits>::extent_type axis)
     {
         if (empty(info)) {
@@ -2966,7 +2967,7 @@ namespace details {
 
     // undo transposed info by rearranging dims accoding to sorted strides.
     template <typename StorageTraits>
-    [[nodiscard]] constexpr arrnd_info<StorageTraits> unstranspose(const arrnd_info<StorageTraits>& info)
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> unstranspose(const arrnd_info<StorageTraits>& info)
     {
         if (empty(info)) {
             return arrnd_info<StorageTraits>{};
@@ -2991,7 +2992,7 @@ namespace details {
     // return simple arrnd info by dims only,
     // ignoring hints such as sliced.
     template <typename StorageTraits>
-    [[nodiscard]] constexpr arrnd_info<StorageTraits> simplify(const arrnd_info<StorageTraits>& info)
+    [[nodiscard]] inline constexpr arrnd_info<StorageTraits> simplify(const arrnd_info<StorageTraits>& info)
     {
         if (empty(info)) {
             return arrnd_info<StorageTraits>{};
@@ -9965,65 +9966,65 @@ namespace details {
     // free arrnd iterator functions
 
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto begin(Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto begin(Arrnd& c, Args&&... args)
     {
         return c.begin(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto begin(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto begin(const Arrnd& c, Args&&... args)
     {
         return c.begin(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto cbegin(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto cbegin(const Arrnd& c, Args&&... args)
     {
         return c.cbegin(std::forward<Args>(args)...);
     }
 
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto end(Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto end(Arrnd& c, Args&&... args)
     {
         return c.end(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto end(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto end(const Arrnd& c, Args&&... args)
     {
         return c.end(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto cend(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto cend(const Arrnd& c, Args&&... args)
     {
         return c.cend(std::forward<Args>(args)...);
     }
 
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto rbegin(Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto rbegin(Arrnd& c, Args&&... args)
     {
         return c.rbegin(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto rbegin(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto rbegin(const Arrnd& c, Args&&... args)
     {
         return c.rbegin(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto crbegin(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto crbegin(const Arrnd& c, Args&&... args)
     {
         return c.crbegin(std::forward<Args>(args)...);
     }
 
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto rend(Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto rend(Arrnd& c, Args&&... args)
     {
         return c.rend(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto rend(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto rend(const Arrnd& c, Args&&... args)
     {
         return c.rend(std::forward<Args>(args)...);
     }
     template <arrnd_type Arrnd, typename... Args>
-    inline constexpr auto crend(const Arrnd& c, Args&&... args)
+    [[nodiscard]] inline constexpr auto crend(const Arrnd& c, Args&&... args)
     {
         return c.crend(std::forward<Args>(args)...);
     }
@@ -11546,7 +11547,7 @@ namespace details {
     }
 
     template <arrnd_type Arrnd>
-    std::ostream& ostream_operator_recursive(std::ostream& os, const Arrnd& arr,
+    inline std::ostream& ostream_operator_recursive(std::ostream& os, const Arrnd& arr,
         typename Arrnd::size_type nvectical_spaces, typename Arrnd::size_type ndepth_spaces)
     {
         constexpr auto block_start_char = Arrnd::depth > 0 ? '{' : '[';
