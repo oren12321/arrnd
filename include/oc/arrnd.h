@@ -8970,116 +8970,125 @@ namespace details {
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr this_type reorder(const InputIt& first_order, const InputIt& last_order) const
+        [[nodiscard]] constexpr this_type& reorder(InputIt first_order, InputIt last_order)
         {
             if (empty()) {
-                return this_type();
+                return *this;
             }
 
-            assert(std::distance(first_order, last_order) == total(info_));
+            if (std::distance(first_order, last_order) != total(info_)) {
+                throw std::invalid_argument("invalid order - different from total elements");
+            }
 
-            std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_order, last_order))};
-            replaced_type<size_type> order(res_dims.begin(), res_dims.end(), first_order, last_order);
+            typename info_type::extent_storage_type order(first_order, last_order);
 
-            auto reordered = clone();
-
-            auto z = zip(zipped_container(order), zipped_container(reordered));
+            auto z = zip(zipped(order), zipped(*this));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
 
-            return reordered;
+            return *this;
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto reorder(const Cont& order) const
+        constexpr this_type& reorder(const Cont& order)
         {
             return reorder(std::begin(order), std::end(order));
         }
-        [[nodiscard]] constexpr auto reorder(std::initializer_list<size_type> order) const
+
+        constexpr this_type& reorder(std::initializer_list<size_type> order)
         {
             return reorder(order.begin(), order.end());
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr this_type reorder(
-            size_type axis, const InputIt& first_order, const InputIt& last_order) const
+        constexpr this_type& reorder(size_type axis, InputIt first_order, InputIt last_order)
         {
             if (empty()) {
-                return this_type();
+                return *this;
             }
 
-            assert(axis >= 0 && axis < info_.dims().size());
-            assert(std::distance(first_order, last_order) == *std::next(info_.dims().cbegin(), axis));
+            if (axis < 0 || axis >= size(info_)) {
+                throw std::invalid_argument("invalid axis");
+            }
 
-            std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_order, last_order))};
-            replaced_type<size_type> order(res_dims.begin(), res_dims.end(), first_order, last_order);
+            if (std::distance(first_order, last_order) != info_.dims()[axis]) {
+                throw std::invalid_argument("invalid order - different from total elements at axis");
+            }
+
+            typename info_type::extent_storage_type order(first_order, last_order);
 
             auto expanded = expand(axis);
 
-            auto z = zip(zipped_container(order), zipped_container(expanded));
+            auto z = zip(zipped(order), zipped(expanded));
             std::sort(z.begin(), z.end(), [](const auto& t1, const auto& t2) {
                 return std::get<0>(t1) < std::get<0>(t2);
             });
 
-            auto reordered = expanded.template reduce<0>([axis](const auto& acc, const auto& cur) {
-                return acc.clone().push_back(cur, axis);
-            });
+            auto sorted_tmp = expanded.collapse(true);
+            std::copy(sorted_tmp.cbegin(), sorted_tmp.cend(), begin());
 
-            return reordered;
+            return *this;
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto reorder(size_type axis, const Cont& order) const
+        constexpr this_type& reorder(size_type axis, const Cont& order)
         {
             return reorder(axis, std::begin(order), std::end(order));
         }
-        [[nodiscard]] constexpr auto reorder(size_type axis, std::initializer_list<size_type> order) const
+
+        constexpr this_type& reorder(size_type axis, std::initializer_list<size_type> order)
         {
             return reorder(axis, order.begin(), order.end());
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr auto find_adjacents(
-            const InputIt& first_sub, const InputIt& last_sub, difference_type offset = 1) const
+        [[nodiscard]] constexpr auto adjacent_indices(
+            const InputIt& first_sub, const InputIt& last_sub, size_type offset = 1) const
         {
-            using returned_type = replaced_type<size_type>;
+            using adjacent_indices_t = replaced_type<size_type>;
 
             if (empty()) {
-                return returned_type();
+                return adjacent_indices_t{};
             }
 
-            assert(std::distance(first_sub, last_sub) == std::ssize(info_.dims()));
-            assert(offset > 0);
+            if (std::distance(first_sub, last_sub) != size(info_)) {
+                throw std::invalid_argument("invalid number of subs");
+            }
 
-            auto compute_num_adj = [](size_type ndims, size_type offset) {
-                size_type base1 = 3 + 2 * (offset - 1);
-                size_type base2 = 3 + 2 * (offset - 2);
+            if (offset <= 0) {
+                throw std::invalid_argument("invalid offset <= 0");
+            }
+
+            auto signed_offset = static_cast<difference_type>(offset);
+
+            auto compute_num_adj = [](difference_type ndims, difference_type soffset) {
+                difference_type base1 = 3 + 2 * (soffset - 1);
+                difference_type base2 = 3 + 2 * (soffset - 2);
                 return static_cast<size_type>(std::pow(base1, ndims) - std::pow(base2, ndims));
             };
 
-            returned_type res({compute_num_adj(std::ssize(info_.dims()), offset)});
+            adjacent_indices_t res({compute_num_adj(static_cast<difference_type>(size(info_)), signed_offset)});
             size_type actual_num_adj = 0;
 
-            std::function<void(returned_type, size_type, bool)> impl;
+            std::function<void(adjacent_indices_t, size_type, bool)> impl;
 
-            impl = [&](returned_type subs, size_type perm_pos, bool used_offset) {
-                if (perm_pos == std::ssize(info_.dims())) {
+            impl = [&](adjacent_indices_t subs, size_type perm_pos, bool used_offset) {
+                if (perm_pos == size(info_)) {
                     return;
                 }
 
-                for (difference_type i = -offset; i <= offset; ++i) {
+                for (difference_type i = -signed_offset; i <= signed_offset; ++i) {
                     size_type abs_i = static_cast<size_type>(std::abs(i));
 
-                    if (abs_i > 0 && abs_i <= offset) {
+                    if (abs_i > 0 && abs_i <= signed_offset) {
                         auto new_subs = subs.clone();
                         new_subs[perm_pos] += i;
-                        if (new_subs[perm_pos] >= 0
-                            && new_subs[perm_pos] < *std::next(info_.dims().cbegin(), perm_pos)) {
-                            if (used_offset || abs_i == offset) {
+                        if (new_subs[perm_pos] >= 0 && new_subs[perm_pos] < info_.dims()[perm_pos]) {
+                            if (used_offset || abs_i == signed_offset) {
                                 res[actual_num_adj++] = sub2ind(info_, new_subs.cbegin(), new_subs.cend());
                             }
-                            impl(new_subs, perm_pos + 1, abs_i == offset);
+                            impl(new_subs, perm_pos + 1, abs_i == signed_offset);
                         }
                     } else {
                         impl(subs, perm_pos + 1, used_offset);
@@ -9088,7 +9097,7 @@ namespace details {
             };
 
             std::initializer_list<size_type> res_dims{static_cast<size_type>(std::distance(first_sub, last_sub))};
-            impl(returned_type(res_dims.begin(), res_dims.end(), first_sub, last_sub), 0, false);
+            impl(adjacent_indices_t(res_dims.begin(), res_dims.end(), first_sub, last_sub), 0, false);
 
             if (total(res.info()) > actual_num_adj) {
                 return res.resize({actual_num_adj});
@@ -9097,14 +9106,14 @@ namespace details {
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr auto find_adjacents(const Cont& subs, difference_type offset = 1) const
+        [[nodiscard]] constexpr auto adjacent_indices(const Cont& subs, difference_type offset = 1) const
         {
-            return find_adjacents(std::begin(subs), std::end(subs), offset);
+            return adjacent_indices(std::begin(subs), std::end(subs), offset);
         }
-        [[nodiscard]] constexpr auto find_adjacents(
+        [[nodiscard]] constexpr auto adjacent_indices(
             std::initializer_list<size_type> subs, difference_type offset = 1) const
         {
-            return find_adjacents(subs.begin(), subs.end(), offset);
+            return adjacent_indices(subs.begin(), subs.end(), offset);
         }
 
         template <std::size_t AtDepth = this_type::depth, typename Pred>
