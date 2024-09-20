@@ -9430,74 +9430,6 @@ namespace details {
             });
         }
 
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto sum() const
-        {
-            return reduce<Level>([](const auto& a, const auto& b) {
-                return a + b;
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto sum(size_type axis) const
-        {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                return a + b;
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto min() const
-        {
-            return reduce<Level>([](const auto& a, const auto& b) {
-                using std::min;
-                return min(a, b);
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto min(size_type axis) const
-        {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                using std::min;
-                return min(a, b);
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto max() const
-        {
-            return reduce<Level>([](const auto& a, const auto& b) {
-                using std::max;
-                return max(a, b);
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto max(size_type axis) const
-        {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                using std::max;
-                return max(a, b);
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto prod() const
-        {
-            return reduce<Level>([](const auto& a, const auto& b) {
-                return a * b;
-            });
-        }
-
-        template <std::int64_t Level = this_type::depth>
-        [[nodiscard]] constexpr auto prod(size_type axis) const
-        {
-            return reduce<Level>(axis, [](const auto& a, const auto& b) {
-                return a * b;
-            });
-        }
-
         template <arrnd_type Arrnd>
         [[nodiscard]] constexpr replaced_type<bool> close(const Arrnd& arr,
             const compliant_tol_type<Arrnd, this_type::depth>& atol
@@ -10508,101 +10440,124 @@ namespace details {
         return any<Arrnd::depth>(arr, axis);
     }
 
-    template <std::int64_t Level, arrnd_type Arrnd>
+        template <std::size_t AtDepth, arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sum(const Arrnd& arr)
     {
-        return arr.template sum<Level>();
+        return arr.template reduce<AtDepth>([](const auto& a, const auto& b) {
+            return a + b;
+        });
     }
 
-    template <arrnd_type Arrnd>
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto sum(const Arrnd& arr, typename Arrnd::size_type axis)
+    {
+        return arr.template reduce<AtDepth>(axis, [](const auto& a, const auto& b) {
+            return a + b;
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto min(const Arrnd& arr)
+    {
+        return arr.template reduce<AtDepth>([](const auto& a, const auto& b) {
+            using std::min;
+            return min(a, b);
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto min(const Arrnd& arr, typename Arrnd::size_type axis)
+    {
+        return arr.template reduce<AtDepth>(axis, [](const auto& a, const auto& b) {
+            using std::min;
+            return min(a, b);
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto max(const Arrnd& arr)
+    {
+        return arr.template reduce<AtDepth>([](const auto& a, const auto& b) {
+            using std::max;
+            return max(a, b);
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto max(const Arrnd& arr, typename Arrnd::size_type axis)
+    {
+        return arr.template reduce<AtDepth>(axis, [](const auto& a, const auto& b) {
+            using std::max;
+            return max(a, b);
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto prod(const Arrnd& arr)
+    {
+        return arr.template reduce<AtDepth>([](const auto& a, const auto& b) {
+            return a * b;
+        });
+    }
+
+    template <std::size_t AtDepth, arrnd_type Arrnd>
+    [[nodiscard]] inline constexpr auto prod(const Arrnd& arr, typename Arrnd::size_type axis)
+    {
+        return arr.template reduce<AtDepth>(axis, [](const auto& a, const auto& b) {
+            return a * b;
+        });
+    }
+
+
+
+        template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sum(const Arrnd& arr)
     {
-        return sum<Arrnd::depth>(arr);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto sum(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template sum<Level>(axis);
+        return sum<Arrnd::depth, Arrnd>(arr);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sum(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return sum<Arrnd::depth>(arr, axis);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto min(const Arrnd& arr)
-    {
-        return arr.template min<Level>();
+        return sum<Arrnd::depth, Arrnd>(arr, axis);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto min(const Arrnd& arr)
     {
-        return min<Arrnd::depth>(arr);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto min(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template min<Level>(axis);
+        return min<Arrnd::depth, Arrnd>(arr);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto min(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return min<Arrnd::depth>(arr, axis);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto max(const Arrnd& arr)
-    {
-        return arr.template max<Level>();
+        return min<Arrnd::depth, Arrnd>(arr, axis);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto max(const Arrnd& arr)
     {
-        return max<Arrnd::depth>(arr);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto max(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template max<Level>(axis);
+        return max<Arrnd::depth, Arrnd>(arr);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto max(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return max<Arrnd::depth>(arr, axis);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto prod(const Arrnd& arr)
-    {
-        return arr.template prod<Level>();
+        return max<Arrnd::depth, Arrnd>(arr, axis);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto prod(const Arrnd& arr)
     {
-        return prod<Arrnd::depth>(arr);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto prod(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template prod<Level>(axis);
+        return prod<Arrnd::depth, Arrnd>(arr);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto prod(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return prod<Arrnd::depth>(arr, axis);
+        return prod<Arrnd::depth, Arrnd>(arr, axis);
     }
+
 
     template <std::int64_t Level, arrnd_type Arrnd, typename Func>
     [[nodiscard]] inline constexpr auto transform(const Arrnd& arr, Func&& func)

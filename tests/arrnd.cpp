@@ -2942,7 +2942,7 @@ TEST(arrnd_test, slide)
             {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})});
 
         auto weigted_sum = [](const auto& slice/*, double weight*/) {
-            return 0.5/*weight*/ * slice.sum();
+            return 0.5/*weight*/ * sum(slice);
         };
 
         {
@@ -2987,7 +2987,7 @@ TEST(arrnd_test, accumulate)
             {1, 2}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({10}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})});
 
         auto slice_sum = [](arrnd<int> slice) {
-            return slice.sum();
+            return sum(slice);
         };
 
         auto add_prev = [](int acc, int processed) {
@@ -3177,13 +3177,13 @@ TEST(arrnd_test, browse)
         arrnd<int> arr1({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
         auto res1 = arr1.browse(2, [](arrnd<int> page) {
-            return 0.5 * page.sum();
+            return 0.5 * sum(page);
         });
 
         EXPECT_TRUE(all_equal(res1, arrnd<double>({3, 1}, {1.5, 3.5, 5.5})));
 
         auto res2 = arr1.browse(1, [](arrnd<int> page) {
-            return 0.5 * page.sum();
+            return 0.5 * sum(page);
         });
 
         EXPECT_TRUE(all_equal(res2, arrnd<double>({3, 1, 1}, {1.5, 3.5, 5.5})));
@@ -3191,7 +3191,7 @@ TEST(arrnd_test, browse)
         arrnd<int> arr2({2, 3, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
 
         auto res3 = arr2.browse(3, [](arrnd<int> page) {
-            return page.sum();
+            return sum(page);
         });
 
         EXPECT_TRUE(all_equal(res3, arrnd<int>({2, 1}, {21, 57})));
@@ -3205,7 +3205,7 @@ TEST(arrnd_test, browse)
         //});
         auto res = transform<0>(arr, [](const auto& val) {
             return val.browse(2, [](arrnd<int> page) {
-                return 0.5 * page.sum();
+                return 0.5 * sum(page);
             });
         });
 
