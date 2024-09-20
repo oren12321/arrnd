@@ -5484,14 +5484,16 @@ namespace details {
     [[nodiscard]] inline constexpr auto eye(DimsIt first_dim, DimsIt last_dim)
     {
         auto ndims = std::distance(first_dim, last_dim);
-        assert(ndims >= 2);
+
+        if (ndims < 2) {
+            throw std::invalid_argument("invalid dims - should be at least matrix");
+        }
 
         auto eye_impl = [](typename Arrnd::size_type r, typename Arrnd::size_type c) {
             if (r == 0 || c == 0) {
-                return Arrnd();
+                return Arrnd{};
             }
             Arrnd res({r, c}, typename Arrnd::value_type{0});
-            assert(ismatrix(res.info()));
 
             auto n = std::min(r, c);
 
