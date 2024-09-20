@@ -301,7 +301,6 @@ TEST(arrnd_test, zeros)
     using namespace oc::arrnd;
 
     EXPECT_TRUE(all_equal(zeros<arrnd<int>>({3, 1, 2}), arrnd<int>({3, 1, 2}, 0)));
-    EXPECT_TRUE(all_equal(zeros<arrnd<int>>({3, 1, 2}), arrnd<int>({3, 1, 2}).zeros()));
 }
 
 TEST(arrnd_test, eye)
@@ -314,7 +313,6 @@ TEST(arrnd_test, eye)
     EXPECT_TRUE(all_equal(eye<arrnd<int>>({4, 3}), arrnd<int>({4, 3}, {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0})));
 
     EXPECT_TRUE(all_equal(eye<arrnd<int>>({2, 2, 2}), arrnd<int>({2, 2, 2}, {1, 0, 0, 1, 1, 0, 0, 1})));
-    EXPECT_TRUE(all_equal(eye<arrnd<int>>({2, 2, 2}), arrnd<int>({2, 2, 2}).eye()));
 }
 
 //TEST(arrnd_test, diag)

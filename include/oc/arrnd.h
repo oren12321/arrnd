@@ -5467,11 +5467,13 @@ namespace details {
     {
         return Arrnd(first_dim, last_dim, 0);
     }
+
     template <arrnd_type Arrnd, iterable_of_type_integral Cont>
     [[nodiscard]] inline constexpr auto zeros(const Cont& dims)
     {
         return zeros<Arrnd>(std::begin(dims), std::end(dims));
     }
+
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto zeros(std::initializer_list<typename Arrnd::size_type> dims)
     {
@@ -5512,11 +5514,13 @@ namespace details {
             return eye_impl(page.info().dims().front(), page.info().dims().back());
         });
     }
+
     template <arrnd_type Arrnd, iterable_of_type_integral Cont>
     [[nodiscard]] inline constexpr auto eye(const Cont& dims)
     {
         return eye<Arrnd>(std::begin(dims), std::end(dims));
     }
+
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto eye(std::initializer_list<typename Arrnd::size_type> dims)
     {
@@ -8904,16 +8908,6 @@ namespace details {
             squeezed.info_ = oc::arrnd::squeeze(info_, type);
 
             return squeezed;
-        }
-
-        [[nodiscard]] constexpr this_type zeros() const
-        {
-            return oc::arrnd::details::zeros<this_type>(info_.dims());
-        }
-
-        [[nodiscard]] constexpr this_type eye() const
-        {
-            return oc::arrnd::details::eye<this_type>(info_.dims());
         }
 
         template <typename Comp>
