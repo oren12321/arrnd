@@ -1809,6 +1809,9 @@ using details::simple_array_traits;
 
 namespace oc::arrnd {
 namespace details {
+    template <typename T1, typename T2>
+    using tol_type = decltype(std::remove_cvref_t<T1>{} - std::remove_cvref_t<T2>{});
+
     template <std::integral T>
     [[nodiscard]] inline constexpr T default_atol() noexcept
     {
@@ -1839,14 +1842,14 @@ namespace details {
         requires((std::is_arithmetic_v<T1> || template_type<T1, std::complex>)
             && (std::is_arithmetic_v<T2> || template_type<T2, std::complex>))
     [[nodiscard]] inline constexpr bool close(const T1& a, const T2& b,
-        const decltype(T1{} - T2{})& atol = default_atol<decltype(T1{} - T2{})>(),
-        const decltype(T1{} - T2{})& rtol = default_rtol<decltype(T1{} - T2{})>()) noexcept
+        const tol_type<T1, T2>& atol = default_atol<tol_type<T1, T2>>(),
+        const tol_type<T1, T2>& rtol = default_rtol<tol_type<T1, T2>>()) noexcept
     {
         using std::abs;
         if (a == b) {
             return true;
         }
-        const decltype(a - b) reps{rtol * (abs(a) > abs(b) ? abs(a) : abs(b))};
+        const tol_type<T1, T2> reps{rtol * (abs(a) > abs(b) ? abs(a) : abs(b))};
         return abs(a - b) <= (atol > reps ? atol : reps);
     }
 
@@ -5046,155 +5049,135 @@ namespace details {
     template <typename T>
     concept arrnd_type = std::is_same_v<typename std::remove_cvref_t<T>::tag, arrnd_tag>;
 
-    template <typename T, typename U>
-    concept arrnd_same_depth = (T::depth == U::depth);
-
-    template <typename T, typename... Args>
-    concept invocable_no_arrnd = !
-    arrnd_type<T>&& std::is_invocable_v<T, Args...>;
-
     template <arrnd_type T>
-    [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
+    [[nodiscard]] inline constexpr std::size_t arrnd_depth()
     {
         return T::depth + 1;
     }
     template <typename T>
-    [[nodiscard]] inline constexpr std::int64_t calc_arrnd_depth()
+    [[nodiscard]] inline constexpr std::size_t arrnd_depth()
     {
         return 0;
     }
 
-    template <typename T>
-    concept flat_arrnd_type = arrnd_type<T> && T::is_flat;
-
-    template <typename T, typename U>
-    [[nodiscard]] inline constexpr bool is_arrnd_of_type()
-    {
-        return std::is_same_v<T, U>;
-    }
-    template <arrnd_type T, typename U>
-    [[nodiscard]] inline constexpr bool is_arrnd_of_type()
-    {
-        return is_arrnd_of_type<typename T::value_type, U>();
-    }
-
-    template <typename T, typename U>
-    concept arrnd_of_type = arrnd_type<T> && is_arrnd_of_type<T, U>();
-
-    template <typename T, template <typename...> typename U>
-    [[nodiscard]] inline constexpr bool is_arrnd_of_template_type()
-    {
-        return is_template_type_v<T, U>;
-    }
-    template <arrnd_type T, template <typename...> typename U>
-    [[nodiscard]] inline constexpr bool is_arrnd_of_template_type()
-    {
-        return is_arrnd_of_template_type<typename T::value_type, U>();
-    }
-
-    template <typename T, template <typename...> typename U>
-    concept arrnd_of_template_type = arrnd_type<T> && is_arrnd_of_template_type<T, U>();
-
-    template <typename T, template <typename> typename Trait>
-    [[nodiscard]] inline constexpr bool is_arrnd_with_trait()
-    {
-        return Trait<T>::value;
-    }
-    template <arrnd_type T, template <typename> typename Trait>
-    [[nodiscard]] inline constexpr bool is_arrnd_with_trait()
-    {
-        return is_arrnd_with_trait<typename T::value_type, Trait>();
-    }
-
-    template <typename T, template <typename> typename Trait>
-    concept arrnd_with_trait = arrnd_type<T> && is_arrnd_with_trait<T, Trait>();
-
-    template <typename ArrndSrc, typename ArrndDst>
-    concept arrnd_depths_match = arrnd_type<ArrndSrc> && arrnd_type<ArrndDst> && arrnd_same_depth<ArrndSrc, ArrndDst>;
+    template <typename Arrnd1, typename Arrnd2>
+    concept arrnd_depths_match = arrnd_type<Arrnd1> && arrnd_type<Arrnd2> && (Arrnd1::depth == Arrnd2::depth);
 
     template <typename T, std::int64_t Depth>
         requires(Depth >= 0 && Depth <= T::depth)
-    struct arrnd_inner_impl {
-        using type = arrnd_inner_impl<typename T::value_type, Depth - 1>::type;
+    struct arrnd_inner {
+        using type = arrnd_inner<typename T::value_type, Depth - 1>::type;
     };
     template <typename T>
-    struct arrnd_inner_impl<T, 0> {
+    struct arrnd_inner<T, 0> {
         using type = T;
     };
     template <typename Arrnd, std::int64_t Level = Arrnd::depth>
         requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
-    using arrnd_inner = arrnd_inner_impl<Arrnd, Level>;
-    template <typename Arrnd, std::int64_t Level = Arrnd::depth>
-        requires std::is_same_v<typename Arrnd::tag, arrnd_tag>
     using arrnd_inner_t = arrnd_inner<Arrnd, Level>::type;
-
-    template <typename Arrnd, std::int64_t Depth>
-        requires(Depth >= 0)
-    struct arrnd_nested {
-        using type = typename Arrnd::template replaced_type<typename arrnd_nested<Arrnd, Depth - 1>::type>;
-    };
-    template <typename Arrnd>
-    struct arrnd_nested<Arrnd, 0> {
-        using type = Arrnd;
-    };
 
     template <typename T>
     struct typed {
         using type = T;
     };
 
-    template <typename T, typename R, std::int64_t Level>
-    struct last_inner_replaced_types_tuple_impl {
+    // Replace type in nested arrnd at specific depth
+
+    template <typename T, typename R, std::size_t Depth>
+    struct arrnd_last_replaced_type_nested_tuple {
+        template <typename UT>
+        struct typed {
+            using type = UT;
+        };
+
+        template <typename UT, typename UR, std::size_t UDepth>
+        struct impl {
+            using type = std::tuple<UT, typename impl<typename UT::value_type, UR, UDepth - 1>::type>;
+        };
+
+        template <typename UT, typename UR>
+        struct impl<UT, UR, 0> {
+            using type = typename UT::template replaced_type<UR>;
+        };
+
         using type
-            = std::tuple<T, typename last_inner_replaced_types_tuple_impl<typename T::value_type, R, Level - 1>::type>;
+            = std::conditional_t<Depth == 0, std::tuple<typename T::template replaced_type<R>>, typename impl<T, R, Depth>::type>;
     };
-    template <typename T, typename R>
-    struct last_inner_replaced_types_tuple_impl<T, R, 0> {
-        using type = typename T::template replaced_type<R>;
-    };
-    template <typename T, typename R, std::int64_t Level>
-    using last_inner_replaced_types_tuple = std::conditional_t<Level == 0,
-        typed<std::tuple<typename T::template replaced_type<R>>>, last_inner_replaced_types_tuple_impl<T, R, Level>>;
-    template <typename T, typename R, std::int64_t Level>
-    using last_inner_replaced_types_tuple_t = typename last_inner_replaced_types_tuple<T, R, Level>::type;
+
+    template <typename T, typename R, std::size_t Depth>
+    using arrnd_last_replaced_type_nested_tuple_t = typename arrnd_last_replaced_type_nested_tuple<T, R, Depth>::type;
 
     template <typename T>
     struct flat_tuple {
         using type = std::tuple<T>;
     };
+
     template <typename... Args>
     struct flat_tuple<std::tuple<Args...>> {
         using type = decltype(std::tuple_cat(typename flat_tuple<Args>::type{}...));
     };
+
     template <typename Tuple>
     using flat_tuple_t = typename flat_tuple<Tuple>::type;
 
-    template <typename Tuple, std::int64_t Index>
-    struct folded_replaced_type_tuple {
-        static constexpr std::size_t tsi = std::tuple_size_v<Tuple> - 1;
-        using type = typename std::tuple_element_t<tsi - Index,
-            Tuple>::template replaced_type<typename folded_replaced_type_tuple<Tuple, Index - 1>::type>;
+    template <typename Tuple, std::size_t Depth>
+    struct arrnd_fold_tuple {
+        static constexpr std::size_t idx = std::tuple_size_v<Tuple> - 1;
+        using type = typename std::tuple_element_t<idx - Depth,
+            Tuple>::template replaced_type<typename arrnd_fold_tuple<Tuple, Depth - 1>::type>;
     };
-    template <typename Tuple>
-    struct folded_replaced_type_tuple<Tuple, 1> {
-        static constexpr std::size_t tsi = std::tuple_size_v<Tuple> - 1;
-        using type =
-            typename std::tuple_element_t<tsi - 1, Tuple>::template replaced_type<std::tuple_element_t<tsi - 0, Tuple>>;
-    };
-    template <typename Tuple>
-    struct folded_replaced_type_tuple<Tuple, 0> {
-        static constexpr int tsi = std::tuple_size_v<Tuple> - 1;
-        using type = std::tuple_element_t<tsi - 0, Tuple>;
-    };
-    template <typename Tuple>
-    using folded_replaced_type_tuple_t = folded_replaced_type_tuple<Tuple, std::tuple_size_v<Tuple> - 1>::type;
 
-    template <typename T, typename R, std::int64_t Level>
-    struct inner_replaced_type {
-        using type = folded_replaced_type_tuple_t<flat_tuple_t<last_inner_replaced_types_tuple_t<T, R, Level>>>;
+    template <typename Tuple>
+    struct arrnd_fold_tuple<Tuple, 1> {
+        static constexpr std::size_t idx = std::tuple_size_v<Tuple> - 1;
+        using type =
+            typename std::tuple_element_t<idx - 1, Tuple>::template replaced_type<std::tuple_element_t<idx - 0, Tuple>>;
     };
-    template <typename T, typename R, std::int64_t Level>
-    using inner_replaced_type_t = inner_replaced_type<T, R, Level>::type;
+
+    template <typename Tuple>
+    struct arrnd_fold_tuple<Tuple, 0> {
+        static constexpr int idx = std::tuple_size_v<Tuple> - 1;
+        using type = std::tuple_element_t<idx - 0, Tuple>;
+    };
+
+    template <typename Tuple>
+    using arrnd_fold_tuple_t = typename arrnd_fold_tuple<Tuple, std::tuple_size_v<Tuple> - 1>::type;
+
+    template <typename T, typename R, std::size_t Depth>
+    struct arrnd_replaced_inner_type {
+        using type = arrnd_fold_tuple_t<flat_tuple_t<arrnd_last_replaced_type_nested_tuple_t<T, R, Depth>>>;
+    };
+
+    template <typename T, typename R, std::size_t Depth>
+    using arrnd_replaced_inner_type_t = arrnd_replaced_inner_type<T, R, Depth>::type;
+
+    // ----------------------------------------------
+
+    template <typename Arrnd, std::size_t Depth>
+        requires(Depth >= 0)
+    struct arrnd_nested {
+        using type = typename Arrnd::template replaced_type<typename arrnd_nested<Arrnd, Depth - 1>::type>;
+    };
+
+    template <typename Arrnd>
+    struct arrnd_nested<Arrnd, 0> {
+        using type = Arrnd;
+    };
+
+    template <typename Arrnd, std::size_t Depth>
+    using arrnd_nested_t = arrnd_nested<Arrnd, Depth>::type;
+
+    template <typename Arrnd1, typename Arrnd2, std::size_t Depth = std::min(Arrnd1::depth, Arrnd2::depth)>
+    using arrnd_tol_type = decltype(typename std::remove_cvref_t<Arrnd1>::template inner_type<Depth>::value_type{} -
+        typename std::remove_cvref_t<Arrnd2>::template inner_type<Depth>::value_type{});
+
+    template <typename Arrnd1, typename T, std::size_t Depth = Arrnd1::depth>
+    using arrnd_lhs_tol_type
+        = decltype(typename std::remove_cvref_t<Arrnd1>::template inner_type<Depth>::value_type{} - std::remove_cvref_t<T>{});
+
+    template <typename T, typename Arrnd2, std::size_t Depth = Arrnd2::depth>
+    using arrnd_rhs_tol_type
+        = decltype(std::remove_cvref_t<T>{} - typename std::remove_cvref_t<Arrnd2>::template inner_type<Depth>::value_type{});
 
     enum class arrnd_common_shape { vector, row, column };
 
@@ -5568,17 +5551,10 @@ namespace details {
         template <typename U>
         using replaced_type = arrnd<U, typename data_storage_traits_type::template replaced_type<U>, info_type>;
 
-        template <typename U, std::int64_t Level>
-        using inner_replaced_type = inner_replaced_type_t<this_type, U, Level>;
-        template <std::int64_t Level>
-        using inner_this_type = arrnd_inner_t<this_type, Level>;
-        template <std::int64_t Level>
-        using inner_value_type = typename inner_this_type<Level>::value_type;
-
-        template <typename U>
-        using shared_ref = U;
-        template <typename U>
-        using maybe_shared_ref = U;
+        template <std::size_t Depth>
+        using inner_type = arrnd_inner_t<this_type, Depth>;
+        template <typename U, std::size_t Depth>
+        using replaced_inner_type = arrnd_replaced_inner_type_t<this_type, U, Depth>;
 
         using iterator = arrnd_iterator<this_type>;
         using const_iterator = arrnd_const_iterator<this_type>;
@@ -5590,19 +5566,11 @@ namespace details {
         using reverse_slice_iterator = arrnd_slice_reverse_iterator<this_type>;
         using const_reverse_slice_iterator = arrnd_slice_reverse_const_iterator<this_type>;
 
-        constexpr static std::int64_t depth = calc_arrnd_depth<T>();
-        constexpr static bool is_flat = depth == 0;
+        constexpr static std::size_t depth = arrnd_depth<T>();
+        constexpr static bool is_flat = (depth == 0);
 
-        template <std::int64_t Depth>
-        using nested = arrnd_nested<this_type, Depth>;
-        template <std::int64_t Depth>
-        using nested_t = nested<Depth>::type;
-
-        template <typename U, std::int64_t Level = this_type::depth>
-        using tol_type = decltype(inner_value_type<Level>{} - U{});
-        template <arrnd_type Arrnd, std::int64_t Level = this_type::depth>
-        using compliant_tol_type
-            = decltype(inner_value_type<Level>{} - typename Arrnd::template inner_value_type<Level>{});
+        template <std::size_t Depth>
+        using nested_t = arrnd_nested_t<this_type, Depth>;
 
         constexpr arrnd() = default;
 
@@ -5786,7 +5754,7 @@ namespace details {
         { }
 
         template <iterator_of_type_integral InputDimsIt, typename Func>
-            requires(invocable_no_arrnd<Func>)
+            requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
         explicit constexpr arrnd(InputDimsIt first_dim, InputDimsIt last_dim, Func&& func)
             : info_(first_dim, last_dim)
             , shared_storage_(oc::arrnd::empty(info_)
@@ -5800,12 +5768,12 @@ namespace details {
             }
         }
         template <iterable_of_type_integral Cont, typename Func>
-            requires(invocable_no_arrnd<Func>)
+            requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
         explicit constexpr arrnd(const Cont& dims, Func&& func)
             : arrnd(std::begin(dims), std::end(dims), std::forward<Func>(func))
         { }
         template <typename Func>
-            requires(invocable_no_arrnd<Func>)
+            requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
         explicit constexpr arrnd(std::initializer_list<size_type> dims, Func&& func)
             : arrnd(dims.begin(), dims.end(), std::forward<Func>(func))
         { }
@@ -5889,7 +5857,7 @@ namespace details {
         }
 
         template <iterator_of_type_interval InputIt>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> boundaries) const&
+        [[nodiscard]] constexpr this_type operator[](std::pair<InputIt, InputIt> boundaries) const&
         {
             this_type slice(oc::arrnd::slice(info_, boundaries.first, boundaries.second), shared_storage_);
             slice.creators_.is_creator_valid = creators_.has_original_creator;
@@ -5897,31 +5865,31 @@ namespace details {
             return slice;
         }
         template <iterator_of_type_interval InputIt>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::pair<InputIt, InputIt> boundaries) const&&
+        [[nodiscard]] constexpr this_type operator[](std::pair<InputIt, InputIt> boundaries) const&&
         {
             return this_type(oc::arrnd::slice(info_, boundaries.first, boundaries.second), shared_storage_);
         }
         template <iterable_of_type_interval Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& boundaries) const&
+        [[nodiscard]] constexpr this_type operator[](const Cont& boundaries) const&
         {
             return (*this)[std::make_pair(std::cbegin(boundaries), std::cend(boundaries))];
         }
         template <iterable_of_type_interval Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](const Cont& boundaries) const&&
+        [[nodiscard]] constexpr this_type operator[](const Cont& boundaries) const&&
         {
             return std::move(*this)[std::make_pair(std::begin(boundaries), std::end(boundaries))];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](std::initializer_list<boundary_type> boundaries) const&
+        [[nodiscard]] constexpr this_type operator[](std::initializer_list<boundary_type> boundaries) const&
         {
             return (*this)[std::make_pair(boundaries.begin(), boundaries.end())];
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](
+        [[nodiscard]] constexpr this_type operator[](
             std::initializer_list<boundary_type> boundaries) const&&
         {
             return std::move(*this)[std::make_pair(boundaries.begin(), boundaries.end())];
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type boundary) const&
+        [[nodiscard]] constexpr this_type operator[](boundary_type boundary) const&
         {
             this_type slice(
                 oc::arrnd::squeeze(oc::arrnd::slice(info_, boundary, 0), arrnd_squeeze_type::left, 1), shared_storage_);
@@ -5929,20 +5897,20 @@ namespace details {
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator[](boundary_type boundary) const&&
+        [[nodiscard]] constexpr this_type operator[](boundary_type boundary) const&&
         {
             return this_type(
                 oc::arrnd::squeeze(oc::arrnd::slice(info_, boundary, 0), arrnd_squeeze_type::left, 1), shared_storage_);
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type boundary, size_type axis) const&
+        [[nodiscard]] constexpr this_type operator()(boundary_type boundary, size_type axis) const&
         {
             this_type slice(oc::arrnd::slice(info_, boundary, axis), shared_storage_);
             slice.creators_.is_creator_valid = creators_.has_original_creator;
             slice.creators_.latest_creator = this;
             return slice;
         }
-        [[nodiscard]] constexpr shared_ref<this_type> operator()(boundary_type boundary, size_type axis) const&&
+        [[nodiscard]] constexpr this_type operator()(boundary_type boundary, size_type axis) const&&
         {
             return this_type(oc::arrnd::slice(info_, boundary, axis), shared_storage_);
         }
@@ -5992,7 +5960,7 @@ namespace details {
         }
 
         template <typename Pred>
-            requires invocable_no_arrnd<Pred, value_type>
+            requires(!arrnd_type<Pred> && std::is_invocable_v<Pred, value_type>)
         [[nodiscard]] constexpr auto operator()(Pred&& pred) const
         {
             auto selector = [&pred](const value_type& value) {
@@ -6220,7 +6188,7 @@ namespace details {
         }
 
         template <iterator_of_type_integral InputIt>
-        [[nodiscard]] constexpr shared_ref<this_type> reshape(InputIt first_dim, InputIt last_dim) const
+        [[nodiscard]] constexpr this_type reshape(InputIt first_dim, InputIt last_dim) const
         {
             if (total(info_) != total(info_type(first_dim, last_dim))) {
                 throw std::invalid_argument("invalid input dims - different total size from array");
@@ -6240,17 +6208,17 @@ namespace details {
         }
 
         template <iterable_of_type_integral Cont>
-        [[nodiscard]] constexpr shared_ref<this_type> reshape(const Cont& dims) const
+        [[nodiscard]] constexpr this_type reshape(const Cont& dims) const
         {
             return reshape(std::begin(dims), std::end(dims));
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> reshape(std::initializer_list<size_type> dims) const
+        [[nodiscard]] constexpr this_type reshape(std::initializer_list<size_type> dims) const
         {
             return reshape(dims.begin(), dims.end());
         }
 
-        [[nodiscard]] constexpr shared_ref<this_type> reshape(arrnd_common_shape shape) const
+        [[nodiscard]] constexpr this_type reshape(arrnd_common_shape shape) const
         {
             if (empty()) {
                 return *this;
@@ -8101,7 +8069,7 @@ namespace details {
                 filter_impl);
         }
 
-        template <std::int64_t AtDepth = this_type::depth>
+        template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> inds) const
         {
             return filter<AtDepth>(zip(zipped(inds.begin(), inds.end())));
@@ -8388,7 +8356,7 @@ namespace details {
                 return *this;
             } else {
                 using type_t = std::invoke_result_t<UnaryOp, this_type>;
-                using browse_t = std::conditional_t<arrnd_type<type_t> && arrnd_same_depth<type_t, this_type>, type_t,
+                using browse_t = std::conditional_t<arrnd_depths_match<type_t, this_type>, type_t,
                     replaced_type<type_t>>;
 
                 if (empty()) {
@@ -8400,7 +8368,7 @@ namespace details {
                 }
 
                 auto invoke = [&op](auto page) {
-                    if constexpr (arrnd_type<type_t> && arrnd_same_depth<type_t, this_type>) {
+                    if constexpr (arrnd_depths_match<type_t, this_type>) {
                         return op(page);
                     } else { // in case that the returned type of op is not arrnd_type, then it should not be void returned type
                         return browse_t({1}, {op(page)});
@@ -9946,16 +9914,16 @@ namespace details {
 
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
         typename ArrndInfo = arrnd_info<>, iterator_of_type_integral InputDimsIt>
-        requires(invocable_no_arrnd<Func>)
+        requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
     arrnd(const InputDimsIt&, const InputDimsIt&, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
         typename ArrndInfo = arrnd_info<>, iterable_of_type_integral Cont>
-        requires(invocable_no_arrnd<Func>)
+        requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
     arrnd(const Cont&, Func&&) -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
     template <typename Func, typename DataStorageTraits = simple_vector_traits<std::invoke_result_t<Func>>,
         typename ArrndInfo = arrnd_info<>>
-        requires(invocable_no_arrnd<Func>)
+        requires(!arrnd_type<Func> && std::is_invocable_v<Func>)
     arrnd(std::initializer_list<typename DataStorageTraits::storage_type::size_type>, Func&&)
         -> arrnd<std::invoke_result_t<Func>, DataStorageTraits, ArrndInfo>;
 
@@ -10461,11 +10429,9 @@ namespace details {
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto close(const Arrnd1& lhs, const Arrnd2 rhs,
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& atol
-        = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>(),
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& rtol
-        = default_rtol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>())
+    [[nodiscard]] inline constexpr auto close(const Arrnd1& lhs, const Arrnd2& rhs,
+        const arrnd_tol_type<Arrnd1, Arrnd2>& atol = default_atol<arrnd_tol_type<Arrnd1, Arrnd2>>(),
+        const arrnd_tol_type<Arrnd1, Arrnd2>& rtol = default_rtol<arrnd_tol_type<Arrnd1, Arrnd2>>())
     {
         return lhs.template transform<Arrnd1::depth>(rhs, [&atol, &rtol](const auto& a, const auto& b) {
             return details::close(a, b, atol, rtol);
@@ -10475,10 +10441,8 @@ namespace details {
     template <arrnd_type Arrnd, typename U>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr auto close(const Arrnd& arr, const U& value,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_lhs_tol_type<Arrnd, U>& atol = default_atol<arrnd_lhs_tol_type<Arrnd, U>>(),
+        const arrnd_lhs_tol_type<Arrnd, U>& rtol = default_rtol<arrnd_lhs_tol_type<Arrnd, U>>())
     {
         return arr.template transform<Arrnd::depth>([&atol, &rtol, &value](const auto& a) {
             return details::close(a, value, atol, rtol);
@@ -10488,10 +10452,8 @@ namespace details {
     template <typename U, arrnd_type Arrnd>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr auto close(const U& value, const Arrnd& arr,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_rhs_tol_type<U, Arrnd>& atol = default_atol<arrnd_rhs_tol_type<U, Arrnd>>(),
+        const arrnd_rhs_tol_type<U, Arrnd>& rtol = default_rtol<arrnd_rhs_tol_type<U, Arrnd>>())
     {
         return close<Arrnd, U>(arr, value, atol, rtol);
     }
@@ -11454,10 +11416,8 @@ namespace details {
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
     [[nodiscard]] inline constexpr bool all_close(const Arrnd1& lhs, const Arrnd2& rhs,
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& atol
-        = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>(),
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& rtol
-        = default_rtol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>())
+        const arrnd_tol_type<Arrnd1, Arrnd2>& atol = default_atol<arrnd_tol_type<Arrnd1, Arrnd2>>(),
+        const arrnd_tol_type<Arrnd1, Arrnd2>& rtol = default_rtol<arrnd_tol_type<Arrnd1, Arrnd2>>())
     {
         return lhs.template all_match<Arrnd1::depth>(rhs, [&atol, &rtol](const auto& a, const auto& b) {
             return details::close(a, b, atol, rtol);
@@ -11467,10 +11427,8 @@ namespace details {
     template <arrnd_type Arrnd, typename U>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr bool all_close(const Arrnd& arr, const U& u,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_lhs_tol_type<Arrnd, U>& atol = default_atol<arrnd_lhs_tol_type<Arrnd, U>>(),
+        const arrnd_lhs_tol_type<Arrnd, U>& rtol = default_rtol<arrnd_lhs_tol_type<Arrnd, U>>())
     {
         return arr.template all<Arrnd::depth>([&u, &atol, &rtol](const auto& a) {
             return details::close(a, u, atol, rtol);
@@ -11480,10 +11438,8 @@ namespace details {
     template <typename U, arrnd_type Arrnd>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr bool all_close(const U& u, const Arrnd& arr,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_rhs_tol_type<U, Arrnd>& atol = default_atol<arrnd_rhs_tol_type<U, Arrnd>>(),
+        const arrnd_rhs_tol_type<U, Arrnd>& rtol = default_rtol<arrnd_rhs_tol_type<U, Arrnd>>())
     {
         return all_close<Arrnd, U>(arr, u, atol, rtol);
     }
@@ -11512,10 +11468,8 @@ namespace details {
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
     [[nodiscard]] inline constexpr bool any_close(const Arrnd1& lhs, const Arrnd2& rhs,
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& atol
-        = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>(),
-        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& rtol
-        = default_rtol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>())
+        const arrnd_tol_type<Arrnd1, Arrnd2>& atol = default_atol<arrnd_tol_type<Arrnd1, Arrnd2>>(),
+        const arrnd_tol_type<Arrnd1, Arrnd2>& rtol = default_rtol<arrnd_tol_type<Arrnd1, Arrnd2>>())
     {
         return lhs.template any_match<Arrnd1::depth>(rhs, [&atol, &rtol](const auto& a, const auto& b) {
             return details::close(a, b, atol, rtol);
@@ -11525,10 +11479,8 @@ namespace details {
     template <arrnd_type Arrnd, typename U>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr bool any_close(const Arrnd& arr, const U& u,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_lhs_tol_type<Arrnd, U>& atol = default_atol<arrnd_lhs_tol_type<Arrnd, U>>(),
+        const arrnd_lhs_tol_type<Arrnd, U>& rtol = default_rtol<arrnd_lhs_tol_type<Arrnd, U>>())
     {
         return arr.template any<Arrnd::depth>([&u, &atol, &rtol](const auto& a) {
             return details::close(a, u, atol, rtol);
@@ -11538,10 +11490,8 @@ namespace details {
     template <typename U, arrnd_type Arrnd>
         requires(!arrnd_type<U>)
     [[nodiscard]] inline constexpr bool any_close(const U& u, const Arrnd& arr,
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
-        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
-        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
-        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
+        const arrnd_rhs_tol_type<U, Arrnd>& atol = default_atol<arrnd_rhs_tol_type<U, Arrnd>>(),
+        const arrnd_rhs_tol_type<U, Arrnd>& rtol = default_rtol<arrnd_rhs_tol_type<U, Arrnd>>())
     {
         return any_close<Arrnd, U>(arr, u, atol, rtol);
     }
@@ -11629,7 +11579,7 @@ namespace details {
             typename Arrnd::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";
             ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
-                    << type_name<typename Arrnd::template inner_value_type<Arrnd::depth>>() << "\"\n";
+                    << type_name<typename Arrnd::template inner_type<Arrnd::depth>::value_type>() << "\"\n";
             to_json(ajm.os_, arr, nvertical_spaces);
             ajm.os_ << "}";
             return ajm.os_;
@@ -11706,13 +11656,7 @@ namespace details {
 }
 
 using details::arrnd_type;
-using details::arrnd_of_type;
-using details::arrnd_of_template_type;
-using details::arrnd_with_trait;
 using details::arrnd_json;
-
-using details::arrnd_inner;
-using details::arrnd_inner_t;
 
 using details::arrnd_traversal_type;
 using details::arrnd_traversal_result;

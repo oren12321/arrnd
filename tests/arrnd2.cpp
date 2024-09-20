@@ -1381,26 +1381,6 @@ TEST(arrnd_test, can_have_complie_time_calculated_depth)
     EXPECT_FALSE(oc::arrnd::arrnd<oc::arrnd::arrnd<oc::arrnd::arrnd<int>>>({1, 1}).is_flat);
 }
 
-TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_type_at_compile_time)
-{
-    static_assert(oc::arrnd::arrnd_of_type<oc::arrnd::arrnd<int>, int>);
-    static_assert(!oc::arrnd::arrnd_of_type<oc::arrnd::arrnd<int>, double>);
-}
-
-TEST(arrnd_test, can_check_if_array_base_type_is_of_specific_template_type_at_compile_time)
-{
-    oc::arrnd::arrnd<std::complex<int>>{}; // required due to MSVC compiler issue
-
-    static_assert(oc::arrnd::arrnd_of_template_type<oc::arrnd::arrnd<std::complex<int>>, std::complex>);
-    static_assert(!oc::arrnd::arrnd_of_template_type<oc::arrnd::arrnd<std::complex<int>>, std::vector>);
-}
-
-TEST(arrnd_test, can_check_if_array_base_type_have_specific_type_trait_at_compile_time)
-{
-    static_assert(oc::arrnd::arrnd_with_trait<oc::arrnd::arrnd<int>, std::is_integral>);
-    static_assert(!oc::arrnd::arrnd_with_trait<oc::arrnd::arrnd<int>, std::is_floating_point>);
-}
-
 TEST(arrnd_test, check_nested_arrnd_common_shape)
 {
     using namespace oc::arrnd;
@@ -1409,13 +1389,15 @@ TEST(arrnd_test, check_nested_arrnd_common_shape)
 
     nested_type{}; // required due to MSVC compiler issue
 
-    static_assert(std::is_same_v<nested_type, oc::arrnd::arrnd_inner_t<nested_type, 0>>);
-    static_assert(std::is_same_v<nested_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 1>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 2>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type, 3>>);
-    static_assert(std::is_same_v<nested_type::value_type::value_type::value_type, oc::arrnd::arrnd_inner_t<nested_type>>);
+    static_assert(std::is_same_v<nested_type, typename nested_type::template inner_type<0>>);
+    static_assert(std::is_same_v<nested_type::value_type, typename nested_type::template inner_type<1>>);
+    static_assert(std::is_same_v<nested_type::value_type::value_type, typename nested_type::template inner_type<2>>);
+    static_assert(
+        std::is_same_v<nested_type::value_type::value_type::value_type, typename nested_type::template inner_type<3>>);
+    static_assert(
+        std::is_same_v<nested_type::value_type::value_type::value_type, typename nested_type::template inner_type<2>::value_type>);
     static_assert(std::is_same_v<nested_type::value_type::value_type::value_type::value_type, std::complex<int>>);
-    static_assert(std::is_same_v<oc::arrnd::arrnd_inner_t<nested_type>::value_type, std::complex<int>>);
+    static_assert(std::is_same_v<typename nested_type::template inner_type<3>::value_type, std::complex<int>>);
 }
 
 TEST(arrnd_test, can_replace_arrnd_common_shape_at_specific_depth)
@@ -1424,10 +1406,10 @@ TEST(arrnd_test, can_replace_arrnd_common_shape_at_specific_depth)
 
     using nested_type = arrnd<arrnd<arrnd<arrnd<int>>>>;
 
-    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 0>, arrnd<double>>);
-    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 1>, arrnd<arrnd<double>>>);
-    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 2>, arrnd<arrnd<arrnd<double>>>>);
-    static_assert(std::is_same_v<nested_type::inner_replaced_type<double, 3>, arrnd<arrnd<arrnd<arrnd<double>>>>>);
+    static_assert(std::is_same_v<nested_type::replaced_inner_type<double, 0>, arrnd<double>>);
+    static_assert(std::is_same_v<nested_type::replaced_inner_type<double, 1>, arrnd<arrnd<double>>>);
+    static_assert(std::is_same_v<nested_type::replaced_inner_type<double, 2>, arrnd<arrnd<arrnd<double>>>>);
+    static_assert(std::is_same_v<nested_type::replaced_inner_type<double, 3>, arrnd<arrnd<arrnd<arrnd<double>>>>>);
 }
 
 TEST(arrnd_test, have_read_write_access_to_its_cells)

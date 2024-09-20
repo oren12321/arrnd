@@ -331,57 +331,62 @@ template <typename U, arrnd_type Arrnd>
     return any_match<Arrnd::depth>(lhs, rhs);
 }
 
+namespace details {
+    template <typename Func, typename... Args>
+    concept invocable_no_arrnd = !arrnd_type<Func> && std::is_invocable_v<Func, Args...>;
+}
+
 template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Level>::value_type>)
 [[nodiscard]] inline constexpr bool all(const Arrnd& arr, Pred&& pred)
 {
     return arr.template all<Level>(std::forward<Pred>(pred));
 }
 
 template <arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Arrnd::depth>::value_type>)
 [[nodiscard]] inline constexpr bool all(const Arrnd& arr, Pred&& pred)
 {
     return all<Arrnd::depth>(arr, std::forward<Pred>(pred));
 }
 
 template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Level>::value_type>)
 [[nodiscard]] inline constexpr bool any(const Arrnd& arr, Pred&& pred)
 {
     return arr.template any<Level>(std::forward<Pred>(pred));
 }
 
 template <arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Arrnd::depth>::value_type>)
 [[nodiscard]] inline constexpr bool any(const Arrnd& arr, Pred&& pred)
 {
     return any<Arrnd::depth>(arr, std::forward<Pred>(pred));
 }
 
 template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Level>::value_type>)
 [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
 {
     return arr.template all<Level>(axis, std::forward<Pred>(pred));
 }
 
 template <arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Arrnd::depth>::value_type>)
 [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
 {
     return all<Arrnd::depth>(arr, axis, std::forward<Pred>(pred));
 }
 
 template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Level>::value_type>)
 [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
 {
     return arr.template any<Level>(axis, std::forward<Pred>(pred));
 }
 
 template <arrnd_type Arrnd, typename Pred>
-    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
+    requires(details::invocable_no_arrnd<Pred, typename Arrnd::template inner_type<Arrnd::depth>::value_type>)
 [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
 {
     return any<Arrnd::depth>(arr, axis, std::forward<Pred>(pred));
