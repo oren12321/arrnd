@@ -8170,99 +8170,6 @@ namespace details {
             return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(find_impl);
         }
 
-        [[nodiscard]] constexpr auto det() const
-            requires(this_type::is_flat)
-        {
-            assert(info_.dims().size() >= 2);
-
-            std::function<value_type(this_type)> det_impl;
-
-            det_impl = [&](this_type arr) {
-                assert(ismatrix(arr.info()));
-                assert(arr.info().dims().front() == arr.info().dims().back());
-                size_type n = arr.info().dims().front();
-
-                if (n == 1) {
-                    return arr(0);
-                }
-
-                if (n == 2) {
-                    return arr(0) * arr(3) - arr(1) * arr(2);
-                }
-
-                value_type sign{1};
-                value_type d{0};
-
-                for (size_type j = 0; j < n; ++j) {
-                    value_type p{arr[{0, j}]};
-                    if (p != value_type{0}) {
-                        d += sign * p
-                            * det_impl(arr.exclude({0}, {0})
-                                           .transform<0>([j](const auto& val) {
-                                               return val.exclude({1}, {j});
-                                           })
-                                           .merge()
-                                           .merge());
-                    }
-                    sign *= value_type{-1};
-                }
-                return d;
-            };
-
-            if (ismatrix(info_)) {
-                return this_type({1}, det_impl(*this));
-            }
-
-            return browse(2, [det_impl](auto page) {
-                return det_impl(page);
-            });
-        }
-
-        [[nodiscard]] constexpr auto inv() const
-            requires(this_type::is_flat)
-        {
-            assert(info_.dims().size() >= 2);
-
-            std::function<this_type(this_type)> inv_impl;
-
-            inv_impl = [&](this_type arr) {
-                assert(ismatrix(arr.info()));
-                assert(arr.info().dims().front() == arr.info().dims().back());
-
-                value_type d = arr.det()(0);
-                assert(d != value_type{0});
-                size_type n = arr.info().dims().front();
-
-                this_type res(arr.info().dims());
-
-                for (size_type i = 0; i < n; ++i) {
-                    value_type sign = (i + 1) % 2 == 0 ? value_type{-1} : value_type{1};
-                    for (size_type j = 0; j < n; ++j) {
-
-                        res[{i, j}] = sign
-                            * arr.exclude({0}, {i})
-                                  .transform<0>([j](const auto& val) {
-                                      return val.exclude({1}, {j});
-                                  })
-                                  .merge()
-                                  .merge()
-                                  .det()(0);
-                        sign *= value_type{-1};
-                    }
-                }
-
-                return (value_type{1} / d) * transpose(res, {1, 0});
-            };
-
-            if (ismatrix(info_)) {
-                return inv_impl(*this);
-            }
-
-            return browse(2, [inv_impl](auto page) {
-                return inv_impl(page);
-            });
-        }
-
         [[nodiscard]] constexpr auto expand(size_type axis, size_type division = 0) const
         {
             using expand_t = replaced_type<this_type>;
@@ -10229,13 +10136,112 @@ namespace details {
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto det(const Arrnd& arr)
     {
-        return arr.det();
+        if (size(arr.info()) < 2) {
+            throw std::invalid_argument("invalid input - should be at least matrix");
+        }
+
+        std::function<typename Arrnd::value_type(Arrnd)> det_impl;
+
+        det_impl = [&](const auto& arr) {
+            if (!ismatrix(arr.info())) {
+                throw std::invalid_argument("invalid input - not matrix");
+            }
+
+            if (arr.info().dims().front() != arr.info().dims().back()) {
+                throw std::invalid_argument("invalid input - not squared");
+            }
+
+            auto n = arr.info().dims().front();
+
+            if (n == 1) {
+                return arr(0);
+            }
+
+            if (n == 2) {
+                return arr(0) * arr(3) - arr(1) * arr(2);
+            }
+
+            typename Arrnd::value_type sign{1};
+            typename Arrnd::value_type d{0};
+
+            for (typename Arrnd::size_type j = 0; j < n; ++j) {
+                typename Arrnd::value_type p{arr[{0, j}]};
+                if (p != typename Arrnd::value_type{0}) {
+                    d += sign * p
+                        * det_impl(arr.exclude({0}, {0})
+                                       .template transform<0>([j](const auto& val) {
+                                           return val.exclude({1}, {j});
+                                       })
+                                       .merge()
+                                       .merge());
+                }
+                sign *= typename Arrnd::value_type{-1};
+            }
+            return d;
+        };
+
+        if (ismatrix(arr.info())) {
+            return Arrnd({1}, det_impl(arr));
+        }
+
+        return arr.browse(2, [det_impl](auto page) {
+            return det_impl(page);
+        });
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto inv(const Arrnd& arr)
     {
-        return arr.inv();
+        if (size(arr.info()) < 2) {
+            throw std::invalid_argument("invalid input - should be at least matrix");
+        }
+
+        std::function<Arrnd(Arrnd)> inv_impl;
+
+        inv_impl = [&](const auto& arr) {
+            if (!ismatrix(arr.info())) {
+                throw std::invalid_argument("invalid input - not matrix");
+            }
+
+            if (arr.info().dims().front() != arr.info().dims().back()) {
+                throw std::invalid_argument("invalid input - not squared");
+            }
+
+            typename Arrnd::value_type d = det(arr)(0);
+            if (d == typename Arrnd::value_type{ 0 }) {
+                throw std::invalid_argument("invalid input - zero determinant");
+            }
+
+            auto n = arr.info().dims().front();
+
+            typename Arrnd::this_type res(arr.info().dims());
+
+            for (typename Arrnd::size_type i = 0; i < n; ++i) {
+                typename Arrnd::value_type sign
+                    = (i + 1) % 2 == 0 ? typename Arrnd::value_type{-1} : typename Arrnd::value_type{1};
+                for (typename Arrnd::size_type j = 0; j < n; ++j) {
+
+                    res[{i, j}] = sign
+                        * det(arr.exclude({0}, {i})
+                                  .template transform<0>([j](const auto& val) {
+                                      return val.exclude({1}, {j});
+                                  })
+                                  .merge()
+                                  .merge())(0);
+                    sign *= typename Arrnd::value_type{-1};
+                }
+            }
+
+            return (typename Arrnd::value_type{1} / d) * transpose(res, {1, 0});
+        };
+
+        if (ismatrix(arr.info())) {
+            return inv_impl(arr);
+        }
+
+        return arr.browse(2, [inv_impl](auto page) {
+            return inv_impl(page);
+        });
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
