@@ -7,7 +7,7 @@ Usage example (simple matrices multiplication):
 ```cpp
 using namespace oc::arrnd;
 
-oc::arrnd<int> mul(const arrnd<int>& lhs, const arrnd<int>& rhs)
+arrnd<int> mul(const arrnd<int>& lhs, const arrnd<int>& rhs)
 {
     assert(size(lhs.info()) == 2);
     assert(size(rhs.info()) == 2);
