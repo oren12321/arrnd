@@ -3417,7 +3417,7 @@ TEST(arrnd_test, ostream_operator)
             ss << oc::arrnd::arrnd_json << oc::arrnd::arrnd<int>{};
             EXPECT_EQ("{\n"
                       "    \"base_type\": \"int\"\n"
-                      "    \"header\": \"empty\",\n"
+                      "    \"info\": \"empty\",\n"
                       "    \"values\": \"empty\"\n"
                       "}",
                 ss.str());
@@ -3436,7 +3436,7 @@ TEST(arrnd_test, ostream_operator)
             ss << oc::arrnd::arrnd_json << arr;
             EXPECT_EQ("{\n"
                       "    \"base_type\": \"int\"\n"
-                      "    \"header\": \"total: 6\\ndims: [6]\\nstrides: [1]\\nindices_boundary: [0,6,1)\\nhints "
+                      "    \"info\": \"total: 6\\ndims: [6]\\nstrides: [1]\\nindices_boundary: [0,6,1)\\nhints "
                       "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 10000\",\n"
                       "    \"values\": \"[1 2 3 4 5 6]\"\n"
                       "}",
@@ -3469,7 +3469,7 @@ TEST(arrnd_test, ostream_operator)
                   "   [10 12]]]]",
             ss.str());
 
-        // array header ostream operator
+        // array info ostream operator
         {
             ss.str(std::string{});
             ss << arr.info();
@@ -3523,45 +3523,45 @@ TEST(arrnd_test, ostream_operator)
             EXPECT_EQ(
                 "{\n"
                 "    \"base_type\": \"int\"\n"
-                "    \"header\": \"total: 2\\ndims: [2]\\nstrides: [1]\\nindices_boundary: [0,2,1)\\nhints "
+                "    \"info\": \"total: 2\\ndims: [2]\\nstrides: [1]\\nindices_boundary: [0,2,1)\\nhints "
                 "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 10000\",\n"
                 "    \"arrays\": [\n"
                 "        {\n"
-                "            \"header\": \"total: 2\\ndims: [1 2]\\nstrides: [2 1]\\nindices_boundary: [0,2,1)\\nhints "
+                "            \"info\": \"total: 2\\ndims: [1 2]\\nstrides: [2 1]\\nindices_boundary: [0,2,1)\\nhints "
                 "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 01100\",\n"
                 "            \"arrays\": [\n"
                 "                {\n"
-                "                    \"header\": \"empty\",\n"
+                "                    \"info\": \"empty\",\n"
                 "                    \"values\": \"empty\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"empty\",\n"
+                "                    \"info\": \"empty\",\n"
                 "                    \"values\": \"empty\"\n"
                 "                }\n"
                 "            ]\n"
                 "        },\n"
                 "        {\n"
-                "            \"header\": \"total: 4\\ndims: [2 2]\\nstrides: [2 1]\\nindices_boundary: [0,4,1)\\nhints "
+                "            \"info\": \"total: 4\\ndims: [2 2]\\nstrides: [2 1]\\nindices_boundary: [0,4,1)\\nhints "
                 "(transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): 01000\",\n"
                 "            \"arrays\": [\n"
                 "                {\n"
-                "                    \"header\": \"total: 5\\ndims: [5]\\nstrides: [1]\\nindices_boundary: "
+                "                    \"info\": \"total: 5\\ndims: [5]\\nstrides: [1]\\nindices_boundary: "
                 "[0,5,1)\\nhints (transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): "
                 "10000\",\n"
                 "                    \"values\": \"[1 2 3 4 5]\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"total: 12\\ndims: [2 1 2 3]\\nstrides: [6 6 3 "
+                "                    \"info\": \"total: 12\\ndims: [2 1 2 3]\\nstrides: [6 6 3 "
                 "1]\\nindices_boundary: [0,12,1)\\nhints (transposed|sliced|continuous): 001\\nprops "
                 "(vector|matrix|row|column|scalar): 00000\",\n"
                 "                    \"values\": \"[[[[6 7 8]\\n   [9 10 11]]]\\n [[[12 13 14]\\n   [15 16 17]]]]\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"empty\",\n"
+                "                    \"info\": \"empty\",\n"
                 "                    \"values\": \"empty\"\n"
                 "                },\n"
                 "                {\n"
-                "                    \"header\": \"total: 4\\ndims: [4 1]\\nstrides: [1 1]\\nindices_boundary: "
+                "                    \"info\": \"total: 4\\ndims: [4 1]\\nstrides: [1 1]\\nindices_boundary: "
                 "[0,4,1)\\nhints (transposed|sliced|continuous): 001\\nprops (vector|matrix|row|column|scalar): "
                 "01010\",\n"
                 "                    \"values\": \"[[18]\\n [19]\\n [20]\\n [21]]\"\n"

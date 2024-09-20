@@ -3625,8 +3625,8 @@ namespace details {
 
         friend class arrnd_const_iterator<Arrnd>;
 
-        explicit constexpr arrnd_iterator(pointer data, const indexer_type& gen)
-            : gen_(gen)
+        explicit constexpr arrnd_iterator(pointer data, const indexer_type& indexer)
+            : indexer_(indexer)
             , data_(data)
         { }
 
@@ -3642,7 +3642,7 @@ namespace details {
 
         constexpr arrnd_iterator& operator++() noexcept
         {
-            ++gen_;
+            ++indexer_;
             return *this;
         }
 
@@ -3655,7 +3655,7 @@ namespace details {
 
         constexpr arrnd_iterator& operator+=(difference_type count) noexcept
         {
-            gen_ += count;
+            indexer_ += count;
             return *this;
         }
 
@@ -3668,7 +3668,7 @@ namespace details {
 
         constexpr arrnd_iterator& operator--() noexcept
         {
-            --gen_;
+            --indexer_;
             return *this;
         }
 
@@ -3681,7 +3681,7 @@ namespace details {
 
         constexpr arrnd_iterator& operator-=(difference_type count) noexcept
         {
-            gen_ -= count;
+            indexer_ -= count;
             return *this;
         }
 
@@ -3694,36 +3694,36 @@ namespace details {
 
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
-            return data_[*gen_];
+            return data_[*indexer_];
         }
 
         [[nodiscard]] constexpr bool operator==(const arrnd_iterator& iter) const noexcept
         {
-            return gen_ == iter.gen_;
+            return indexer_ == iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<(const arrnd_iterator& iter) const noexcept
         {
-            return gen_ < iter.gen_;
+            return indexer_ < iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<=(const arrnd_iterator& iter) const noexcept
         {
-            return gen_ <= iter.gen_;
+            return indexer_ <= iter.indexer_;
         }
 
         [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
-            return data_[gen_[index]];
+            return data_[indexer_[index]];
         }
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_iterator& other) const noexcept
         {
-            return gen_ - other.gen_;
+            return indexer_ - other.indexer_;
         }
 
     private:
-        indexer_type gen_;
+        indexer_type indexer_;
         pointer data_ = nullptr;
     };
 
@@ -3739,8 +3739,8 @@ namespace details {
         using indexer_type = typename Arrnd::indexer_type;
         using returned_type_category = arrnd_returned_element_iterator_tag;
 
-        explicit constexpr arrnd_const_iterator(pointer data, const indexer_type& gen)
-            : gen_(gen)
+        explicit constexpr arrnd_const_iterator(pointer data, const indexer_type& indexer)
+            : indexer_(indexer)
             , data_(data)
         { }
 
@@ -3755,30 +3755,30 @@ namespace details {
         constexpr ~arrnd_const_iterator() = default;
 
         constexpr arrnd_const_iterator(const arrnd_iterator<Arrnd>& other)
-            : gen_(other.gen_)
+            : indexer_(other.indexer_)
             , data_(other.data_)
         { }
         constexpr arrnd_const_iterator& operator=(const arrnd_iterator<Arrnd>& other)
         {
-            gen_ = other.gen_;
+            indexer_ = other.indexer_;
             data_ = other.data_;
             return *this;
         }
 
         constexpr arrnd_const_iterator(arrnd_iterator<Arrnd>&& other)
-            : gen_(std::move(other.gen_))
+            : indexer_(std::move(other.indexer_))
             , data_(std::move(other.data_))
         { }
         constexpr arrnd_const_iterator& operator=(arrnd_iterator<Arrnd>&& other)
         {
-            gen_ = std::move(other.gen_);
+            indexer_ = std::move(other.indexer_);
             data_ = std::move(other.data_);
             return *this;
         }
 
         constexpr arrnd_const_iterator& operator++() noexcept
         {
-            ++gen_;
+            ++indexer_;
             return *this;
         }
 
@@ -3791,7 +3791,7 @@ namespace details {
 
         constexpr arrnd_const_iterator& operator+=(difference_type count) noexcept
         {
-            gen_ += count;
+            indexer_ += count;
             return *this;
         }
 
@@ -3804,7 +3804,7 @@ namespace details {
 
         constexpr arrnd_const_iterator& operator--() noexcept
         {
-            --gen_;
+            --indexer_;
             return *this;
         }
 
@@ -3817,7 +3817,7 @@ namespace details {
 
         constexpr arrnd_const_iterator& operator-=(difference_type count) noexcept
         {
-            gen_ -= count;
+            indexer_ -= count;
             return *this;
         }
 
@@ -3830,36 +3830,36 @@ namespace details {
 
         [[nodiscard]] constexpr const reference operator*() const noexcept
         {
-            return data_[*gen_];
+            return data_[*indexer_];
         }
 
         [[nodiscard]] constexpr bool operator==(const arrnd_const_iterator& iter) const noexcept
         {
-            return gen_ == iter.gen_;
+            return indexer_ == iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<(const arrnd_const_iterator& iter) const noexcept
         {
-            return gen_ < iter.gen_;
+            return indexer_ < iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<=(const arrnd_const_iterator& iter) const noexcept
         {
-            return gen_ <= iter.gen_;
+            return indexer_ <= iter.indexer_;
         }
 
         [[nodiscard]] constexpr const reference operator[](difference_type index) const noexcept
         {
-            return data_[gen_[index]];
+            return data_[indexer_[index]];
         }
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_const_iterator& other) const noexcept
         {
-            return gen_ - other.gen_;
+            return indexer_ - other.indexer_;
         }
 
     private:
-        indexer_type gen_;
+        indexer_type indexer_;
         pointer data_ = nullptr;
     };
 
@@ -3880,8 +3880,8 @@ namespace details {
 
         friend arrnd_const_reverse_iterator<Arrnd>;
 
-        explicit constexpr arrnd_reverse_iterator(pointer data, const indexer_type& gen)
-            : gen_(gen)
+        explicit constexpr arrnd_reverse_iterator(pointer data, const indexer_type& indexer)
+            : indexer_(indexer)
             , data_(data)
         { }
 
@@ -3897,7 +3897,7 @@ namespace details {
 
         constexpr arrnd_reverse_iterator& operator++() noexcept
         {
-            --gen_;
+            --indexer_;
             return *this;
         }
 
@@ -3910,7 +3910,7 @@ namespace details {
 
         constexpr arrnd_reverse_iterator& operator+=(difference_type count) noexcept
         {
-            gen_ -= count;
+            indexer_ -= count;
             return *this;
         }
 
@@ -3923,7 +3923,7 @@ namespace details {
 
         constexpr arrnd_reverse_iterator& operator--() noexcept
         {
-            ++gen_;
+            ++indexer_;
             return *this;
         }
 
@@ -3936,7 +3936,7 @@ namespace details {
 
         constexpr arrnd_reverse_iterator& operator-=(difference_type count) noexcept
         {
-            gen_ += count;
+            indexer_ += count;
             return *this;
         }
 
@@ -3949,36 +3949,36 @@ namespace details {
 
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
-            return data_[*gen_];
+            return data_[*indexer_];
         }
 
         [[nodiscard]] constexpr bool operator==(const arrnd_reverse_iterator& iter) const noexcept
         {
-            return gen_ == iter.gen_;
+            return indexer_ == iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<(const arrnd_reverse_iterator& iter) const noexcept
         {
-            return iter.gen_ < gen_;
+            return iter.indexer_ < indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<=(const arrnd_reverse_iterator& iter) const noexcept
         {
-            return iter.gen_ <= gen_;
+            return iter.indexer_ <= indexer_;
         }
 
         [[nodiscard]] constexpr reference operator[](difference_type index) const noexcept
         {
-            return data_[gen_[index]];
+            return data_[indexer_[index]];
         }
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_reverse_iterator& other) const noexcept
         {
-            return other.gen_ - gen_;
+            return other.indexer_ - indexer_;
         }
 
     private:
-        indexer_type gen_;
+        indexer_type indexer_;
         pointer data_ = nullptr;
     };
 
@@ -3994,8 +3994,8 @@ namespace details {
         using indexer_type = typename Arrnd::indexer_type;
         using returned_type_category = arrnd_returned_element_iterator_tag;
 
-        explicit constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& gen)
-            : gen_(gen)
+        explicit constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& indexer)
+            : indexer_(indexer)
             , data_(data)
         { }
 
@@ -4010,30 +4010,30 @@ namespace details {
         constexpr ~arrnd_const_reverse_iterator() = default;
 
         constexpr arrnd_const_reverse_iterator(const arrnd_reverse_iterator<Arrnd>& other)
-            : gen_(other.gen_)
+            : indexer_(other.indexer_)
             , data_(other.data_)
         { }
         constexpr arrnd_const_reverse_iterator& operator=(const arrnd_reverse_iterator<Arrnd>& other)
         {
-            gen_ = other.gen_;
+            indexer_ = other.indexer_;
             data_ = other.data_;
             return *this;
         }
 
         constexpr arrnd_const_reverse_iterator(arrnd_reverse_iterator<Arrnd>&& other)
-            : gen_(std::move(other.gen_))
+            : indexer_(std::move(other.indexer_))
             , data_(std::move(other.data_))
         { }
         constexpr arrnd_const_reverse_iterator& operator=(arrnd_reverse_iterator<Arrnd>&& other)
         {
-            gen_ = std::move(other.gen_);
+            indexer_ = std::move(other.indexer_);
             data_ = std::move(other.data_);
             return *this;
         }
 
         constexpr arrnd_const_reverse_iterator& operator++() noexcept
         {
-            --gen_;
+            --indexer_;
             return *this;
         }
 
@@ -4046,7 +4046,7 @@ namespace details {
 
         constexpr arrnd_const_reverse_iterator& operator+=(difference_type count) noexcept
         {
-            gen_ -= count;
+            indexer_ -= count;
             return *this;
         }
 
@@ -4059,7 +4059,7 @@ namespace details {
 
         constexpr arrnd_const_reverse_iterator& operator--() noexcept
         {
-            ++gen_;
+            ++indexer_;
             return *this;
         }
 
@@ -4072,7 +4072,7 @@ namespace details {
 
         constexpr arrnd_const_reverse_iterator& operator-=(difference_type count) noexcept
         {
-            gen_ += count;
+            indexer_ += count;
             return *this;
         }
 
@@ -4085,36 +4085,36 @@ namespace details {
 
         [[nodiscard]] constexpr const reference operator*() const noexcept
         {
-            return data_[*gen_];
+            return data_[*indexer_];
         }
 
         [[nodiscard]] constexpr bool operator==(const arrnd_const_reverse_iterator& iter) const noexcept
         {
-            return gen_ == iter.gen_;
+            return indexer_ == iter.indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<(const arrnd_const_reverse_iterator& iter) const noexcept
         {
-            return iter.gen_ < gen_;
+            return iter.indexer_ < indexer_;
         }
 
         [[nodiscard]] constexpr bool operator<=(const arrnd_const_reverse_iterator& iter) const noexcept
         {
-            return iter.gen_ <= gen_;
+            return iter.indexer_ <= indexer_;
         }
 
         [[nodiscard]] constexpr const reference operator[](difference_type index) const noexcept
         {
-            return data_[gen_[index]];
+            return data_[indexer_[index]];
         }
 
         [[nodiscard]] constexpr difference_type operator-(const arrnd_const_reverse_iterator& other) const noexcept
         {
-            return other.gen_ - gen_;
+            return other.indexer_ - indexer_;
         }
 
     private:
-        indexer_type gen_;
+        indexer_type indexer_;
         pointer data_ = nullptr;
     };
 
@@ -5675,26 +5675,24 @@ namespace details {
                 return *this;
             }
 
-            for (indexer_type gen(info_); gen; ++gen) {
-                (*this)[*gen] = value;
-            }
+            std::fill(begin(), end(), value);
 
             return *this;
         }
 
         virtual constexpr ~arrnd() = default;
 
-        explicit constexpr arrnd(const info_type& hdr, std::shared_ptr<storage_type> shared_storage)
-            : info_(hdr)
+        explicit constexpr arrnd(const info_type& info, std::shared_ptr<storage_type> shared_storage)
+            : info_(info)
             , shared_storage_(shared_storage)
         {
             // check if the arrnd type invariant is legal.
-            if (!oc::arrnd::empty(hdr)) {
+            if (!oc::arrnd::empty(info)) {
                 if (!shared_storage || std::empty(*shared_storage)) {
                     throw std::invalid_argument("invalid null or empty shared storage");
                 }
-                if (!(hdr.indices_boundary().start() < shared_storage->size()
-                        && hdr.indices_boundary().stop() <= shared_storage->size())) {
+                if (!(info.indices_boundary().start() < shared_storage->size()
+                        && info.indices_boundary().stop() <= shared_storage->size())) {
                     throw std::invalid_argument("invalid shared storage size not in indices boundaries");
                 }
             }
@@ -11631,8 +11629,8 @@ namespace details {
             return arr;
         }
 
-        for (typename Arrnd::indexer_type gen(arr.info()); gen; ++gen) {
-            ++arr[*gen];
+        for (auto& value : arr) {
+            ++value;
         }
         return arr;
     }
@@ -11664,8 +11662,8 @@ namespace details {
             return arr;
         }
 
-        for (typename Arrnd::indexer_type gen(arr.info()); gen; ++gen) {
-            --arr[*gen];
+        for (auto& value : arr) {
+            --value;
         }
         return arr;
     }
@@ -11971,29 +11969,29 @@ namespace details {
     }
 
     template <arrnd_type Arrnd>
-    std::ostream& ostream_operator_recursive(std::ostream& os, const Arrnd& arco,
+    std::ostream& ostream_operator_recursive(std::ostream& os, const Arrnd& arr,
         typename Arrnd::size_type nvectical_spaces, typename Arrnd::size_type ndepth_spaces)
     {
         constexpr auto block_start_char = Arrnd::depth > 0 ? '{' : '[';
         constexpr auto block_stop_char = Arrnd::depth > 0 ? '}' : ']';
 
-        if (arco.empty()) {
+        if (arr.empty()) {
             os << block_start_char << block_stop_char;
             return os;
         }
 
         if constexpr (Arrnd::is_flat) {
-            if (std::ssize(arco.info().dims()) > 1) {
+            if (std::ssize(arr.info().dims()) > 1) {
                 os << block_start_char;
-                for (typename Arrnd::size_type i = 0; i < arco.info().dims()[0]; ++i) {
+                for (typename Arrnd::size_type i = 0; i < arr.info().dims()[0]; ++i) {
                     if (i > 0) {
                         for (typename Arrnd::size_type i = 0; i < ndepth_spaces + nvectical_spaces + 1; ++i) {
                             os << ' ';
                         }
                     }
                     ostream_operator_recursive(
-                        os, arco[typename Arrnd::boundary_type{i, i + 1}], nvectical_spaces + 1, ndepth_spaces);
-                    if (i < arco.info().dims()[0] - 1) {
+                        os, arr[typename Arrnd::boundary_type{i, i + 1}], nvectical_spaces + 1, ndepth_spaces);
+                    if (i < arr.info().dims()[0] - 1) {
                         os << '\n';
                     }
                 }
@@ -12002,20 +12000,19 @@ namespace details {
             }
 
             os << block_start_char;
-            typename Arrnd::indexer_type gen(arco.info());
-            os << arco[*gen];
-            ++gen;
-            for (; gen; ++gen) {
-                os << ' ' << arco[*gen];
+            auto arr_it = arr.cbegin();
+            os << *arr_it;
+            ++arr_it;
+            for (; arr_it != arr.cend(); ++arr_it) {
+                os << ' ' << *arr_it;
             }
             os << block_stop_char;
         } else {
             os << block_start_char;
-            typename Arrnd::indexer_type gen(arco.info());
             typename Arrnd::size_type inner_count = 0;
-            for (; gen; ++gen) {
-                ostream_operator_recursive(os, arco[*gen], nvectical_spaces, ndepth_spaces + 1);
-                if (++inner_count < total(arco.info())) {
+            for (const auto& inner : arr) {
+                ostream_operator_recursive(os, inner, nvectical_spaces, ndepth_spaces + 1);
+                if (++inner_count < total(arr.info())) {
                     os << '\n';
                     for (typename Arrnd::size_type i = 0; i < ndepth_spaces + 1; ++i) {
                         os << ' ';
@@ -12029,11 +12026,11 @@ namespace details {
     }
 
     template <arrnd_type Arrnd>
-    inline constexpr std::ostream& operator<<(std::ostream& os, const Arrnd& arco)
+    inline constexpr std::ostream& operator<<(std::ostream& os, const Arrnd& arr)
     {
         typename Arrnd::size_type nvectical_spaces = 0;
         typename Arrnd::size_type ndepth_spaces = 0;
-        return ostream_operator_recursive(os, arco, nvectical_spaces, ndepth_spaces);
+        return ostream_operator_recursive(os, arr, nvectical_spaces, ndepth_spaces);
     }
 
     struct arrnd_json_manip {
@@ -12049,20 +12046,20 @@ namespace details {
         }
 
         template <arrnd_type Arrnd>
-        friend std::ostream& operator<<(const arrnd_json_manip& ajm, const Arrnd& arco)
+        friend std::ostream& operator<<(const arrnd_json_manip& ajm, const Arrnd& arr)
         {
             typename Arrnd::size_type nvertical_spaces = 4;
             ajm.os_ << "{\n";
             ajm.os_ << std::string(nvertical_spaces, ' ') << "\"base_type\": \""
                     << type_name<typename Arrnd::template inner_value_type<Arrnd::depth>>() << "\"\n";
-            to_json(ajm.os_, arco, nvertical_spaces);
+            to_json(ajm.os_, arr, nvertical_spaces);
             ajm.os_ << "}";
             return ajm.os_;
         }
 
     private:
         template <arrnd_type Arrnd>
-        static std::ostream& to_json(std::ostream& os, const Arrnd& arco, typename Arrnd::size_type nvertical_spaces)
+        static std::ostream& to_json(std::ostream& os, const Arrnd& arr, typename Arrnd::size_type nvertical_spaces)
         {
             auto replace_newlines = [](std::string s) {
                 std::string::size_type n = 0;
@@ -12074,43 +12071,43 @@ namespace details {
                 return d;
             };
 
-            if (arco.empty()) {
-                os << std::string(nvertical_spaces, ' ') << "\"header\": \"empty\",\n";
+            if (arr.empty()) {
+                os << std::string(nvertical_spaces, ' ') << "\"info\": \"empty\",\n";
                 os << std::string(nvertical_spaces, ' ') << "\"values\": \"empty\"\n";
                 return os;
             }
 
             if constexpr (Arrnd::is_flat) {
-                // header
+                // info
                 {
                     std::stringstream ss;
-                    ss << arco.info();
-                    os << std::string(nvertical_spaces, ' ') << "\"header\": \"" << replace_newlines(ss.str())
+                    ss << arr.info();
+                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str())
                        << "\",\n";
                 }
                 // array
                 {
                     std::stringstream ss;
-                    ss << arco;
+                    ss << arr;
                     os << std::string(nvertical_spaces, ' ') << "\"values\": \"" << replace_newlines(ss.str())
                        << "\"\n";
                 }
             } else {
-                // header
+                // info
                 {
                     std::stringstream ss;
-                    ss << arco.info();
-                    os << std::string(nvertical_spaces, ' ') << "\"header\": \"" << replace_newlines(ss.str())
+                    ss << arr.info();
+                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str())
                        << "\",\n";
                 }
                 // arrays
                 os << std::string(nvertical_spaces, ' ') << "\"arrays\": [\n";
-                typename Arrnd::indexer_type gen(arco.info());
-                for (typename Arrnd::size_type i = 0; gen; ++gen, ++i) {
+                auto arr_it = arr.cbegin();
+                for (typename Arrnd::size_type i = 0; arr_it != arr.cend(); ++arr_it, ++i) {
                     os << std::string(nvertical_spaces + 4, ' ') << "{\n";
-                    to_json(os, arco[*gen], nvertical_spaces + 8);
+                    to_json(os, *arr_it, nvertical_spaces + 8);
                     os << std::string(nvertical_spaces + 4, ' ') << '}';
-                    if (i < total(arco.info()) - 1) {
+                    if (i < total(arr.info()) - 1) {
                         os << ',';
                     }
                     os << '\n';
