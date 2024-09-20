@@ -14,6 +14,7 @@
 #include <thread>
 
 #include <oc/arrnd.h>
+#include "tmpaux.h"
 
 TEST(arrnd_test, basic_math_and_trigo)
 {

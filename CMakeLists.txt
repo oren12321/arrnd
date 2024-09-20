@@ -72,7 +72,7 @@ FetchContent_Declare(
     FIND_PACKAGE_ARGS)
 FetchContent_MakeAvailable(benchmark)
 
-file(GLOB_RECURSE TESTS_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/*.cpp")
+file(GLOB_RECURSE TESTS_SRCS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/*.cpp" "${PROJECT_SOURCE_DIR}/tests/*.h")
 add_executable(${PROJECT_NAME}_tests ${TESTS_SRCS})
 target_include_directories(${PROJECT_NAME}_tests PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}_tests ${PROJECT_NAME}::${PROJECT_NAME} GTest::gtest GTest::gtest_main)

@@ -8383,8 +8383,7 @@ namespace details {
 
                 pages(page_size).template apply<0>(std::forward<UnaryOp>(op));
                 return *this;
-            }
-            else {
+            } else {
                 using type_t = std::invoke_result_t<UnaryOp, this_type>;
                 using browse_t = std::conditional_t<arrnd_type<type_t> && arrnd_same_depth<type_t, this_type>, type_t,
                     replaced_type<type_t>>;
@@ -8413,8 +8412,7 @@ namespace details {
             }
         }
 
-        [[nodiscard]] constexpr auto pages(
-            size_type page_size = 2) const
+        [[nodiscard]] constexpr auto pages(size_type page_size = 2) const
         {
             using pages_t = replaced_type<this_type>;
 
@@ -8525,13 +8523,13 @@ namespace details {
             }
 
             if (std::any_of(first_axis, last_axis, [&](auto axis) {
-                return axis < 0 || axis >= size(info_);
+                    return axis < 0 || axis >= size(info_);
                 })) {
                 throw std::invalid_argument("invalid axes for dims");
             }
 
             if (std::any_of(std::begin(info_.dims()), std::end(info_.dims()), [division](auto dim) {
-                return division <= 0 || division > dim;
+                    return division <= 0 || division > dim;
                 })) {
                 throw std::invalid_argument("invalid division");
             }
@@ -8605,8 +8603,7 @@ namespace details {
                 return split_t{};
             }
 
-            if(!std::is_sorted(first_ind, last_ind))
-            {
+            if (!std::is_sorted(first_ind, last_ind)) {
                 throw std::invalid_argument("invalid indices - not sorted");
             }
 
@@ -8855,8 +8852,7 @@ namespace details {
                     prev_ind = current_ind;
                 }
                 if (current_ind + 1 < current_dim) {
-                    exclude_impl(
-                        arr(boundary_type{current_ind + 1, current_dim}, size(arr.info()) - current_depth),
+                    exclude_impl(arr(boundary_type{current_ind + 1, current_dim}, size(arr.info()) - current_depth),
                         current_depth - 1);
                 }
             };
@@ -9135,7 +9131,7 @@ namespace details {
         template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr bool all() const
         {
-            return all<this_type::depth>([](const auto& value) {
+            return all<AtDepth>([](const auto& value) {
                 return static_cast<bool>(value);
             });
         }
@@ -9206,8 +9202,6 @@ namespace details {
             });
         }
 
-        
-
         template <std::size_t AtDepth = this_type::depth, typename Pred>
         [[nodiscard]] constexpr bool any(Pred&& pred) const
         {
@@ -9233,7 +9227,7 @@ namespace details {
         template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr bool any() const
         {
-            return any<this_type::depth>([](const auto& value) {
+            return any<AtDepth>([](const auto& value) {
                 return static_cast<bool>(value);
             });
         }
@@ -9303,8 +9297,6 @@ namespace details {
                 }
             });
         }
-
-
 
         template <std::size_t AtDepth = this_type::depth, typename Pred>
         [[nodiscard]] constexpr replaced_type<bool> all(size_type axis, Pred pred) const
@@ -10209,7 +10201,7 @@ namespace details {
             }
 
             typename Arrnd::value_type d = det(arr)(0);
-            if (d == typename Arrnd::value_type{ 0 }) {
+            if (d == typename Arrnd::value_type{0}) {
                 throw std::invalid_argument("invalid input - zero determinant");
             }
 
@@ -10245,112 +10237,19 @@ namespace details {
         });
     }
 
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto insert(
-        const Arrnd1& lhs, const Arrnd2& rhs, typename Arrnd1::size_type ind, typename Arrnd1::size_type axis = 0)
-    {
-        return lhs.insert(rhs, ind, axis);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto reduce(const Arrnd& arr, Func&& func)
-    {
-        return arr.template reduce<Level>(std::forward<Func>(func));
-    }
-    template <arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto reduce(const Arrnd& arr, Func&& func)
-    {
-        return reduce<Arrnd::depth>(arr, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename T, typename Func>
-    [[nodiscard]] inline constexpr auto fold(const Arrnd& arr, const T& init, Func&& func)
-    {
-        return arr.template fold<Level>(init, std::forward<Func>(func));
-    }
-    template <arrnd_type Arrnd, typename T, typename Func>
-    [[nodiscard]] inline constexpr auto fold(const Arrnd& arr, const T& init, Func&& func)
-    {
-        return fold<Arrnd::depth>(arr, init, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto reduce(const Arrnd& arr, typename Arrnd::size_type axis, Func&& func)
-    {
-        return arr.template reduce<Level>(axis, std::forward<Func>(func));
-    }
-    template <arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto reduce(const Arrnd& arr, typename Arrnd::size_type axis, Func&& func)
-    {
-        return reduce<Arrnd::depth>(arr, axis, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd1, arrnd_type Arrnd2, typename Func>
-    [[nodiscard]] inline constexpr auto fold(
-        const Arrnd1& arr, typename Arrnd1::size_type axis, const Arrnd2& inits, Func&& func)
-    {
-        return arr.template fold<Level>(axis, inits, std::forward<Func>(func));
-    }
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2, typename Func>
-    [[nodiscard]] inline constexpr auto fold(
-        const Arrnd1& arr, typename Arrnd1::size_type axis, const Arrnd2& inits, Func&& func)
-    {
-        return fold<Arrnd1::depth>(arr, axis, inits, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
-    {
-        return arr.template all<Level>(axis, std::forward<Pred>(pred));
-    }
-
-    template <arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
-    [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
-    {
-        return all<Arrnd::depth>(arr, axis, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template all<Level>(axis);
-    }
-
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto all(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return all<Arrnd::depth>(arr, axis);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
-    {
-        return arr.template any<Level>(axis, std::forward<Pred>(pred));
-    }
-
-    template <arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
-    [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis, Pred&& pred)
-    {
-        return any<Arrnd::depth>(arr, axis, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis)
-    {
-        return arr.template any<Level>(axis);
+        return arr.template all<Arrnd::depth>(axis);
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto any(const Arrnd& arr, typename Arrnd::size_type axis)
     {
-        return any<Arrnd::depth>(arr, axis);
+        return arr.template any<Arrnd::depth>(axis);
     }
 
-        template <std::size_t AtDepth, arrnd_type Arrnd>
+    template <std::size_t AtDepth, arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sum(const Arrnd& arr)
     {
         return arr.template reduce<AtDepth>([](const auto& a, const auto& b) {
@@ -10418,9 +10317,7 @@ namespace details {
         });
     }
 
-
-
-        template <arrnd_type Arrnd>
+    template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr auto sum(const Arrnd& arr)
     {
         return sum<Arrnd::depth, Arrnd>(arr);
@@ -10466,178 +10363,6 @@ namespace details {
     [[nodiscard]] inline constexpr auto prod(const Arrnd& arr, typename Arrnd::size_type axis)
     {
         return prod<Arrnd::depth, Arrnd>(arr, axis);
-    }
-
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto transform(const Arrnd& arr, Func&& func)
-    {
-        return arr.template transform<Level>(std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr auto transform(const Arrnd& lhs, const U& rhs, Func&& func)
-    {
-        return lhs.template transform<Level>(rhs, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename Func>
-    [[nodiscard]] inline constexpr auto transform(const Arrnd& arr, Func&& func)
-    {
-        return transform<Arrnd::depth>(arr, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr auto transform(const Arrnd& lhs, const U& rhs, Func&& func)
-    {
-        return transform<Arrnd::depth>(lhs, rhs, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-    inline constexpr auto& apply(Arrnd&& arr, Func&& func)
-    {
-        return arr.template apply<Level>(std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    inline constexpr auto& apply(Arrnd&& lhs, const U& rhs, Func&& func)
-    {
-        return lhs.template apply<Level>(rhs, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename Func>
-    inline constexpr auto& apply(Arrnd&& arr, Func&& func)
-    {
-        return apply<std::remove_cvref_t<Arrnd>::depth>(std::forward<Arrnd>(arr), std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    inline constexpr auto& apply(Arrnd&& lhs, const U& rhs, Func&& func)
-    {
-        return apply<std::remove_cvref_t<Arrnd>::depth>(std::forward<Arrnd>(lhs), rhs, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Func>
-    inline constexpr auto& apply(Arrnd& arr, Func&& func)
-    {
-        return arr.template apply<Level>(std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    inline constexpr auto& apply(Arrnd& lhs, const U& rhs, Func&& func)
-    {
-        return lhs.template apply<Level>(rhs, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename Func>
-    inline constexpr auto& apply(Arrnd& arr, Func&& func)
-    {
-        return apply<std::remove_cvref_t<Arrnd>::depth>(arr, std::forward<Func>(func));
-    }
-
-    template <arrnd_type Arrnd, typename U, typename Func>
-        requires arrnd_type<U>
-    inline constexpr auto& apply(Arrnd& lhs, const U& rhs, Func&& func)
-    {
-        return apply<std::remove_cvref_t<Arrnd>::depth>(lhs, rhs, std::forward<Func>(func));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, Pred&& pred)
-    {
-        return arr.template filter<Level>(std::forward<Pred>(pred));
-    }
-    template <arrnd_type Arrnd, typename Pred>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, Pred&& pred)
-    {
-        return filter<Arrnd::depth>(arr, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd1& arr, const Arrnd2& selector)
-    {
-        return arr.template filter<Level>(selector);
-    }
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd1& arr, const Arrnd2& selector)
-    {
-        return filter<Arrnd1::depth>(arr, selector);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-    [[nodiscard]] inline constexpr auto find(const Arrnd& arr, Pred&& pred)
-    {
-        return arr.template find<Level>(std::forward<Pred>(pred));
-    }
-    template <arrnd_type Arrnd, typename Pred>
-    [[nodiscard]] inline constexpr auto find(const Arrnd& arr, Pred&& pred)
-    {
-        return find<Arrnd::depth>(arr, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto find(const Arrnd1& arr, const Arrnd2& mask)
-    {
-        return arr.template find<Level>(mask);
-    }
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto find(const Arrnd1& arr, const Arrnd2& mask)
-    {
-        return find<Arrnd1::depth>(arr, mask);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, iterator_of_type_integral InputIt>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, InputIt first_ind, InputIt last_ind)
-    {
-        return filter<Level>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                {std::distance(first_ind, last_ind)}, first_ind, last_ind));
-    }
-    template <std::int64_t Level, arrnd_type Arrnd, iterable_of_type_integral Cont>
-        requires(!arrnd_type<Cont>)
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, const Cont& indices)
-    {
-        return filter<Level>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                {std::ssize(indices)}, std::begin(indices), std::end(indices)));
-    }
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto filter(
-        const Arrnd& arr, std::initializer_list<typename Arrnd::size_type> indices)
-    {
-        return filter<Level>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                {std::ssize(indices)}, indices.begin(), indices.end()));
-    }
-
-    template <arrnd_type Arrnd, iterator_of_type_integral InputIt>
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, InputIt first_ind, InputIt last_ind)
-    {
-        return filter<Arrnd::depth>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                {std::distance(first_ind, last_ind)}, first_ind, last_ind));
-    }
-    template <arrnd_type Arrnd, iterable_of_type_integral Cont>
-        requires(!arrnd_type<Cont>)
-    [[nodiscard]] inline constexpr auto filter(const Arrnd& arr, const Cont& indices)
-    {
-        return filter<Arrnd::depth>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                {std::ssize(indices)}, std::begin(indices), std::end(indices)));
-    }
-    template <arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr auto filter(
-        const Arrnd& arr, std::initializer_list<typename Arrnd::size_type> indices)
-    {
-        std::initializer_list<typename Arrnd::size_type> dims{std::size(indices)};
-        return filter<Arrnd::depth>(arr,
-            typename Arrnd::template replaced_type<typename Arrnd::size_type>(
-                dims.begin(), dims.end(), indices.begin(), indices.end()));
     }
 
     template <arrnd_type Arrnd, iterator_of_type_integral InputIt>
@@ -10733,7 +10458,7 @@ namespace details {
         });
     }
 
-        template <arrnd_type Arrnd1, arrnd_type Arrnd2>
+    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
     [[nodiscard]] inline constexpr auto close(const Arrnd1& lhs, const Arrnd2 rhs,
         const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& atol
         = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>(),
@@ -11691,168 +11416,16 @@ namespace details {
         return operator--(arr, int{});
     }
 
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool all(const Arrnd& arr, Pred&& pred)
-    {
-        return arr.template all<Level>(std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr bool all(const Arrnd& arr)
-    {
-        return arr.template all<Level>();
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U, typename Pred>
-    [[nodiscard]] inline constexpr bool all_match(const Arrnd& lhs, const U& rhs, Pred&& pred)
-    {
-        return lhs.template all_match<Level>(rhs, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U>
-    [[nodiscard]] inline constexpr bool all_match(const Arrnd& lhs, const U& rhs)
-    {
-        return lhs.template all_match<Level>(rhs);
-    }
-
-    template <std::int64_t Level, typename U, arrnd_type Arrnd, typename Pred>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool all_match(const U& lhs, const Arrnd& rhs, Pred&& pred)
-    {
-        return rhs.template all_match<Level>(lhs, [&pred](const auto& a, const auto& b) {
-            return pred(b, a);
-        });
-    }
-
-    template <std::int64_t Level, typename U, arrnd_type Arrnd>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool all_match(const U& lhs, const Arrnd& rhs)
-    {
-        return rhs.template all_match<Level>(lhs);
-    }
-
-    template <arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
-    [[nodiscard]] inline constexpr bool all(const Arrnd& arr, Pred&& pred)
-    {
-        return all<Arrnd::depth>(arr, std::forward<Pred>(pred));
-    }
-
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr bool all(const Arrnd& arr)
     {
-        return all<Arrnd::depth>(arr);
-    }
-
-    template <arrnd_type Arrnd, typename U, typename Pred>
-    [[nodiscard]] inline constexpr bool all_match(const Arrnd& lhs, const U& rhs, Pred&& pred)
-    {
-        return all_match<Arrnd::depth>(lhs, rhs, std::forward<Pred>(pred));
-    }
-
-    template <arrnd_type Arrnd, typename U>
-    [[nodiscard]] inline constexpr bool all_match(const Arrnd& lhs, const U& rhs)
-    {
-        return all_match<Arrnd::depth>(lhs, rhs);
-    }
-
-    template <typename U, arrnd_type Arrnd, typename Pred>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool all_match(const U& lhs, const Arrnd& rhs, Pred&& pred)
-    {
-        return all_match<Arrnd::depth>(lhs, rhs, std::forward<Pred>(pred));
-    }
-
-    template <typename U, arrnd_type Arrnd>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool all_match(const U& lhs, const Arrnd& rhs)
-    {
-        return all_match<Arrnd::depth>(lhs, rhs);
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Level>>)
-    [[nodiscard]] inline constexpr bool any(const Arrnd& arr, Pred&& pred)
-    {
-        return arr.template any<Level>(std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd>
-    [[nodiscard]] inline constexpr bool any(const Arrnd& arr)
-    {
-        return arr.template any<Level>();
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U, typename Pred>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr bool any_match(const Arrnd& lhs, const U& rhs, Pred&& pred)
-    {
-        return lhs.template any_match<Level>(rhs, std::forward<Pred>(pred));
-    }
-
-    template <std::int64_t Level, arrnd_type Arrnd, typename U>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr bool any_match(const Arrnd& lhs, const U& rhs)
-    {
-        return lhs.template any_match<Level>(rhs);
-    }
-
-    template <std::int64_t Level, typename U, arrnd_type Arrnd, typename Pred>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool any_match(const U& lhs, const Arrnd& rhs, Pred&& pred)
-    {
-        return rhs.template any_match<Level>(lhs, [&pred](const auto& a, const auto& b) {
-            return pred(b, a);
-        });
-    }
-
-    template <std::int64_t Level, typename U, arrnd_type Arrnd>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool any_match(const U& lhs, const Arrnd& rhs)
-    {
-        return rhs.template any_match<Level>(lhs);
-    }
-
-    template <arrnd_type Arrnd, typename Pred>
-        requires(invocable_no_arrnd<Pred, typename Arrnd::template inner_value_type<Arrnd::depth>>)
-    [[nodiscard]] inline constexpr bool any(const Arrnd& arr, Pred&& pred)
-    {
-        return any<Arrnd::depth>(arr, std::forward<Pred>(pred));
+        return arr.template all<Arrnd::depth>();
     }
 
     template <arrnd_type Arrnd>
     [[nodiscard]] inline constexpr bool any(const Arrnd& arr)
     {
-        return any<Arrnd::depth>(arr);
-    }
-
-    template <arrnd_type Arrnd, typename U, typename Pred>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr bool any_match(const Arrnd& lhs, const U& rhs, Pred&& pred)
-    {
-        return any_match<Arrnd::depth>(lhs, rhs, std::forward<Pred>(pred));
-    }
-
-    template <arrnd_type Arrnd, typename U>
-        requires arrnd_type<U>
-    [[nodiscard]] inline constexpr bool any_match(const Arrnd& lhs, const U& rhs)
-    {
-        return any_match<Arrnd::depth>(lhs, rhs);
-    }
-
-    template <typename U, arrnd_type Arrnd, typename Pred>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool any_match(const U& lhs, const Arrnd& rhs, Pred&& pred)
-    {
-        return any_match<Arrnd::depth>(lhs, rhs, std::forward<Pred>(pred));
-    }
-
-    template <typename U, arrnd_type Arrnd>
-        requires(!arrnd_type<U>)
-    [[nodiscard]] inline constexpr bool any_match(const U& lhs, const Arrnd& rhs)
-    {
-        return any_match<Arrnd::depth>(lhs, rhs);
+        return arr.template any<Arrnd::depth>();
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
@@ -12085,8 +11658,7 @@ namespace details {
                 {
                     std::stringstream ss;
                     ss << arr.info();
-                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str())
-                       << "\",\n";
+                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str()) << "\",\n";
                 }
                 // array
                 {
@@ -12100,8 +11672,7 @@ namespace details {
                 {
                     std::stringstream ss;
                     ss << arr.info();
-                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str())
-                       << "\",\n";
+                    os << std::string(nvertical_spaces, ' ') << "\"info\": \"" << replace_newlines(ss.str()) << "\",\n";
                 }
                 // arrays
                 os << std::string(nvertical_spaces, ' ') << "\"arrays\": [\n";
@@ -12162,14 +11733,6 @@ using details::concat;
 
 using details::all;
 using details::any;
-using details::all_match;
-using details::any_match;
-using details::transform;
-using details::apply;
-using details::reduce;
-using details::fold;
-using details::filter;
-using details::find;
 using details::all_equal;
 using details::all_close;
 using details::any_equal;

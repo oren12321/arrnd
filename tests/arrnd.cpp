@@ -14,6 +14,7 @@
 #include <thread>
 
 #include <oc/arrnd.h>
+#include "tmpaux.h"
 
 //#include <chrono>
 //#include <thread>
