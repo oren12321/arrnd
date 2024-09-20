@@ -9431,29 +9431,6 @@ namespace details {
         }
 
         template <arrnd_type Arrnd>
-        [[nodiscard]] constexpr replaced_type<bool> close(const Arrnd& arr,
-            const compliant_tol_type<Arrnd, this_type::depth>& atol
-            = default_atol<compliant_tol_type<Arrnd, this_type::depth>>(),
-            const compliant_tol_type<Arrnd, this_type::depth>& rtol
-            = default_rtol<compliant_tol_type<Arrnd, this_type::depth>>()) const
-        {
-            return transform<this_type::depth>(arr, [&atol, &rtol](const auto& a, const auto& b) {
-                return details::close(a, b, atol, rtol);
-            });
-        }
-
-        template <typename U>
-            requires(!arrnd_type<U>)
-        [[nodiscard]] constexpr replaced_type<bool> close(const U& value,
-            const tol_type<U, this_type::depth>& atol = default_atol<tol_type<U, this_type::depth>>(),
-            const tol_type<U, this_type::depth>& rtol = default_rtol<tol_type<U, this_type::depth>>()) const
-        {
-            return transform<this_type::depth>([&atol, &rtol, &value](const auto& a) {
-                return details::close(a, value, atol, rtol);
-            });
-        }
-
-        template <arrnd_type Arrnd>
         [[nodiscard]] constexpr bool all_equal(const Arrnd& arr) const
         {
             return all_match<this_type::depth>(arr);
@@ -10823,32 +10800,40 @@ namespace details {
         });
     }
 
-    template <arrnd_type Arrnd1, arrnd_type Arrnd2>
-    [[nodiscard]] inline constexpr auto close(const Arrnd1& lhs, const Arrnd2& rhs,
-        const typename Arrnd1::template compliant_tol_type<Arrnd2>& atol
-        = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2>>(),
-        const typename Arrnd1::template compliant_tol_type<Arrnd2>& rtol
-        = default_rtol<typename Arrnd1::template compliant_tol_type<Arrnd2>>())
+        template <arrnd_type Arrnd1, arrnd_type Arrnd2>
+    [[nodiscard]] inline constexpr auto close(const Arrnd1& lhs, const Arrnd2 rhs,
+        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& atol
+        = default_atol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>(),
+        const typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>& rtol
+        = default_rtol<typename Arrnd1::template compliant_tol_type<Arrnd2, Arrnd1::depth>>())
     {
-        return lhs.close(rhs, atol, rtol);
+        return lhs.template transform<Arrnd1::depth>(rhs, [&atol, &rtol](const auto& a, const auto& b) {
+            return details::close(a, b, atol, rtol);
+        });
     }
 
-    template <arrnd_type Arrnd, typename T>
-        requires(!arrnd_type<T>)
-    [[nodiscard]] inline constexpr auto close(const Arrnd& lhs, const T& rhs,
-        const typename Arrnd::template tol_type<T>& atol = default_atol<typename Arrnd::template tol_type<T>>(),
-        const typename Arrnd::template tol_type<T>& rtol = default_rtol<typename Arrnd::template tol_type<T>>())
+    template <arrnd_type Arrnd, typename U>
+        requires(!arrnd_type<U>)
+    [[nodiscard]] inline constexpr auto close(const Arrnd& arr, const U& value,
+        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
+        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
+        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
+        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
     {
-        return lhs.close(rhs, atol, rtol);
+        return arr.template transform<Arrnd::depth>([&atol, &rtol, &value](const auto& a) {
+            return details::close(a, value, atol, rtol);
+        });
     }
 
-    template <typename T, arrnd_type Arrnd>
-        requires(!arrnd_type<T>)
-    [[nodiscard]] inline constexpr auto close(const T& lhs, const Arrnd& rhs,
-        const typename Arrnd::template tol_type<T>& atol = default_atol<typename Arrnd::template tol_type<T>>(),
-        const typename Arrnd::template tol_type<T>& rtol = default_rtol<typename Arrnd::template tol_type<T>>())
+    template <typename U, arrnd_type Arrnd>
+        requires(!arrnd_type<U>)
+    [[nodiscard]] inline constexpr auto close(const U& value, const Arrnd& arr,
+        const typename Arrnd::template tol_type<U, Arrnd::depth>& atol
+        = default_atol<typename Arrnd::template tol_type<U, Arrnd::depth>>(),
+        const typename Arrnd::template tol_type<U, Arrnd::depth>& rtol
+        = default_rtol<typename Arrnd::template tol_type<U, Arrnd::depth>>())
     {
-        return rhs.close(lhs, atol, rtol);
+        return close<Arrnd, U>(arr, value, atol, rtol);
     }
 
     template <arrnd_type Arrnd1, arrnd_type Arrnd2>
