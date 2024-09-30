@@ -3625,7 +3625,6 @@ namespace details {
         using reference = typename Arrnd::value_type&;
 
         using indexer_type = typename Arrnd::indexer_type;
-        using returned_type_category = arrnd_returned_element_iterator_tag;
 
         friend class arrnd_const_iterator<Arrnd>;
 
@@ -3741,7 +3740,6 @@ namespace details {
         using reference = typename Arrnd::value_type&;
 
         using indexer_type = typename Arrnd::indexer_type;
-        using returned_type_category = arrnd_returned_element_iterator_tag;
 
         explicit constexpr arrnd_const_iterator(pointer data, const indexer_type& indexer)
             : indexer_(indexer)
@@ -3880,7 +3878,6 @@ namespace details {
         using reference = typename Arrnd::value_type&;
 
         using indexer_type = typename Arrnd::indexer_type;
-        using returned_type_category = arrnd_returned_element_iterator_tag;
 
         friend arrnd_const_reverse_iterator<Arrnd>;
 
@@ -3996,7 +3993,6 @@ namespace details {
         using reference = typename Arrnd::value_type&;
 
         using indexer_type = typename Arrnd::indexer_type;
-        using returned_type_category = arrnd_returned_element_iterator_tag;
 
         explicit constexpr arrnd_const_reverse_iterator(pointer data, const indexer_type& indexer)
             : indexer_(indexer)
@@ -4134,7 +4130,6 @@ namespace details {
         using reference = Arrnd&;
 
         using windows_slider_type = typename Arrnd::windows_slider_type;
-        using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         friend arrnd_slice_const_iterator<Arrnd>;
 
@@ -4257,7 +4252,6 @@ namespace details {
         using const_reference = const Arrnd&;
 
         using windows_slider_type = typename Arrnd::windows_slider_type;
-        using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         explicit constexpr arrnd_slice_const_iterator(const value_type& arrnd_ref, const windows_slider_type& far)
             : arrnd_ref_(arrnd_ref)
@@ -4407,7 +4401,6 @@ namespace details {
         using reference = Arrnd&;
 
         using windows_slider_type = typename Arrnd::windows_slider_type;
-        using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         friend arrnd_slice_reverse_const_iterator<Arrnd>;
 
@@ -4530,7 +4523,6 @@ namespace details {
         using const_reference = const Arrnd&;
 
         using windows_slider_type = typename Arrnd::windows_slider_type;
-        using returned_type_category = arrnd_returned_slice_iterator_tag;
 
         explicit constexpr arrnd_slice_reverse_const_iterator(
             const value_type& arrnd_ref, const windows_slider_type& far)
