@@ -14,7 +14,6 @@
 #include <thread>
 
 #include <oc/arrnd.h>
-#include "tmpaux.h"
 
 //#include <chrono>
 //#include <thread>
@@ -1072,6 +1071,37 @@ TEST(arrnd_test, arrnd_view_from_external_type)
     arrnd_info info({3, 1, 2});
 
     arrnd view(info, svec);
+
+    view.apply([](int value) {
+        return value * 2;
+    });
+
+    std::vector<int> res{2, 4, 6, 8, 10, 12};
+
+    EXPECT_TRUE(std::equal(std::begin(*svec), std::end(*svec), std::begin(res), std::end(res)));
+}
+
+template <typename T, template <typename> typename Allocator = std::allocator>
+struct dummy_traits {
+    using storage_type = std::vector<T, Allocator<T>>;
+    template <typename U>
+    using replaced_type = dummy_traits<U, Allocator>;
+    template <typename U>
+    using allocator_template_type = Allocator<U>;
+};
+
+TEST(arrnd_test, arrnd_view_from_std_vector)
+{
+    using namespace oc::arrnd;
+
+    // create arrnd view from continuous container that fully/parially
+    // implements simple_vector/simple_array interface.
+
+    std::shared_ptr<std::vector<int>> svec
+        = std::shared_ptr<std::vector<int>>(new std::vector<int>{1, 2, 3, 4, 5, 6});
+    arrnd_info info({3, 1, 2});
+
+    arrnd<int, dummy_traits<int>> view(info, svec);
 
     view.apply([](int value) {
         return value * 2;
@@ -2424,14 +2454,14 @@ TEST(arrnd_test, sort)
         EXPECT_TRUE(all_equal(arrnd<int>().sort(0, dummy_less), arrnd<int>()));
         EXPECT_TRUE(all_equal(arrnd<arrnd<int>>().sort /*<0>*/ (dummy_less), arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(
-            /*sort<1>(arrnd<arrnd<int>>(), dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
+            /*sort<1>(arrnd<arrnd<int>>(), dummy_less)*/ arrnd<arrnd<int>>().transform<0>(
                 [dummy_less](const auto& val) {
                     return val.clone().sort(dummy_less);
                 }),
             arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(arrnd<arrnd<int>>() .sort /*<0>*/ (0, dummy_less), arrnd<arrnd<int>>()));
         EXPECT_TRUE(all_equal(
-            /*sort<1>(arrnd<arrnd<int>>(), 0, dummy_less)*/ transform<0>(arrnd<arrnd<int>>(),
+            /*sort<1>(arrnd<arrnd<int>>(), 0, dummy_less)*/ arrnd<arrnd<int>>().transform<0>(
                 [dummy_less](const auto& val) {
                     return val.clone().sort(0, dummy_less);
                 }),
@@ -2450,17 +2480,17 @@ TEST(arrnd_test, sort)
     // standard sort
     {
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, std::less<>{})*/
-            transform<0>(iarr,
+            iarr.transform<0>(
                 [](const auto& val) {
                     return val.is_sorted(std::less<>{});
                 }),
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, std::less<>{});
-        auto sarr1 = transform<0>(iarr, [](const auto& val) {
+        auto sarr1 = iarr.transform<0>([](const auto& val) {
             return val.clone().sort(std::less<>{});
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, std::less<>{})*/
-            transform<0>(sarr1,
+            sarr1.transform<0>(
                 [](const auto& val) {
                     return val.is_sorted(std::less<>{});
                 }),
@@ -2483,19 +2513,19 @@ TEST(arrnd_test, sort)
     // sort by axis
     {
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, 0, sum_less)*/
-            transform<0>(iarr,
+            iarr.transform<0>(
                 [sum_less](const auto& val) {
                     return val.is_sorted(0, sum_less);
                 }),
             arrnd<bool>({1, 2}, {false, false})));
         //auto sarr1 = sort(iarr, 0, sum_less);
-        auto sarr1 = transform<0>(iarr, [sum_less](const auto& val) {
+        auto sarr1 = iarr.transform<0>([sum_less](const auto& val) {
             return val.clone().sort(0, sum_less);
         });
         //std::cout << iarr << "\n";
         //std::cout << sarr1 << "\n";
         EXPECT_TRUE(all_equal(/*is_sorted(sarr1, 0, sum_less)*/
-            transform<0>(sarr1,
+            sarr1.transform<0>(
                 [sum_less](const auto& val) {
                     return val.is_sorted(0, sum_less);
                 }),
@@ -2506,17 +2536,17 @@ TEST(arrnd_test, sort)
                     arrnd<int>({3, 1, 2}, {3, 6, 4, 6, 8, 2})})));
 
         EXPECT_TRUE(all_equal(/*is_sorted(iarr, 1, sum_less)*/
-            transform<0>(iarr,
+            iarr.transform<0>(
                 [sum_less](const auto& val) {
                     return val.is_sorted(1, sum_less);
                 }),
             arrnd<bool>({1, 2}, {false, true})));
         //auto sarr2 = sort(iarr, 1, sum_less);
-        auto sarr2 = transform<0>(iarr, [sum_less](const auto& val) {
+        auto sarr2 = iarr.transform<0>([sum_less](const auto& val) {
             return val.clone().sort(1, sum_less);
         });
         EXPECT_TRUE(all_equal(/*is_sorted(sarr2, 1, sum_less)*/
-            transform<0>(sarr2,
+            sarr2.transform<0>(
                 [sum_less](const auto& val) {
                     return val.is_sorted(1, sum_less);
                 }),
@@ -2550,7 +2580,7 @@ TEST(arrnd_test, expand)
 
     arrnd<arrnd<int>> narr({2, 1}, {arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({2, 3}, {1, 2, 3, 4, 5, 6})});
 
-    EXPECT_TRUE(all_equal(/*expand(narr, 0)*/ transform<0>(narr,
+    EXPECT_TRUE(all_equal(/*expand(narr, 0)*/ narr.transform<0>(
                               [](const auto& val) {
                                   return val.expand(0);
                               }),
@@ -2610,7 +2640,7 @@ TEST(arrnd_test, expand)
         {
             arrnd<int> arr(
                 {12, 1, 2}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
-            apply(arr, multiply/*, 2*/);
+            arr.apply(multiply/*, 2*/);
             EXPECT_TRUE(all_equal(res, arr));
         }
 
@@ -2624,7 +2654,7 @@ TEST(arrnd_test, expand)
 
             for (auto i = 0; i < std::ssize(threads); ++i) {
                 threads[i] = std::thread([&multiply, &works, i]() {
-                    apply(works[i], multiply/*, 2*/);
+                    works[i].apply(multiply /*, 2*/);
                 });
             }
 
@@ -2721,7 +2751,7 @@ TEST(arrnd_test, exclude_and_merge)
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
         //auto exc = exclude(arr, {}, {2});
-        auto exc = transform<0>(arr, [](const auto& val) {
+        auto exc = arr.transform<0>([](const auto& val) {
             return val.exclude({}, {2});
         });
 
@@ -2732,7 +2762,7 @@ TEST(arrnd_test, exclude_and_merge)
                         arrnd<int>({3, 2}, {13, 14, 17, 18, 21, 22}), arrnd<int>({3, 1}, {16, 20, 24})}))));
 
         EXPECT_TRUE(all_equal(/*merge(exc)*/
-            transform<0>(exc,
+            exc.transform<0>(
                 [](const auto& val) {
                     return val.merge();
                 }),
@@ -2798,7 +2828,7 @@ TEST(arrnd_test, split)
                 {6, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24})});
 
         EXPECT_TRUE(all_equal(/*split(arr, {}, {2})*/
-            transform<0>(arr,
+            arr.transform<0>(
                 [](const auto& val) {
                     return val.split({}, {2});
                 }),
@@ -2882,7 +2912,7 @@ TEST(arrnd_test, pages)
         EXPECT_TRUE(all_equal(merged_pages, arr));
         EXPECT_EQ(100, merged_pages[0]);
 
-        auto p2 = transform(arr, [](int a) {
+        auto p2 = arr.transform([](int a) {
             return a * 2;
         }).pages();
 
@@ -2955,7 +2985,7 @@ TEST(arrnd_test, slide)
 
         {
             //auto res = slide(arr, 0, {-1, 2}, false, weigted_sum, 0.5);
-            auto res = transform<0>(arr, [weigted_sum](const auto& val) {
+            auto res = arr.transform<0>([weigted_sum](const auto& val) {
                 return val.slide(
                     0, typename arrnd<int>::window_type{{-1, 3}, arrnd_window_type::partial}, weigted_sum /*, 0.5*/);
             });
@@ -2968,7 +2998,7 @@ TEST(arrnd_test, slide)
 
         {
             //auto res = slide(arr, 0, {-1, 2}, true, weigted_sum, 0.5);
-            auto res = transform<0>(arr, [weigted_sum](const auto& val) {
+            auto res = arr.transform<0>([weigted_sum](const auto& val) {
                 return val.slide(
                     0, typename arrnd<int>::window_type{{-1, 2}, arrnd_window_type::complete}, weigted_sum /*, 0.5*/);
             });
@@ -3003,7 +3033,7 @@ TEST(arrnd_test, accumulate)
 
         {
             //auto res = accumulate(arr, 0, {-1, 2}, false, add_prev, slice_sum);
-            auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
+            auto res = arr.transform<0>([add_prev, slice_sum](const auto& val) {
                 return val.accumulate(
                     0, typename arrnd<int>::window_type{{-1, 3}, arrnd_window_type::partial}, add_prev, slice_sum);
             });
@@ -3015,7 +3045,7 @@ TEST(arrnd_test, accumulate)
 
         {
             //auto res = accumulate(arr, 0, {-1, 2}, true, add_prev, slice_sum);
-            auto res = transform<0>(arr, [add_prev, slice_sum](const auto& val) {
+            auto res = arr.transform<0>([add_prev, slice_sum](const auto& val) {
                 return val.accumulate(
                     0, typename arrnd<int>::window_type{{-1, 2}, arrnd_window_type::complete}, add_prev, slice_sum);
             });
@@ -3135,7 +3165,7 @@ TEST(arrnd_test, browse)
         //        return value * 2;
         //    });
         //});
-        auto res = transform<0>(arr, [](const auto& val) {
+        auto res = arr.transform<0>([](const auto& val) {
             return val.browse(2, [](arrnd<int> page) {
                 page.apply([](int value) {
                     return value * 2;
@@ -3164,7 +3194,7 @@ TEST(arrnd_test, browse)
         //auto res = browse<1>(arr, 2, [](arrnd<int> page) {
         //    return page.transpose({1, 0});
         //});
-        auto res = transform<0>(arr, [](const auto& val) {
+        auto res = arr.transform<0>([](const auto& val) {
             return val.browse(2, [](arrnd<int> page) {
                 return transpose(page, {1, 0});
             });
@@ -3204,7 +3234,7 @@ TEST(arrnd_test, browse)
         //auto res = browse<1>(arr, 2, [](arrnd<int> page) {
         //    return 0.5 * page.sum();
         //});
-        auto res = transform<0>(arr, [](const auto& val) {
+        auto res = arr.transform<0>([](const auto& val) {
             return val.browse(2, [](arrnd<int> page) {
                 return 0.5 * sum(page);
             });

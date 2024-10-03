@@ -7974,7 +7974,7 @@ namespace details {
         }
 
         template <std::size_t AtDepth = this_type::depth, typename Pred>
-            requires(!iterable_of_type_integral<Pred>)
+            requires(!iterable_type<Pred>)
         [[nodiscard]] constexpr auto filter(Pred pred) const
         {
             auto filter_impl = [&pred](const auto& arr) {
@@ -8003,14 +8003,44 @@ namespace details {
                 filter_impl);
         }
 
+        template <std::size_t AtDepth = this_type::depth, iterator_of_type_integral InputIt>
+        [[nodiscard]] constexpr auto filter(InputIt first, InputIt last) const
+        {
+            auto filter_impl = [&first, &last](const auto& arr) {
+                using filter_t = std::remove_cvref_t<decltype(arr)>;
+
+                if (std::distance(first, last) > total(arr.info())) {
+                    throw std::invalid_argument("different total size between arr and selector");
+                }
+
+                if (arr.empty()) {
+                    return filter_t{};
+                }
+
+                filter_t res({static_cast<size_type>(std::distance(first, last))});
+                auto rit = std::begin(res);
+
+                for (auto ind_it = first; ind_it != last; ++ind_it) {
+                    *rit = arr[*ind_it];
+                    ++rit;
+                }
+
+                return res;
+            };
+
+            return traverse<AtDepth, AtDepth, arrnd_traversal_type::dfs, arrnd_traversal_result::transform>(
+                filter_impl);
+        }
+
         template <std::size_t AtDepth = this_type::depth, iterable_of_type_integral Cont>
+            requires(arrnd_type<Cont>)
         [[nodiscard]] constexpr auto filter(const Cont& selector) const
         {
             auto filter_impl = [&selector](const auto& arr) {
                 using filter_t = std::remove_cvref_t<decltype(arr)>;
 
                 // mask - should be inside arr dims limit
-                if constexpr (arrnd_type<Cont> && std::is_same_v<bool, typename Cont::value_type>) {
+                if constexpr (std::is_same_v<bool, typename Cont::value_type>) {
                     if (!std::equal(std::begin(arr.info().dims()), std::end(arr.info().dims()),
                             std::begin(selector.info().dims()), std::end(selector.info().dims()))) {
                         throw std::invalid_argument("different dims between arr and selector");
@@ -8061,14 +8091,21 @@ namespace details {
                 filter_impl);
         }
 
+        template <std::size_t AtDepth = this_type::depth, iterable_of_type_integral Cont>
+            requires(!arrnd_type<Cont>)
+        [[nodiscard]] constexpr auto filter(const Cont& selector) const
+        {
+            return filter<AtDepth>(std::begin(selector), std::end(selector));
+        }
+
         template <std::size_t AtDepth = this_type::depth>
         [[nodiscard]] constexpr auto filter(std::initializer_list<size_type> inds) const
         {
-            return filter<AtDepth>(zip(zipped(inds.begin(), inds.end())));
+            return filter<AtDepth>(inds.begin(), inds.end());
         }
 
         template <std::size_t AtDepth = this_type::depth, typename Pred>
-            requires(!iterable_of_type_integral<Pred>)
+            requires(!iterable_type<Pred>)
         [[nodiscard]] constexpr auto find(Pred pred) const
         {
             auto find_impl = [&pred](const auto& arr) {

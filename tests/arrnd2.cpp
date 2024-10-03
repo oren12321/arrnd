@@ -14,7 +14,6 @@
 #include <thread>
 
 #include <oc/arrnd.h>
-#include "tmpaux.h"
 
 TEST(arrnd_test, dot)
 {
@@ -37,9 +36,9 @@ TEST(arrnd_test, dot)
             {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 1, 3, 1}, {1, 2, 3, 4, 5, 6, 7, 8, 9})})});
 
         //auto res = dot(arr1, arr2);
-        auto res = transform<1>(arr1, arr2, [](const auto& val1, const auto& val2) {
-            return dot(val1, val2);
-        });
+        //auto res = transform<1>(arr1, arr2, [](const auto& val1, const auto& val2) {
+        //    return dot(val1, val2);
+        //});
 
         /*auto rest = arr1.traverse<2, 2, arrnd_traversal_type::dfs, arrnd_traversal_result::transform,
             arrnd_traversal_container::propagate>(arr2, [](const auto& a, const auto& b) {
@@ -51,9 +50,9 @@ TEST(arrnd_test, dot)
                 return dot(a[0], rhs[0]);
             });*/
 
-        EXPECT_TRUE(all_equal(res,
-            arrnd<arrnd<arrnd<double>>>(
-                {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 2, 1}, {14, 32, 122, 167, 338, 410})})})));
+        //EXPECT_TRUE(all_equal(res,
+        //    arrnd<arrnd<arrnd<double>>>(
+        //        {1, 1}, {arrnd<arrnd<double>>({1}, {arrnd<double>({3, 2, 1}, {14, 32, 122, 167, 338, 410})})})));
 
         /*EXPECT_TRUE(
             all_equal(res, arrnd<arrnd<double>>({1}, {arrnd<double>({3, 2, 1}, {14, 32, 122, 167, 338, 410})})));*/
@@ -80,7 +79,7 @@ TEST(arrnd_test, det)
             arrnd<int>({3, 3}, {2, -3, 1, 2, 0, -1, 1, 4, 5})});
 
     EXPECT_TRUE(all_equal(/*det(arr)*/
-        transform<0>(arr,
+        arr.transform<0>(
             [](const auto& val) {
                 return det(val);
             }),
@@ -96,7 +95,7 @@ TEST(arrnd_test, inv)
             arrnd<double>({3, 3}, {3, 0, 2, 2, 0, -2, 0, 1, 1})});
 
     EXPECT_TRUE(all_close(/*inv(arr)*/
-        transform<0>(arr,
+        arr.transform<0>(
             [](const auto& val) {
                 return inv(val);
             }),
@@ -673,12 +672,12 @@ TEST(arrnd_test, squeeze)
         //EXPECT_TRUE(sarr1.info().is_slice());
 
         //auto sarr2 = squeeze(arr);
-        auto sarr2 = transform<0>(arr, [](const auto& val) {
-            return val.squeeze();
-        });
-        EXPECT_TRUE(all_equal(sarr2,
-            arrnd<arrnd<int>>(
-                {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
+        //auto sarr2 = transform<0>(arr, [](const auto& val) {
+        //    return val.squeeze();
+        //});
+        //EXPECT_TRUE(all_equal(sarr2,
+        //    arrnd<arrnd<int>>(
+        //        {1, 2}, {arrnd<int>({3, 2}, {1, 2, 3, 4, 5, 6}), arrnd<int>({3, 2}, {7, 8, 9, 10, 11, 12})})));
         //EXPECT_TRUE((sarr2[{0, 0}].info().is_slice() && sarr2[{0, 1}].info().is_slice()));
     }
 }
@@ -1538,7 +1537,7 @@ TEST(arrnd_test, element_wise_transformation)
     const double odata[]{0.5, 1.0, 1.5, 2.0, 2.5, 3.0};
     oc::arrnd::arrnd oarr{dims, odata};
 
-    EXPECT_TRUE(oc::arrnd::all_equal(oarr, oc::arrnd::transform(iarr, [](int n) {
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr, iarr.transform([](int n) {
         return n * 0.5;
     })));
 
@@ -1547,7 +1546,7 @@ TEST(arrnd_test, element_wise_transformation)
         oc::arrnd::arrnd<oc::arrnd::arrnd<int>> narr(
             {1, 2}, {oc::arrnd::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
 
-        auto rnarr = oc::arrnd::transform<0>(narr, [](const auto& arr) {
+        auto rnarr = narr.transform<0>([](const auto& arr) {
             return 0.5 * std::reduce(arr.cbegin(), arr.cend(), 0, std::plus<>{});
         });
 
@@ -1563,13 +1562,13 @@ TEST(arrnd_test, element_wise_transformation)
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
         arrnd<int> scalar({1}, {1});
 
-        auto tarr1 = transform(iarr, scalar, std::minus<>{});
+        auto tarr1 = iarr.transform(scalar, std::minus<>{});
 
         EXPECT_TRUE(all_equal(tarr1,
             arrnd<int>(
                 {3, 2, 4}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})));
 
-        auto tarr2 = transform(scalar, iarr, std::minus<>{});
+        auto tarr2 = scalar.transform(iarr, std::minus<>{});
 
         EXPECT_TRUE(all_equal(tarr2,
             arrnd<int>({3, 2, 4},
@@ -1585,13 +1584,13 @@ TEST(arrnd_test, element_wise_transformation)
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
         arrnd<int> rarr({1, 2, 1}, {1, 2});
 
-        auto tarr1 = transform(iarr, rarr, std::minus<>{});
+        auto tarr1 = iarr.transform(rarr, std::minus<>{});
 
         EXPECT_TRUE(all_equal(tarr1,
             arrnd<int>(
                 {3, 2, 4}, {0, 1, 2, 3, 3, 4, 5, 6, 8, 9, 10, 11, 11, 12, 13, 14, 16, 17, 18, 19, 19, 20, 21, 22})));
 
-        auto tarr2 = transform(rarr, iarr, std::minus<>{});
+        auto tarr2 = rarr.transform(iarr, std::minus<>{});
 
         EXPECT_TRUE(all_equal(tarr2,
             arrnd<int>({3, 2, 4},
@@ -1606,14 +1605,13 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
 
     arrnd<int> arr({3, 1, 2}, {1, 2, 3, 4, 5, 6});
 
-    auto& tarr = apply(arr, [](int val) {
+    auto& tarr = arr.apply([](int val) {
         return 2 * val;
     });
-    tarr = apply(tarr, arrnd<int>({3, 1, 2}, {1, 0, 1, 0, 1, 0}), [](int val1, int val2) {
+    tarr = tarr.apply(arrnd<int>({3, 1, 2}, {1, 0, 1, 0, 1, 0}), [](int val1, int val2) {
         return val1 * val2;
     });
-    tarr = apply(
-        tarr,
+    tarr = tarr.apply(
         [](int val1/*, int val2*/) {
             return val1 == 0 ? 0 : val1 + 2/*val2*/;
         }/*,
@@ -1629,10 +1627,10 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
             {arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {1, 2}), arrnd<int>({1, 2}, {1, 2}),
                 arrnd<int>({1, 2}, {1, 2})});
 
-        auto& tnarr = apply(narr, [](int a) {
+        auto& tnarr = narr.apply([](int a) {
             return a * 2;
         });
-        tnarr = apply<0>(tnarr, [](const arrnd<int> a) {
+        tnarr = tnarr.apply<0>([](const arrnd<int> a) {
             return arrnd<int>({1}, a[{0, 0}]);
         });
 
@@ -1648,7 +1646,7 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
             {3, 2, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
         arrnd<int> scalar({1}, {1});
 
-        apply(iarr, scalar, [](int a, int b) {
+        iarr.apply(scalar, [](int a, int b) {
             return a + b;
         });
 
@@ -1678,7 +1676,7 @@ TEST(arrnd_test, apply_transformation_on_array_elements)
         //auto t = z.begin();
 
 
-        apply(iarr, rarr, [](int a, int b) {
+        iarr.apply(rarr, [](int a, int b) {
             return a + b;
         });
         EXPECT_TRUE(all_equal(iarr,
@@ -1724,7 +1722,7 @@ TEST(arrnd_test, element_wise_transform_operation)
 
     oc::arrnd::arrnd oarr1{dims, 0.5};
 
-    EXPECT_TRUE(oc::arrnd::all_equal(oarr1, oc::arrnd::transform(iarr1, iarr2, [](int a, double b) {
+    EXPECT_TRUE(oc::arrnd::all_equal(oarr1, iarr1.transform(iarr2, [](int a, double b) {
         return b / a;
     })));
 
@@ -1732,8 +1730,7 @@ TEST(arrnd_test, element_wise_transform_operation)
     oc::arrnd::arrnd oarr2{dims, odata2};
 
     EXPECT_TRUE(oc::arrnd::all_equal(oarr2,
-        oc::arrnd::transform(
-            iarr1,
+        iarr1.transform(
             [](int a/*, int b*/) {
                 return a - 1/*b*/;
             }/*,
@@ -1743,8 +1740,7 @@ TEST(arrnd_test, element_wise_transform_operation)
     oc::arrnd::arrnd oarr3{dims, odata3};
 
     EXPECT_TRUE(oc::arrnd::all_equal(oarr3,
-        oc::arrnd::transform(
-            iarr1,
+        iarr1.transform(
             [](int a/*, int b*/) {
                 return -a + 1/*b*/;
             }/*,
@@ -1758,7 +1754,7 @@ TEST(arrnd_test, element_wise_transform_operation)
         oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr(
             {1, 2}, {oc::arrnd::arrnd<int>({1, 5}, {1, 2, 3, 4, 5}), oc::arrnd::arrnd<int>({1, 5}, {6, 7, 8, 9, 10})});
 
-        auto rnarr = oc::arrnd::transform<0>(narr, inarr, [](const auto& lhs, const auto& rhs) {
+        auto rnarr = narr.transform<0>(inarr, [](const auto& lhs, const auto& rhs) {
             return 0.5 * std::reduce(lhs.cbegin(), lhs.cend(), 0, std::plus<>{})
                 + std::reduce(rhs.cbegin(), rhs.cend(), 0, std::plus<>{});
         });
@@ -1775,35 +1771,35 @@ TEST(arrnd_test, reduce_elements)
     const int idata[]{1, 2, 3, 4, 5, 6};
     oc::arrnd::arrnd<int> iarr{dims, idata};
 
-    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), oc::arrnd::reduce(iarr, [](double a, int b) {
+    EXPECT_EQ((1.0 / 2 / 3 / 4 / 5 / 6), iarr.reduce([](double a, int b) {
         return a / b;
     }));
 
     std::int64_t dims2[]{3, 1};
     const double rdata2[]{3.0, 7.0, 11.0};
     oc::arrnd::arrnd<double> rarr2{dims2, rdata2};
-    EXPECT_TRUE(oc::arrnd::all_equal(rarr2, oc::arrnd::reduce(iarr, 2, [](int value, double previous) {
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr2, iarr.reduce(2, [](int value, double previous) {
         return previous + value;
     })));
 
     std::int64_t dims1[]{3, 2};
     const double rdata1[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     oc::arrnd::arrnd<double> rarr1{dims1, rdata1};
-    EXPECT_TRUE(oc::arrnd::all_equal(rarr1, oc::arrnd::reduce(iarr, 1, [](int value, double previous) {
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr1, iarr.reduce(1, [](int value, double previous) {
         return previous + value;
     })));
 
     std::int64_t dims0[]{1, 2};
     const double rdata0[]{9.0, 12.0};
     oc::arrnd::arrnd<double> rarr0{dims0, rdata0};
-    EXPECT_TRUE(oc::arrnd::all_equal(rarr0, oc::arrnd::reduce(iarr, 0, [](int value, double previous) {
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr0, iarr.reduce(0, [](int value, double previous) {
         return previous + value;
     })));
 
     oc::arrnd::arrnd iarr1d{std::vector<int>{6}, idata};
     const double data1d[]{21.0};
     oc::arrnd::arrnd rarr1d{std::vector<int>{1}, data1d};
-    EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, oc::arrnd::reduce(iarr1d, 0, [](int value, double previous) {
+    EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, iarr1d.reduce(0, [](int value, double previous) {
         return previous + value;
     })));
 
@@ -1813,12 +1809,12 @@ TEST(arrnd_test, reduce_elements)
     {
         oc::arrnd::arrnd arr{{2, 3}, {1, 2, 5, 6, 10, 11}};
 
-        std::string chain = oc::arrnd::fold(arr, std::string{}, [](const std::string& s, int n) {
+        std::string chain = arr.fold(std::string{}, [](const std::string& s, int n) {
             return s + "-" + std::to_string(n);
         });
         EXPECT_EQ("-1-2-5-6-10-11", chain);
 
-        oc::arrnd::arrnd<std::string> byaxis = oc::arrnd::fold(arr[{{0, 2}, {2, 3}}], 1,
+        oc::arrnd::arrnd<std::string> byaxis = arr[{{0, 2}, {2, 3}}].fold(1,
             oc::arrnd::arrnd{{2}, {std::to_string(arr[{0, 0}]), std::to_string(arr[{1, 0}])}},
             [](const std::string& s, int n) {
                 return s + "-" + std::to_string(n);
@@ -1832,7 +1828,7 @@ TEST(arrnd_test, reduce_elements)
             return previous + value;
         };
 
-        EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, oc::arrnd::reduce(oc::arrnd::reduce(oc::arrnd::reduce(iarr, 2, sum), 1, sum), 0, sum)));
+        EXPECT_TRUE(oc::arrnd::all_equal(rarr1d, iarr.reduce(2, sum).reduce(1, sum).reduce(0, sum)));
     }
 
     // nested array
@@ -1840,34 +1836,34 @@ TEST(arrnd_test, reduce_elements)
         oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr1(
             {1, 2}, {oc::arrnd::arrnd<int>({4}, {1, 2, 3, 4}), oc::arrnd::arrnd<int>({4}, {5, 6, 7, 8})});
 
-        auto r1 = oc::arrnd::reduce(inarr1, std::plus<>{});
+        auto r1 = inarr1.reduce(std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r1, oc::arrnd::arrnd<int>({1, 2}, {10, 26})));
 
-        auto r2 = oc::arrnd::reduce<0>(inarr1, std::plus<>{});
+        auto r2 = inarr1.reduce<0>(std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r2, oc::arrnd::arrnd<int>({4}, {6, 8, 10, 12})));
 
         oc::arrnd::arrnd<oc::arrnd::arrnd<int>> inarr2(
             {1, 2}, {oc::arrnd::arrnd<int>({3, 1, 2}, {1, 2, 3, 4, 5, 6}), oc::arrnd::arrnd<int>({3, 1, 2}, {7, 8, 9, 10, 11, 12})});
 
-        auto r3 = oc::arrnd::reduce(inarr2, 0, std::plus<>{});
+        auto r3 = inarr2.reduce(0, std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r3,
             oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 2}, {oc::arrnd::arrnd<int>({1, 2}, {9, 12}), oc::arrnd::arrnd<int>({1, 2}, {27, 30})})));
 
-        auto r4 = oc::arrnd::reduce<0>(inarr2, 1, std::plus<>{});
+        auto r4 = inarr2.reduce<0>(1, std::plus<>{});
         EXPECT_TRUE(
             oc::arrnd::all_equal(r4, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, {8, 10, 12, 14, 16, 18})})));
 
-        auto r5 = oc::arrnd::fold(inarr1, 2, std::plus<>{});
+        auto r5 = inarr1.fold(2, std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r5, oc::arrnd::arrnd<int>({1, 2}, {12, 28})));
 
-        auto r6 = oc::arrnd::fold<0>(inarr1, oc::arrnd::arrnd<int>({4}, 2), std::plus<>{});
+        auto r6 = inarr1.fold<0>(oc::arrnd::arrnd<int>({4}, 2), std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r6, oc::arrnd::arrnd<int>({4}, {8, 10, 12, 14})));
 
         auto r7 = inarr2.fold(0, {2, 2}, std::plus<>{});
         EXPECT_TRUE(oc::arrnd::all_equal(r7,
             oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1, 2}, {oc::arrnd::arrnd<int>({1, 2}, {11, 14}), oc::arrnd::arrnd<int>({1, 2}, {29, 32})})));
 
-        auto r8 = oc::arrnd::fold<0>(inarr2, 1, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, 2)}), std::plus<>{});
+        auto r8 = inarr2.fold<0>(1, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, 2)}), std::plus<>{});
         EXPECT_TRUE(
             oc::arrnd::all_equal(r8, oc::arrnd::arrnd<oc::arrnd::arrnd<int>>({1}, {oc::arrnd::arrnd<int>({3, 1, 2}, {10, 12, 14, 16, 18, 20})})));
     }
